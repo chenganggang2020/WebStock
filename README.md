@@ -1,6 +1,6 @@
 # 📈 股票行情看板 (Stock Dashboard)
 
-一个基于 Node.js + ECharts 的 A 股实时行情看板，支持 K 线图、多指标分析、拼音模糊搜索，数据来自公开免费接口。
+一个基于 Node.js + ECharts 的 A 股实时行情看板，支持 K 线图、分时图，交易详情，多指标分析、拼音模糊搜索，数据来自公开免费接口。
 
 ![界面截图](https://github.com/xujh1969/WebStock/blob/main/WebStock.png)
 
@@ -8,7 +8,8 @@
 
 - 🔍 **智能搜索**：支持股票代码、拼音首字母、全拼、中文名称模糊匹配
 - 📊 **实时行情**：左侧列表自动刷新最新价、涨跌幅（红涨绿跌）
-- 📈 **K 线图表**：日线蜡烛图，成交量柱状图（万手单位）
+- 📈 **K 线图表**：日线蜡烛图，成交量柱状图（万手单位），支持日线、周线、月线切换，
+- 📈 分时图：分时图价量显示，交易详情，买卖盘口，分时成交明细
 - 🧮 **技术指标**：MA、MACD、KDJ、RSI、CCI、OBV、VWAP、ATR
 - ⚙️ **自定义均线**：双击图例或点击设置按钮，自由修改均线周期
 - 🌓 **深色/浅色主题**：一键切换，图表配色自动适配
@@ -22,7 +23,7 @@
 - Node.js 14+
 - npm 6+
 
-如果还没安装Node，则建议去这个地址：https://nodejs.org/zh-cn/download 下载安装
+如果还没安装Node，则建议去这个地址：<https://nodejs.org/zh-cn/download> 下载安装
 
 ### 安装依赖
 
@@ -39,4 +40,4 @@ node server.js
 http://localhost:3000
 ```
 
-"# WebStock" 
+"# WebStock"
