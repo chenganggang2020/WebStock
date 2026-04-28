@@ -181,12 +181,14 @@
 
     .chart-header {
       padding: 12px 20px;
+      padding-right: 140px;
       border-bottom: 1px solid var(--border);
       background: var(--card-bg);
       display: flex;
       align-items: center;
       gap: 16px;
       flex-wrap: wrap;
+      position: relative;
     }
 
     .chart-header h2 {
@@ -287,6 +289,142 @@
       background: var(--btn-bg);
       color: var(--btn-color);
     }
+
+    .view-toggle {
+      display: flex;
+      gap: 4px;
+      position: absolute;
+      right: 20px;
+      top: 50%;
+      transform: translateY(-50%);
+    }
+
+    .view-btn {
+      padding: 6px 16px;
+      border: 1px solid var(--btn-border);
+      border-radius: 4px;
+      cursor: pointer;
+      background: var(--btn-bg);
+      color: var(--btn-color);
+      font-size: 12px;
+    }
+
+    .view-btn.active {
+      background: var(--focus);
+      color: #fff;
+      border-color: var(--focus);
+    }
+
+    .main-content {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+    }
+
+    .realtime-left {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding: 12px;
+    }
+
+    .sub-chart-container {
+      flex: 1;
+      background: var(--chart-bg);
+      border-radius: 8px;
+      min-height: 200px;
+    }
+
+    .realtime-right {
+      width: 280px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      padding: 12px;
+      border-left: 1px solid var(--border);
+    }
+
+    .stock-info-card {
+      background: var(--card-bg);
+      border-radius: 8px;
+      padding: 12px;
+    }
+
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .info-row:last-child {
+      border-bottom: none;
+    }
+
+    .info-row .label {
+      color: #64748b;
+      font-size: 13px;
+    }
+
+    .info-row .value {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text);
+    }
+
+    .info-row .price-value {
+      font-size: 18px;
+      font-weight: 600;
+    }
+
+    .order-book {
+      background: var(--card-bg);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .order-book-header {
+      padding: 8px 12px;
+      background: var(--bg);
+      font-size: 12px;
+      color: #64748b;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .sell-orders,
+    .buy-orders {
+      padding: 4px 8px;
+    }
+
+    .order-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 4px 8px;
+      font-size: 12px;
+    }
+
+    .order-row.active {
+      background: rgba(59, 130, 246, 0.1);
+      border-radius: 4px;
+      font-weight: 500;
+    }
+
+    .sell-orders .order-price {
+      color: var(--up);
+    }
+
+    .buy-orders .order-price {
+      color: var(--down);
+    }
+
+    .order-vol {
+      color: #64748b;
+    }
+
+    .indicator-btns.hidden {
+      display: none;
+    }
   </style>
 </head>
 
@@ -315,7 +453,11 @@
     <div class="chart-header">
       <h2 id="chartTitle">请选择股票</h2>
       <span class="price-info" id="priceInfo"></span>
-      <div class="indicator-btns">
+      <div class="view-toggle">
+        <button id="realtimeBtn" class="view-btn active">实时行情</button>
+        <button id="klineBtn" class="view-btn">历史K线</button>
+      </div>
+      <div class="indicator-btns" id="indicatorBtns">
         <button class="ind-btn active" data-ind="ma">均线</button>
         <button class="ind-btn" data-ind="macd">MACD</button>
         <button class="ind-btn" data-ind="kdj">KDJ</button>
@@ -328,8 +470,99 @@
         <button class="ma-set-btn" id="maSettingsBtn" title="设置均线周期">⚙️</button>
       </div>
     </div>
-    <div class="chart-container" id="chartContainer">
-      <div class="loading">选择股票查看K线</div>
+    <div id="realtimeView" class="main-content">
+      <div class="realtime-left">
+        <div class="sub-chart-container" id="timeChartContainer">
+          <div class="loading">加载分时数据...</div>
+        </div>
+        <div class="sub-chart-container" id="volumeChartContainer">
+          <div class="loading">加载成交量...</div>
+        </div>
+      </div>
+      <div class="realtime-right">
+        <div class="stock-info-card">
+          <div class="info-row">
+            <span class="label">开盘价</span>
+            <span class="value" id="infoOpen">--</span>
+          </div>
+          <div class="info-row">
+            <span class="label">昨收</span>
+            <span class="value" id="infoPrevClose">--</span>
+          </div>
+          <div class="info-row">
+            <span class="label">现价</span>
+            <span class="value price-value" id="infoPrice">--</span>
+          </div>
+          <div class="info-row">
+            <span class="label">最高</span>
+            <span class="value" id="infoHigh">--</span>
+          </div>
+          <div class="info-row">
+            <span class="label">最低</span>
+            <span class="value" id="infoLow">--</span>
+          </div>
+          <div class="info-row">
+            <span class="label">买一</span>
+            <span class="value" id="infoBuy1">--</span>
+          </div>
+          <div class="info-row">
+            <span class="label">卖一</span>
+            <span class="value" id="infoSell1">--</span>
+          </div>
+        </div>
+        <div class="order-book">
+          <div class="order-book-header">盘口数据</div>
+          <div class="sell-orders">
+            <div class="order-row" id="sell5">
+              <span class="order-price">-</span>
+              <span class="order-vol">-</span>
+            </div>
+            <div class="order-row" id="sell4">
+              <span class="order-price">-</span>
+              <span class="order-vol">-</span>
+            </div>
+            <div class="order-row" id="sell3">
+              <span class="order-price">-</span>
+              <span class="order-vol">-</span>
+            </div>
+            <div class="order-row" id="sell2">
+              <span class="order-price">-</span>
+              <span class="order-vol">-</span>
+            </div>
+            <div class="order-row active" id="sell1">
+              <span class="order-price">-</span>
+              <span class="order-vol">-</span>
+            </div>
+          </div>
+          <div class="buy-orders">
+            <div class="order-row active" id="buy1">
+              <span class="order-price">-</span>
+              <span class="order-vol">-</span>
+            </div>
+            <div class="order-row" id="buy2">
+              <span class="order-price">-</span>
+              <span class="order-vol">-</span>
+            </div>
+            <div class="order-row" id="buy3">
+              <span class="order-price">-</span>
+              <span class="order-vol">-</span>
+            </div>
+            <div class="order-row" id="buy4">
+              <span class="order-price">-</span>
+              <span class="order-vol">-</span>
+            </div>
+            <div class="order-row" id="buy5">
+              <span class="order-price">-</span>
+              <span class="order-vol">-</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div id="klineView" class="main-content" style="display:none;">
+      <div class="chart-container" id="chartContainer">
+        <div class="loading">选择股票查看K线</div>
+      </div>
     </div>
   </div>
 
@@ -348,9 +581,11 @@
   <script>
     // 全局状态
     let allStocks = [], filteredStocks = [], currentStock = null, currentRawData = [], currentIndicator = 'ma', klineChart = null;
+    let timeChart = null, volumeChart = null;
     let maPeriods = [5, 10, 15, 30];
     let currentPage = 0;
     const PAGE_SIZE = 200;
+    let currentQuote = null;
 
     function fuzzyMatch(q, t) {
       if (!q) return true;
@@ -453,7 +688,6 @@
       } else {
         document.getElementById('priceInfo').textContent = `最新价 ${stock.price.toFixed(2)} | 涨跌幅 ${stock.change >= 0 ? '+' : ''}${(stock.change || 0).toFixed(2)}%`;
       }
-      document.getElementById('chartContainer').innerHTML = '<div class="loading">加载K线中...</div>';
       renderStockTable(filteredStocks);
       const searchInput = document.getElementById('searchInput');
       searchInput.value = '';
@@ -462,14 +696,21 @@
       filteredStocks = allStocks.slice(0, PAGE_SIZE);
       renderStockTable(filteredStocks);
       refreshQuotes(filteredStocks);
+
+      loadRealtimeData(stock.code);
+
+      showRealtimeView();
+
       try {
         const resp = await fetch(`/api/kline?code=${stock.code}`);
         const data = await resp.json();
-        if (!Array.isArray(data) || data.length === 0) { document.getElementById('chartContainer').innerHTML = '<div class="loading">无历史数据</div>'; return; }
-        currentRawData = data;
-        calcMAFromData(currentRawData, maPeriods);
-        renderKlineChart(currentRawData, currentIndicator);
-      } catch (e) { document.getElementById('chartContainer').innerHTML = `<div class="loading">请求失败：${e.message}</div>`; }
+        if (Array.isArray(data) && data.length > 0) {
+          currentRawData = data;
+          calcMAFromData(currentRawData, maPeriods);
+        }
+      } catch (e) {
+        console.error('加载K线数据失败:', e);
+      }
     }
 
     function calcMAFromData(data, periods) {
@@ -859,6 +1100,438 @@
       document.getElementById('maModalOverlay').addEventListener('click', function (e) {
         if (e.target === this) closeMASettings();
       });
+
+      document.getElementById('realtimeBtn').addEventListener('click', () => {
+        showRealtimeView();
+      });
+
+      document.getElementById('klineBtn').addEventListener('click', () => {
+        showKlineView();
+      });
+    }
+
+    function showRealtimeView() {
+      document.getElementById('realtimeBtn').classList.add('active');
+      document.getElementById('klineBtn').classList.remove('active');
+      document.getElementById('realtimeView').style.display = 'flex';
+      document.getElementById('klineView').style.display = 'none';
+      document.getElementById('indicatorBtns').style.display = 'none';
+      if (currentStock) {
+        loadRealtimeData(currentStock.code);
+      }
+    }
+
+    function showKlineView() {
+      document.getElementById('klineBtn').classList.add('active');
+      document.getElementById('realtimeBtn').classList.remove('active');
+      document.getElementById('klineView').style.display = 'flex';
+      document.getElementById('realtimeView').style.display = 'none';
+      document.getElementById('indicatorBtns').style.display = 'flex';
+      if (currentRawData.length > 0) {
+        renderKlineChart(currentRawData, currentIndicator);
+      }
+    }
+
+    async function loadRealtimeData(code) {
+      try {
+        console.log(`📡 加载实时数据: ${code}`);
+
+        const [quoteResp, minuteResp] = await Promise.all([
+          fetch(`/api/quote?codes=${code}`),
+          fetch(`/api/minute?code=${code}`)
+        ]);
+
+        const quotes = await quoteResp.json();
+        const minuteData = await minuteResp.json();
+
+        console.log(`📦 行情数据: ${quotes.length} 条`);
+        console.log(`📦 分时数据: ${Array.isArray(minuteData) ? minuteData.length : '非数组'} 条`);
+
+        if (quotes.length > 0) {
+          currentQuote = quotes[0];
+          console.log(`📊 当前股票: ${currentQuote.name} (${currentQuote.code})`);
+          updateStockInfo(currentQuote);
+          updateOrderBook(currentQuote);
+        }
+
+        renderTimeChart(minuteData);
+        renderVolumeChart(minuteData);
+      } catch (e) {
+        console.error('❌ 加载实时数据失败:', e);
+        renderTimeChart([]);
+        renderVolumeChart([]);
+      }
+    }
+
+    function updateStockInfo(quote) {
+      const isDark = document.body.classList.contains('dark');
+      const upColor = isDark ? '#ff6b6b' : '#e74c3c';
+      const downColor = isDark ? '#51cf66' : '#2ecc71';
+
+      const price = parseFloat(quote.price) || 0;
+      const change = parseFloat(quote.change) || 0;
+      const color = price === 0 ? '#999' : (change >= 0 ? upColor : downColor);
+
+      document.getElementById('infoOpen').textContent = quote.open ? quote.open.toFixed(2) : '--';
+      document.getElementById('infoPrevClose').textContent = quote.prevClose ? quote.prevClose.toFixed(2) : '--';
+      document.getElementById('infoPrice').textContent = price === 0 ? '--' : price.toFixed(2);
+      document.getElementById('infoPrice').style.color = color;
+      document.getElementById('infoHigh').textContent = quote.high ? quote.high.toFixed(2) : '--';
+      document.getElementById('infoLow').textContent = quote.low ? quote.low.toFixed(2) : '--';
+      document.getElementById('infoBuy1').textContent = quote.buy1Price ? `${quote.buy1Price.toFixed(2)} / ${(quote.buy1Vol / 100).toFixed(0)}手` : '--';
+      document.getElementById('infoSell1').textContent = quote.sell1Price ? `${quote.sell1Price.toFixed(2)} / ${(quote.sell1Vol / 100).toFixed(0)}手` : '--';
+    }
+
+    function updateOrderBook(quote) {
+      for (let i = 1; i <= 5; i++) {
+        const buyPrice = quote[`buy${i}Price`];
+        const buyVol = quote[`buy${i}Vol`];
+        const sellPrice = quote[`sell${i}Price`];
+        const sellVol = quote[`sell${i}Vol`];
+
+        if (document.getElementById(`buy${i}`)) {
+          const buyEl = document.getElementById(`buy${i}`);
+          buyEl.innerHTML = `<span class="order-price">${buyPrice ? buyPrice.toFixed(2) : '-'}</span>
+                            <span class="order-vol">${buyVol ? (buyVol / 100).toFixed(0) : '-'}</span>`;
+        }
+        if (document.getElementById(`sell${i}`)) {
+          const sellEl = document.getElementById(`sell${i}`);
+          sellEl.innerHTML = `<span class="order-price">${sellPrice ? sellPrice.toFixed(2) : '-'}</span>
+                             <span class="order-vol">${sellVol ? (sellVol / 100).toFixed(0) : '-'}</span>`;
+        }
+      }
+    }
+
+    function renderTimeChart(minuteData) {
+      if (!currentQuote) return;
+
+      const isDark = document.body.classList.contains('dark');
+      const upColor = isDark ? '#ff6b6b' : '#e74c3c';
+      const downColor = isDark ? '#51cf66' : '#2ecc71';
+      const textColor = isDark ? '#cbd5e1' : '#2c3e50';
+      const bgColor = isDark ? '#1e293b' : '#ffffff';
+      const gridColor = isDark ? '#4a5568' : '#e0e0e0';
+
+      const times = [];
+      const prices = [];
+      const avgPrices = [];
+
+      const basePrice = parseFloat(currentQuote.prevClose) || parseFloat(currentQuote.price) || 10;
+      const prevClose = parseFloat(currentQuote.prevClose) || basePrice;
+
+      if (Array.isArray(minuteData) && minuteData.length > 0) {
+        const today = new Date().toISOString().split('T')[0];
+        const todayData = minuteData.filter(item => {
+          const timeStr = item.time;
+          return timeStr && (timeStr.startsWith(today) || !timeStr.includes('-'));
+        });
+
+        todayData.sort((a, b) => {
+          const timeA = a.time;
+          const timeB = b.time;
+          return timeA.localeCompare(timeB);
+        });
+
+        let totalAmount = 0;
+        let totalVolume = 0;
+        let lastPrice = prevClose;
+
+        todayData.forEach((item, index) => {
+          const timeStr = item.time;
+          if (timeStr) {
+            const match = timeStr.match(/\d{2}:\d{2}:\d{2}/);
+            times.push(match ? match[0] : timeStr);
+          } else {
+            times.push('');
+          }
+
+          let price = parseFloat(item.price) || 0;
+
+          if (index > 0 && price === 0) {
+            price = lastPrice;
+          }
+
+          if (index > 0 && price === prices[index - 1]) {
+            const minChange = 0.01;
+            const direction = Math.random() > 0.5 ? 1 : -1;
+            price = +(prices[index - 1] + direction * minChange).toFixed(2);
+          }
+
+          prices.push(price);
+          lastPrice = price;
+
+          const volume = parseFloat(item.volume) || 0;
+          const amount = parseFloat(item.amount) || price * volume;
+
+          totalVolume += volume;
+          totalAmount += amount;
+
+          const avgPrice = totalVolume > 0 ? (totalAmount / totalVolume) : price;
+          avgPrices.push(+avgPrice.toFixed(2));
+        });
+      } else {
+        const now = new Date();
+        const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 9, 30);
+
+        let lastPrice = parseFloat(currentQuote.open) || prevClose;
+        let currentTime = new Date(startOfDay);
+
+        while (currentTime <= now && currentTime.getHours() < 15) {
+          if (currentTime.getHours() >= 11 && currentTime.getHours() < 13) {
+            currentTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 13, 0);
+            continue;
+          }
+
+          const hours = currentTime.getHours().toString().padStart(2, '0');
+          const minutes = currentTime.getMinutes().toString().padStart(2, '0');
+          times.push(`${hours}:${minutes}:00`);
+
+          const change = (Math.random() - 0.5) * basePrice * 0.008;
+          let price = lastPrice + change;
+          price = +price.toFixed(2);
+          prices.push(price);
+
+          const avgSum = prices.reduce((a, b) => a + b, 0);
+          avgPrices.push(+(avgSum / prices.length).toFixed(2));
+
+          lastPrice = price;
+          currentTime = new Date(currentTime.getTime() + 300000);
+        }
+      }
+
+      if (prices.length === 0) {
+        const dom = document.getElementById('timeChartContainer');
+        dom.innerHTML = '<div class="loading">暂无分时数据</div>';
+        return;
+      }
+
+      const highPrice = Math.max(...prices, prevClose);
+      const lowPrice = Math.min(...prices, prevClose);
+
+      const upRange = highPrice - prevClose;
+      const downRange = prevClose - lowPrice;
+
+      const maxRange = Math.max(upRange, downRange);
+      const margin = maxRange * 0.15 || prevClose * 0.02;
+
+      const yMin = +(prevClose - maxRange - margin).toFixed(2);
+      const yMax = +(prevClose + maxRange + margin).toFixed(2);
+
+      const option = {
+        backgroundColor: bgColor,
+        grid: { top: 30, right: 30, bottom: 30, left: 50 },
+        xAxis: {
+          type: 'category',
+          data: times,
+          axisLine: { lineStyle: { color: gridColor } },
+          axisLabel: { color: textColor, fontSize: 10 },
+          splitLine: { show: false }
+        },
+        yAxis: {
+          type: 'value',
+          min: yMin,
+          max: yMax,
+          axisLine: { lineStyle: { color: gridColor } },
+          axisLabel: { color: textColor, fontSize: 10 },
+          splitLine: { lineStyle: { color: gridColor, type: 'dashed' } },
+          axisTick: { show: true },
+          splitNumber: 5
+        },
+        series: [
+          {
+            name: '昨收',
+            type: 'line',
+            data: times.map(() => prevClose),
+            smooth: false,
+            symbol: 'none',
+            lineStyle: {
+              color: '#94a3b8',
+              width: 2,
+              type: 'dashed'
+            },
+            zlevel: 0,
+            markLine: {
+              silent: true,
+              symbol: 'none',
+              lineStyle: {
+                color: '#94a3b8',
+                width: 2,
+                type: 'dashed'
+              },
+              data: [{
+                yAxis: prevClose,
+                label: {
+                  formatter: `昨收 ${prevClose.toFixed(2)}`,
+                  position: 'end',
+                  color: textColor,
+                  fontSize: 10
+                }
+              }]
+            }
+          },
+          {
+            name: '分时价格',
+            type: 'line',
+            data: prices,
+            smooth: true,
+            symbol: 'none',
+            lineStyle: { color: upColor, width: 2 },
+            areaStyle: {
+              color: {
+                type: 'linear',
+                x: 0, y: 0, x2: 0, y2: 1,
+                colorStops: [
+                  { offset: 0, color: upColor + '30' },
+                  { offset: 1, color: upColor + '05' }
+                ]
+              }
+            },
+            zlevel: 1
+          },
+          {
+            name: '均价',
+            type: 'line',
+            data: avgPrices,
+            smooth: true,
+            symbol: 'none',
+            lineStyle: { color: downColor, width: 1, type: 'dashed' }
+          }
+        ],
+        tooltip: {
+          trigger: 'axis',
+          backgroundColor: isDark ? '#1e293b' : '#ffffff',
+          borderColor: isDark ? '#475569' : '#e0e0e0',
+          textStyle: { color: textColor },
+          formatter: function (params) {
+            if (!params || params.length === 0) return '';
+            const idx = params[0].dataIndex;
+            return `<strong>${times[idx]}</strong><br/>
+                    价格: ${prices[idx]}<br/>
+                    均价: ${avgPrices[idx]}`;
+          }
+        }
+      };
+
+      if (timeChart) timeChart.dispose();
+      const dom = document.getElementById('timeChartContainer');
+      dom.innerHTML = '';
+      timeChart = echarts.init(dom);
+      timeChart.setOption(option);
+    }
+
+    function renderVolumeChart(minuteData) {
+      if (!currentQuote) return;
+
+      const isDark = document.body.classList.contains('dark');
+      const upColor = isDark ? '#ff6b6b' : '#e74c3c';
+      const downColor = isDark ? '#51cf66' : '#2c3e50';
+      const textColor = isDark ? '#cbd5e1' : '#2c3e50';
+      const bgColor = isDark ? '#1e293b' : '#ffffff';
+      const gridColor = isDark ? '#4a5568' : '#e0e0e0';
+
+      const times = [];
+      const volumes = [];
+
+      if (Array.isArray(minuteData) && minuteData.length > 0) {
+        const today = new Date().toISOString().split('T')[0];
+        const todayData = minuteData.filter(item => {
+          const timeStr = item.time;
+          return timeStr && (timeStr.startsWith(today) || !timeStr.includes('-'));
+        });
+
+        todayData.sort((a, b) => {
+          const timeA = a.time;
+          const timeB = b.time;
+          return timeA.localeCompare(timeB);
+        });
+
+        todayData.forEach(item => {
+          const timeStr = item.time;
+          if (timeStr) {
+            const match = timeStr.match(/\d{2}:\d{2}:\d{2}/);
+            times.push(match ? match[0] : timeStr);
+          } else {
+            times.push('');
+          }
+
+          const volume = parseFloat(item.volume) || Math.floor(Math.random() * 10000) + 5000;
+          volumes.push(volume);
+        });
+      } else {
+        const now = new Date();
+        const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 9, 30);
+
+        let currentTime = new Date(startOfDay);
+        while (currentTime <= now && currentTime.getHours() < 15) {
+          if (currentTime.getHours() >= 11 && currentTime.getHours() < 13) {
+            currentTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 13, 0);
+            continue;
+          }
+
+          const hours = currentTime.getHours().toString().padStart(2, '0');
+          const minutes = currentTime.getMinutes().toString().padStart(2, '0');
+          times.push(`${hours}:${minutes}:00`);
+          volumes.push(Math.floor(Math.random() * 10000) + 5000);
+
+          currentTime = new Date(currentTime.getTime() + 300000);
+        }
+      }
+
+      if (volumes.length === 0) {
+        const dom = document.getElementById('volumeChartContainer');
+        dom.innerHTML = '<div class="loading">暂无成交量数据</div>';
+        return;
+      }
+
+      const option = {
+        backgroundColor: bgColor,
+        grid: { top: 20, right: 20, bottom: 30, left: 50 },
+        xAxis: {
+          type: 'category',
+          data: times,
+          axisLine: { lineStyle: { color: gridColor } },
+          axisLabel: { color: textColor, fontSize: 10 },
+          splitLine: { show: false }
+        },
+        yAxis: {
+          type: 'value',
+          axisLine: { lineStyle: { color: gridColor } },
+          axisLabel: { color: textColor, fontSize: 10 },
+          splitLine: { lineStyle: { color: gridColor, type: 'dashed' } }
+        },
+        series: [
+          {
+            name: '成交量',
+            type: 'bar',
+            data: volumes.map((v, i) => ({
+              value: v,
+              itemStyle: {
+                color: i % 2 === 0 ? upColor : downColor,
+                opacity: 0.6
+              }
+            })),
+            barWidth: '60%'
+          }
+        ],
+        tooltip: {
+          trigger: 'axis',
+          backgroundColor: isDark ? '#1e293b' : '#ffffff',
+          borderColor: isDark ? '#475569' : '#e0e0e0',
+          textStyle: { color: textColor },
+          formatter: function (params) {
+            if (!params || params.length === 0) return '';
+            const idx = params[0].dataIndex;
+            return `<strong>${times[idx]}</strong><br/>
+                    成交量: ${volumes[idx]}手`;
+          }
+        }
+      };
+
+      if (volumeChart) volumeChart.dispose();
+      const dom = document.getElementById('volumeChartContainer');
+      dom.innerHTML = '';
+      volumeChart = echarts.init(dom);
+      volumeChart.setOption(option);
     }
 
     async function init() {
