@@ -432,9 +432,12 @@
         const change = parseFloat(s.change) || 0, price = parseFloat(s.price) || 0;
         const isUp = change >= 0, color = isUp ? up : down, sign = isUp ? '+' : '';
         const active = currentStock && currentStock.code === s.code ? 'active' : '';
+        const priceDisplay = price === 0 ? '--' : price.toFixed(2);
+        const changeDisplay = price === 0 ? '--' : `${sign}${change.toFixed(2)}%`;
+        const priceColor = price === 0 ? '#999' : color;
         return `<tr class="${active}" data-code="${s.code}"><td>${s.code}</td><td>${s.name || '未知'}</td>
-        <td class="price" style="text-align:right;color:${color}">${price.toFixed(2)}</td>
-        <td style="text-align:right;color:${color}">${sign}${change.toFixed(2)}%</td></tr>`;
+        <td class="price" style="text-align:right;color:${priceColor}">${priceDisplay}</td>
+        <td style="text-align:right;color:${priceColor}">${changeDisplay}</td></tr>`;
       }).join('');
       tbody.querySelectorAll('tr').forEach(row => row.addEventListener('click', () => {
         const code = row.dataset.code; const stock = stocks.find(s => s.code === code); if (stock) selectStock(stock);
@@ -444,7 +447,12 @@
     async function selectStock(stock) {
       currentStock = stock;
       document.getElementById('chartTitle').textContent = `${stock.name} (${stock.code})`;
-      document.getElementById('priceInfo').textContent = stock.price ? `最新价 ${stock.price.toFixed(2)} | 涨跌幅 ${stock.change >= 0 ? '+' : ''}${(stock.change || 0).toFixed(2)}%` : '';
+      const price = parseFloat(stock.price) || 0;
+      if (price === 0) {
+        document.getElementById('priceInfo').textContent = '停牌/退市';
+      } else {
+        document.getElementById('priceInfo').textContent = `最新价 ${stock.price.toFixed(2)} | 涨跌幅 ${stock.change >= 0 ? '+' : ''}${(stock.change || 0).toFixed(2)}%`;
+      }
       document.getElementById('chartContainer').innerHTML = '<div class="loading">加载K线中...</div>';
       renderStockTable(filteredStocks);
       const searchInput = document.getElementById('searchInput');
