@@ -294,30 +294,40 @@ app.get('/api/stocklist', (req, res) => {
 app.get('/api/quote', async (req, res) => {
   const codes = (req.query.codes || '').split(',').filter(Boolean);
   if (codes.length === 0) return res.json([]);
+
+  const BATCH_SIZE = 80;
+  const batches = [];
+  for (let i = 0; i < codes.length; i += BATCH_SIZE) {
+    batches.push(codes.slice(i, i + BATCH_SIZE));
+  }
+
+  const results = {};
   try {
-    const sinaCodes = codes.map(c => (c.startsWith('6') ? 'sh' : 'sz') + c).join(',');
-    const resp = await axios.get(`https://hq.sinajs.cn/list=${sinaCodes}`, {
-      headers: { 'Referer': 'https://finance.sina.com.cn' }
-    });
-    const lines = resp.data.split('\n').filter(Boolean);
-    const results = {};
-    lines.forEach(line => {
-      const m = line.match(/hq_str_(s[hz]\d+)="(.+)"/);
-      if (!m) return;
-      const code = m[1].replace(/^sh|^sz/, '');
-      const f = m[2].split(',');
-      const price = parseFloat(f[3]) || 0;
-      const prevClose = parseFloat(f[2]) || price;
-      results[code] = {
-        code, name: f[0], price,
-        open: parseFloat(f[1]) || 0,
-        high: parseFloat(f[4]) || 0,
-        low: parseFloat(f[5]) || 0,
-        volume: parseFloat(f[8]) || 0,
-        prevClose,
-        change: prevClose ? parseFloat(((price - prevClose) / prevClose * 100).toFixed(2)) : 0
-      };
-    });
+    for (const batch of batches) {
+      const sinaCodes = batch.map(c => (c.startsWith('6') ? 'sh' : 'sz') + c).join(',');
+      const resp = await axios.get(`https://hq.sinajs.cn/list=${sinaCodes}`, {
+        headers: { 'Referer': 'https://finance.sina.com.cn' }
+      });
+      const lines = resp.data.split('\n').filter(Boolean);
+      lines.forEach(line => {
+        const m = line.match(/hq_str_(s[hz]\d+)="(.+)"/);
+        if (!m) return;
+        const code = m[1].replace(/^sh|^sz/, '');
+        const f = m[2].split(',');
+        const price = parseFloat(f[3]) || 0;
+        const prevClose = parseFloat(f[2]) || price;
+        results[code] = {
+          code, name: f[0], price,
+          open: parseFloat(f[1]) || 0,
+          high: parseFloat(f[4]) || 0,
+          low: parseFloat(f[5]) || 0,
+          volume: parseFloat(f[8]) || 0,
+          prevClose,
+          change: prevClose ? parseFloat(((price - prevClose) / prevClose * 100).toFixed(2)) : 0
+        };
+      });
+      await new Promise(r => setTimeout(r, 100));
+    }
     res.json(Object.values(results));
   } catch (e) {
     console.error('❌ 获取行情失败:', e.message);
