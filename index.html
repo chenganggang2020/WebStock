@@ -225,6 +225,29 @@
       border-color: #3b82f6;
     }
 
+    .period-toggle {
+      display: flex;
+      gap: 6px;
+      padding-left: 8px;
+      border-left: 1px solid var(--border);
+    }
+
+    .period-btn {
+      padding: 4px 12px;
+      border: 1px solid var(--btn-border);
+      background: var(--btn-bg);
+      color: var(--btn-color);
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+    }
+
+    .period-btn.active {
+      background: #10b981;
+      color: #fff;
+      border-color: #10b981;
+    }
+
     .ma-set-btn {
       margin-left: 6px;
       font-size: 14px;
@@ -422,6 +445,60 @@
       color: #64748b;
     }
 
+    .minute-deals {
+      background: var(--card-bg);
+      border-radius: 8px;
+      overflow: hidden;
+      margin-top: 10px;
+    }
+
+    .deals-header {
+      padding: 8px 12px;
+      background: var(--bg);
+      font-size: 12px;
+      color: #64748b;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .deals-list {
+      max-height: 200px;
+      overflow-y: auto;
+    }
+
+    .deal-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 4px 8px;
+      font-size: 11px;
+    }
+
+    .deal-row.header {
+      font-weight: 600;
+      background: var(--bg);
+      color: #64748b;
+    }
+
+    .deal-row span {
+      flex: 1;
+      text-align: center;
+    }
+
+    .deal-row span:first-child {
+      text-align: left;
+    }
+
+    .deal-row span:last-child {
+      text-align: right;
+    }
+
+    .deal-row.up {
+      color: var(--up);
+    }
+
+    .deal-row.down {
+      color: var(--down);
+    }
+
     .indicator-btns.hidden {
       display: none;
     }
@@ -466,6 +543,11 @@
         <button class="ind-btn" data-ind="obv">OBV</button>
         <button class="ind-btn" data-ind="vwap">VWAP</button>
         <button class="ind-btn" data-ind="atr">ATR</button>
+        <div class="period-toggle" id="periodToggle" style="display:none;">
+          <button class="period-btn active" data-period="day">日线</button>
+          <button class="period-btn" data-period="week">周线</button>
+          <button class="period-btn" data-period="month">月线</button>
+        </div>
         <button class="theme-btn" id="themeToggle">🌙深色</button>
         <button class="ma-set-btn" id="maSettingsBtn" title="设置均线周期">⚙️</button>
       </div>
@@ -557,6 +639,16 @@
             </div>
           </div>
         </div>
+        <div class="minute-deals">
+          <div class="deals-header">分时成交</div>
+          <div class="deals-list" id="dealsList">
+            <div class="deal-row header">
+              <span>时间</span>
+              <span>价格</span>
+              <span>成交量</span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
     <div id="klineView" class="main-content" style="display:none;">
@@ -580,7 +672,7 @@
 
   <script>
     // 全局状态
-    let allStocks = [], filteredStocks = [], currentStock = null, currentRawData = [], currentIndicator = 'ma', klineChart = null;
+    let allStocks = [], filteredStocks = [], currentStock = null, currentRawData = [], currentIndicator = 'ma', currentPeriod = 'day', currentView = 'realtime', klineChart = null;
     let timeChart = null, volumeChart = null;
     let maPeriods = [5, 10, 15, 30];
     let currentPage = 0;
@@ -697,12 +789,8 @@
       renderStockTable(filteredStocks);
       refreshQuotes(filteredStocks);
 
-      loadRealtimeData(stock.code);
-
-      showRealtimeView();
-
       try {
-        const resp = await fetch(`/api/kline?code=${stock.code}`);
+        const resp = await fetch('/api/kline?code=' + stock.code + '&period=' + currentPeriod);
         const data = await resp.json();
         if (Array.isArray(data) && data.length > 0) {
           currentRawData = data;
@@ -710,6 +798,13 @@
         }
       } catch (e) {
         console.error('加载K线数据失败:', e);
+      }
+
+      if (currentView === 'kline') {
+        showKlineView();
+      } else {
+        loadRealtimeData(stock.code);
+        showRealtimeView();
       }
     }
 
@@ -1111,24 +1206,60 @@
     }
 
     function showRealtimeView() {
+      currentView = 'realtime';
       document.getElementById('realtimeBtn').classList.add('active');
       document.getElementById('klineBtn').classList.remove('active');
       document.getElementById('realtimeView').style.display = 'flex';
       document.getElementById('klineView').style.display = 'none';
       document.getElementById('indicatorBtns').style.display = 'none';
+      document.getElementById('periodToggle').style.display = 'none';
       if (currentStock) {
         loadRealtimeData(currentStock.code);
       }
     }
 
     function showKlineView() {
+      currentView = 'kline';
       document.getElementById('klineBtn').classList.add('active');
       document.getElementById('realtimeBtn').classList.remove('active');
       document.getElementById('klineView').style.display = 'flex';
       document.getElementById('realtimeView').style.display = 'none';
       document.getElementById('indicatorBtns').style.display = 'flex';
+      document.getElementById('periodToggle').style.display = 'flex';
+
       if (currentRawData.length > 0) {
         renderKlineChart(currentRawData, currentIndicator);
+      }
+    }
+
+    document.querySelectorAll('.period-btn').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        const period = this.getAttribute('data-period');
+        if (period === currentPeriod) return;
+
+        document.querySelectorAll('.period-btn').forEach(function(b) {
+          b.classList.remove('active');
+        });
+        this.classList.add('active');
+
+        currentPeriod = period;
+        if (currentStock) {
+          loadKlineData(currentStock.code, period);
+        }
+      });
+    });
+
+    async function loadKlineData(code, period) {
+      try {
+        const resp = await fetch('/api/kline?code=' + code + '&period=' + period);
+        const data = await resp.json();
+        if (Array.isArray(data) && data.length > 0) {
+          currentRawData = data;
+          calcMAFromData(currentRawData, maPeriods);
+          renderKlineChart(currentRawData, currentIndicator);
+        }
+      } catch (e) {
+        console.error('加载K线数据失败:', e);
       }
     }
 
@@ -1417,6 +1548,51 @@
       dom.innerHTML = '';
       timeChart = echarts.init(dom);
       timeChart.setOption(option);
+
+      renderMinuteDeals(minuteData);
+    }
+
+    function renderMinuteDeals(minuteData) {
+      const dealsList = document.getElementById('dealsList');
+      if (!dealsList || !minuteData || minuteData.length === 0) return;
+
+      const today = new Date().toISOString().split('T')[0];
+      const todayData = minuteData.filter(item => {
+        const timeStr = item.time;
+        return timeStr && (timeStr.startsWith(today) || !timeStr.includes('-'));
+      });
+
+      todayData.sort((a, b) => b.time.localeCompare(a.time));
+
+      const recentDeals = todayData.slice(0, 20);
+
+      let html = '<div class="deal-row header"><span>时间</span><span>价格</span><span>成交量</span></div>';
+      const prevClose = currentQuote ? currentQuote.prevClose : 0;
+
+      recentDeals.forEach(deal => {
+        const price = deal.price || 0;
+        const direction = price >= prevClose ? 'up' : 'down';
+        let timeStr = deal.time || '-';
+        if (timeStr.includes(' ')) {
+          timeStr = timeStr.split(' ')[1];
+        }
+        html += '<div class="deal-row ' + direction + '">';
+        html += '<span>' + timeStr + '</span>';
+        html += '<span>' + (price > 0 ? price.toFixed(2) : '-') + '</span>';
+        html += '<span>' + ((deal.volume || 0) > 0 ? formatVolume(deal.volume) : '-') + '</span>';
+        html += '</div>';
+      });
+
+      dealsList.innerHTML = html;
+    }
+
+    function formatVolume(vol) {
+      if (vol >= 100000000) {
+        return (vol / 100000000).toFixed(2) + '亿';
+      } else if (vol >= 10000) {
+        return (vol / 10000).toFixed(2) + '万';
+      }
+      return vol.toString();
     }
 
     function renderVolumeChart(minuteData) {
