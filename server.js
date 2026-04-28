@@ -161,7 +161,7 @@ function calcMACD(data, closeKey = 'close', fast = 12, slow = 26, signal = 9) {
   return { dif, dea, macd };
 }
 
-function calcKDJ(data, highKey='high', lowKey='low', closeKey='close', n=9, m1=3, m2=3) {
+function calcKDJ(data, highKey = 'high', lowKey = 'low', closeKey = 'close', n = 9, m1 = 3, m2 = 3) {
   const k = [], d = [], j = [];
   let prevK = 50, prevD = 50;
   for (let i = 0; i < data.length; i++) {
@@ -180,12 +180,12 @@ function calcKDJ(data, highKey='high', lowKey='low', closeKey='close', n=9, m1=3
 }
 
 // 新增指标
-function calcRSI(data, closeKey='close', period=14) {
+function calcRSI(data, closeKey = 'close', period = 14) {
   const rsi = [];
   let avgGain = 0, avgLoss = 0;
   for (let i = 0; i < data.length; i++) {
     if (i === 0) { rsi.push(null); continue; }
-    const change = data[i][closeKey] - data[i-1][closeKey];
+    const change = data[i][closeKey] - data[i - 1][closeKey];
     const gain = change > 0 ? change : 0;
     const loss = change < 0 ? -change : 0;
     if (i < period) {
@@ -207,7 +207,7 @@ function calcRSI(data, closeKey='close', period=14) {
   return rsi;
 }
 
-function calcCCI(data, highKey='high', lowKey='low', closeKey='close', period=14) {
+function calcCCI(data, highKey = 'high', lowKey = 'low', closeKey = 'close', period = 14) {
   const cci = [];
   for (let i = 0; i < data.length; i++) {
     if (i < period - 1) { cci.push(null); continue; }
@@ -227,7 +227,7 @@ function calcCCI(data, highKey='high', lowKey='low', closeKey='close', period=14
   return cci;
 }
 
-function calcOBV(data, closeKey='close', volumeKey='volume') {
+function calcOBV(data, closeKey = 'close', volumeKey = 'volume') {
   const obv = [];
   let sum = 0;
   for (let i = 0; i < data.length; i++) {
@@ -235,8 +235,8 @@ function calcOBV(data, closeKey='close', volumeKey='volume') {
       sum = data[i][volumeKey];
       obv.push(sum);
     } else {
-      if (data[i][closeKey] > data[i-1][closeKey]) sum += data[i][volumeKey];
-      else if (data[i][closeKey] < data[i-1][closeKey]) sum -= data[i][volumeKey];
+      if (data[i][closeKey] > data[i - 1][closeKey]) sum += data[i][volumeKey];
+      else if (data[i][closeKey] < data[i - 1][closeKey]) sum -= data[i][volumeKey];
       // 持平则不变
       obv.push(sum);
     }
@@ -244,7 +244,7 @@ function calcOBV(data, closeKey='close', volumeKey='volume') {
   return obv;
 }
 
-function calcVWAP(data, highKey='high', lowKey='low', closeKey='close', volumeKey='volume') {
+function calcVWAP(data, highKey = 'high', lowKey = 'low', closeKey = 'close', volumeKey = 'volume') {
   const vwap = [];
   let cumVolume = 0, cumPriceVolume = 0;
   for (let i = 0; i < data.length; i++) {
@@ -261,11 +261,11 @@ function calcVWAP(data, highKey='high', lowKey='low', closeKey='close', volumeKe
   return vwap;
 }
 
-function calcATR(data, highKey='high', lowKey='low', closeKey='close', period=14) {
+function calcATR(data, highKey = 'high', lowKey = 'low', closeKey = 'close', period = 14) {
   const atr = [];
   let prevATR = 0;
   for (let i = 0; i < data.length; i++) {
-    const high = data[i][highKey], low = data[i][lowKey], close = data[i-1] ? data[i-1][closeKey] : data[i][closeKey];
+    const high = data[i][highKey], low = data[i][lowKey], close = data[i - 1] ? data[i - 1][closeKey] : data[i][closeKey];
     const tr = Math.max(high - low, Math.abs(high - close), Math.abs(low - close));
     if (i < period - 1) {
       atr.push(null);
@@ -274,7 +274,7 @@ function calcATR(data, highKey='high', lowKey='low', closeKey='close', period=14
     if (i === period - 1) {
       let sum = 0;
       for (let j = 0; j < period; j++) {
-        const hh = data[j][highKey], ll = data[j][lowKey], cc = j > 0 ? data[j-1][closeKey] : data[j][closeKey];
+        const hh = data[j][highKey], ll = data[j][lowKey], cc = j > 0 ? data[j - 1][closeKey] : data[j][closeKey];
         sum += Math.max(hh - ll, Math.abs(hh - cc), Math.abs(ll - cc));
       }
       prevATR = sum / period;
@@ -323,7 +323,7 @@ app.get('/api/quote', async (req, res) => {
           low: parseFloat(f[5]) || 0,
           volume: parseFloat(f[8]) || 0,
           prevClose,
-          change: prevClose ? parseFloat(((price - prevClose) / prevClose * 100).toFixed(2)) : 0
+          change: prevClose ? Number(((price - prevClose) / prevClose * 100).toFixed(2)) : 0
         };
       });
       await new Promise(r => setTimeout(r, 100));
