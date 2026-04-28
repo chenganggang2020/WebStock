@@ -1232,12 +1232,12 @@
       }
     }
 
-    document.querySelectorAll('.period-btn').forEach(function(btn) {
-      btn.addEventListener('click', function() {
+    document.querySelectorAll('.period-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () {
         const period = this.getAttribute('data-period');
         if (period === currentPeriod) return;
 
-        document.querySelectorAll('.period-btn').forEach(function(b) {
+        document.querySelectorAll('.period-btn').forEach(function (b) {
           b.classList.remove('active');
         });
         this.classList.add('active');
