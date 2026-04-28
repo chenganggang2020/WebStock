@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>股票行情看板</title>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+  <style>
+    :root {
+      --bg: #f5f6fa;
+      --card-bg: #ffffff;
+      --text: #2c3e50;
+      --up: #e74c3c;
+      --down: #2ecc71;
+      --border: #e0e0e0;
+      --hover: #f0f7ff;
+      --active: #dbeafe;
+      --focus: #3b82f6;
+      --chart-bg: #ffffff;
+      --btn-bg: #ffffff;
+      --btn-color: #2c3e50;
+      --btn-border: #d1d5db;
+      --scrollbar-track: #f1f1f1;
+      --scrollbar-thumb: #c1c1c1;
+    }
+    body.dark {
+      --bg: #0f172a;
+      --card-bg: #1e293b;
+      --text: #cbd5e1;
+      --up: #ff6b6b;
+      --down: #51cf66;
+      --border: #0f172a;
+      --hover: #1e293b;
+      --active: #334155;
+      --focus: #60a5fa;
+      --chart-bg: #1e293b;
+      --btn-bg: #1e293b;
+      --btn-color: #cbd5e1;
+      --btn-border: #475569;
+      --scrollbar-track: #1e293b;
+      --scrollbar-thumb: #475569;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
+    }
+    .sidebar { width: 320px; background: var(--card-bg); border-right: 1px solid var(--border); display: flex; flex-direction: column; }
+    .search-box {
+      padding: 12px; border-bottom: 1px solid var(--border);
+      position: relative; display: flex; align-items: center;
+    }
+    .search-box input {
+      width: 100%; padding: 10px 30px 10px 10px;
+      border: 2px solid var(--border); border-radius: 8px;
+      background: var(--card-bg); color: var(--text); outline: none; font-size: 14px;
+    }
+    .search-box input:focus { border-color: var(--focus); }
+    .search-box .clear-btn {
+      position: absolute; right: 20px; top: 50%; transform: translateY(-50%);
+      border: none; background: transparent; color: #94a3b8; font-size: 20px;
+      line-height: 1; cursor: pointer; display: none;
+      width: 20px; height: 20px; justify-content: center; align-items: center;
+    }
+    .search-box .clear-btn.visible { display: flex; }
+    .search-hint { padding: 4px 12px 10px; font-size: 12px; color: #94a3b8; }
+    .stock-table-wrap {
+      flex: 1; overflow-y: auto;
+      scrollbar-width: thin;
+      scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+    }
+    .stock-table-wrap::-webkit-scrollbar { width: 8px; }
+    .stock-table-wrap::-webkit-scrollbar-track { background: var(--scrollbar-track); }
+    .stock-table-wrap::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 4px; }
+    .stock-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .stock-table th {
+      position: sticky; top: 0; background: var(--card-bg); padding: 8px 10px;
+      text-align: left; font-weight: 600; border-bottom: 2px solid var(--border); z-index: 1;
+    }
+    .stock-table td { padding: 8px 10px; border-bottom: 1px solid var(--border); cursor: pointer; }
+    .stock-table tr:hover td { background: var(--hover); }
+    .stock-table tr.active td { background: var(--active) !important; }
+    .price { font-weight: 600; }
+    .main { flex: 1; display: flex; flex-direction: column; }
+    .chart-header {
+      padding: 12px 20px; border-bottom: 1px solid var(--border);
+      background: var(--card-bg); display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+    }
+    .chart-header h2 { font-size: 18px; }
+    .price-info { font-size: 14px; color: #64748b; }
+    .indicator-btns { display: flex; gap: 6px; margin-left: auto; flex-wrap: wrap; }
+    .ind-btn, .theme-btn, .ma-set-btn {
+      padding: 4px 12px; border: 1px solid var(--btn-border); background: var(--btn-bg);
+      color: var(--btn-color); border-radius: 4px; cursor: pointer; font-size: 12px;
+    }
+    .ind-btn.active { background: #3b82f6; color: #fff; border-color: #3b82f6; }
+    .ma-set-btn { margin-left: 6px; font-size: 14px; }
+    .chart-container { flex: 1; background: var(--chart-bg); }
+    .loading { display: flex; align-items: center; justify-content: center; height: 100%; color: #94a3b8; }
+
+    .modal-overlay {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.4); display: flex; justify-content: center; align-items: center; z-index: 9999;
+    }
+    .modal {
+      background: var(--card-bg); color: var(--text); padding: 24px; border-radius: 8px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.2); min-width: 300px;
+    }
+    .modal input { width: 100%; padding: 8px; margin: 8px 0; border: 1px solid var(--border); border-radius: 4px; background: var(--bg); color: var(--text); }
+    .modal-actions { display: flex; gap: 8px; justify-content: flex-end; }
+    .modal-actions button { padding: 6px 12px; border: 1px solid var(--btn-border); border-radius: 4px; cursor: pointer; background: var(--btn-bg); color: var(--btn-color); }
+  </style>
+</head>
+<body>
+  <div class="sidebar">
+    <div class="search-box">
+      <input id="searchInput" type="text" placeholder="输入代码/拼音/中文" autocomplete="off">
+      <button id="clearBtn" class="clear-btn">✕</button>
+    </div>
+    <div class="search-hint">💡 代码/拼音首字母/全拼/中文</div>
+    <div class="stock-table-wrap">
+      <table class="stock-table">
+        <thead><tr><th>代码</th><th>名称</th><th style="text-align:right">最新价</th><th style="text-align:right">涨跌幅</th></tr></thead>
+        <tbody id="stockTbody"></tbody>
+      </table>
+    </div>
+  </div>
+  <div class="main">
+    <div class="chart-header">
+      <h2 id="chartTitle">请选择股票</h2>
+      <span class="price-info" id="priceInfo"></span>
+      <div class="indicator-btns">
+        <button class="ind-btn active" data-ind="ma">均线</button>
+        <button class="ind-btn" data-ind="macd">MACD</button>
+        <button class="ind-btn" data-ind="kdj">KDJ</button>
+        <button class="ind-btn" data-ind="rsi">RSI</button>
+        <button class="ind-btn" data-ind="cci">CCI</button>
+        <button class="ind-btn" data-ind="obv">OBV</button>
+        <button class="ind-btn" data-ind="vwap">VWAP</button>
+        <button class="ind-btn" data-ind="atr">ATR</button>
+        <button class="theme-btn" id="themeToggle">🌙深色</button>
+        <button class="ma-set-btn" id="maSettingsBtn" title="设置均线周期">⚙️</button>
+      </div>
+    </div>
+    <div class="chart-container" id="chartContainer">
+      <div class="loading">选择股票查看K线</div>
+    </div>
+  </div>
+
+  <div id="maModalOverlay" class="modal-overlay" style="display:none;">
+    <div class="modal">
+      <h3>设置均线周期</h3>
+      <label>请输入周期，用英文逗号隔开（例如：5,10,20,60）</label>
+      <input type="text" id="maPeriodsInput" value="5,10,15,30">
+      <div class="modal-actions">
+        <button id="maModalCancel">取消</button>
+        <button id="maModalOk">确定</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 全局状态
+    let allStocks=[], filteredStocks=[], currentStock=null, currentRawData=[], currentIndicator='ma', klineChart=null;
+    let maPeriods = [5,10,15,30];
+
+    function fuzzyMatch(q,t) {
+      if(!q) return true;
+      q=q.toLowerCase().replace(/\s+/g,'');
+      t=t.toLowerCase();
+      if(t.includes(q)) return true;
+      let qi=0, ti=0;
+      while(qi<q.length && ti<t.length){ if(q[qi]===t[ti])qi++; ti++; }
+      return qi===q.length;
+    }
+
+    function matchScore(query, stock) {
+      const q=query.toLowerCase().replace(/\s+/g,'');
+      let score=0;
+      const code=(stock.code||'').toLowerCase(), name=(stock.name||'').toLowerCase(),
+            abbr=(stock.abbr||'').toLowerCase(), pinyin=(stock.pinyin||'').toLowerCase();
+      if(code.startsWith(q)) score=Math.max(score,100);
+      if(abbr&&abbr.includes(q)) score=Math.max(score,90);
+      if(pinyin&&pinyin.includes(q)) score=Math.max(score,85);
+      if(name.includes(q)) score=Math.max(score,80);
+      if(fuzzyMatch(query,stock.name)||fuzzyMatch(query,stock.code)) score=Math.max(score,40);
+      return score;
+    }
+
+    function searchStocks(query) {
+      if(!query.trim()) return allStocks.slice(0,80);
+      const res=[];
+      for(const s of allStocks){ const sc=matchScore(query,s); if(sc>0) res.push({...s,score:sc}); }
+      res.sort((a,b)=>b.score-a.score);
+      return res.slice(0,80);
+    }
+
+    async function refreshQuotes(stocks) {
+      if(!stocks.length) return;
+      const codes=stocks.map(s=>s.code).join(',');
+      try {
+        const resp=await fetch(`/api/quote?codes=${codes}`);
+        const quotes=await resp.json();
+        const map={};
+        quotes.forEach(q=>map[q.code]=q);
+        allStocks.forEach(s=>{ if(map[s.code]) Object.assign(s,{price:map[s.code].price, change:map[s.code].change, open:map[s.code].open, high:map[s.code].high, low:map[s.code].low, volume:map[s.code].volume, prevClose:map[s.code].prevClose}); });
+        renderStockTable(filteredStocks);
+        if(currentStock&&map[currentStock.code]){
+          const q=map[currentStock.code];
+          document.getElementById('priceInfo').textContent=`最新价 ${q.price.toFixed(2)} | 涨跌幅 ${q.change>=0?'+':''}${q.change.toFixed(2)}%`;
+        }
+      } catch(e) { console.error(e); }
+    }
+
+    function renderStockTable(stocks) {
+      const tbody=document.getElementById('stockTbody');
+      if(!stocks.length) { tbody.innerHTML='<tr><td colspan="4" style="text-align:center;padding:30px;">无结果</td></tr>'; return; }
+      const style=getComputedStyle(document.body);
+      const up=style.getPropertyValue('--up').trim()||'#e74c3c', down=style.getPropertyValue('--down').trim()||'#2ecc71';
+      tbody.innerHTML=stocks.map(s=>{
+        const change=parseFloat(s.change)||0, price=parseFloat(s.price)||0;
+        const isUp=change>=0, color=isUp?up:down, sign=isUp?'+':'';
+        const active=currentStock&&currentStock.code===s.code?'active':'';
+        return `<tr class="${active}" data-code="${s.code}"><td>${s.code}</td><td>${s.name||'未知'}</td>
+        <td class="price" style="text-align:right;color:${color}">${price.toFixed(2)}</td>
+        <td style="text-align:right;color:${color}">${sign}${change.toFixed(2)}%</td></tr>`;
+      }).join('');
+      tbody.querySelectorAll('tr').forEach(row=> row.addEventListener('click',()=>{
+        const code=row.dataset.code; const stock=stocks.find(s=>s.code===code); if(stock) selectStock(stock);
+      }));
+    }
+
+    async function selectStock(stock) {
+      currentStock=stock;
+      document.getElementById('chartTitle').textContent=`${stock.name} (${stock.code})`;
+      document.getElementById('priceInfo').textContent=stock.price?`最新价 ${stock.price.toFixed(2)} | 涨跌幅 ${stock.change>=0?'+':''}${(stock.change||0).toFixed(2)}%`:'';
+      document.getElementById('chartContainer').innerHTML='<div class="loading">加载K线中...</div>';
+      renderStockTable(filteredStocks);
+      const searchInput = document.getElementById('searchInput');
+      searchInput.value = '';
+      toggleClearButton();
+      filteredStocks = allStocks.slice(0, 80);
+      renderStockTable(filteredStocks);
+      refreshQuotes(filteredStocks);
+      try {
+        const resp=await fetch(`/api/kline?code=${stock.code}`);
+        const data=await resp.json();
+        if(!Array.isArray(data)||data.length===0){ document.getElementById('chartContainer').innerHTML='<div class="loading">无历史数据</div>'; return; }
+        currentRawData=data;
+        calcMAFromData(currentRawData, maPeriods);
+        renderKlineChart(currentRawData, currentIndicator);
+      } catch(e) { document.getElementById('chartContainer').innerHTML=`<div class="loading">请求失败：${e.message}</div>`; }
+    }
+
+    function calcMAFromData(data, periods) {
+      periods.forEach(p => {
+        const key = `ma${p}`;
+        for (let i = 0; i < data.length; i++) {
+          if (i < p - 1) { data[i][key] = null; continue; }
+          let sum = 0;
+          for (let j = i - p + 1; j <= i; j++) sum += data[j].close;
+          data[i][key] = +(sum / p).toFixed(2);
+        }
+      });
+    }
+
+    function renderKlineChart(rawData, indicator) {
+      const isDark = document.body.classList.contains('dark');
+      const upColor = isDark ? '#ff6b6b' : '#e74c3c';
+      const downColor = isDark ? '#51cf66' : '#2ecc71';
+      const textColor = isDark ? '#cbd5e1' : '#2c3e50';
+      const bgColor = isDark ? '#1e293b' : '#ffffff';
+      const gridColor = isDark ? '#4a5568' : '#e0e0e0';
+      const axisColor = gridColor;
+
+      // 提示框样式
+      const tooltipBg = isDark ? '#1e293b' : '#ffffff';
+      const tooltipBorder = isDark ? '#475569' : '#e0e0e0';
+      const tooltipTextColor = isDark ? '#cbd5e1' : '#2c3e50';
+
+      // 坐标轴标签样式
+      const axisLabelBg = isDark ? '#1e293b' : '#ffffff';
+      const axisLabelColor = isDark ? '#cbd5e1' : '#2c3e50';
+      const axisLabelBorder = isDark ? '#475569' : '#d1d5db';
+
+      const dates=rawData.map(d=>d.date);
+      const ohlc=rawData.map(d=>[d.open,d.close,d.low,d.high]);
+      const volumes=rawData.map(d=>{
+        if (typeof d.volume === 'number') return +(d.volume / 10000).toFixed(0);
+        return 0;
+      });
+
+      const baseSeries=[{
+        name:'K线',
+        type:'candlestick',
+        data:ohlc,
+        itemStyle:{ color:upColor, color0:downColor, borderColor:upColor, borderColor0:downColor },
+        xAxisIndex:0, yAxisIndex:0, z:1
+      }];
+
+      let needThreeGrids = false;
+      let legendData = ['K线'];
+
+      if(indicator==='ma'){
+        const priceColors = ['#f1c40f', '#e74c3c', '#3498db', '#9b59b6', '#2ecc71', '#e67e22', '#1abc9c'];
+        const volColors = ['rgba(241,196,15,0.6)', 'rgba(231,76,60,0.6)', 'rgba(52,152,219,0.6)', 'rgba(155,89,182,0.6)', 'rgba(46,204,113,0.6)', 'rgba(230,126,34,0.6)', 'rgba(26,188,156,0.6)'];
+
+        maPeriods.forEach((p, idx) => {
+          const key = `ma${p}`;
+          const data = rawData.map(d => (typeof d[key] === 'number' ? d[key] : null));
+          const name = `MA${p}`;
+          baseSeries.push({
+            name, type:'line', data, smooth:true, connectNulls:true,
+            lineStyle:{ width:2, color:priceColors[idx % priceColors.length] },
+            symbol:'none', xAxisIndex:0, yAxisIndex:0, z:10
+          });
+          legendData.push(name);
+        });
+
+        // 成交量均线
+        const volData = rawData.map(d => {
+          if (typeof d.volume === 'number') return +(d.volume / 10000).toFixed(2);
+          return 0;
+        });
+        maPeriods.forEach((p, idx) => {
+          const volMA = (() => {
+            const result = [];
+            for (let i = 0; i < volData.length; i++) {
+              if (i < p - 1) { result.push(null); continue; }
+              let sum = 0;
+              for (let j = i - p + 1; j <= i; j++) sum += volData[j];
+              result.push(+(sum / p).toFixed(2));
+            }
+            return result;
+          })();
+          const name = `VOL_MA${p}`;
+          baseSeries.push({
+            name, type:'line', data: volMA, smooth:true, connectNulls:true,
+            lineStyle:{ width:1, color:volColors[idx % volColors.length] },
+            symbol:'none', xAxisIndex:1, yAxisIndex:1, z:5
+          });
+          legendData.push(name);
+        });
+      } else if(indicator==='macd'){
+        needThreeGrids = true;
+        baseSeries.push(
+          { name:'DIF', type:'line', data:rawData.map(d=>d.macd_dif), lineStyle:{color:'#2196F3'}, symbol:'none', xAxisIndex:1, yAxisIndex:1 },
+          { name:'DEA', type:'line', data:rawData.map(d=>d.macd_dea), lineStyle:{color:'#FF9800'}, symbol:'none', xAxisIndex:1, yAxisIndex:1 },
+          { name:'MACD柱', type:'bar', data:rawData.map(d=>d.macd_bar), xAxisIndex:1, yAxisIndex:1,
+            itemStyle:{ color:params=>params.data>=0?upColor:downColor } }
+        );
+        legendData.push('DIF','DEA','MACD柱');
+      } else if(indicator==='kdj'){
+        needThreeGrids = true;
+        baseSeries.push(
+          { name:'K', type:'line', data:rawData.map(d=>d.kdj_k), lineStyle:{color:'#E91E63'}, symbol:'none', xAxisIndex:1, yAxisIndex:1 },
+          { name:'D', type:'line', data:rawData.map(d=>d.kdj_d), lineStyle:{color:'#2196F3'}, symbol:'none', xAxisIndex:1, yAxisIndex:1 },
+          { name:'J', type:'line', data:rawData.map(d=>d.kdj_j), lineStyle:{color:'#4CAF50'}, symbol:'none', xAxisIndex:1, yAxisIndex:1 }
+        );
+        legendData.push('K','D','J');
+      } else if(indicator==='rsi'){
+        baseSeries.push({ name:'RSI(14)', type:'line', data:rawData.map(d=>d.rsi), lineStyle:{color:'#9b59b6'}, symbol:'none',
+          xAxisIndex:1, yAxisIndex:1 });
+        needThreeGrids = true;
+        legendData.push('RSI(14)');
+      } else if(indicator==='cci'){
+        baseSeries.push({ name:'CCI(14)', type:'line', data:rawData.map(d=>d.cci), lineStyle:{color:'#e67e22'}, symbol:'none',
+          xAxisIndex:1, yAxisIndex:1 });
+        needThreeGrids = true;
+        legendData.push('CCI(14)');
+      } else if(indicator==='obv'){
+        baseSeries.push({ name:'OBV', type:'line', data:rawData.map(d=>d.obv), lineStyle:{color:'#1abc9c'}, symbol:'none',
+          xAxisIndex:1, yAxisIndex:1 });
+        needThreeGrids = true;
+        legendData.push('OBV');
+      } else if(indicator==='vwap'){
+        baseSeries.push({ name:'VWAP', type:'line', data:rawData.map(d=>d.vwap), lineStyle:{color:'#2ecc71', width:1}, symbol:'none',
+          xAxisIndex:0, yAxisIndex:0, z:5 });
+        legendData.push('VWAP');
+      } else if(indicator==='atr'){
+        baseSeries.push({ name:'ATR(14)', type:'line', data:rawData.map(d=>d.atr), lineStyle:{color:'#e74c3c'}, symbol:'none',
+          xAxisIndex:1, yAxisIndex:1 });
+        needThreeGrids = true;
+        legendData.push('ATR(14)');
+      }
+
+      // 成交量柱状图
+      const volX = (indicator === 'ma') ? 1 : (needThreeGrids ? 2 : 1);
+      const volY = (indicator === 'ma') ? 1 : (needThreeGrids ? 2 : 1);
+      const volSeries = {
+        name:'成交量(万手)',
+        type:'bar',
+        data:volumes.map((v,i)=>({value:v, itemStyle:{color:rawData[i].close>=rawData[i].open?upColor:downColor}})),
+        xAxisIndex:volX, yAxisIndex:volY
+      };
+      baseSeries.push(volSeries);
+      legendData.push('成交量(万手)');
+
+      const topMargin = '12%';
+      const axisCommon = {
+        axisLine: { lineStyle: { color: axisColor } },
+        splitLine: { lineStyle: { color: gridColor } }
+      };
+      const crossLineStyle = {
+        color: isDark ? '#718096' : '#ccc',
+        width: 1,
+        type: 'dashed',
+        opacity: 0.6
+      };
+
+      let grids, xAxes, yAxes;
+      if(indicator==='ma' || !needThreeGrids){
+        grids=[
+          { left:'8%',right:'3%',top:topMargin,height:'55%' },
+          { left:'8%',right:'3%',top:'75%',height:'15%' }
+        ];
+        xAxes = [0,1].map(idx => ({
+          type:'category',
+          data:dates,
+          gridIndex: idx,
+          axisLabel: idx === 0 ? { color: textColor, fontSize: 11 } : { show: false },
+          axisTick: { show: false },
+          ...axisCommon
+        }));
+        yAxes = [0,1].map(idx => ({
+          scale: true,
+          gridIndex: idx,
+          axisLabel: { color: textColor },
+          ...axisCommon,
+          name: idx === 1 ? '成交量(万手)' : undefined,
+          nameTextStyle: idx === 1 ? { color: textColor } : undefined
+        }));
+      } else {
+        grids=[
+          { left:'8%',right:'3%',top:topMargin,height:'35%' },
+          { left:'8%',right:'3%',top:'55%',height:'15%' },
+          { left:'8%',right:'3%',top:'78%',height:'12%' }
+        ];
+        xAxes = [0,1,2].map(idx => ({
+          type:'category',
+          data:dates,
+          gridIndex: idx,
+          axisLabel: idx === 0 ? { color: textColor, fontSize: 11 } : { show: false },
+          axisTick: { show: false },
+          ...axisCommon
+        }));
+        yAxes = [0,1,2].map(idx => ({
+          scale: true,
+          gridIndex: idx,
+          axisLabel: { color: textColor },
+          ...axisCommon,
+          name: idx === 2 ? '成交量(万手)' : undefined,
+          nameTextStyle: idx === 2 ? { color: textColor } : undefined
+        }));
+      }
+
+      const zoomX = (indicator === 'ma' || !needThreeGrids) ? [0,1] : [0,1,2];
+      const option = {
+        backgroundColor: bgColor,
+        legend: {
+          data: legendData, orient: 'horizontal', left: 'center', top: 0,
+          itemGap: 10, textStyle: { color: textColor, fontSize: 11 },
+          padding: [5,0,2,0], itemWidth: 14, itemHeight: 8
+        },
+        grid: grids,
+        xAxis: xAxes,
+        yAxis: yAxes,
+        tooltip: {
+          trigger: 'axis',
+          backgroundColor: tooltipBg,
+          borderColor: tooltipBorder,
+          textStyle: {
+            color: tooltipTextColor,
+            fontSize: 12
+          },
+          axisPointer: {
+            type: 'cross',
+            crossStyle: {
+              color: crossLineStyle.color,
+              width: crossLineStyle.width,
+              type: crossLineStyle.type
+            },
+            lineStyle: crossLineStyle,
+            label: {
+              backgroundColor: axisLabelBg,
+              color: axisLabelColor,
+              borderColor: axisLabelBorder,
+              borderWidth: 1,
+              shadowBlur: 0,
+              shadowColor: 'transparent',
+              textStyle: {
+                color: axisLabelColor
+              }
+            }
+          },
+          formatter: function(params) {
+            if (!params || params.length === 0) return '';
+            const idx = params[0].dataIndex;
+            const day = rawData[idx];
+            if (!day) return '';
+            let html = `<strong>${day.date}</strong><br/>`;
+            html += `开: ${day.open.toFixed(2)} &nbsp; 高: ${day.high.toFixed(2)} &nbsp; 低: ${day.low.toFixed(2)} &nbsp; 收: ${day.close.toFixed(2)}<br/>`;
+            params.forEach(p => {
+              if (p.seriesName === 'K线') return;
+              if (p.seriesName === '成交量(万手)') {
+                html += `${p.marker}${p.seriesName}: ${p.value}<br/>`;
+              } else {
+                const val = p.value;
+                html += `${p.marker}${p.seriesName}: ${val !== null && val !== undefined ? (typeof val === 'number' ? val.toFixed(2) : val) : '--'}<br/>`;
+              }
+            });
+            return html;
+          }
+        },
+        dataZoom: [
+          { type:'inside', xAxisIndex:zoomX, start:50, end:100 },
+          { type:'slider', xAxisIndex:zoomX, start:50, end:100, height:20, bottom:20, textStyle:{color:textColor}}
+        ],
+        series: baseSeries
+      };
+
+      if(klineChart) klineChart.dispose();
+      const dom = document.getElementById('chartContainer');
+      dom.innerHTML = '';
+      klineChart = echarts.init(dom);
+      klineChart.setOption(option);
+
+      if (indicator === 'ma') {
+        enableLegendDblClick();
+      }
+    }
+
+    function enableLegendDblClick() {
+      if (!klineChart) return;
+      const dom = klineChart.getDom();
+      const legendEl = dom.querySelector('.echarts-legend');
+      if (!legendEl) return;
+      legendEl.removeEventListener('dblclick', onLegendDblClick);
+      legendEl.addEventListener('dblclick', onLegendDblClick);
+    }
+
+    function onLegendDblClick(e) {
+      const target = e.target.closest('.echarts-legend-item');
+      if (target) {
+        const nameEl = target.querySelector('.echarts-legend-text');
+        if (nameEl && nameEl.textContent && nameEl.textContent.startsWith('MA')) {
+          openMASettings();
+        }
+      }
+    }
+
+    function openMASettings() {
+      document.getElementById('maPeriodsInput').value = maPeriods.join(',');
+      document.getElementById('maModalOverlay').style.display = 'flex';
+    }
+
+    function closeMASettings() {
+      document.getElementById('maModalOverlay').style.display = 'none';
+    }
+
+    function applyMASettings() {
+      const input = document.getElementById('maPeriodsInput').value;
+      const periods = input.split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n) && n > 0);
+      if (periods.length === 0) {
+        alert('请输入至少一个有效周期数字');
+        return;
+      }
+      maPeriods = periods;
+      calcMAFromData(currentRawData, maPeriods);
+      renderKlineChart(currentRawData, 'ma');
+      closeMASettings();
+    }
+
+    function toggleClearButton() {
+      const input = document.getElementById('searchInput');
+      const clearBtn = document.getElementById('clearBtn');
+      if (input.value.trim().length > 0) {
+        clearBtn.classList.add('visible');
+      } else {
+        clearBtn.classList.remove('visible');
+      }
+    }
+
+    function clearSearch() {
+      const input = document.getElementById('searchInput');
+      input.value = '';
+      toggleClearButton();
+      filteredStocks = allStocks.slice(0, 80);
+      renderStockTable(filteredStocks);
+      refreshQuotes(filteredStocks);
+      input.focus();
+    }
+
+    function bindButtons(){
+      document.querySelectorAll('.ind-btn').forEach(btn=>{
+        btn.addEventListener('click',()=>{
+          document.querySelectorAll('.ind-btn').forEach(b=>b.classList.remove('active'));
+          btn.classList.add('active');
+          currentIndicator=btn.dataset.ind;
+          if(currentRawData.length) renderKlineChart(currentRawData,currentIndicator);
+        });
+      });
+      document.getElementById('themeToggle').addEventListener('click',()=>{
+        document.body.classList.toggle('dark');
+        const btn=document.getElementById('themeToggle');
+        btn.textContent=document.body.classList.contains('dark')?'☀️浅色':'🌙深色';
+        if(currentRawData.length) renderKlineChart(currentRawData,currentIndicator);
+      });
+      document.getElementById('clearBtn').addEventListener('click', clearSearch);
+      const searchInput = document.getElementById('searchInput');
+      searchInput.addEventListener('input', (e) => {
+        toggleClearButton();
+        filteredStocks = searchStocks(e.target.value);
+        renderStockTable(filteredStocks);
+        refreshQuotes(filteredStocks);
+      });
+      toggleClearButton();
+
+      document.getElementById('maSettingsBtn').addEventListener('click', () => {
+        if (currentIndicator === 'ma') openMASettings();
+        else alert('请先切换到均线模式');
+      });
+      document.getElementById('maModalCancel').addEventListener('click', closeMASettings);
+      document.getElementById('maModalOk').addEventListener('click', applyMASettings);
+      document.getElementById('maModalOverlay').addEventListener('click', function(e){
+        if (e.target === this) closeMASettings();
+      });
+    }
+
+    async function init(){
+      const resp=await fetch('/api/stocklist');
+      allStocks=await resp.json();
+      filteredStocks=allStocks.slice(0,80);
+      renderStockTable(filteredStocks);
+      bindButtons();
+      refreshQuotes(filteredStocks);
+      setInterval(()=>refreshQuotes(filteredStocks),5000);
+    }
+
+    init();
+  </script>
+</body>
+</html>
