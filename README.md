@@ -2,7 +2,7 @@
 
 一个基于 Node.js + ECharts 的 A 股实时行情看板，支持 K 线图、多指标分析、拼音模糊搜索，数据来自公开免费接口。
 
-![界面截图](screenshot.png)
+![界面截图](https://github.com/xujh1969/WebStock/blob/main/WebStock.png)
 
 ## ✨ 主要功能
 
