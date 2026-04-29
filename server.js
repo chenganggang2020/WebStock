@@ -203,43 +203,42 @@ app.get('/api/kline', async function (req, res) {
 
   try {
     const market = code.startsWith('6') ? 'sh' : 'sz';
-    const url = 'https://money.finance.sina.com.cn/quotes_service/api/json_v2.php/CN_MarketData.getKLineData?symbol=' + market + code + '&scale=240&ma=no&datalen=500&klt=100';
+    const url = 'https://money.finance.sina.com.cn/quotes_service/api/json_v2.php/CN_MarketData.getKLineData?symbol=' + market + code + '&scale=240&ma=no&datalen=10000&klt=100';
+      const resp = await axios.get(url, { headers: { 'Referer': 'https://finance.sina.com.cn' } });
 
-    const resp = await axios.get(url, { headers: { 'Referer': 'https://finance.sina.com.cn' } });
-
-    const data = resp.data;
-    if (Array.isArray(data) && data.length > 0) {
-      const result = [];
-      for (let i = 0; i < data.length; i++) {
-        const item = data[i];
-        result.push({
-          date: item.day || '',
-          open: parseFloat(item.open) || 0,
-          close: parseFloat(item.close) || 0,
-          high: parseFloat(item.high) || 0,
-          low: parseFloat(item.low) || 0,
-          volume: parseFloat(item.volume) || 0,
-          amount: parseFloat(item.amount) || 0
-        });
+      const data = resp.data;
+      if (Array.isArray(data) && data.length > 0) {
+        const result = [];
+        for (let i = 0; i < data.length; i++) {
+          const item = data[i];
+          result.push({
+            date: item.day || '',
+            open: parseFloat(item.open) || 0,
+            close: parseFloat(item.close) || 0,
+            high: parseFloat(item.high) || 0,
+            low: parseFloat(item.low) || 0,
+            volume: parseFloat(item.volume) || 0,
+            amount: parseFloat(item.amount) || 0
+          });
+        }
+        klineCache.set(cacheKey, { ts: Date.now(), data: result });
+        res.json(result);
+      } else {
+        res.json([]);
       }
-      klineCache.set(cacheKey, { ts: Date.now(), data: result });
-      res.json(result);
-    } else {
-      res.json([]);
+    } catch (e) {
+      console.error('Get kline failed:', e.message);
+      res.status(500).json({ error: e.message });
     }
-  } catch (e) {
-    console.error('Get kline failed:', e.message);
-    res.status(500).json({ error: e.message });
-  }
-});
+  });
 
-async function calculateWeekOrMonthData(code, period) {
-  const dayCacheKey = code + '_day';
-  let dayData = klineCache.get(dayCacheKey);
+  async function calculateWeekOrMonthData(code, period) {
+    const dayCacheKey = code + '_day';
+    let dayData = klineCache.get(dayCacheKey);
 
-  if (!dayData || Date.now() - dayData.ts > 30 * 60 * 1000) {
-    const market = code.startsWith('6') ? 'sh' : 'sz';
-    const url = 'https://money.finance.sina.com.cn/quotes_service/api/json_v2.php/CN_MarketData.getKLineData?symbol=' + market + code + '&scale=240&ma=no&datalen=1000&klt=100';
+    if (!dayData || Date.now() - dayData.ts > 30 * 60 * 1000) {
+      const market = code.startsWith('6') ? 'sh' : 'sz';
+    const url = 'https://money.finance.sina.com.cn/quotes_service/api/json_v2.php/CN_MarketData.getKLineData?symbol=' + market + code + '&scale=240&ma=no&datalen=10000&klt=100';
     const resp = await axios.get(url, { headers: { 'Referer': 'https://finance.sina.com.cn' } });
 
     if (Array.isArray(resp.data) && resp.data.length > 0) {
