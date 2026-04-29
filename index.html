@@ -1071,6 +1071,13 @@
     }
 
     function renderKlineChart(rawData, indicator) {
+      function calcStartPercent() {
+        const halfYearDays = 126;
+        const total = rawData.length;
+        if (total <= halfYearDays) return 0;
+        return +(((total - halfYearDays) / total) * 100).toFixed(1);
+      }
+
       if (indicator === 'macd') calcMACD(rawData);
       else if (indicator === 'kdj') calcKDJ(rawData);
       else if (indicator === 'rsi') calcRSI(rawData);
@@ -1251,7 +1258,7 @@
         yAxes = [0, 1].map(idx => ({
           scale: true,
           gridIndex: idx,
-          axisLabel: { color: textColor },
+          axisLabel: { color: textColor, formatter: idx === 1 ? function (v) { return v; } : function (v) { return v.toFixed(2); } },
           ...axisCommon,
           name: idx === 1 ? '成交量(万手)' : undefined,
           nameTextStyle: idx === 1 ? { color: textColor } : undefined
@@ -1273,7 +1280,7 @@
         yAxes = [0, 1, 2].map(idx => ({
           scale: true,
           gridIndex: idx,
-          axisLabel: { color: textColor },
+          axisLabel: { color: textColor, formatter: idx === 2 ? function (v) { return v; } : function (v) { return v.toFixed(2); } },
           ...axisCommon,
           name: idx === 2 ? '成交量(万手)' : undefined,
           nameTextStyle: idx === 2 ? { color: textColor } : undefined
@@ -1316,6 +1323,9 @@
               shadowColor: 'transparent',
               textStyle: {
                 color: axisLabelColor
+              },
+              formatter: function (params) {
+                return typeof params.value === 'number' ? params.value.toFixed(2) : params.value;
               }
             }
           },
@@ -1339,8 +1349,8 @@
           }
         },
         dataZoom: [
-          { type: 'inside', xAxisIndex: zoomX, start: 50, end: 100 },
-          { type: 'slider', xAxisIndex: zoomX, start: 50, end: 100, height: 20, bottom: 20, textStyle: { color: textColor } }
+          { type: 'inside', xAxisIndex: zoomX, start: calcStartPercent(), end: 100 },
+          { type: 'slider', xAxisIndex: zoomX, start: calcStartPercent(), end: 100, height: 20, bottom: 20, textStyle: { color: textColor } }
         ],
         series: baseSeries
       };
@@ -1932,15 +1942,15 @@
         yAxis: {
           type: 'value',
           axisLine: { lineStyle: { color: gridColor } },
-          axisLabel: { color: textColor, fontSize: 10 },
+          axisLabel: { color: textColor, fontSize: 10, formatter: function (v) { return v.toFixed(1); } },
           splitLine: { lineStyle: { color: gridColor, type: 'dashed' } }
         },
         series: [
           {
-            name: '成交量',
+            name: '成交量(万手)',
             type: 'bar',
             data: volumes.map((v, i) => ({
-              value: v,
+              value: v / 10000,
               itemStyle: {
                 color: i % 2 === 0 ? upColor : downColor,
                 opacity: 0.6
@@ -1958,7 +1968,7 @@
             if (!params || params.length === 0) return '';
             const idx = params[0].dataIndex;
             return `<strong>${times[idx]}</strong><br/>
-                    成交量: ${volumes[idx]}手`;
+                    成交量: ${(volumes[idx] / 10000).toFixed(2)}万手`;
           }
         }
       };
