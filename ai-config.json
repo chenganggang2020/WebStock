@@ -1,7 +1,7 @@
 {
   "comment": "AI 大模型配置文件 - DeepSeek V4",
   "apiUrl": "https://api.deepseek.com/v1/chat/completions",
-  "apiKey": "sk-7dbe8c",
+  "apiKey": "sk-你的APIKey",
   "model": "deepseek-v4-pro",
   "maxTokens": 4096,
   "temperature": 0.3,
