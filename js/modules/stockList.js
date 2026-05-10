@@ -51,7 +51,7 @@ async function refreshQuotes(stocks) {
 function renderStockTable(stocks) {
   const State = window.State;
   const tbody = document.getElementById('stockTbody');
-  if (!stocks.length) { tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:30px;">无结果</td></tr>'; return; }
+  if (!stocks.length) { tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:30px;">无结果</td></tr>'; return; }
   const style = getComputedStyle(document.body);
   const up = style.getPropertyValue('--up').trim() || '#e74c3c', down = style.getPropertyValue('--down').trim() || '#2ecc71';
   tbody.innerHTML = stocks.map(s => {
@@ -61,10 +61,22 @@ function renderStockTable(stocks) {
     const priceDisplay = price === 0 ? '--' : price.toFixed(2);
     const changeDisplay = price === 0 ? '--' : sign + change.toFixed(2) + '%';
     const priceColor = price === 0 ? '#999' : color;
-    return '<tr class="' + active + '" data-code="' + s.code + '"><td>' + s.code + '</td><td>' + (s.name || '未知') + '</td>' +
+    const watched = State.watchlist.some(item => item.code === s.code);
+    const star = watched ? '★' : '☆';
+    return '<tr class="' + active + '" data-code="' + s.code + '">' +
+      '<td class="star-cell"><button class="star-btn ' + (watched ? 'active' : '') + '" data-code="' + s.code + '" title="切换自选">' + star + '</button></td>' +
+      '<td>' + s.code + '</td><td>' + (s.name || '未知') + '</td>' +
       '<td class="price" style="text-align:right;color:' + priceColor + '">' + priceDisplay + '</td>' +
       '<td style="text-align:right;color:' + priceColor + '">' + changeDisplay + '</td></tr>';
   }).join('');
+  tbody.querySelectorAll('.star-btn').forEach(btn => btn.addEventListener('click', async function(event) {
+    event.stopPropagation();
+    const code = btn.getAttribute('data-code');
+    const stock = stocks.find(s => s.code === code);
+    if (!stock || !window.Watchlist) return;
+    if (btn.classList.contains('active')) await window.Watchlist.removeByCode(code);
+    else await window.Watchlist.addStock(stock);
+  }));
   tbody.querySelectorAll('tr').forEach(row => row.addEventListener('click', () => {
     const code = row.getAttribute('data-code'); const stock = stocks.find(s => s.code === code); if (stock) StockList.selectStock(stock);
   }));

@@ -121,16 +121,16 @@ function openAnalysisPanel(stock, forceRefresh) {
                 simulatedMode = true;
                 window.currentPromptText = ev.prompt || '';
                 const infoHtml = '<div style="background:#fff3cd;color:#856404;padding:16px 18px;border-radius:8px;margin-bottom:16px;font-size:14px;line-height:1.8;border:1px solid #ffeeba;">' +
-                  '<div style="font-weight:bold;margin-bottom:10px;font-size:15px;">⚠️ AI 模拟模式 - API Key 缺失或无效</div>' +
-                  '<div style="margin-bottom:8px;">由于 API Key 配置缺失或错误，系统无法调用 AI 大模型进行分析。</div>' +
+                  '<div style="font-weight:bold;margin-bottom:10px;font-size:15px;">⚠️ AI 模拟模式 - OpenAI API Key 缺失或无效</div>' +
+                  '<div style="margin-bottom:8px;">由于 OpenAI API Key 配置缺失或错误，系统无法调用 OpenAI API 进行分析。</div>' +
                   '<div style="margin-bottom:8px;">下方已生成完整的分析提示词，您可以：</div>' +
                   '<ol style="margin:8px 0;padding-left:20px;">' +
                   '<li>点击【一键复制提示词】按钮</li>' +
-                  '<li>粘贴到 <a href="https://chat.deepseek.com/" target="_blank" style="color:#0c63b7;font-weight:bold;">DeepSeek 对话窗口</a> 中进行详细分析</li>' +
+                  '<li>粘贴到 <a href="https://chatgpt.com/" target="_blank" style="color:#0c63b7;font-weight:bold;">OpenAI / ChatGPT 对话窗口</a> 中进行详细分析</li>' +
                   '</ol>' +
                   '<div style="margin-top:12px;padding-top:12px;border-top:1px solid #ffeeba;">' +
                   '<div style="font-weight:bold;margin-bottom:6px;">💡 如何获取 API Key？</div>' +
-                  '<div>访问 <a href="https://platform.deepseek.com" target="_blank" style="color:#0c63b7;">DeepSeek 开放平台</a> 注册账号并申请 API Key，然后将 Key 配置到 <code>ai-config.json</code> 文件中，即可启用 AI 大模型分析功能。</div>' +
+                  '<div>访问 <a href="https://platform.openai.com/" target="_blank" style="color:#0c63b7;">OpenAI Platform</a> 创建 API Key。本地开发可复制 <code>.env.example</code> 为 <code>.env</code>，并填写 <code>OPENAI_API_KEY</code>；部署环境请使用平台 Secret 或环境变量。</div>' +
                   '</div>' +
                   '<button onclick="copyAnalysisData()" style="background:#0c63b7;color:#fff;border:none;padding:10px 20px;border-radius:5px;cursor:pointer;font-size:14px;margin-top:14px;font-weight:bold;">📋 一键复制分析提示词</button>' +
                   '</div>';

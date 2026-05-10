@@ -1,9 +1,11 @@
+node_modules
+npm-debug.log
 .env
 .env.*
-!.env.example
-node_modules/
-npm-debug.log
+.git
+.gitignore
 analysis.md
 data/*.db
 data/*.db-*
+coverage
 .DS_Store

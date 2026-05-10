@@ -1,9 +1,8 @@
 {
-  "comment": "AI 大模型配置文件 - DeepSeek V4",
-  "apiUrl": "https://api.deepseek.com/v1/chat/completions",
-  "apiKey": "sk-你的APIKey",
-  "model": "deepseek-v4-pro",
-  "maxTokens": 4096,
-  "temperature": 0.3,
+  "comment": "AI 配置默认值。真实 OpenAI API Key 请使用环境变量 OPENAI_API_KEY，不要写入仓库。",
+  "provider": "openai",
+  "baseUrl": "https://api.openai.com/v1",
+  "model": "gpt-5-mini",
+  "maxCompletionTokens": 4096,
   "enabled": true
 }

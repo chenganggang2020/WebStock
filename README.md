@@ -32,7 +32,7 @@
   - 📈 ATR
 
 ### 🤖 AI 智能分析
-- 集成 DeepSeek AI 大模型
+- 集成 OpenAI Chat Completions API
 - 自动生成个股分析报告
 - 流式输出，实时展示
 - AI 模拟模式（无 API Key 时可用）
@@ -72,20 +72,16 @@
 
 3. **配置 AI（可选）**
    
-   编辑 `ai-config.json`，填写你的 DeepSeek API Key：
-   ```json
-   {
-     "apiUrl": "https://api.deepseek.com/v1/chat/completions",
-     "apiKey": "sk-你的APIKey",
-     "model": "deepseek-v4-pro",
-     "maxTokens": 4096,
-     "temperature": 0.3,
-     "enabled": true
-   }
+   复制环境变量模板并填写 OpenAI API Key。不要把真实 key 写入仓库。
+
+   ```bash
+   cp .env.example .env
+   # 编辑 .env，填写 OPENAI_API_KEY
    ```
 
 4. **启动服务**
    ```bash
+   npm test
    npm start
    ```
 
@@ -122,7 +118,11 @@ WebStock/
 ├── server.js                    # 服务器入口
 ├── index.html                   # 前端页面
 ├── package.json                 # 项目配置
-├── ai-config.json               # AI 配置
+├── ai-config.json               # AI 默认配置（不保存真实 key）
+├── .env.example                 # 环境变量模板
+├── Dockerfile                   # Docker 部署
+├── docker-compose.example.yml   # Docker Compose 示例
+├── docs/                        # 开发与部署文档
 ├── stocks.json                  # 股票列表数据
 ├── css/
 │   └── styles.css               # 样式文件
@@ -154,9 +154,15 @@ WebStock/
 | 后端 | Node.js + Express |
 | 前端 | 原生 JavaScript + ECharts |
 | 数据来源 | 新浪财经 API |
-| AI | DeepSeek V4 |
+| AI | OpenAI Chat Completions |
 | 拼音 | tiny-pinyin |
 | 编码 | iconv-lite |
+
+---
+
+## 🚢 部署
+
+本地、PM2、Docker 与 Nginx 反向代理说明见 [docs/deployment.md](docs/deployment.md)。
 
 ---
 
@@ -169,7 +175,7 @@ MIT License - 详见 [LICENSE](LICENSE) 文件
 ## 🙏 致谢
 
 - [ECharts](https://echarts.apache.org/) - 强大的图表库
-- [DeepSeek](https://deepseek.com/) - AI 大模型
+- [OpenAI](https://platform.openai.com/) - AI API
 - [新浪财经](https://finance.sina.com.cn/) - 数据源
 
 ---

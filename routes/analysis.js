@@ -515,7 +515,7 @@ router.get('/analysis', async function (req, res) {
     let promptText = '';
 
     if (!aiConfig) {
-      return res.json({ success: false, error: 'AI 配置未加载，请检查 ai-config.json 是否存在' });
+      return res.json({ success: false, error: 'OpenAI 配置未加载，请检查 OPENAI_API_KEY / ai-config.json' });
     }
 
     try {
@@ -627,7 +627,7 @@ router.get('/analysis-stream', async function (req, res) {
 
     const aiConfig = getAIConfig();
     if (!aiConfig) {
-      sendEvent({ type: 'error', error: 'AI 配置未加载，请检查 ai-config.json 是否存在' });
+      sendEvent({ type: 'error', error: 'OpenAI 配置未加载，请检查 OPENAI_API_KEY / ai-config.json' });
       res.end();
       return;
     }
@@ -651,21 +651,25 @@ router.get('/analysis-stream', async function (req, res) {
 
     try {
       const aiStream = await createAIModelStream(prompt);
+      let doneSent = false;
 
       aiStream.on('data', (chunk) => {
         const lines = chunk.toString().split('\n');
         for (const line of lines) {
+          if (doneSent) continue;
           if (!line.startsWith('data: ')) continue;
           const data = line.slice(6).trim();
           if (data === '[DONE]') {
-            res.write('data: ' + JSON.stringify({ type: 'done' }) + '\n\n');
+            doneSent = true;
+            sendEvent({ type: 'done' });
             continue;
           }
           try {
             const parsed = JSON.parse(data);
-            const content = parsed.choices && parsed.choices[0] && parsed.choices[0].delta && parsed.choices[0].delta.content;
+            if (!parsed.choices || parsed.choices.length === 0) continue;
+            const content = parsed.choices[0].delta && parsed.choices[0].delta.content;
             if (content) {
-              res.write('data: ' + JSON.stringify({ type: 'chunk', content }) + '\n\n');
+              sendEvent({ type: 'chunk', content });
             }
           } catch (e) {
           }

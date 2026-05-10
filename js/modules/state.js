@@ -13,6 +13,12 @@ let maPeriods = [5, 10, 15, 30];
 let currentPage = 0;
 const PAGE_SIZE = 200;
 let currentQuote = null;
+let currentMainView = 'market';
+let watchlist = [];
+let trades = [];
+let positions = [];
+let portfolioSummary = null;
+let portfolioAllocation = [];
 
 const State = {
   get allStocks() { return allStocks; },
@@ -43,7 +49,19 @@ const State = {
   set currentPage(val) { currentPage = val; },
   PAGE_SIZE,
   get currentQuote() { return currentQuote; },
-  set currentQuote(val) { currentQuote = val; }
+  set currentQuote(val) { currentQuote = val; },
+  get currentMainView() { return currentMainView; },
+  set currentMainView(val) { currentMainView = val; },
+  get watchlist() { return watchlist; },
+  set watchlist(val) { watchlist = val; },
+  get trades() { return trades; },
+  set trades(val) { trades = val; },
+  get positions() { return positions; },
+  set positions(val) { positions = val; },
+  get portfolioSummary() { return portfolioSummary; },
+  set portfolioSummary(val) { portfolioSummary = val; },
+  get portfolioAllocation() { return portfolioAllocation; },
+  set portfolioAllocation(val) { portfolioAllocation = val; }
 };
 
 window.State = State;
