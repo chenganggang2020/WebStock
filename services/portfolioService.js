@@ -279,6 +279,45 @@ function calculatePositions(trades, quoteMap = {}) {
     });
 }
 
+function calculateClosedPositions(trades) {
+  const stats = new Map();
+  trades.slice().sort((a, b) => {
+    const dateCompare = a.tradeDate.localeCompare(b.tradeDate);
+    if (dateCompare !== 0) return dateCompare;
+    return (a.id || 0) - (b.id || 0);
+  }).forEach(trade => {
+    if (!stats.has(trade.code)) {
+      stats.set(trade.code, {
+        code: trade.code,
+        name: trade.name,
+        firstTradeDate: trade.tradeDate,
+        lastTradeDate: trade.tradeDate,
+        tradeCount: 0
+      });
+    }
+    const item = stats.get(trade.code);
+    item.name = trade.name || item.name;
+    item.firstTradeDate = item.firstTradeDate < trade.tradeDate ? item.firstTradeDate : trade.tradeDate;
+    item.lastTradeDate = item.lastTradeDate > trade.tradeDate ? item.lastTradeDate : trade.tradeDate;
+    item.tradeCount += 1;
+  });
+
+  return calculatePositionStates(trades)
+    .filter(pos => pos.quantity === 0 && stats.has(pos.code))
+    .map(pos => {
+      const item = stats.get(pos.code);
+      return {
+        code: pos.code,
+        name: pos.name || item.name,
+        realizedPnl: round(pos.realizedPnl, 2),
+        tradeCount: item.tradeCount,
+        firstTradeDate: item.firstTradeDate,
+        lastTradeDate: item.lastTradeDate
+      };
+    })
+    .sort((a, b) => b.lastTradeDate.localeCompare(a.lastTradeDate) || a.code.localeCompare(b.code));
+}
+
 function validateTradeSet(candidateTrades) {
   calculatePositions(candidateTrades);
 }
@@ -333,6 +372,10 @@ function getPositions(quoteMap = {}) {
   return calculatePositions(listTradesAscending(), quoteMap);
 }
 
+function getClosedPositions() {
+  return calculateClosedPositions(listTradesAscending());
+}
+
 function getSummary(positions = getPositions()) {
   const totalMarketValue = positions.reduce((sum, pos) => sum + (pos.marketValue === null ? pos.costValue : pos.marketValue), 0);
   const totalCost = positions.reduce((sum, pos) => sum + pos.costValue, 0);
@@ -380,7 +423,9 @@ module.exports = {
   deleteTrade,
   calculatePositionStates,
   calculatePositions,
+  calculateClosedPositions,
   getPositions,
+  getClosedPositions,
   getSummary,
   getAllocation
 };

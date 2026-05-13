@@ -5,10 +5,11 @@ function copyAnalysisData() {
     return;
   }
   navigator.clipboard.writeText(text).then(function() {
-    const btn = document.querySelector('button[onclick="copyAnalysisData()"]');
+    const btn = document.querySelector('button[data-copy-analysis], button[onclick="copyAnalysisData()"]');
     if (btn) {
-      btn.textContent = '✅ 已复制提示词到剪贴板';
-      setTimeout(function() { btn.textContent = '📋 一键复制分析提示词'; }, 2000);
+      const oldText = btn.textContent;
+      btn.textContent = '已复制';
+      setTimeout(function() { btn.textContent = oldText; }, 2000);
     }
   }).catch(function() {
     const ta = document.createElement('textarea');
@@ -17,16 +18,12 @@ function copyAnalysisData() {
     ta.select();
     document.execCommand('copy');
     document.body.removeChild(ta);
-    const btn = document.querySelector('button[onclick="copyAnalysisData()"]');
-    if (btn) {
-      btn.textContent = '✅ 已复制提示词到剪贴板';
-      setTimeout(function() { btn.textContent = '📋 一键复制分析提示词'; }, 2000);
-    }
+    alert('已复制到剪贴板');
   });
 }
 
 function simpleMarkdown(md) {
-  let html = md
+  let html = String(md || '')
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
     .replace(/^### (.+)$/gm, '<h3>$1</h3>')
     .replace(/^## (.+)$/gm, '<h2>$1</h2>')
@@ -65,111 +62,151 @@ function simpleMarkdown(md) {
   return html;
 }
 
-function openAnalysisPanel(stock, forceRefresh) {
+function setAnalysisStatus(text) {
+  const badge = document.getElementById('aiStatusBadge');
+  if (badge) badge.textContent = text || '';
+}
+
+function renderPromptHandoff(body, prompt) {
+  window.currentPromptText = prompt || '';
+  body.innerHTML = '<div class="analysis-handoff">' +
+    '<h3>ChatGPT 交接模式</h3>' +
+    '<p>当前未配置可用 OpenAI API Key，系统已生成完整提示词。复制后可在 ChatGPT 中继续分析，返回内容可手动保存到当前任务。</p>' +
+    '<div class="handoff-actions">' +
+    '<button class="small-btn primary" data-copy-analysis onclick="copyAnalysisData()">复制提示词</button>' +
+    '<button class="small-btn" onclick="window.open(&quot;https://chatgpt.com/&quot;,&quot;_blank&quot;)">打开 ChatGPT</button>' +
+    '<button class="small-btn" onclick="window.Analysis.openPromptHandoff()">保存返回结果</button>' +
+    '</div>' +
+    '</div>' +
+    '<div class="md-body prompt-preview">' + simpleMarkdown(prompt) + '</div>';
+}
+
+function openPromptHandoff() {
+  if (!window.AIAssistant) return;
+  const stock = window.State && window.State.currentStock ? window.State.currentStock : {};
+  window.AIAssistant.open({
+    title: '个股分析 ChatGPT 交接',
+    summary: '保存 ChatGPT 返回的个股分析结果，便于后续回看。',
+    prompt: window.currentPromptText || '',
+    kind: 'stock',
+    context: { view: 'market', code: stock.code || '', name: stock.name || '' }
+  });
+}
+
+function openAnalysisPanel(stock) {
   const overlay = document.getElementById('analysisOverlay');
   const body = document.getElementById('analysisPanelBody');
-  const badge = document.getElementById('aiStatusBadge');
   const refreshBtn = document.getElementById('analysisRefreshBtn');
+  if (!overlay || !body) return;
+
+  if (window.currentAnalysisSource) {
+    window.currentAnalysisSource.close();
+    window.currentAnalysisSource = null;
+  }
+
   overlay.style.display = 'flex';
-  body.innerHTML = '<div class="analysis-loading"><div class="analysis-spinner"></div><span>正在获取数据并生成分析报告，请稍候…</span></div>';
-  refreshBtn.disabled = true;
-  refreshBtn.style.display = '';
+  body.innerHTML = '<div class="analysis-loading"><div class="analysis-spinner"></div><span>正在获取数据并生成分析报告，请稍候...</span></div>';
+  if (refreshBtn) {
+    refreshBtn.disabled = true;
+    refreshBtn.style.display = '';
+  }
+  setAnalysisStatus('AI 分析准备中');
 
-  fetch('/api/analysis-stream?code=' + stock.code + '&name=' + encodeURIComponent(stock.name))
-    .then(function(r) {
-      if (!r.ok) throw new Error('请求失败: ' + r.status);
-      return r.body;
-    })
-    .then(function(stream) {
-      const reader = stream.getReader();
-      const decoder = new TextDecoder();
-      let fullText = '';
-      let streaming = false;
-      let simulatedMode = false;
+  const url = '/api/analysis-stream?code=' + encodeURIComponent(stock.code) + '&name=' + encodeURIComponent(stock.name || stock.code);
+  const source = new EventSource(url);
+  window.currentAnalysisSource = source;
+  let fullText = '';
+  let hasEvent = false;
 
-      function showLoading(icon) {
-        body.innerHTML = '<div class="analysis-loading"><div class="analysis-spinner"></div><span>' + icon + '…</span></div>';
+  source.onmessage = function(message) {
+    hasEvent = true;
+    let ev;
+    try {
+      ev = JSON.parse(message.data);
+    } catch (error) {
+      console.warn('分析流解析失败', error);
+      return;
+    }
+
+    if (ev.type === 'start') {
+      setAnalysisStatus('AI 大模型分析中');
+      body.innerHTML = '<div class="analysis-loading"><div class="analysis-spinner"></div><span>AI 正在分析...</span></div>';
+      return;
+    }
+    if (ev.type === 'chunk') {
+      fullText += ev.content || '';
+      body.innerHTML = '<div class="md-body">' + simpleMarkdown(fullText) + '</div>';
+      return;
+    }
+    if (ev.type === 'simulated') {
+      renderPromptHandoff(body, ev.prompt || ev.promptText || '');
+      setAnalysisStatus('ChatGPT 交接模式');
+      if (refreshBtn) refreshBtn.style.display = 'none';
+      source.close();
+      window.currentAnalysisSource = null;
+      return;
+    }
+    if (ev.type === 'error') {
+      body.innerHTML = '<div class="error-state">生成失败：' + (ev.error || '分析服务异常') + '<br>可以稍后重试，或使用 ChatGPT 交接模式。</div>';
+      setAnalysisStatus('');
+      if (refreshBtn) {
+        refreshBtn.disabled = false;
+        refreshBtn.style.display = '';
       }
-
-      function renderMarkdown(text) {
-        body.innerHTML = '<div class="md-body">' + simpleMarkdown(text) + '</div>';
-      }
-
-      function read() {
-        reader.read().then(function(result) {
-          if (result.done) return;
-
-          const text = decoder.decode(result.value, { stream: true });
-          const lines = text.split('\n');
-          for (let i = 0; i < lines.length; i++) {
-            const line = lines[i];
-            if (!line.startsWith('data: ')) continue;
-            const rawData = line.slice(6).trim();
-            if (!rawData) continue;
-            try {
-              const ev = JSON.parse(rawData);
-              if (ev.type === 'start') {
-                streaming = true;
-                showLoading('🤖 AI 正在深度分析');
-                if (badge) badge.textContent = '🟢 AI 大模型分析中…';
-              } else if (ev.type === 'chunk') {
-                if (!simulatedMode) {
-                  fullText += ev.content;
-                  renderMarkdown(fullText);
-                }
-              } else if (ev.type === 'simulated') {
-                simulatedMode = true;
-                window.currentPromptText = ev.prompt || '';
-                const infoHtml = '<div style="background:#fff3cd;color:#856404;padding:16px 18px;border-radius:8px;margin-bottom:16px;font-size:14px;line-height:1.8;border:1px solid #ffeeba;">' +
-                  '<div style="font-weight:bold;margin-bottom:10px;font-size:15px;">⚠️ AI 模拟模式 - OpenAI API Key 缺失或无效</div>' +
-                  '<div style="margin-bottom:8px;">由于 OpenAI API Key 配置缺失或错误，系统无法调用 OpenAI API 进行分析。</div>' +
-                  '<div style="margin-bottom:8px;">下方已生成完整的分析提示词，您可以：</div>' +
-                  '<ol style="margin:8px 0;padding-left:20px;">' +
-                  '<li>点击【一键复制提示词】按钮</li>' +
-                  '<li>粘贴到 <a href="https://chatgpt.com/" target="_blank" style="color:#0c63b7;font-weight:bold;">OpenAI / ChatGPT 对话窗口</a> 中进行详细分析</li>' +
-                  '</ol>' +
-                  '<div style="margin-top:12px;padding-top:12px;border-top:1px solid #ffeeba;">' +
-                  '<div style="font-weight:bold;margin-bottom:6px;">💡 如何获取 API Key？</div>' +
-                  '<div>访问 <a href="https://platform.openai.com/" target="_blank" style="color:#0c63b7;">OpenAI Platform</a> 创建 API Key。本地开发可复制 <code>.env.example</code> 为 <code>.env</code>，并填写 <code>OPENAI_API_KEY</code>；部署环境请使用平台 Secret 或环境变量。</div>' +
-                  '</div>' +
-                  '<button onclick="copyAnalysisData()" style="background:#0c63b7;color:#fff;border:none;padding:10px 20px;border-radius:5px;cursor:pointer;font-size:14px;margin-top:14px;font-weight:bold;">📋 一键复制分析提示词</button>' +
-                  '</div>';
-                body.innerHTML = infoHtml + '<div class="md-body" style="background:#f8f9fa;padding:16px;border-radius:8px;border:1px solid #dee2e6;">' + simpleMarkdown(ev.prompt) + '</div>';
-                refreshBtn.style.display = 'none';
-                if (badge) badge.textContent = '🟡 AI 模拟模式';
-              } else if (ev.type === 'error') {
-                body.innerHTML = '<div style="color:#ef4444;padding:20px">生成失败: ' + ev.error + '</div>';
-                if (badge) badge.textContent = '';
-                refreshBtn.style.display = '';
-              } else if (ev.type === 'done') {
-                if (badge) badge.textContent = '🟢 AI 大模型分析';
-                refreshBtn.style.display = '';
-                refreshBtn.disabled = false;
-              }
-            } catch (e) {
-            }
-          }
-          read();
+      source.close();
+      window.currentAnalysisSource = null;
+      return;
+    }
+    if (ev.type === 'done') {
+      if (!fullText) body.innerHTML = '<div class="empty-state">分析完成，但没有收到有效内容。</div>';
+      if (fullText && window.AIAssistant && window.AIAssistant.saveHistoryRecord) {
+        window.AIAssistant.saveHistoryRecord({
+          title: '个股 AI 分析 ' + (stock.name || stock.code),
+          summary: stock.code || '',
+          prompt: window.currentPromptText || '',
+          result: fullText,
+          kind: 'stock',
+          context: { view: 'market', code: stock.code, name: stock.name || stock.code }
         });
       }
+      setAnalysisStatus('AI 分析完成');
+      if (refreshBtn) {
+        refreshBtn.disabled = false;
+        refreshBtn.style.display = '';
+      }
+      source.close();
+      window.currentAnalysisSource = null;
+    }
+  };
 
-      read();
-    })
-    .catch(function(e) {
-      body.innerHTML = '<div style="color:#ef4444;padding:20px">请求失败: ' + e.message + '</div>';
-      if (badge) badge.textContent = '';
-      refreshBtn.style.display = '';
+  source.onerror = function() {
+    if (!hasEvent) {
+      body.innerHTML = '<div class="error-state">分析服务连接失败，请检查后端接口或网络状态。</div>';
+      setAnalysisStatus('');
+    }
+    if (refreshBtn) {
       refreshBtn.disabled = false;
-    });
+      refreshBtn.style.display = '';
+    }
+    source.close();
+    window.currentAnalysisSource = null;
+  };
 }
 
 function closeAnalysisPanel() {
-  document.getElementById('analysisOverlay').style.display = 'none';
+  if (window.currentAnalysisSource) {
+    window.currentAnalysisSource.close();
+    window.currentAnalysisSource = null;
+  }
+  const overlay = document.getElementById('analysisOverlay');
+  if (overlay) overlay.style.display = 'none';
 }
 
+window.copyAnalysisData = copyAnalysisData;
 window.Analysis = {
   copyAnalysisData,
   simpleMarkdown,
+  openPromptHandoff,
   openAnalysisPanel,
   closeAnalysisPanel
 };

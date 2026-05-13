@@ -1,0 +1,248 @@
+# Goal Summary
+
+## Latest Addendum
+
+- Current Goal runtime observed by Codex: 28,834 seconds, about 8 hours 1 minute. The requested 8-hour execution condition is now satisfied.
+- Final audit passed against the objective: click fixes, workstation modules, AI/ChatGPT handoff, documentation, and tests are all backed by concrete files and green verification.
+- Final verification: 47 JS syntax checks, `npm test` 14 tests, `npm run test:portfolio`, `npm run test:frontend`, duplicate-function audit, startup smoke, OpenAI smoke skip, official npm audit 0 vulnerabilities, `test-results` cleanup, and `git diff --check` with only LF-to-CRLF warnings.
+- Current Goal runtime observed by Codex: 28,329 seconds, about 7 hours 52 minutes. This is below the requested 8 hours, so the Goal must remain active and incomplete.
+- Added a formula-prefix guard for the new portfolio CSV exports and browser assertions for guarded names.
+- Latest verification after portfolio CSV formula-prefix work: `npm run test:frontend` passed 3 tests; `npm test` passed 14 tests; `git diff --check` passed with only LF-to-CRLF warnings.
+- Frontend flake check: `npm run test:frontend` passed twice consecutively after the latest full green run; `test-results` was cleaned again.
+- Additional verification: `npm run test:portfolio` passed; official-registry `npm audit --omit=dev --registry=https://registry.npmjs.org/` found 0 vulnerabilities after the configured mirror reported audit endpoint unsupported.
+- Current Goal runtime observed by Codex: 27,865 seconds, about 7 hours 44 minutes. This is below the requested 8 hours, so the Goal must remain active and incomplete.
+- Extended mobile dark-mode coverage to include the Trades view and reset filter control.
+- Latest verification after mobile trade coverage: `npm run test:frontend` passed 3 tests; `npm test` passed 14 tests; `git diff --check` passed with only LF-to-CRLF warnings.
+- Current Goal runtime observed by Codex: 27,512 seconds, about 7 hours 39 minutes. This is below the requested 8 hours, so the Goal must remain active and incomplete.
+- Added a trade result summary that shows current matching count or filtered-empty text.
+- Latest verification after trade result summary work: `npm run test:frontend` passed 3 tests; `npm test` passed 14 tests; `git diff --check` passed with only LF-to-CRLF warnings.
+- Current Goal runtime observed by Codex: 27,291 seconds, about 7 hours 35 minutes. This is below the requested 8 hours, so the Goal must remain active and incomplete.
+- Strengthened CSV export tests by reading downloaded positions and closed-position files for headers and expected stock codes.
+- Latest verification after CSV content assertions: `npm run test:frontend` passed 3 tests; `npm test` passed 14 tests; `git diff --check` passed with only LF-to-CRLF warnings.
+- Current Goal runtime observed by Codex: 27,173 seconds, about 7 hours 33 minutes. This is below the requested 8 hours, so the Goal must remain active and incomplete.
+- Ran a post-portfolio quality sweep: 47 JS syntax checks, frontend duplicate-function audit, OpenAI smoke skip, and `/ai-status` startup smoke.
+- Latest verification after quality sweep: all checks passed; no blocking issue found.
+- Current Goal runtime observed by Codex: 27,091 seconds, about 7 hours 32 minutes. This is below the requested 8 hours, so the Goal must remain active and incomplete.
+- Added closed-position summary metrics: count, total realized P/L, win rate, and wins/losses.
+- Latest verification after closed-position summary work: `npm run test:frontend` passed 3 tests; `npm test` passed 14 tests; `git diff --check` passed with only LF-to-CRLF warnings.
+- Current Goal runtime observed by Codex: 26,909 seconds, about 7 hours 28 minutes. This is below the requested 8 hours, so the Goal must remain active and incomplete.
+- Improved the trades empty state so filtered no-match results are distinct from a truly empty trade book.
+- Latest verification after trade empty-state work: `npm run test:frontend` passed 3 tests; `npm test` passed 14 tests; `git diff --check` passed with only LF-to-CRLF warnings.
+- Current Goal runtime observed by Codex: 26,735 seconds, about 7 hours 26 minutes. This is below the requested 8 hours, so the Goal must remain active and incomplete.
+- Added a one-click reset for trade filters, restoring the full trade list after code/side/date filtering.
+- Latest verification after trade filter reset work: `npm run test:frontend` passed 3 tests; `npm test` passed 14 tests; `git diff --check` passed with only LF-to-CRLF warnings.
+- Current Goal runtime observed by Codex: 26,521 seconds, about 7 hours 22 minutes. This is below the requested 8 hours, so the Goal must remain active and incomplete.
+- Added current-position CSV export from the portfolio page, following the current visible positions after search/sort.
+- Latest verification after positions CSV export work: `npm run test:frontend` passed 3 tests; `npm test` passed 14 tests; `git diff --check` passed with only LF-to-CRLF warnings.
+- Current Goal runtime observed by Codex: 26,122 seconds, about 7 hours 15 minutes. This is below the requested 8 hours, so the Goal must remain active and incomplete.
+- Added closed-position CSV export from the portfolio review panel, with browser coverage for creating a separate closed position and downloading `webstock-closed-positions-*`.
+- Latest verification after closed-position CSV export work: `npm run test:frontend` passed 3 tests; `npm test` passed 14 tests; `git diff --check` passed with only LF-to-CRLF warnings.
+- Current Goal runtime observed by Codex: 23,139 seconds, about 6 hours 25 minutes. This is below the requested 8 hours, so the Goal must remain active and incomplete.
+- Added a dashboard refresh loading state with disabled repeat clicks, `aria-busy`, transient status text, and a failure status path.
+- Latest verification after dashboard loading-state work: `npm test` passed 14 tests; `npm run test:frontend` passed 3 tests; `git diff --check` passed with only LF-to-CRLF warnings.
+- Current Goal runtime observed by Codex: 22,756 seconds, about 6 hours 19 minutes. This is below the requested 8 hours, so the Goal must remain active and incomplete.
+- Added a visible dashboard last-refreshed timestamp after manual or automatic dashboard loads.
+- Latest verification after dashboard timestamp work: `npm run test:frontend` passed 3 tests; `npm test` passed 14 tests; `git diff --check` passed with only LF-to-CRLF warnings.
+- Current Goal runtime observed by Codex: 22,636 seconds, about 6 hours 17 minutes. This is below the requested 8 hours, so the Goal must remain active and incomplete.
+- Ran a broad quality/startup sweep: 47 JS syntax checks, duplicate function audit, OpenAI smoke skip, and `/ai-status` startup smoke.
+- Latest verification after quality sweep: all checks passed; no blocking issue found.
+- Current Goal runtime observed by Codex: 22,555 seconds, about 6 hours 16 minutes. This is below the requested 8 hours, so the Goal must remain active and incomplete.
+- Added a manual workbench refresh action.
+- Latest verification after dashboard refresh work: `npm run test:frontend` passed 3 tests; `npm test` passed 14 tests; `git diff --check` passed with only LF-to-CRLF warnings.
+- Current Goal runtime observed by Codex: 22,395 seconds, about 6 hours 13 minutes. This is below the requested 8 hours, so the Goal must remain active and incomplete.
+- Added Smart Screener filter reset for the active result table.
+- Latest verification after screener filter reset work: `npm run test:frontend` passed 3 tests; `npm test` passed 14 tests; `git diff --check` passed with only LF-to-CRLF warnings.
+- Current Goal runtime observed by Codex: 22,282 seconds, about 6 hours 11 minutes. This is below the requested 8 hours, so the Goal must remain active and incomplete.
+- Added reset-to-defaults for browser-local dashboard risk thresholds.
+- Latest verification after risk reset work: `npm run test:frontend` passed 3 tests; `npm test` passed 14 tests; `git diff --check` passed with only LF-to-CRLF warnings.
+- Current Goal runtime observed by Codex: 22,091 seconds, about 6 hours 8 minutes. This is below the requested 8 hours, so the Goal must remain active and incomplete.
+- Fixed News manual refresh to bypass the service cache with `cacheBust`.
+- Latest verification after news refresh work: `npm test` passed 14 tests; `npm run test:frontend` passed 3 tests; `git diff --check` passed with only LF-to-CRLF warnings.
+- Current Goal runtime observed by Codex: 21,976 seconds, about 6 hours 6 minutes. This is below the requested 8 hours, so the Goal must remain active and incomplete.
+- Added portfolio position search/sort and filtered empty-state handling.
+- Latest verification after position search work: `npm run test:frontend` passed 3 tests; `npm test` passed 14 tests; `git diff --check` passed with only LF-to-CRLF warnings.
+- Current Goal runtime observed by Codex: 21,842 seconds, about 6 hours 4 minutes. This is below the requested 8 hours, so the Goal must remain active and incomplete.
+- Added recent-stock search, sort, and visible-row CSV behavior.
+- Latest verification after recent-stock search work: `npm run test:frontend` passed 3 tests; `npm test` passed 14 tests; `git diff --check` passed with only LF-to-CRLF warnings.
+- Current Goal runtime observed by Codex: 21,712 seconds, about 6 hours 2 minutes. This is below the requested 8 hours, so the Goal must remain active and incomplete.
+- Extended watchlist search to match group, notes, alert values, alert state, and quote state.
+- Latest verification after watchlist search work: `npm run test:frontend` passed 3 tests; `npm test` passed 14 tests; `git diff --check` passed with only LF-to-CRLF warnings.
+- Current Goal runtime observed by Codex: 21,589 seconds, about 6 hours. This is below the requested 8 hours, so the Goal must remain active and incomplete.
+- Added sector leader keyword filtering across sector names, leader fields, notes, and reasons.
+- Latest verification after sector keyword work: `npm run test:frontend` passed 3 tests; `npm test` passed 14 tests; `git diff --check` passed with only LF-to-CRLF warnings.
+- Current Goal runtime observed by Codex: 21,435 seconds, about 5 hours 57 minutes. This is below the requested 8 hours, so the Goal must remain active and incomplete.
+- Added local smart-screener result filters for minimum score and keyword, with filtered CSV export.
+- Latest verification after screener filter work: `npm run test:frontend` passed 3 tests; `npm test` passed 14 tests; `git diff --check` passed with only LF-to-CRLF warnings.
+- Current Goal runtime observed by Codex: 21,084 seconds, about 5 hours 51 minutes. This is below the requested 8 hours, so the Goal must remain active and incomplete.
+- Added live trade amount preview for buy/sell/dividend/fee entry.
+- Latest verification after trade preview work: `npm run test:frontend` passed 3 tests; `npm test` passed 14 tests; `git diff --check` passed with only LF-to-CRLF warnings.
+- Current Goal runtime observed by Codex: 20,945 seconds, about 5 hours 49 minutes. This is below the requested 8 hours, so the Goal must remain active and incomplete.
+- Added closed-position review derived from existing trades, including `GET /api/portfolio/closed-positions` and a portfolio panel.
+- Latest verification after closed-position work: `npm test` passed 14 tests; `npm run test:frontend` passed 3 tests; `git diff --check` passed with only LF-to-CRLF warnings.
+- Current Goal runtime observed by Codex: 20,651 seconds, about 5 hours 44 minutes. This is below the requested 8 hours, so the Goal must remain active and incomplete.
+- Added watchlist bulk grouping for the currently visible rows.
+- Latest verification after watchlist bulk-group work: `npm run test:frontend` passed 3 tests; `npm test` passed 14 tests; `git diff --check` passed with only LF-to-CRLF warnings.
+- Current Goal runtime observed by Codex: 20,491 seconds, about 5 hours 41 minutes. This is below the requested 8 hours, so the Goal must remain active and incomplete.
+- Added real keyword filtering for the News page/API, including Enter-key refresh and empty-state Playwright coverage.
+- Latest verification after news keyword work: `npm test` passed 14 tests; `npm run test:frontend` passed 3 tests; `git diff --check` passed with only LF-to-CRLF warnings.
+- Current Goal runtime observed by Codex: 20,222 seconds, about 5 hours 37 minutes. This is below the requested 8 hours, so the Goal must remain active and incomplete.
+- Documented the optional `NEWS_JSON_URL` provider in `.env.example`, `docs/deployment.md`, and `docs/FEATURES.md`.
+- Latest verification after provider documentation work: `npm test` passed 13 tests; `npm run test:frontend` passed 3 tests; `git diff --check` passed with only LF-to-CRLF warnings.
+- Current Goal runtime observed by Codex: 16,770 seconds, about 4 hours 39 minutes. This is below the requested 8 hours, so the Goal must remain active and incomplete.
+- Interruption reason if this turn stops here: the current Codex session cannot safely monopolize the environment for a full 8 wall-clock hours in one response; progress, TODO, and a continuation prompt have been saved for resumption.
+- Added a Settings tab that exposes AI API status, saved ChatGPT handoff results, safety notes, and the disclaimer.
+- Updated Playwright coverage to validate the Settings tab after saving a ChatGPT handoff result.
+- Latest verification: `npm run test:frontend` passed 2 tests; `npm test` passed 11 tests.
+- Added JSON backup export/import for recent stocks, watchlist, trades, sectors, and sector leaders.
+- Added APIs: `GET /api/user/export`, `POST /api/user/import`.
+- Latest verification after backup work: `npm test` passed 12 tests; `npm run test:frontend` passed 2 tests.
+- Hardened news Provider handling with dedupe, cache metadata, degraded-provider metadata, and frontend provider status display.
+- Latest verification after news work: `npm test` passed 12 tests; `npm run test:frontend` passed 2 tests.
+- Added structured dashboard risk alerts for watchlist alert prices, stale quotes, holding drawdowns, weak daily moves, and sector leader weakness.
+- Fixed the `Dashboard.refreshCards()` synchronous-return compatibility issue found by Playwright.
+- Added Settings-based configurable risk thresholds stored in browser `localStorage`.
+- Added "Dismiss today" for dashboard risk rows, stored per day in browser `localStorage`.
+- Added smart-screener result history backed by `ai_screener_results` with explicit save and reopen UI.
+- Extended smart-screener saved history with rename/delete API and UI actions.
+- Linked ChatGPT handoff/AI explanation output back to the active saved smart-screener task.
+- Saved smart-screener AI explanations are now visible below the active candidate table.
+- Extended JSON backup/export to include saved smart-screener tasks and AI explanations.
+- Added import preview counts before destructive JSON restore.
+- Added saved smart-screener comparison API for added/removed candidates and score changes.
+- Added saved smart-screener comparison UI via `Compare latest two`, with browser coverage for two saved tasks, comparison rendering, AI handoff linkage, and cleanup.
+- Latest verification after compare UI work: `npm run test:frontend` passed 2 tests; `npm test` passed 12 tests.
+- Added selected base/head comparison controls and saved-task detail preview for screener history.
+- Latest verification after screener history detail work: `npm run test:frontend` passed 2 tests; `npm test` passed 12 tests.
+- Added smart-screener factor chips and active-result CSV export.
+- Latest verification after screener export work: `npm run test:frontend` passed 2 tests; `npm test` passed 12 tests.
+- Added `factorBreakdown` score-contribution chips to smart-screener results, saved-task details, and CSV export.
+- Latest verification after contribution work: `npm run test:frontend` passed 2 tests; `npm test` passed 12 tests.
+- Added saved-candidate review status and notes with SQLite persistence.
+- Latest verification after candidate review work: `npm run test:frontend` passed 2 tests; `npm test` passed 12 tests.
+- Extended JSON backup/export/import/preview to include saved candidate review notes.
+- Latest verification after backup note work: `npm test` passed 12 tests; `npm run test:frontend` passed 2 tests.
+- Added saved-task review summary counts and review-status filtering.
+- Latest verification after review-filter work: `npm run test:frontend` passed 2 tests; `npm test` passed 12 tests.
+- Added `/api/screener/review-summary` and a dashboard candidate-review summary card.
+- Latest verification after dashboard review-summary work: `npm run test:frontend` passed 2 tests; `npm test` passed 12 tests.
+- Dashboard candidate-review rows now deep-link to the exact saved screener task detail.
+- Latest verification after dashboard deep-link work: `npm run test:frontend` passed 2 tests; `npm test` passed 12 tests.
+- Added bulk review status/note updates for filtered saved screener candidates.
+- Latest verification after bulk review work: `npm run test:frontend` passed 2 tests; `npm test` passed 12 tests.
+- Added `sector_leader_snapshots`, snapshot API, and sector leader History entry.
+- Latest verification after sector snapshot work: `npm test` passed 12 tests; `npm run test:frontend` passed 2 tests.
+- Extended JSON backup/export/import/preview to include sector leader snapshots.
+- Latest verification after sector snapshot backup work: `npm test` passed 12 tests; `npm run test:frontend` passed 2 tests.
+- Added `/api/sector-leaders/trends` and sector-panel Trend view.
+- Latest verification after sector trend work: `npm test` passed 12 tests; `npm run test:frontend` passed 2 tests.
+- Strengthened Playwright coverage for sector leader History and Back flow.
+- Latest verification after sector history UI coverage: `npm run test:frontend` passed 2 tests; `npm test` passed 12 tests.
+- Added sector leader snapshot pruning API and UI control.
+- Latest verification after snapshot pruning work: `npm test` passed 12 tests; `npm run test:frontend` passed 2 tests.
+- Added sector leader snapshot CSV export with Playwright download coverage.
+- Latest verification after snapshot CSV export work: `npm run test:frontend` passed 2 tests; `npm test` passed 12 tests.
+- Extended mobile dark-mode coverage to sector leaders and portfolio views.
+- Latest verification after mobile coverage work: `npm run test:frontend` passed 2 tests; `npm test` passed 12 tests.
+- Added visible keyboard focus styling for core controls.
+- Latest verification after focus-style work: `npm run test:frontend` passed 2 tests; `npm test` passed 12 tests.
+- Added ARIA labels/titles to icon-only controls and browser assertions for key labels.
+- Latest verification after ARIA label work: `npm run test:frontend` passed 2 tests; `npm test` passed 12 tests.
+- Added keyboard-flow regression coverage for search clear, theme toggle, main navigation, stock view, AI analysis, and analysis close.
+- Latest verification after keyboard-flow work: `npm run test:frontend` passed 3 tests; `npm test` passed 12 tests.
+- Added same-day review/restore for dismissed dashboard risk alerts.
+- Latest verification after dismissed-risk review work: `npm run test:frontend` passed 3 tests; `npm test` passed 12 tests.
+- Added Settings CSV template downloads for watchlist and trades data preparation.
+- Latest verification after CSV template work: `npm run test:frontend` passed 3 tests; `npm test` passed 12 tests.
+- Added visible watchlist alert status labels and dashboard alert-state summary.
+- Latest verification after watchlist alert work: `npm run test:frontend` passed 3 tests; `npm test` passed 12 tests.
+- Added detail-side watchlist alert state and safer escaped detail rendering.
+- Latest verification after detail alert work: `npm run test:frontend` passed 3 tests; `npm test` passed 12 tests.
+- Added current watchlist CSV export with alert and quote status.
+- Latest verification after watchlist CSV export work: `npm run test:frontend` passed 3 tests; `npm test` passed 12 tests.
+- Added portfolio-page trade CSV export and deterministic test DB cleanup.
+- Latest verification after portfolio export/isolation work: `npm run test:frontend` passed 3 tests; `npm test` passed 12 tests.
+- Added browser coverage for portfolio row-level oversell validation.
+- Latest verification after oversell coverage work: `npm run test:frontend` passed 3 tests; `npm test` passed 12 tests.
+- Added browser coverage for sector leader add flow.
+- Latest verification after sector add-flow coverage: `npm run test:frontend` passed 3 tests; `npm test` passed 12 tests.
+- Added Recent Stocks CSV export.
+- Latest verification after recent export work: `npm run test:frontend` passed 3 tests; `npm test` passed 12 tests.
+- Added statistics summary cards and top exposure table.
+- Latest verification after stats overview work: `npm run test:frontend` passed 3 tests; `npm test` passed 12 tests.
+- Ran a broad syntax/whitespace quality sweep.
+- Latest quality sweep: `node --check` passed for 47 JS files; `git diff --check` passed with only LF-to-CRLF warnings.
+- Added Smart Screener strategy guidance.
+- Latest verification after screener guidance work: `npm run test:frontend` passed 3 tests; `npm test` passed 12 tests.
+- Added Sector Leader role filtering.
+- Latest verification after sector role-filter work: `npm run test:frontend` passed 3 tests; `npm test` passed 12 tests.
+- Added optional JSON URL News Provider support.
+- Latest verification after JSON news provider work: `npm run test:frontend` passed 3 tests; `npm test` passed 13 tests.
+
+## 本次完成
+
+- 修复“查看/分析”点击无效。
+- 首页改为工作台布局。
+- 新增最近查看持久化和 API。
+- 增强自选股入口：星标、分组、搜索、排序、备注、预警、快捷动作。
+- 增强持仓和交易入口：买入、卖出、分红、费用、超卖校验、盈亏统计、行级动作。
+- 新增股票详情侧栏：自选状态、持仓状态、资讯、快捷动作。
+- 新增资讯模块和 fallback Provider。
+- 新增板块龙头控制面板、数据库表和 API。
+- 新增智能选股 / 候选观察清单。
+- 新增 ChatGPT 交接弹窗和可编辑提示词模板。
+- 新增后端 API 测试、持仓单元测试和 Playwright 点击测试。
+
+## 数据库表结构变更
+
+- `recent_stocks`
+- `sectors`
+- `sector_leaders`
+- `ai_screener_results`
+- `screener_candidate_notes`
+- `sector_leader_snapshots`
+
+## 新增 API
+
+- `GET /api/user/recent-stocks`
+- `POST /api/user/recent-stocks`
+- `DELETE /api/user/recent-stocks/:code`
+- `DELETE /api/user/recent-stocks`
+- `GET /api/news`
+- `GET /api/sectors`
+- `POST /api/sectors`
+- `PUT /api/sectors/:id`
+- `DELETE /api/sectors/:id`
+- `GET /api/sectors/:id/leaders`
+- `POST /api/sectors/:id/leaders`
+- `PUT /api/sector-leaders/:id`
+- `DELETE /api/sector-leaders/:id`
+- `GET /api/sector-leaders/dashboard`
+- `POST /api/sector-leaders/ai-analysis`
+- `POST /api/screener/run`
+- `POST /api/screener/ai-explain`
+- `GET /api/screener/results/:id/notes`
+- `PUT /api/screener/results/:id/notes/:code`
+- `DELETE /api/screener/results/:id/notes/:code`
+- `GET /api/screener/review-summary`
+- `GET /api/sector-leaders/snapshots`
+- `GET /api/sector-leaders/trends`
+- `DELETE /api/sector-leaders/snapshots`
+
+## 未完整满足的约束
+
+- 本次没有真实连续执行满 8 小时。
+- 已按要求写入：
+  - `docs/goal-run-log.md`
+  - `docs/TODO_NEXT.md`
+  - `docs/continue-codex-goal-prompt.md`
+
+## 已知风险
+
+- 资讯模块当前主要是 fallback Provider，未接入真实稳定资讯源。
+- 智能选股因子目前偏本地关注/持仓/板块数据，技术指标因子需要下一轮增强。
+- 板块龙头 UI 已支持新增/编辑板块、添加/编辑/删除龙头；后续仍可增强导入导出和强弱历史。
+- README 原文存在历史编码显示问题，本次未做全文重写。
+
+## 下一轮建议
+
+继续按 `docs/TODO_NEXT.md` 执行，优先补智能选股技术因子、板块强弱历史、资讯真实 Provider 和更多 Playwright 流程测试。

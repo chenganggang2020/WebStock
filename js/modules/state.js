@@ -13,12 +13,15 @@ let maPeriods = [5, 10, 15, 30];
 let currentPage = 0;
 const PAGE_SIZE = 200;
 let currentQuote = null;
-let currentMainView = 'market';
+let currentMainView = 'dashboard';
 let watchlist = [];
+let recentStocks = [];
 let trades = [];
 let positions = [];
 let portfolioSummary = null;
 let portfolioAllocation = [];
+let klineSnapshots = {};
+let screenerReviewSummary = [];
 
 const State = {
   get allStocks() { return allStocks; },
@@ -54,6 +57,8 @@ const State = {
   set currentMainView(val) { currentMainView = val; },
   get watchlist() { return watchlist; },
   set watchlist(val) { watchlist = val; },
+  get recentStocks() { return recentStocks; },
+  set recentStocks(val) { recentStocks = val; },
   get trades() { return trades; },
   set trades(val) { trades = val; },
   get positions() { return positions; },
@@ -61,7 +66,11 @@ const State = {
   get portfolioSummary() { return portfolioSummary; },
   set portfolioSummary(val) { portfolioSummary = val; },
   get portfolioAllocation() { return portfolioAllocation; },
-  set portfolioAllocation(val) { portfolioAllocation = val; }
+  set portfolioAllocation(val) { portfolioAllocation = val; },
+  get klineSnapshots() { return klineSnapshots; },
+  set klineSnapshots(val) { klineSnapshots = val || {}; },
+  get screenerReviewSummary() { return screenerReviewSummary; },
+  set screenerReviewSummary(val) { screenerReviewSummary = Array.isArray(val) ? val : []; }
 };
 
 window.State = State;

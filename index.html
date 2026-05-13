@@ -17,10 +17,28 @@
   <div class="sidebar">
     <div class="search-box">
       <input id="searchInput" type="text" placeholder="输入代码/拼音/中文" autocomplete="off">
-      <button id="clearBtn" class="clear-btn">✕</button>
-      <button id="themeToggle" class="theme-btn" title="切换深浅色">🌙</button>
+      <button id="clearBtn" class="clear-btn" aria-label="清空搜索" title="清空搜索">✕</button>
+      <button id="themeToggle" class="theme-btn" aria-label="切换深浅色" title="切换深浅色">🌙</button>
     </div>
     <div class="search-hint">💡 代码/拼音首字母/全拼/中文</div>
+    <nav class="sidebar-workspace" id="sidebarWorkspaceNav" aria-label="工作台快捷入口">
+      <button id="sidebarWatchlistBtn" class="sidebar-workspace-btn" data-main-view="watchlist">
+        <span>泽哥自选</span><strong id="sidebarWatchlistCount">0</strong>
+      </button>
+      <button id="sidebarPortfolioBtn" class="sidebar-workspace-btn" data-main-view="portfolio">
+        <span>持仓</span><strong id="sidebarPortfolioCount">0</strong>
+      </button>
+      <button id="sidebarScreenerBtn" class="sidebar-workspace-btn" data-main-view="screener">
+        <span>智能选股</span><strong>AI</strong>
+      </button>
+      <button id="sidebarSectorsBtn" class="sidebar-workspace-btn" data-main-view="sectors">
+        <span>板块热股</span><strong id="sidebarSectorCount">0</strong>
+      </button>
+      <button id="sidebarAiHistoryBtn" class="sidebar-workspace-btn" data-main-view="aiHistory">
+        <span>AI记录</span><strong id="sidebarAiHistoryCount">0</strong>
+      </button>
+    </nav>
+    <div id="hotSidebarPanel" class="hot-sidebar-panel" aria-live="polite"></div>
     <div class="stock-table-wrap">
       <table class="stock-table">
         <thead>
@@ -35,17 +53,73 @@
         <tbody id="stockTbody"></tbody>
       </table>
     </div>
+    <div id="stockListStatus" class="sidebar-status"></div>
   </div>
   <div class="main">
     <div class="main-tabs" id="mainTabs">
-      <button class="main-tab active" data-main-view="market">行情</button>
+      <button class="main-tab active" data-main-view="dashboard">工作台</button>
+      <button class="main-tab" data-main-view="market">行情</button>
       <button class="main-tab" data-main-view="watchlist">自选</button>
       <button class="main-tab" data-main-view="portfolio">持仓</button>
+      <button class="main-tab" data-main-view="recent">最近查看</button>
+      <button class="main-tab" data-main-view="news">资讯</button>
+      <button class="main-tab" data-main-view="sectors">板块龙头</button>
+      <button class="main-tab" data-main-view="screener">智能选股</button>
+      <button class="main-tab" data-main-view="aiHistory">AI记录</button>
       <button class="main-tab" data-main-view="trades">交易记录</button>
       <button class="main-tab" data-main-view="stats">统计</button>
+      <button class="main-tab" data-main-view="settings">设置</button>
     </div>
 
-    <div id="marketView" class="main-view active">
+    <div id="dashboardView" class="main-view active">
+      <div class="workbench">
+        <div class="workbench-hero">
+          <div>
+            <h1>WebStock 工作台</h1>
+            <p>集中查看行情、自选、持仓、资讯、板块龙头和候选观察清单。</p>
+            <div id="dashboardUpdatedAt" class="muted" aria-live="polite">Last refreshed: --</div>
+          </div>
+          <div class="quick-actions">
+            <button class="small-btn primary" onclick="switchMainView('screener')">运行智能选股</button>
+            <button class="small-btn" onclick="switchMainView('sectors')">板块龙头</button>
+            <button class="small-btn" onclick="switchMainView('portfolio')">新增交易</button>
+            <button id="refreshDashboardBtn" class="small-btn">刷新工作台</button>
+          </div>
+        </div>
+        <div class="dashboard-grid">
+          <section class="dashboard-card">
+            <h3>最近查看</h3>
+            <div id="dashboardRecentList"></div>
+          </section>
+          <section class="dashboard-card">
+            <h3>我的自选</h3>
+            <div id="dashboardWatchlistList"></div>
+          </section>
+          <section class="dashboard-card">
+            <h3>我的持仓</h3>
+            <div id="dashboardPortfolioList"></div>
+          </section>
+          <section class="dashboard-card">
+            <h3>最新资讯</h3>
+            <div id="dashboardNewsList"></div>
+          </section>
+          <section class="dashboard-card wide">
+            <h3>板块龙头监控</h3>
+            <div id="dashboardSectorList"></div>
+          </section>
+          <section class="dashboard-card">
+            <h3>今日风险提醒</h3>
+            <div id="dashboardRiskList"></div>
+          </section>
+          <section class="dashboard-card">
+            <h3>候选复核</h3>
+            <div id="dashboardScreenerReviewList"></div>
+          </section>
+        </div>
+      </div>
+    </div>
+
+    <div id="marketView" class="main-view" style="display:none;">
       <div class="chart-header">
         <h2 id="chartTitle">请选择股票</h2>
         <span class="price-info" id="priceInfo"></span>
@@ -65,7 +139,7 @@
             <button class="period-btn" data-period="week">周线</button>
             <button class="period-btn" data-period="month">月线</button>
           </div>
-          <button class="ma-set-btn" id="maSettingsBtn" title="设置均线周期">⚙️</button>
+          <button class="ma-set-btn" id="maSettingsBtn" aria-label="设置均线周期" title="设置均线周期">⚙️</button>
           <button class="analysis-btn" id="analysisBtn" title="生成个股AI分析报告">🤖 AI分析</button>
         </div>
       </div>
@@ -108,6 +182,17 @@
               <span class="label">卖一</span>
               <span class="value" id="infoSell1">--</span>
             </div>
+          </div>
+          <div class="stock-detail-card">
+            <div class="detail-actions">
+              <button id="detailWatchlistBtn" class="small-btn">加自选</button>
+              <button id="detailTradeBtn" class="small-btn">加持仓</button>
+              <button id="detailAnalysisBtn" class="small-btn primary">AI分析</button>
+              <button id="detailNewsBtn" class="small-btn">看资讯</button>
+            </div>
+            <div id="detailWatchlistStatus" class="detail-status">自选：--</div>
+            <div id="detailPositionStatus" class="detail-status">持仓：--</div>
+            <div id="detailNewsList" class="detail-news"></div>
           </div>
           <div class="order-book">
             <div class="order-book-header">盘口数据</div>
@@ -175,6 +260,225 @@
       </div>
     </div>
 
+    <div id="recentView" class="main-view" style="display:none;">
+      <div class="section-header">
+        <h2>最近查看</h2>
+        <div class="section-actions">
+          <select id="recentSortSelect">
+            <option value="last_viewed">最近查看</option>
+            <option value="view_count">查看次数</option>
+            <option value="change_desc">涨跌幅降序</option>
+            <option value="change_asc">涨跌幅升序</option>
+          </select>
+          <input id="recentSearchInput" placeholder="搜索代码/名称">
+          <button id="refreshRecentStocksBtn">刷新</button>
+          <button id="exportRecentStocksCsvBtn">Export CSV</button>
+          <button id="clearRecentStocksBtn">清空</button>
+        </div>
+      </div>
+      <div id="recentStocksEmpty" class="empty-state">暂无最近查看记录。点击任意股票的“查看”后会自动记录。</div>
+      <div class="table-scroll">
+        <table class="data-table" id="recentStocksTable">
+          <thead>
+            <tr>
+              <th>代码</th>
+              <th>名称</th>
+              <th>最后价格</th>
+              <th>最后涨跌幅</th>
+              <th>查看次数</th>
+              <th>最后查看</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody id="recentStocksTbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div id="newsView" class="main-view" style="display:none;">
+      <div class="section-header">
+        <h2>资讯聚合</h2>
+        <div class="section-actions">
+          <select id="newsTypeFilter">
+            <option value="">全部</option>
+            <option value="stock">个股</option>
+          <option value="sector">板块</option>
+          <option value="watchlist">自选</option>
+          <option value="holding">持仓</option>
+          </select>
+          <select id="newsSourceFilter">
+            <option value="">全部来源</option>
+          </select>
+          <input id="newsKeywordInput" placeholder="代码/板块">
+          <button id="refreshNewsBtn">刷新</button>
+        </div>
+      </div>
+      <div id="newsProviderStatus" class="provider-status"></div>
+      <div id="newsList" class="news-list"></div>
+    </div>
+
+    <div id="sectorsView" class="main-view" style="display:none;">
+      <div class="section-header">
+        <h2>板块龙头控制面板</h2>
+        <div class="section-actions">
+          <select id="sectorSortSelect">
+            <option value="change">按涨跌幅</option>
+            <option value="amount">按成交额</option>
+            <option value="weight">按权重</option>
+          </select>
+          <select id="sectorRoleFilter">
+            <option value="">全部角色</option>
+            <option value="总龙头">总龙头</option>
+            <option value="趋势龙头">趋势龙头</option>
+            <option value="容量龙头">容量龙头</option>
+            <option value="补涨龙头">补涨龙头</option>
+            <option value="观察股">观察股</option>
+          </select>
+          <input id="sectorKeywordFilter" placeholder="搜索板块/龙头/备注">
+          <button id="addSectorBtn">添加板块</button>
+          <button id="refreshSectorsBtn">刷新</button>
+          <button id="sectorTrendBtn">Trend</button>
+          <button id="sectorExportSnapshotsBtn">Export snapshots CSV</button>
+          <button id="sectorExportConfigBtn">Export config JSON</button>
+          <button id="sectorImportConfigBtn">Import config JSON</button>
+          <input id="sectorImportConfigFile" type="file" accept="application/json,.json" style="display:none;">
+          <button id="sectorPruneSnapshotsBtn">Prune snapshots</button>
+          <button id="sectorAiBtn">AI板块分析</button>
+          <button id="refreshHotMarketBtn">刷新实时热点</button>
+          <button id="hotMarketAiBtn">复制热点AI提示词</button>
+        </div>
+      </div>
+      <section class="hot-market-board" id="hotMarketBoard">
+        <div class="empty-state compact">热点板块数据加载中...</div>
+      </section>
+      <section class="hot-analysis-card" id="hotMarketAnalysisCard" style="display:none;"></section>
+      <div class="mode-tabs">
+        <button class="small-btn active" data-sector-mode="cards">卡片模式</button>
+        <button class="small-btn" data-sector-mode="overview">总览模式</button>
+        <button class="small-btn" data-sector-mode="risk">风险模式</button>
+      </div>
+      <div id="sectorDashboard"></div>
+    </div>
+
+    <div id="screenerView" class="main-view" style="display:none;">
+      <div class="section-header">
+        <h2>智能选股 / 候选观察清单</h2>
+        <div class="section-actions">
+          <button id="runScreenerBtn">运行筛选</button>
+          <button id="saveScreenerResultBtn">保存结果</button>
+          <button id="exportScreenerCsvBtn">导出 CSV</button>
+          <button id="screenerAiBtn">用 ChatGPT / AI 分析</button>
+        </div>
+      </div>
+      <div class="screener-panel">
+        <label>策略模板</label>
+        <select id="screenerStrategy">
+          <option value="stable">稳健观察</option>
+          <option value="breakout">趋势突破</option>
+          <option value="pullback">回调观察</option>
+          <option value="sector-leader">板块龙头</option>
+          <option value="short-strong">短线强势</option>
+          <option value="portfolio-risk">持仓风险排查</option>
+        </select>
+        <div id="screenerStrategyHint" class="strategy-hint"></div>
+        <label>筛选范围</label>
+        <select id="screenerScope">
+          <option value="all">全市场+个人数据</option>
+          <option value="watchlist">自选股</option>
+          <option value="portfolio">持仓</option>
+          <option value="recent">最近查看</option>
+          <option value="leaders">板块龙头</option>
+        </select>
+        <label>需求描述</label>
+        <textarea id="screenerDemand" placeholder="例如：短线强势、回调到均线附近、低估值观察、自选股中筛选..."></textarea>
+      </div>
+      <div class="disclaimer">仅供研究和学习，不构成投资建议；市场有风险，决策需自行验证。</div>
+      <div class="screener-result-tools">
+        <label>最低得分 <input id="screenerMinScoreInput" type="number" min="0" max="100" step="1" value="0"></label>
+        <input id="screenerResultKeywordInput" placeholder="过滤代码/名称/理由/风险">
+        <button id="resetScreenerFiltersBtn" class="small-btn">重置过滤</button>
+      </div>
+      <div id="screenerHistory" class="screener-history"></div>
+      <div id="screenerResults" class="screener-results"></div>
+    </div>
+
+    <div id="settingsView" class="main-view" style="display:none;">
+      <div class="section-header">
+        <h2>设置</h2>
+        <div class="section-actions">
+          <button id="refreshSettingsBtn">刷新状态</button>
+          <button id="clearHandoffResultsBtn">清空交接结果</button>
+          <button id="exportUserDataBtn">Export JSON</button>
+          <button id="importUserDataBtn">Import JSON</button>
+          <input id="importUserDataFile" type="file" accept="application/json,.json" style="display:none;">
+        </div>
+      </div>
+      <div class="settings-grid">
+        <section class="settings-card">
+          <h3>AI API 状态</h3>
+          <div id="settingsAiStatus" class="settings-status">--</div>
+        </section>
+        <section class="settings-card">
+          <h3>Data Backup</h3>
+          <p>Export or restore recent stocks, watchlist, trades, sectors, sector leaders, leader snapshots, saved screener tasks, and candidate review notes. Import replaces local workstation data after confirmation.</p>
+          <div class="template-actions">
+            <button id="downloadWatchlistTemplateBtn" class="small-btn">Watchlist CSV template</button>
+            <button id="downloadTradesTemplateBtn" class="small-btn">Trades CSV template</button>
+          </div>
+          <div id="settingsBackupStatus" class="settings-status-detail"></div>
+        </section>
+        <section class="settings-card">
+          <h3>Risk Thresholds</h3>
+          <label class="settings-field">Position drawdown %
+            <input id="riskDrawdownInput" type="number" step="0.5" min="1" max="80">
+          </label>
+          <label class="settings-field">Daily drop %
+            <input id="riskDailyDropInput" type="number" step="0.5" min="1" max="30">
+          </label>
+          <label class="settings-field">Leader drop %
+            <input id="riskLeaderDropInput" type="number" step="0.5" min="1" max="30">
+          </label>
+          <button id="saveRiskSettingsBtn" class="small-btn primary">Save thresholds</button>
+          <button id="resetRiskSettingsBtn" class="small-btn">Reset defaults</button>
+          <div id="settingsRiskStatus" class="settings-status-detail"></div>
+        </section>
+        <section class="settings-card">
+          <h3>数据与安全</h3>
+          <ul>
+            <li>不保存真实证券账户密码。</li>
+            <li>不接入真实券商交易。</li>
+            <li>OpenAI API Key 仅从环境变量或本地配置读取，不写入仓库。</li>
+          </ul>
+        </section>
+        <section class="settings-card wide">
+          <h3>已保存的 ChatGPT 交接结果</h3>
+          <div id="savedHandoffResults"></div>
+        </section>
+        <section class="settings-card wide">
+          <h3>免责声明</h3>
+          <p>本系统仅供研究和学习使用，不构成投资建议。市场有风险，所有候选清单、AI 分析和资讯摘要都需要用户自行复核。</p>
+        </section>
+      </div>
+    </div>
+
+    <div id="aiHistoryView" class="main-view" style="display:none;">
+      <div class="section-header">
+        <h2>AI 对话记录</h2>
+        <div class="section-actions">
+          <select id="aiHistoryKindFilter">
+            <option value="">全部记录</option>
+            <option value="stock">个股分析</option>
+            <option value="screener">智能选股</option>
+            <option value="sector">板块龙头</option>
+            <option value="portfolio">组合诊断</option>
+          </select>
+          <button id="refreshAiHistoryBtn">刷新</button>
+          <button id="clearAiHistoryBtn">清空记录</button>
+        </div>
+      </div>
+      <div id="aiHistoryList" class="ai-history-list"></div>
+    </div>
+
     <div id="watchlistView" class="main-view" style="display:none;">
       <div class="section-header">
         <h2>我的自选股</h2>
@@ -182,8 +486,16 @@
           <select id="watchlistGroupFilter">
             <option value="">全部分组</option>
           </select>
+          <select id="watchlistSortSelect">
+            <option value="">默认排序</option>
+            <option value="change_desc">涨跌幅降序</option>
+            <option value="change_asc">涨跌幅升序</option>
+          </select>
+          <input id="watchlistSearchInput" placeholder="名称/代码">
           <button id="addCurrentToWatchlistBtn">添加当前股票</button>
           <button id="refreshWatchlistBtn">刷新行情</button>
+          <button id="bulkWatchlistGroupBtn">批量分组</button>
+          <button id="exportWatchlistCsvBtn">Export CSV</button>
         </div>
       </div>
       <div id="watchlistEmpty" class="empty-state">暂无自选股，请先添加关注股票。</div>
@@ -197,6 +509,7 @@
               <th>涨跌幅</th>
               <th>分组</th>
               <th>预警价</th>
+              <th>状态</th>
               <th>备注</th>
               <th>操作</th>
             </tr>
@@ -210,8 +523,17 @@
       <div class="section-header">
         <h2>我的持仓</h2>
         <div class="section-actions">
+          <select id="positionSortSelect">
+            <option value="market_value">按市值</option>
+            <option value="pnl">按盈亏</option>
+            <option value="return">按收益率</option>
+            <option value="code">按代码</option>
+          </select>
+          <input id="positionSearchInput" placeholder="搜索代码/名称">
           <button id="addTradeFromPortfolioBtn">新增交易</button>
           <button id="refreshPortfolioBtn">刷新持仓</button>
+          <button id="exportPositionsCsvBtn">Export positions CSV</button>
+          <button id="exportTradesFromPortfolioBtn">导出交易</button>
           <button id="aiPortfolioAnalysisBtn">AI组合诊断</button>
         </div>
       </div>
@@ -246,6 +568,7 @@
         <div id="allocationChart" class="portfolio-chart"></div>
         <div id="pnlRankChart" class="portfolio-chart"></div>
       </div>
+      <div id="closedPositionsPanel" class="stats-panel closed-positions-panel"></div>
     </div>
 
     <div id="tradesView" class="main-view" style="display:none;">
@@ -263,9 +586,11 @@
           <input id="tradeStartDate" type="date">
           <input id="tradeEndDate" type="date">
           <button id="addTradeBtn">新增交易</button>
+          <button id="resetTradeFiltersBtn">Reset filters</button>
           <button id="exportTradesBtn">导出</button>
         </div>
       </div>
+      <div id="tradesResultSummary" class="screener-result-summary"></div>
       <div id="tradesEmpty" class="empty-state">暂无交易记录。</div>
       <div class="table-scroll">
         <table class="data-table" id="tradesTable">
@@ -294,6 +619,8 @@
         <h2>组合统计</h2>
         <button id="refreshStatsBtn">刷新统计</button>
       </div>
+      <div id="statsOverviewCards" class="summary-cards stats-overview"></div>
+      <div id="statsExposureTable" class="stats-panel"></div>
       <div class="portfolio-charts stats-charts">
         <div id="statsAllocationChart" class="portfolio-chart"></div>
         <div id="statsPnlChart" class="portfolio-chart"></div>
@@ -338,6 +665,7 @@
       <input id="tradeFeeInput" type="number" step="0.01" value="0">
       <label>印花税</label>
       <input id="tradeTaxInput" type="number" step="0.01" value="0">
+      <div id="tradeAmountPreview" class="trade-amount-preview">Estimated amount: --</div>
       <label>备注</label>
       <textarea id="tradeNoteInput"></textarea>
       <div class="modal-actions">
@@ -353,7 +681,7 @@
       <div class="analysis-panel-header">
         <h3>🤖 个股 AI 深度分析报告</h3>
         <span id="aiStatusBadge" style="font-size:12px;opacity:0.85;font-weight:400;"></span>
-        <button class="analysis-close-btn" id="analysisCloseBtn">×</button>
+        <button class="analysis-close-btn" id="analysisCloseBtn" aria-label="关闭分析面板" title="关闭分析面板">×</button>
       </div>
       <div class="analysis-panel-body" id="analysisPanelBody">
         <div class="analysis-loading">
@@ -367,7 +695,26 @@
     </div>
   </div>
 
+  <div id="handoffModalOverlay" class="modal-overlay" style="display:none;">
+    <div class="modal handoff-modal">
+      <h3 id="handoffModalTitle">ChatGPT 交接</h3>
+      <p id="handoffModalSummary">复制提示词到 ChatGPT，或导入返回结果保存到当前任务。</p>
+      <textarea id="handoffPromptText" readonly></textarea>
+      <label>导入 ChatGPT 返回结果</label>
+      <textarea id="handoffResultText"></textarea>
+      <div class="modal-actions">
+        <button id="handoffCopyBtn">复制提示词</button>
+        <button id="handoffCopyOpenBtn">复制并打开 ChatGPT</button>
+        <button id="handoffOpenChatBtn">打开 ChatGPT</button>
+        <button id="handoffImportClipboardBtn">从剪贴板导入</button>
+        <button id="handoffSaveBtn">保存结果</button>
+        <button id="handoffCloseBtn">关闭</button>
+      </div>
+    </div>
+  </div>
+
   <script src="js/modules/state.js"></script>
+  <script src="js/modules/apiClient.js"></script>
   <script src="js/modules/search.js"></script>
   <script src="js/modules/stockList.js"></script>
   <script src="js/modules/indicators.js"></script>
@@ -375,6 +722,16 @@
   <script src="js/modules/realtimeChart.js"></script>
   <script src="js/modules/analysis.js"></script>
   <script src="js/modules/portfolioCharts.js"></script>
+  <script src="js/modules/recentStocks.js"></script>
+  <script src="js/modules/dashboard.js"></script>
+  <script src="js/modules/news.js"></script>
+  <script src="js/modules/stockDetail.js"></script>
+  <script src="js/modules/sectorLeaders.js"></script>
+  <script src="js/modules/hotMarket.js"></script>
+  <script src="js/modules/stockScreener.js"></script>
+  <script src="js/modules/aiAssistant.js"></script>
+  <script src="js/modules/aiHistory.js"></script>
+  <script src="js/modules/settings.js"></script>
   <script src="js/modules/watchlist.js"></script>
   <script src="js/modules/trades.js"></script>
   <script src="js/modules/portfolio.js"></script>

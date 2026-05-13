@@ -5,6 +5,7 @@ const router = express.Router();
 
 const portfolio = require('../services/portfolioService');
 const { isValidApiKey, getAIConfig, callAIModel } = require('./ai');
+const { toSinaSymbol } = require('../utils/market');
 
 function ok(res, data) {
   res.json({ success: true, data });
@@ -17,7 +18,7 @@ function fail(res, error, status = 400) {
 async function fetchQuotesSafe(codes) {
   if (!codes.length) return {};
   try {
-    const sinaCodes = codes.map(code => (code.startsWith('6') ? 'sh' : 'sz') + code).join(',');
+    const sinaCodes = codes.map(toSinaSymbol).join(',');
     const resp = await axios.get('https://hq.sinajs.cn/list=' + sinaCodes, {
       headers: { Referer: 'https://finance.sina.com.cn' },
       responseType: 'arraybuffer',
@@ -146,6 +147,14 @@ router.get('/trades/export', function (req, res) {
 router.get('/positions', async function (req, res) {
   try {
     ok(res, await getPositionsWithQuotes());
+  } catch (error) {
+    fail(res, error);
+  }
+});
+
+router.get('/closed-positions', function (req, res) {
+  try {
+    ok(res, portfolio.getClosedPositions());
   } catch (error) {
     fail(res, error);
   }

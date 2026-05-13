@@ -6,7 +6,9 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js",
-    "test": "node --test test/ai.test.js test/server.test.js",
+    "test": "node --test test/*.test.js",
+    "test:api-json": "node scripts/test-api-json.js",
+    "test:frontend": "playwright test test/frontend-click.spec.js",
     "test:portfolio": "node scripts/test-portfolio-api.js",
     "smoke:openai": "node scripts/smoke-openai.js"
   },
@@ -18,5 +20,8 @@
     "express": "^4.18.2",
     "iconv-lite": "^0.7.2",
     "tiny-pinyin": "^1.3.2"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.59.1"
   }
 }

@@ -14,8 +14,10 @@ function matchScore(query, stock) {
   const code = (stock.code || '').toLowerCase(), name = (stock.name || '').toLowerCase();
   const abbr = (stock.abbr || '').toLowerCase();
   const pinyin = (stock.pinyin || '').toLowerCase();
+  const py = (stock.py || '').toLowerCase();
   if (code.startsWith(q)) score = Math.max(score, 100);
   if (abbr && abbr.includes(q)) score = Math.max(score, 90);
+  if (py && py.includes(q)) score = Math.max(score, 88);
   if (pinyin && pinyin.includes(q)) score = Math.max(score, 85);
   if (name.includes(q)) score = Math.max(score, 80);
   if (fuzzyMatch(query, stock.name) || fuzzyMatch(query, stock.code)) score = Math.max(score, 40);
@@ -51,6 +53,7 @@ function clearSearch() {
   State.searchResults = [];
   State.filteredStocks = State.allStocks.slice(0, State.PAGE_SIZE);
   StockList.renderStockTable(State.filteredStocks);
+  if (window.HotMarket) window.HotMarket.syncSearchMode();
   StockList.refreshQuotes(State.filteredStocks);
   input.focus();
 }

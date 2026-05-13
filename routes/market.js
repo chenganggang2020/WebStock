@@ -4,10 +4,19 @@ const router = express.Router();
 const axios = require('axios');
 const iconv = require('iconv-lite');
 const { minuteCache, klineCache } = require('./cache');
+const { toSinaSymbol } = require('../utils/market');
+
+function ok(res, data) {
+  res.json({ success: true, data });
+}
+
+function fail(res, error, status = 400) {
+  res.status(status).json({ success: false, error: error.message || String(error) });
+}
 
 router.get('/quote', async function (req, res) {
   const codes = (req.query.codes || '').split(',').filter(function (c) { return c; });
-  if (codes.length === 0) return res.json([]);
+  if (codes.length === 0) return ok(res, []);
 
   const BATCH_SIZE = 80;
   const batches = [];
@@ -19,9 +28,7 @@ router.get('/quote', async function (req, res) {
   try {
     for (let j = 0; j < batches.length; j++) {
       const batch = batches[j];
-      const sinaCodes = batch.map(function (c) {
-        return (c.startsWith('6') ? 'sh' : 'sz') + c;
-      }).join(',');
+      const sinaCodes = batch.map(toSinaSymbol).join(',');
       const resp = await axios.get('https://hq.sinajs.cn/list=' + sinaCodes, {
         headers: { 'Referer': 'https://finance.sina.com.cn' },
         responseType: 'arraybuffer'
@@ -70,10 +77,12 @@ router.get('/quote', async function (req, res) {
       });
       await new Promise(function (r) { setTimeout(r, 100); });
     }
-    res.json(Object.values(results));
+    ok(res, Object.values(results));
   } catch (e) {
     console.error('Get quote failed:', e.message);
-    res.status(500).json({ error: e.message });
+    ok(res, codes.map(function(code) {
+      return { code: code, name: code, price: 0, change: 0, open: 0, high: 0, low: 0, volume: 0, amount: 0, prevClose: 0, quoteStatus: 'fallback' };
+    }));
   }
 });
 
@@ -108,7 +117,7 @@ router.get('/minute', async function (req, res) {
   const code = req.query.code;
 
   if (!code) {
-    return res.status(400).json({ error: 'Missing code' });
+    return fail(res, 'Missing code');
   }
 
   const isTrading = isTradingTime();
@@ -120,15 +129,14 @@ router.get('/minute', async function (req, res) {
     const cachedDate = cached.data.length > 0 && cached.data[0].time ? 
       cached.data[0].time.split(' ')[0] : '';
     if (!isTrading || cachedDate === today) {
-      return res.json(cached.data);
+      return ok(res, cached.data);
     }
   }
 
   let basePrice = null;
 
   try {
-    const market = code.startsWith('6') ? 'sh' : 'sz';
-    const quoteUrl = 'https://hq.sinajs.cn/list=' + market + code;
+    const quoteUrl = 'https://hq.sinajs.cn/list=' + toSinaSymbol(code);
     const quoteResp = await axios.get(quoteUrl, {
       headers: { 'Referer': 'https://finance.sina.com.cn' },
       responseType: 'arraybuffer',
@@ -146,8 +154,7 @@ router.get('/minute', async function (req, res) {
   }
 
   try {
-    const market = code.startsWith('6') ? 'sh' : 'sz';
-    const url = 'https://money.finance.sina.com.cn/quotes_service/api/json_v2.php/CN_MarketData.getKLineData?symbol=' + market + code + '&scale=5&ma=no&datalen=1000';
+    const url = 'https://money.finance.sina.com.cn/quotes_service/api/json_v2.php/CN_MarketData.getKLineData?symbol=' + toSinaSymbol(code) + '&scale=5&ma=no&datalen=1000';
 
     const resp = await axios.get(url, {
       headers: { 'Referer': 'https://finance.sina.com.cn' },
@@ -172,7 +179,7 @@ router.get('/minute', async function (req, res) {
         console.log(`[${code}] 新浪API暂未返回今日(${today})分时数据，使用模拟数据`);
         const mockData = generateMockMinuteData(code, basePrice);
         minuteCache.set(code, { ts: Date.now(), data: mockData });
-        return res.json(mockData);
+        return ok(res, mockData);
       }
 
       if (!hasTodayData && !isTrading) {
@@ -211,7 +218,7 @@ router.get('/minute', async function (req, res) {
         console.log(`[${code}] 有效数据不足(总数:${lastTradingData.length}, 有效价格:${validPriceCount})，使用模拟数据`);
         const mockData = generateMockMinuteData(code, lastClosePrice || basePrice);
         minuteCache.set(code, { ts: Date.now(), data: mockData });
-        return res.json(mockData);
+        return ok(res, mockData);
       }
 
       if (hasTodayData && isTrading) {
@@ -228,15 +235,15 @@ router.get('/minute', async function (req, res) {
       }
 
       minuteCache.set(code, { ts: Date.now(), data: lastTradingData });
-      res.json(lastTradingData);
+      ok(res, lastTradingData);
     } else {
       const mockData = generateMockMinuteData(code, basePrice);
-      res.json(mockData);
+      ok(res, mockData);
     }
   } catch (e) {
     console.error(`[${code}] 获取分时数据失败:`, e.message);
     const mockData = generateMockMinuteData(code, basePrice);
-    res.json(mockData);
+    ok(res, mockData);
   }
 });
 
@@ -332,29 +339,28 @@ router.get('/kline', async function (req, res) {
   console.log('API kline called:', code, period);
 
   if (!code) {
-    return res.status(400).json({ error: 'Missing code' });
+    return fail(res, 'Missing code');
   }
 
   const cacheKey = code + '_' + period;
   const cached = klineCache.get(cacheKey);
   if (cached && Date.now() - cached.ts < 30 * 60 * 1000) {
-    return res.json(cached.data);
+    return ok(res, cached.data);
   }
 
   if (period === 'week' || period === 'month') {
     try {
       const aggData = await calculateWeekOrMonthData(code, period);
       klineCache.set(cacheKey, { ts: Date.now(), data: aggData });
-      res.json(aggData);
+      ok(res, aggData);
     } catch (calcError) {
-      res.status(500).json({ error: calcError.message });
+      fail(res, calcError, 500);
     }
     return;
   }
 
   try {
-    const market = code.startsWith('6') ? 'sh' : 'sz';
-    const url = 'https://money.finance.sina.com.cn/quotes_service/api/json_v2.php/CN_MarketData.getKLineData?symbol=' + market + code + '&scale=240&ma=no&datalen=10000&klt=100';
+    const url = 'https://money.finance.sina.com.cn/quotes_service/api/json_v2.php/CN_MarketData.getKLineData?symbol=' + toSinaSymbol(code) + '&scale=240&ma=no&datalen=10000&klt=100';
     const resp = await axios.get(url, { headers: { 'Referer': 'https://finance.sina.com.cn' } });
 
     const data = resp.data;
@@ -373,13 +379,13 @@ router.get('/kline', async function (req, res) {
         });
       }
       klineCache.set(cacheKey, { ts: Date.now(), data: result });
-      res.json(result);
+      ok(res, result);
     } else {
-      res.json([]);
+      ok(res, []);
     }
   } catch (e) {
     console.error('Get kline failed:', e.message);
-    res.status(500).json({ error: e.message });
+    fail(res, e, 500);
   }
 });
 
@@ -388,8 +394,7 @@ async function calculateWeekOrMonthData(code, period) {
   let dayData = klineCache.get(dayCacheKey);
 
   if (!dayData || Date.now() - dayData.ts > 30 * 60 * 1000) {
-    const market = code.startsWith('6') ? 'sh' : 'sz';
-    const url = 'https://money.finance.sina.com.cn/quotes_service/api/json_v2.php/CN_MarketData.getKLineData?symbol=' + market + code + '&scale=240&ma=no&datalen=10000&klt=100';
+    const url = 'https://money.finance.sina.com.cn/quotes_service/api/json_v2.php/CN_MarketData.getKLineData?symbol=' + toSinaSymbol(code) + '&scale=240&ma=no&datalen=10000&klt=100';
     const resp = await axios.get(url, { headers: { 'Referer': 'https://finance.sina.com.cn' } });
 
     if (Array.isArray(resp.data) && resp.data.length > 0) {

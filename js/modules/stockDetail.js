@@ -1,0 +1,97 @@
+async function refresh(stock) {
+  if (!stock) return;
+  renderWatchlistStatus(stock);
+  renderPositionStatus(stock);
+  if (window.News) {
+    try {
+      const items = await window.News.loadStockNews(stock, 'detailNewsList');
+      const box = document.getElementById('detailNewsList');
+      if (box && items.length) {
+        box.innerHTML = items.slice(0, 2).map(item => '<div class="mini-news"><strong>' + detailEscapeHtml(item.title) + '</strong><p>' + detailEscapeHtml(item.summary) + '</p></div>').join('');
+      }
+    } catch (error) {
+      const box = document.getElementById('detailNewsList');
+      if (box) box.innerHTML = '<div class="empty-state compact">News failed: ' + detailEscapeHtml(error.message) + '</div>';
+    }
+  }
+}
+
+function detailEscapeHtml(value) {
+  return String(value == null ? '' : value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function detailAlertStatus(item, stock) {
+  const price = Number(stock.price !== undefined ? stock.price : item.price);
+  const high = Number(item.alertHigh);
+  const low = Number(item.alertLow);
+  if (!Number.isFinite(price)) return { className: 'muted', label: 'Alert pending' };
+  if (Number.isFinite(low) && low > 0 && price <= low) return { className: 'status-danger', label: 'Alert low' };
+  if (Number.isFinite(high) && high > 0 && price >= high) return { className: 'status-warn', label: 'Alert high' };
+  if ((Number.isFinite(low) && low > 0) || (Number.isFinite(high) && high > 0)) return { className: 'status-ok', label: 'Alert normal' };
+  return { className: 'muted', label: 'No alert' };
+}
+
+function renderWatchlistStatus(stock) {
+  const el = document.getElementById('detailWatchlistStatus');
+  if (!el) return;
+  el.className = 'detail-status';
+  const item = (window.State.watchlist || []).find(row => row.code === stock.code);
+  if (!item) {
+    el.textContent = 'Watchlist: not added';
+    return;
+  }
+  const alertStatus = detailAlertStatus(item, stock);
+  el.innerHTML = '<div>Watchlist: added' + (item.note ? ', note: ' + detailEscapeHtml(item.note) : '') + '</div>' +
+    '<div class="' + alertStatus.className + '">' + alertStatus.label + '</div>';
+}
+
+function renderPositionStatus(stock) {
+  const el = document.getElementById('detailPositionStatus');
+  if (!el) return;
+  el.className = 'detail-status';
+  const pos = (window.State.positions || []).find(row => row.code === stock.code);
+  if (!pos) {
+    el.textContent = 'Position: not held';
+    return;
+  }
+  el.textContent = 'Position: ' + pos.quantity + ' shares, cost ' + pos.avgCost + ', floating P/L ' + (pos.unrealizedPnl === null ? '--' : pos.unrealizedPnl);
+  el.className = 'detail-status ' + (Number(pos.unrealizedPnl) >= 0 ? 'pnl-up' : 'pnl-down');
+}
+
+function bindStockDetail() {
+  const watch = document.getElementById('detailWatchlistBtn');
+  if (watch) watch.addEventListener('click', async function() {
+    if (!window.State.currentStock) return alert('Please select a stock first');
+    await window.Watchlist.addStock(window.State.currentStock);
+    refresh(window.State.currentStock);
+  });
+  const trade = document.getElementById('detailTradeBtn');
+  if (trade) trade.addEventListener('click', function() {
+    if (!window.State.currentStock) return alert('Please select a stock first');
+    if (window.Portfolio) window.Portfolio.openBuyTrade(window.State.currentStock);
+    else window.Trades.openTradeModal('new', null, Object.assign({ side: 'buy' }, window.State.currentStock));
+  });
+  const analysis = document.getElementById('detailAnalysisBtn');
+  if (analysis) analysis.addEventListener('click', function() {
+    if (!window.State.currentStock) return alert('Please select a stock first');
+    window.Analysis.openAnalysisPanel(window.State.currentStock);
+  });
+  const news = document.getElementById('detailNewsBtn');
+  if (news) news.addEventListener('click', async function() {
+    if (!window.State.currentStock) return alert('Please select a stock first');
+    window.switchMainView('news');
+    document.getElementById('newsTypeFilter').value = 'stock';
+    document.getElementById('newsKeywordInput').value = window.State.currentStock.code;
+    await window.News.load();
+  });
+}
+
+window.StockDetail = {
+  refresh,
+  bind: bindStockDetail
+};

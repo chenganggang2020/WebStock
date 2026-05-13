@@ -22,6 +22,27 @@ app.get('/ai-status', function (req, res) {
   });
 });
 
+app.use('/api', function (req, res) {
+  res.status(404).json({
+    success: false,
+    error: 'API not found: ' + req.originalUrl
+  });
+});
+
+app.use(function (err, req, res, next) {
+  const status = err.status || err.statusCode || 500;
+  const isJsonParseError = err.type === 'entity.parse.failed';
+  const message = isJsonParseError
+    ? 'Invalid JSON body'
+    : (status < 500 && err.message ? err.message : 'Server error');
+
+  console.error('[Server] request failed:', err.message || err);
+  res.status(status).json({
+    success: false,
+    error: message
+  });
+});
+
 const PORT = process.env.PORT || 3000;
 
 if (require.main === module) {

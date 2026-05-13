@@ -350,10 +350,10 @@ async function loadKlineData(code, period) {
   const State = window.State;
   const Indicators = window.Indicators;
   try {
-    const resp = await fetch('/api/kline?code=' + code + '&period=' + period);
-    const data = await resp.json();
+    const data = await window.ApiClient.fetchJsonData('/api/kline?code=' + code + '&period=' + period);
     if (Array.isArray(data) && data.length > 0) {
       State.currentRawData = data;
+      State.klineSnapshots[code] = data.slice(-80);
       Indicators.calcMAFromData(State.currentRawData, State.maPeriods);
       renderKlineChart(State.currentRawData, State.currentIndicator);
     }

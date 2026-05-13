@@ -3,7 +3,10 @@
 !.env.example
 node_modules/
 npm-debug.log
+server_*.log
 analysis.md
+test-results/
+playwright-report/
 data/*.db
 data/*.db-*
 .DS_Store

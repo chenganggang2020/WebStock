@@ -41,13 +41,10 @@ async function loadRealtimeData(code) {
   try {
     console.log('📡 加载实时数据:', code);
 
-    const [quoteResp, minuteResp] = await Promise.all([
-      fetch('/api/quote?codes=' + code),
-      fetch('/api/minute?code=' + code)
+    const [quotes, minuteData] = await Promise.all([
+      window.ApiClient.fetchJsonData('/api/quote?codes=' + code),
+      window.ApiClient.fetchJsonData('/api/minute?code=' + code)
     ]);
-
-    const quotes = await quoteResp.json();
-    const minuteData = await minuteResp.json();
 
     console.log('📦 行情数据:', quotes.length, '条');
     console.log('📦 分时数据:', Array.isArray(minuteData) ? minuteData.length : '非数组', '条');

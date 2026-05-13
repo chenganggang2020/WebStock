@@ -10,6 +10,7 @@ const dbPath = process.env.WEBSTOCK_DB_PATH || path.join(dataDir, 'webstock.db')
 let db;
 try {
   db = new Database(dbPath);
+  db.pragma('foreign_keys = ON');
   const initSql = fs.readFileSync(path.join(__dirname, 'init.sql'), 'utf8');
   db.exec(initSql);
 } catch (error) {
