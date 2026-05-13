@@ -50,12 +50,13 @@ function visibleWatchlistItems() {
   return items;
 }
 
-async function loadWatchlist() {
+async function loadWatchlist(options) {
+  options = options || {};
   const State = window.State;
   const group = document.getElementById('watchlistGroupFilter') ? document.getElementById('watchlistGroupFilter').value : '';
   State.watchlist = await watchlistApi('/watchlist' + (group ? '?group=' + encodeURIComponent(group) : ''));
   renderWatchlist();
-  if (State.watchlist.length) await refreshWatchlistQuotes();
+  if (!options.skipQuotes && State.watchlist.length) await refreshWatchlistQuotes();
   if (window.StockList) window.StockList.renderStockTable(State.filteredStocks);
   if (window.Dashboard) window.Dashboard.refreshCards();
   if (window.updateSidebarWorkspace) window.updateSidebarWorkspace();

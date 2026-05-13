@@ -230,7 +230,7 @@ async function selectStock(stock) {
   State.currentPage = 0;
   State.filteredStocks = State.allStocks.slice(0, State.PAGE_SIZE);
   renderStockTable(State.filteredStocks);
-  await refreshQuotes(State.filteredStocks);
+  await refreshQuotes([stock]);
   if (window.Dashboard) Promise.resolve(window.Dashboard.refreshCards()).catch(function(error) { console.warn(error.message); });
 
   try {

@@ -61,7 +61,7 @@ function dashboardRestoreRisk(key) {
 async function dashboardLoad() {
   await Promise.all([
     window.RecentStocks ? window.RecentStocks.load(20).catch(function() {}) : Promise.resolve(),
-    window.Watchlist ? window.Watchlist.loadWatchlist().catch(function() {}) : Promise.resolve(),
+    window.Watchlist ? window.Watchlist.loadWatchlist({ skipQuotes: true }).catch(function() {}) : Promise.resolve(),
     window.Portfolio ? window.Portfolio.loadPortfolio().catch(function() {}) : Promise.resolve(),
     window.News ? window.News.loadDashboardNews().catch(function() {}) : Promise.resolve(),
     window.SectorLeaders ? window.SectorLeaders.loadDashboardSummary().catch(function() {}) : Promise.resolve(),

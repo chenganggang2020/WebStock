@@ -279,6 +279,13 @@ a:focus-visible {
   margin-top: 6px;
 }
 
+.hot-rank-reason {
+  margin-top: 6px;
+  color: #64748b;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
 .hot-chip-row {
   display: flex;
   flex-wrap: wrap;
@@ -332,8 +339,14 @@ a:focus-visible {
 }
 
 .hot-news-item {
+  width: 100%;
+  border: 0;
   border-top: 1px solid var(--border);
   padding: 8px 0;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  text-align: left;
 }
 
 .hot-news-item:first-child {
@@ -407,6 +420,26 @@ a:focus-visible {
 .hot-news-block,
 .hot-analysis-card {
   margin: 0 16px 14px;
+}
+
+.hot-news-block {
+  max-height: 420px;
+  overflow-y: auto;
+}
+
+.hot-news-scroll {
+  max-height: 360px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.hot-news-modal {
+  width: min(720px, 92vw);
+}
+
+.hot-news-modal p {
+  color: #475569;
+  line-height: 1.7;
 }
 
 .hot-paste-hint {

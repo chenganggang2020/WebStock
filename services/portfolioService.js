@@ -1,6 +1,8 @@
 const db = require('../db');
 
 const VALID_SIDES = new Set(['buy', 'sell', 'dividend', 'fee']);
+const DEFAULT_ESTIMATED_EXIT_FEE = 5;
+const DEFAULT_ESTIMATED_EXIT_TAX = 0;
 
 function round(value, digits = 2) {
   const n = Number(value);
@@ -260,7 +262,10 @@ function calculatePositions(trades, quoteMap = {}) {
       const quote = quoteMap[pos.code] || {};
       const currentPrice = Number.isFinite(Number(quote.price)) && Number(quote.price) > 0 ? Number(quote.price) : null;
       const marketValue = currentPrice === null ? null : currentPrice * pos.quantity;
-      const unrealizedPnl = marketValue === null ? null : marketValue - pos.costValue;
+      const grossUnrealizedPnl = marketValue === null ? null : marketValue - pos.costValue;
+      const estimatedExitFee = marketValue === null ? 0 : DEFAULT_ESTIMATED_EXIT_FEE;
+      const estimatedExitTax = marketValue === null ? 0 : DEFAULT_ESTIMATED_EXIT_TAX;
+      const unrealizedPnl = grossUnrealizedPnl === null ? null : grossUnrealizedPnl - estimatedExitFee - estimatedExitTax;
       const avgCost = pos.quantity > 0 ? pos.costValue / pos.quantity : 0;
       return {
         code: pos.code,
@@ -270,6 +275,9 @@ function calculatePositions(trades, quoteMap = {}) {
         currentPrice: currentPrice === null ? null : round(currentPrice, 3),
         marketValue: marketValue === null ? null : round(marketValue, 2),
         costValue: round(pos.costValue, 2),
+        grossUnrealizedPnl: grossUnrealizedPnl === null ? null : round(grossUnrealizedPnl, 2),
+        estimatedExitFee: round(estimatedExitFee, 2),
+        estimatedExitTax: round(estimatedExitTax, 2),
         unrealizedPnl: unrealizedPnl === null ? null : round(unrealizedPnl, 2),
         unrealizedPnlRate: unrealizedPnl === null || pos.costValue === 0 ? null : round(unrealizedPnl / pos.costValue * 100, 2),
         realizedPnl: round(pos.realizedPnl, 2),

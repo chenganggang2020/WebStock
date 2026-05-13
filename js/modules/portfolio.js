@@ -35,11 +35,15 @@ function downloadPortfolioCsv(filename, rows) {
 }
 
 async function loadPortfolio() {
-  await Promise.all([loadSummary(), loadPositions(), loadClosedPositions()]);
-  const allocation = await portfolioApi('/allocation');
-  window.State.portfolioAllocation = allocation;
+  const result = await portfolioApi('/recalculate', { method: 'POST' });
+  window.State.positions = result.positions || [];
+  window.State.portfolioSummary = result.summary || {};
+  window.State.portfolioAllocation = result.allocation || [];
+  renderSummary();
+  renderPositions();
+  await loadClosedPositions();
   if (window.PortfolioCharts) {
-    window.PortfolioCharts.renderAllocationChart(allocation);
+    window.PortfolioCharts.renderAllocationChart(window.State.portfolioAllocation);
     window.PortfolioCharts.renderPnlRankChart(window.State.positions);
     setTimeout(window.PortfolioCharts.resizePortfolioCharts, 30);
   }
@@ -72,6 +76,7 @@ function renderSummary() {
   document.getElementById('summaryCost').textContent = fmt(summary.totalCost);
   const unrealized = document.getElementById('summaryUnrealizedPnl');
   unrealized.textContent = fmt(summary.unrealizedPnl);
+  unrealized.title = '已扣除买入成本中的手续费，并预估扣除卖出手续费。';
   unrealized.className = 'summary-value ' + pnlClass(summary.unrealizedPnl);
   const realized = document.getElementById('summaryRealizedPnl');
   realized.textContent = fmt(summary.realizedPnl);
@@ -123,7 +128,7 @@ function renderPositions() {
       '<td>' + fmt(pos.avgCost, 3) + '</td>' +
       '<td>' + fmt(pos.currentPrice, 3) + '</td>' +
       '<td>' + fmt(pos.marketValue === null ? pos.costValue : pos.marketValue) + '</td>' +
-      '<td class="' + pnlClass(pos.unrealizedPnl) + '">' + fmt(pos.unrealizedPnl) + '</td>' +
+      '<td class="' + pnlClass(pos.unrealizedPnl) + '" title="毛收益 ' + fmt(pos.grossUnrealizedPnl) + ' - 预估卖出费 ' + fmt(pos.estimatedExitFee) + '">' + fmt(pos.unrealizedPnl) + '</td>' +
       '<td class="' + pnlClass(pos.unrealizedPnlRate) + '">' + fmt(pos.unrealizedPnlRate) + '%</td>' +
       '<td class="' + pnlClass(pos.todayPnl) + '">' + fmt(pos.todayPnl) + '</td>' +
       '<td><div class="stock-actions">' +

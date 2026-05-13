@@ -1,6 +1,7 @@
 let hotMarketOverview = null;
 let selectedHotBoardIndex = 0;
 let pendingHotPaste = false;
+let hotFullRefreshScheduled = false;
 
 function hotEscape(value) {
   return String(value == null ? '' : value)
@@ -64,12 +65,21 @@ async function hotLoad(options) {
     renderHotStatus('hotSidebarPanel', '正在刷新热点板块...');
     renderHotStatus('hotMarketBoard', '正在刷新热点板块...');
   }
-  hotMarketOverview = await window.ApiClient.fetchJsonData('/api/hot-market/overview' + (options.refresh ? '?refresh=1' : ''));
+  const params = new URLSearchParams();
+  if (options.refresh) params.set('refresh', '1');
+  if (options.fast) params.set('fast', '1');
+  hotMarketOverview = await window.ApiClient.fetchJsonData('/api/hot-market/overview' + (params.toString() ? '?' + params.toString() : ''));
   selectedHotBoardIndex = 0;
   renderHotSidebar();
   renderHotBoard();
   hotSyncSearchMode();
   if (window.updateSidebarWorkspace) window.updateSidebarWorkspace();
+  if (options.backgroundFull && options.fast && !hotFullRefreshScheduled) {
+    hotFullRefreshScheduled = true;
+    setTimeout(function() {
+      hotLoad({ refresh: true, silent: true }).catch(function(error) { console.warn(error.message); });
+    }, 1200);
+  }
   return hotMarketOverview;
 }
 
@@ -88,8 +98,9 @@ function renderHotSectorCard(board, index, compact) {
     '<div class="hot-sector-meta">' +
       '<span>月 ' + hotFmtPct(board.monthChangePct) + '</span>' +
       '<span>额 ' + hotFmtYi(board.amount) + '</span>' +
-      '<span>流 ' + hotFmtYi(board.mainNetInflow) + '</span>' +
+      '<span>分 ' + (Number.isFinite(Number(board.heatScore)) ? Number(board.heatScore).toFixed(1) : '--') + '</span>' +
     '</div>' +
+    '<div class="hot-rank-reason">' + hotEscape(board.rankReason || '按日涨幅、成交额和活跃股综合排序') + '</div>' +
     '<div class="hot-chip-row">' + stocks + '</div>' +
     '</article>';
 }
@@ -105,11 +116,11 @@ function renderHotStockLine(stock) {
 function renderHotNews(items, limit) {
   const news = (items || []).slice(0, limit || 4);
   if (!news.length) return '<div class="empty-state compact">暂无最新资讯。</div>';
-  return news.map(function(item) {
-    return '<article class="hot-news-item">' +
+  return news.map(function(item, index) {
+    return '<button class="hot-news-item" type="button" data-hot-news-index="' + index + '">' +
       '<div><strong>' + hotEscape(item.title) + '</strong><p>' + hotEscape(item.summary || '') + '</p></div>' +
-      '<span>' + hotEscape(item.source || '') + '</span>' +
-      '</article>';
+      '<span>' + hotEscape(item.source || '') + ' · ' + hotEscape((item.time || '').slice(0, 10)) + '</span>' +
+      '</button>';
   }).join('');
 }
 
@@ -133,8 +144,8 @@ function renderHotSidebar() {
     }).join('') + '</div>' +
     '<div class="hot-sidebar-section"><div class="hot-sidebar-title">' + hotEscape(selected.name) + ' 核心股</div>' +
     '<div class="hot-stock-lines">' + stocks.map(renderHotStockLine).join('') + '</div></div>' +
-    '<div class="hot-sidebar-section"><div class="hot-sidebar-title">新浪财经最新资讯</div>' +
-    renderHotNews(hotMarketOverview.news || [], 4) + '</div>';
+    '<div class="hot-sidebar-section hot-news-scroll"><div class="hot-sidebar-title">近7天财经资讯</div>' +
+    renderHotNews(hotMarketOverview.news || [], 20) + '</div>';
   bindHotContainer(panel);
   hotSyncSearchMode();
 }
@@ -153,7 +164,7 @@ function renderHotBoard() {
     ? '<div class="provider-status">部分外部接口降级：' + hotEscape((hotMarketOverview.errors || []).join(' | ') || '请人工复核数据') + '</div>'
     : '';
   box.innerHTML = '<div class="hot-board-head">' +
-    '<div><h3>实时热点板块</h3><p>按当日涨幅、成交额、主力净流入和月度持续性综合展示。</p></div>' +
+    '<div><h3>实时热点板块</h3><p>按热度分排序：日涨幅、成交额、活跃股数量、大涨股数量、可用资金流共同计算。</p></div>' +
     '<div class="hot-board-actions">' +
       '<button class="small-btn" data-hot-action="refresh">刷新数据</button>' +
       '<button class="small-btn primary" data-hot-action="ai">复制 GPT 提示词</button>' +
@@ -171,7 +182,7 @@ function renderHotBoard() {
       }).join('') + '</div></section>' +
       '<section><h3>热门个股</h3><div class="hot-stock-lines">' + hotStocks.slice(0, 12).map(renderHotStockLine).join('') + '</div></section>' +
     '</div>' +
-    '<section class="hot-news-block"><h3>最新资讯</h3>' + renderHotNews(hotMarketOverview.news || [], 8) + '</section>';
+    '<section class="hot-news-block"><h3>近7天资讯</h3>' + renderHotNews(hotMarketOverview.news || [], 60) + '</section>';
   bindHotContainer(box);
 }
 
@@ -180,6 +191,7 @@ function bindHotContainer(container) {
     const action = event.target.closest('[data-hot-action]');
     const stockBtn = event.target.closest('[data-hot-stock]');
     const sector = event.target.closest('[data-hot-sector-index]');
+    const newsBtn = event.target.closest('[data-hot-news-index]');
     try {
       if (action) {
         const name = action.getAttribute('data-hot-action');
@@ -191,6 +203,10 @@ function bindHotContainer(container) {
         await openHotStock(stockBtn.getAttribute('data-hot-stock'));
         return;
       }
+      if (newsBtn) {
+        openHotNews(Number(newsBtn.getAttribute('data-hot-news-index')) || 0);
+        return;
+      }
       if (sector) {
         selectedHotBoardIndex = Number(sector.getAttribute('data-hot-sector-index')) || 0;
         renderHotSidebar();
@@ -200,6 +216,52 @@ function bindHotContainer(container) {
       alert(error.message || '热点操作失败');
     }
   };
+}
+
+function ensureHotNewsModal() {
+  let overlay = document.getElementById('hotNewsModalOverlay');
+  if (overlay) return overlay;
+  overlay = document.createElement('div');
+  overlay.id = 'hotNewsModalOverlay';
+  overlay.className = 'modal-overlay';
+  overlay.style.display = 'none';
+  overlay.innerHTML = '<div class="modal hot-news-modal">' +
+    '<h3 id="hotNewsModalTitle"></h3>' +
+    '<div id="hotNewsModalMeta" class="news-meta"></div>' +
+    '<p id="hotNewsModalSummary"></p>' +
+    '<div id="hotNewsModalTags" class="tag-row"></div>' +
+    '<div class="modal-actions">' +
+      '<a id="hotNewsModalLink" class="small-btn primary" target="_blank" rel="noopener">打开原文</a>' +
+      '<button id="hotNewsModalClose" type="button">关闭</button>' +
+    '</div>' +
+    '</div>';
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', function(event) {
+    if (event.target === overlay) overlay.style.display = 'none';
+  });
+  overlay.querySelector('#hotNewsModalClose').addEventListener('click', function() {
+    overlay.style.display = 'none';
+  });
+  return overlay;
+}
+
+function openHotNews(index) {
+  const item = (hotMarketOverview && hotMarketOverview.news && hotMarketOverview.news[index]) || null;
+  if (!item) return;
+  const overlay = ensureHotNewsModal();
+  overlay.querySelector('#hotNewsModalTitle').textContent = item.title || '资讯详情';
+  overlay.querySelector('#hotNewsModalMeta').textContent = (item.source || 'WebStock') + ' · ' + (item.time || '');
+  overlay.querySelector('#hotNewsModalSummary').textContent = item.summary || '该资讯没有摘要，可打开原文查看。';
+  const tags = []
+    .concat(item.relatedStocks || [])
+    .concat(item.relatedSectors || [])
+    .filter(Boolean);
+  overlay.querySelector('#hotNewsModalTags').innerHTML = tags.map(function(tag) {
+    return '<span class="tag">' + hotEscape(tag) + '</span>';
+  }).join('');
+  const link = overlay.querySelector('#hotNewsModalLink');
+  link.href = item.link && item.link !== '#' ? item.link : 'https://finance.sina.com.cn/';
+  overlay.style.display = 'flex';
 }
 
 async function openHotStock(code) {

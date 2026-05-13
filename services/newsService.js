@@ -254,18 +254,27 @@ function createSinaFinanceProvider(options = {}) {
   const url = options.url || 'https://feed.mix.sina.com.cn/api/roll/get';
   const lids = options.lids || [2517, 2516];
   const pageid = options.pageid || 153;
-  const num = options.num || 30;
   return {
     name: options.name || 'sina-finance-roll',
     async list(filters = {}) {
-      const lists = await Promise.all(lids.map(async function(lid) {
+      const days = Math.min(Math.max(Number(filters.days) || options.days || 7, 1), 14);
+      const pages = Math.min(Math.max(Number(filters.pages) || options.pages || 7, 1), 10);
+      const num = Math.min(Math.max(Number(filters.num) || options.num || 50, 10), 80);
+      const since = Date.now() - days * 24 * 60 * 60 * 1000;
+      const tasks = [];
+      for (const lid of lids) {
+        for (let page = 1; page <= pages; page++) {
+          tasks.push({ lid, page });
+        }
+      }
+      const lists = await Promise.all(tasks.map(async function(task) {
         const response = await axios.get(url, {
           timeout: options.timeoutMs || 7000,
           params: {
             pageid,
-            lid,
+            lid: task.lid,
             num,
-            page: 1,
+            page: task.page,
             encode: 'utf-8',
             _: Date.now()
           },
@@ -279,7 +288,13 @@ function createSinaFinanceProvider(options = {}) {
           : [];
         return data;
       }));
-      return lists.flat().map(function(item) {
+      return lists.flat().filter(function(item) {
+        const seconds = Number(item.ctime || item.mtime);
+        if (!Number.isFinite(seconds) || seconds <= 0) return true;
+        return seconds * 1000 >= since;
+      }).sort(function(a, b) {
+        return Number(b.ctime || b.mtime || 0) - Number(a.ctime || a.mtime || 0);
+      }).map(function(item) {
         const keywords = String(item.keywords || '').split(',').map(function(tag) { return tag.trim(); }).filter(Boolean);
         const relatedStocks = [];
         if (filters.code && [

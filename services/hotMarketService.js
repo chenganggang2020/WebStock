@@ -56,6 +56,33 @@ function formatYi(value) {
   return (n / 100000000).toFixed(2) + '亿';
 }
 
+function calcHeatScore(metrics) {
+  const dailyChange = Number(metrics.dailyChangePct) || 0;
+  const amount = Number(metrics.amount) || 0;
+  const activeStocks = Number(metrics.activeStocks) || 0;
+  const strongStocks = Number(metrics.strongStocks) || 0;
+  const limitUpLike = Number(metrics.limitUpLike) || 0;
+  const mainNetInflow = Math.max(Math.abs(Number(metrics.mainNetInflow) || 0), 1);
+  const amountScore = Math.log10(Math.max(amount, 1));
+  const flowScore = metrics.mainNetInflow == null ? 0 : Math.log10(mainNetInflow);
+  return round(dailyChange * 4 + amountScore * 1.6 + activeStocks * 0.8 + strongStocks * 1.2 + limitUpLike * 2 + flowScore * 0.8, 2);
+}
+
+function withRankReason(board, metrics) {
+  const parts = [
+    '热度分 ' + (Number.isFinite(Number(board.heatScore)) ? Number(board.heatScore).toFixed(2) : '--'),
+    '日涨幅 ' + formatPct(board.dailyChangePct),
+    '成交额 ' + formatYi(board.amount)
+  ];
+  if (metrics && Number.isFinite(Number(metrics.activeStocks))) parts.push('活跃股 ' + metrics.activeStocks);
+  if (metrics && Number.isFinite(Number(metrics.strongStocks))) parts.push('大涨股 ' + metrics.strongStocks);
+  if (board.mainNetInflow !== null && board.mainNetInflow !== undefined) parts.push('主力净流入 ' + formatYi(board.mainNetInflow));
+  return Object.assign({}, board, {
+    rankMetrics: metrics || {},
+    rankReason: parts.join(' / ')
+  });
+}
+
 function isExternalDisabled() {
   return process.env.WEBSTOCK_HOT_MARKET_OFFLINE === '1' || process.env.NODE_ENV === 'test';
 }
@@ -99,7 +126,15 @@ function mapBoard(row, kind) {
   const mainNetInflow = numberOrNull(row.f62);
   const dailyChangePct = numberOrNull(row.f3);
   const amount = numberOrNull(row.f6);
-  return {
+  const metrics = {
+    dailyChangePct,
+    amount,
+    mainNetInflow,
+    activeStocks: null,
+    strongStocks: null,
+    limitUpLike: null
+  };
+  const board = {
     code: String(row.f12 || ''),
     name: String(row.f14 || ''),
     kind,
@@ -113,13 +148,9 @@ function mapBoard(row, kind) {
     leaderName: String(row.f128 || row.f207 || ''),
     leaderCode: String(row.f140 || row.f208 || ''),
     leaderChangePct: numberOrNull(row.f136),
-    heatScore: round(
-      (dailyChangePct || 0) * 3 +
-      Math.log10(Math.max(amount || 1, 1)) +
-      Math.log10(Math.max(Math.abs(mainNetInflow || 0), 1)),
-      2
-    )
+    heatScore: calcHeatScore(metrics)
   };
+  return withRankReason(board, metrics);
 }
 
 function mapStock(row, sectorName) {
@@ -330,21 +361,31 @@ async function fetchSinaNodeStocks(node, sectorName, limit) {
   return (Array.isArray(data) ? data : []).map(row => mapSinaStock(row, sectorName)).filter(item => item.code && item.name);
 }
 
-async function fetchSinaIndustryRank(limit) {
+async function fetchSinaIndustryRank(limit, options = {}) {
   const nodes = await getSinaIndustryNodes();
-  const boards = await mapLimit(nodes.slice(0, 60), 6, async function(node) {
+  const nodeLimit = Math.min(Math.max(Number(options.nodeLimit) || 60, limit || 12), 80);
+  const memberLimit = Math.min(Math.max(Number(options.memberLimit) || 10, 5), 20);
+  const boards = await mapLimit(nodes.slice(0, nodeLimit), 6, async function(node) {
     try {
-      const stocks = await fetchSinaNodeStocks(node.node, node.name, 6);
+      const stocks = await fetchSinaNodeStocks(node.node, node.name, memberLimit);
       if (!stocks.length) return null;
-      const top = stocks.slice(0, 3);
+      const top = stocks.slice(0, 5);
       const avgChange = top.reduce((sum, stock) => sum + (Number(stock.changePct) || 0), 0) / top.length;
       const amount = stocks.reduce((sum, stock) => sum + (Number(stock.amount) || 0), 0);
-      return {
+      const metrics = {
+        dailyChangePct: round(avgChange, 2),
+        amount,
+        mainNetInflow: null,
+        activeStocks: stocks.length,
+        strongStocks: stocks.filter(stock => Number(stock.changePct) >= 5).length,
+        limitUpLike: stocks.filter(stock => Number(stock.changePct) >= 9.8).length
+      };
+      const board = {
         code: node.node,
         name: node.name,
         kind: 'sina-industry',
         latestPoint: null,
-        dailyChangePct: round(avgChange, 2),
+        dailyChangePct: metrics.dailyChangePct,
         dailyChangeAmount: null,
         volume: stocks.reduce((sum, stock) => sum + (Number(stock.volume) || 0), 0),
         amount,
@@ -355,9 +396,10 @@ async function fetchSinaIndustryRank(limit) {
         leaderChangePct: stocks[0].changePct,
         monthChangePct: null,
         sampleDays: 0,
-        heatScore: round(avgChange * 3 + Math.log10(Math.max(amount, 1)), 2),
+        heatScore: calcHeatScore(metrics),
         stocks
       };
+      return withRankReason(board, metrics);
     } catch (error) {
       return null;
     }
@@ -449,7 +491,7 @@ function buildFallbackBoards() {
         mainNetInflow: null
       };
     });
-    return {
+    const board = {
       code: 'LOCAL' + sector.id,
       name: sector.name,
       kind: 'local',
@@ -461,6 +503,13 @@ function buildFallbackBoards() {
       sourceNote: '本地板块配置兜底',
       stocks
     };
+    return withRankReason(board, {
+      dailyChangePct: null,
+      amount: null,
+      activeStocks: stocks.length,
+      strongStocks: null,
+      limitUpLike: null
+    });
   });
 }
 
@@ -474,6 +523,28 @@ function sortMonthBoards(boards) {
   return boards.slice().sort(function(a, b) {
     return (Number(b.monthChangePct) || -999) - (Number(a.monthChangePct) || -999);
   });
+}
+
+function latestSnapshotForToday() {
+  const row = db.prepare(`
+    SELECT id, payload_json, created_at
+    FROM hot_market_snapshots
+    WHERE snapshot_date = ?
+    ORDER BY datetime(created_at) DESC, id DESC
+    LIMIT 1
+  `).get(todayString());
+  if (!row) return null;
+  try {
+    const payload = JSON.parse(row.payload_json || '{}');
+    payload.snapshotId = payload.snapshotId || row.id;
+    if (Array.isArray(payload.news)) payload.news = payload.news.slice(0, 120);
+    payload.cached = true;
+    payload.cachedSnapshot = true;
+    payload.snapshotCreatedAt = row.created_at;
+    return payload;
+  } catch (error) {
+    return null;
+  }
 }
 
 function dashboardTable(boards) {
@@ -608,10 +679,16 @@ function saveAiResult(input = {}) {
 
 async function getOverview(options = {}) {
   const refresh = Boolean(options.refresh);
+  const fast = Boolean(options.fast);
   if (!refresh && cachedOverview && Date.now() - cachedOverview.ts < CACHE_TTL_MS) {
     return Object.assign({}, cachedOverview.data, { cached: true });
   }
+  if (!refresh && fast) {
+    const latest = latestSnapshotForToday();
+    if (latest) return latest;
+  }
 
+  const startedAt = Date.now();
   const sources = [];
   const errors = [];
   let dayBoards = [];
@@ -627,7 +704,10 @@ async function getOverview(options = {}) {
   } catch (error) {
     errors.push('Eastmoney sector rank: ' + error.message);
     try {
-      dayBoards = await fetchSinaIndustryRank(12);
+      dayBoards = await fetchSinaIndustryRank(fast ? 8 : 12, {
+        nodeLimit: fast ? 30 : 60,
+        memberLimit: fast ? 6 : 10
+      });
       sources.push('Sina industry rank');
     } catch (sinaError) {
       errors.push('Sina industry rank: ' + sinaError.message);
@@ -636,7 +716,16 @@ async function getOverview(options = {}) {
     }
   }
 
-  dayBoards = await enrichBoardsWithMonthStats(dayBoards);
+  if (fast) {
+    dayBoards = dayBoards.map(function(board) {
+      return Object.assign({}, board, {
+        monthChangePct: board.monthChangePct == null ? null : board.monthChangePct,
+        sampleDays: board.sampleDays || 0
+      });
+    });
+  } else {
+    dayBoards = await enrichBoardsWithMonthStats(dayBoards);
+  }
   dayBoards = await Promise.all(dayBoards.map(async function(board) {
     if (board.stocks && board.stocks.length) return board;
     return Object.assign({}, board, { stocks: await fetchBoardMembers(board, 8) });
@@ -658,6 +747,9 @@ async function getOverview(options = {}) {
 
   const newsResult = await newsService.listNewsWithMetaAsync({
     type: 'market',
+    days: 7,
+    pages: fast ? 3 : 7,
+    num: fast ? 30 : 50,
     cacheBust: refresh ? String(Date.now()) : ''
   });
   if (newsResult.meta && newsResult.meta.sources) {
@@ -678,8 +770,10 @@ async function getOverview(options = {}) {
       month: sortMonthBoards(dayBoards)
     },
     hotStocks,
-    news: newsResult.items || [],
-    newsMeta: newsResult.meta || null
+    news: (newsResult.items || []).slice(0, 120),
+    newsMeta: newsResult.meta || null,
+    durationMs: Date.now() - startedAt,
+    fastMode: fast
   };
   overview.prompt = buildPrompt(overview);
   saveSnapshot(overview);

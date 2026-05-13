@@ -12,7 +12,10 @@ function fail(res, error, status = 400) {
 
 router.get('/hot-market/overview', async function(req, res) {
   try {
-    ok(res, await hotMarket.getOverview({ refresh: req.query.refresh === '1' }));
+    ok(res, await hotMarket.getOverview({
+      refresh: req.query.refresh === '1',
+      fast: req.query.fast === '1'
+    }));
   } catch (error) {
     fail(res, error, 500);
   }

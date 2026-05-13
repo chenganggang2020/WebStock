@@ -19,6 +19,9 @@ router.get('/news', async function(req, res) {
       sector: req.query.sector,
       keyword: req.query.keyword,
       source: req.query.source,
+      days: req.query.days,
+      pages: req.query.pages,
+      num: req.query.num,
       cacheBust: req.query.cacheBust
     };
     if (req.query.withMeta === '1') {

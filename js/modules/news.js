@@ -133,7 +133,7 @@ async function load(options) {
 }
 
 async function loadDashboardNews() {
-  const result = await newsApi('');
+  const result = await newsApi(new URLSearchParams({ days: '7', pages: '2', num: '20' }).toString());
   const box = document.getElementById('dashboardNewsList');
   if (!box) return result.items;
   if (!result.items.length) {

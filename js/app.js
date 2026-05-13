@@ -302,7 +302,7 @@ function switchMainView(view) {
   if (view === 'recent') window.RecentStocks.load(50).catch(function(error) { alert(error.message); });
   if (view === 'news') window.News.load().catch(function(error) { alert(error.message); });
   if (view === 'sectors') {
-    if (window.HotMarket) window.HotMarket.load({ silent: true }).catch(function(error) { console.warn(error.message); });
+    if (window.HotMarket) window.HotMarket.load({ silent: true, fast: true }).catch(function(error) { console.warn(error.message); });
     window.SectorLeaders.load().catch(function(error) { alert(error.message); });
   }
   if (view === 'screener') window.StockScreener.ensureLoaded().catch(function(error) { alert(error.message); });
@@ -348,15 +348,20 @@ async function init() {
 
   State.allStocks = await window.ApiClient.fetchJsonData('/api/stocklist');
   State.filteredStocks = State.allStocks.slice(0, State.PAGE_SIZE);
-  if (window.Watchlist) await window.Watchlist.loadWatchlist();
+  if (window.Watchlist) await window.Watchlist.loadWatchlist({ skipQuotes: true });
   if (window.RecentStocks) await window.RecentStocks.load(20).catch(function() {});
   StockList.renderStockTable(State.filteredStocks);
   bindButtons();
   updateSidebarWorkspace();
-  if (window.HotMarket) window.HotMarket.load({ silent: true }).catch(function(error) { console.warn(error.message); });
-  StockList.refreshQuotes(State.filteredStocks);
+  if (window.HotMarket) window.HotMarket.load({ silent: true, fast: true }).catch(function(error) { console.warn(error.message); });
   StockList.setupInfiniteScroll();
-  setInterval(function() { StockList.refreshQuotes(State.filteredStocks); }, 5000);
+  setInterval(function() {
+    const searchInput = document.getElementById('searchInput');
+    const tableWrap = document.querySelector('.stock-table-wrap');
+    const shouldRefreshList = Boolean(searchInput && searchInput.value.trim()) ||
+      Boolean(tableWrap && getComputedStyle(tableWrap).display !== 'none');
+    if (shouldRefreshList) StockList.refreshQuotes(State.filteredStocks).catch(function(error) { console.warn(error.message); });
+  }, 15000);
 
   const pingAn = State.allStocks.find(function(s) { return s.code === '000001'; });
   if (pingAn) {
