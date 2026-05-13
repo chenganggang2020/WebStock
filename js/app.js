@@ -306,6 +306,9 @@ function switchMainView(view) {
     window.SectorLeaders.load().catch(function(error) { alert(error.message); });
   }
   if (view === 'screener') window.StockScreener.ensureLoaded().catch(function(error) { alert(error.message); });
+  if (view === 'market' && window.StockList && State.currentStock && !State.currentRawData.length) {
+    window.StockList.selectStock(State.currentStock).catch(function(error) { console.warn(error.message); });
+  }
   if (view === 'aiHistory' && window.AIHistory) window.AIHistory.render();
   if (view === 'portfolio') window.Portfolio.loadPortfolio().catch(function(error) { alert(error.message); });
   if (view === 'trades') window.Trades.loadTrades().catch(function(error) { alert(error.message); });
@@ -324,6 +327,14 @@ function switchMainView(view) {
 
 window.switchMainView = switchMainView;
 window.updateSidebarWorkspace = updateSidebarWorkspace;
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function() {
+    navigator.serviceWorker.register('/sw.js').catch(function(error) {
+      console.warn('Service worker registration failed:', error.message);
+    });
+  });
+}
 
 document.querySelectorAll('.period-btn').forEach(function(btn) {
   btn.addEventListener('click', function() {
@@ -365,9 +376,13 @@ async function init() {
 
   const pingAn = State.allStocks.find(function(s) { return s.code === '000001'; });
   if (pingAn) {
-    await StockList.selectStock(pingAn);
+    StockList.primeStock(pingAn);
   }
-  if (window.Dashboard) window.Dashboard.load().catch(function(error) { console.warn(error.message); });
+  if (window.Dashboard) {
+    setTimeout(function() {
+      window.Dashboard.load().catch(function(error) { console.warn(error.message); });
+    }, 0);
+  }
 }
 
 init();

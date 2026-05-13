@@ -106,8 +106,11 @@ function renderHotSectorCard(board, index, compact) {
 }
 
 function renderHotStockLine(stock) {
+  const tags = (stock.tags || []).slice(0, 3).map(function(tag) {
+    return '<span class="stock-tag">' + hotEscape(tag) + '</span>';
+  }).join('');
   return '<button class="hot-stock-line" data-hot-stock="' + hotEscape(stock.code) + '">' +
-    '<span><strong>' + hotEscape(stock.name || stock.code) + '</strong><em>' + hotEscape(stock.code || '') + '</em></span>' +
+    '<span class="hot-stock-main"><strong>' + hotEscape(stock.name || stock.code) + '</strong><em>' + hotEscape(stock.code || '') + '</em><span class="stock-tags">' + tags + '</span></span>' +
     '<span class="' + hotPnlClass(stock.changePct) + '">' + hotFmtPct(stock.changePct) + '</span>' +
     '<span>' + hotFmtYi(stock.amount) + '</span>' +
     '</button>';
@@ -122,6 +125,49 @@ function renderHotNews(items, limit) {
       '<span>' + hotEscape(item.source || '') + ' · ' + hotEscape((item.time || '').slice(0, 10)) + '</span>' +
       '</button>';
   }).join('');
+}
+
+function renderThemeSearchBox() {
+  return '<div class="theme-search-box">' +
+    '<div class="theme-search-row">' +
+      '<input id="themeSearchInput" type="search" placeholder="搜 CPO / 半导体 / 先进封装">' +
+      '<button class="small-btn" data-hot-action="themeSearch">搜索</button>' +
+    '</div>' +
+    '<div class="theme-quick-row">' +
+      ['CPO', '半导体', '先进封装', '工业母机'].map(function(name) {
+        return '<button type="button" data-theme-query="' + hotEscape(name) + '">' + hotEscape(name) + '</button>';
+      }).join('') +
+    '</div>' +
+    '<div id="themeSearchResults" class="theme-search-results"></div>' +
+  '</div>';
+}
+
+function renderThemeResults(themes) {
+  if (!themes || !themes.length) {
+    return '<div class="empty-state compact">没有找到匹配产业，可换一个关键词。</div>';
+  }
+  return themes.slice(0, 4).map(function(theme) {
+    const leaders = (theme.leaders || []).slice(0, 6).map(function(stock) {
+      return '<button type="button" class="theme-leader-chip" data-hot-stock="' + hotEscape(stock.code) + '">' +
+        '<strong>' + hotEscape(stock.name || stock.code) + '</strong><span>' + hotEscape(stock.role || stock.marketLabel || '') + '</span>' +
+      '</button>';
+    }).join('');
+    return '<article class="theme-result-card">' +
+      '<header><strong>' + hotEscape(theme.name) + '</strong><span>' + hotEscape((theme.aliases || []).slice(0, 3).join(' / ')) + '</span></header>' +
+      '<div class="theme-leader-grid">' + leaders + '</div>' +
+    '</article>';
+  }).join('');
+}
+
+async function runThemeSearch(query) {
+  const input = document.getElementById('themeSearchInput');
+  const target = document.getElementById('themeSearchResults');
+  const keyword = String(query || (input && input.value) || '').trim();
+  if (input && query) input.value = keyword;
+  if (!target || !keyword) return;
+  target.innerHTML = '<div class="empty-state compact">正在查询产业龙头...</div>';
+  const data = await window.ApiClient.fetchJsonData('/api/themes/search?q=' + encodeURIComponent(keyword));
+  target.innerHTML = renderThemeResults(data || []);
 }
 
 function renderHotSidebar() {
@@ -142,11 +188,20 @@ function renderHotSidebar() {
     '<div class="hot-sidebar-grid">' + boards.slice(0, 6).map(function(board, index) {
       return renderHotSectorCard(board, index, true);
     }).join('') + '</div>' +
+    renderThemeSearchBox() +
     '<div class="hot-sidebar-section"><div class="hot-sidebar-title">' + hotEscape(selected.name) + ' 核心股</div>' +
     '<div class="hot-stock-lines">' + stocks.map(renderHotStockLine).join('') + '</div></div>' +
     '<div class="hot-sidebar-section hot-news-scroll"><div class="hot-sidebar-title">近7天财经资讯</div>' +
     renderHotNews(hotMarketOverview.news || [], 20) + '</div>';
   bindHotContainer(panel);
+  const themeInput = panel.querySelector('#themeSearchInput');
+  if (themeInput) {
+    themeInput.addEventListener('keydown', function(event) {
+      if (event.key !== 'Enter') return;
+      event.preventDefault();
+      runThemeSearch().catch(function(error) { alert(error.message || '产业搜索失败'); });
+    });
+  }
   hotSyncSearchMode();
 }
 
@@ -192,11 +247,17 @@ function bindHotContainer(container) {
     const stockBtn = event.target.closest('[data-hot-stock]');
     const sector = event.target.closest('[data-hot-sector-index]');
     const newsBtn = event.target.closest('[data-hot-news-index]');
+    const themeQuery = event.target.closest('[data-theme-query]');
     try {
       if (action) {
         const name = action.getAttribute('data-hot-action');
         if (name === 'refresh') await hotLoad({ refresh: true });
         if (name === 'ai') await openHotAIHandoff(true);
+        if (name === 'themeSearch') await runThemeSearch();
+        return;
+      }
+      if (themeQuery) {
+        await runThemeSearch(themeQuery.getAttribute('data-theme-query'));
         return;
       }
       if (stockBtn) {

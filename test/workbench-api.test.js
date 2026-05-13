@@ -148,6 +148,17 @@ test('news, sector and screener APIs return unified success envelopes', async (t
   assert.equal(hotSnapshots.json.success, true);
   assert.ok(hotSnapshots.json.data.length >= 1);
 
+  const cpoThemes = await requestJson(server, '/api/themes/search?q=CPO');
+  assert.equal(cpoThemes.json.success, true);
+  assert.ok(cpoThemes.json.data.some(item => item.leaders.some(stock => stock.code === '300308')));
+
+  const stockTags = await requestJson(server, '/api/stock-tags?codes=300308,688981,159611');
+  assert.equal(stockTags.json.success, true);
+  assert.equal(stockTags.json.data.length, 3);
+  assert.ok(stockTags.json.data.find(item => item.code === '300308').tags.length >= 2);
+  assert.ok(stockTags.json.data.find(item => item.code === '688981').marketLabel);
+  assert.ok(stockTags.json.data.find(item => item.code === '159611').marketLabel);
+
   const savedHotAiResult = await requestJson(server, {
     path: '/api/hot-market/ai-result',
     method: 'POST',

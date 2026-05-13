@@ -88,6 +88,55 @@ function normalizeStock(stock) {
   return stock;
 }
 
+function stockEscape(value) {
+  return String(value == null ? '' : value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function stockMarketLabel(code) {
+  const value = String(code || '').replace(/\D/g, '').slice(-6);
+  if (/^30[0-9]/.test(value)) return '创业板';
+  if (/^68[89]?/.test(value)) return '科创板';
+  if (/^(8|4|92)/.test(value)) return '北交所';
+  if (/^(50|51|52|56|58|15|16)/.test(value)) return 'ETF';
+  if (/^60[0135]/.test(value)) return '沪主板';
+  if (/^(00|001|002|003)/.test(value)) return '深主板';
+  return 'A股';
+}
+
+function stockTags(stock) {
+  const tags = [stock.marketLabel || stockMarketLabel(stock.code)];
+  (stock.themes || []).forEach(function(theme) {
+    if (theme && theme.name) tags.push(theme.name);
+  });
+  return tags.filter(Boolean).filter(function(tag, index, arr) {
+    return arr.indexOf(tag) === index;
+  }).slice(0, 3);
+}
+
+function renderStockNameCell(stock) {
+  const tags = stockTags(stock).map(function(tag) {
+    return '<span class="stock-tag">' + stockEscape(tag) + '</span>';
+  }).join('');
+  return '<div class="stock-name-cell"><span>' + stockEscape(stock.name || '未知') + '</span><div class="stock-tags">' + tags + '</div></div>';
+}
+
+function primeStock(stock) {
+  const normalized = normalizeStock(stock);
+  if (!normalized || !normalized.code) return;
+  const State = window.State;
+  State.currentStock = normalized;
+  State.currentRawData = [];
+  const title = document.getElementById('chartTitle');
+  if (title) title.textContent = (normalized.name || normalized.code) + ' (' + normalized.code + ')';
+  const priceInfo = document.getElementById('priceInfo');
+  if (priceInfo) priceInfo.innerHTML = '<span style="color:#999">进入行情页后加载实时行情与K线</span>';
+}
+
 async function runRowAction(action, stock) {
   if (!stock) return;
   if (action === 'view') {
@@ -141,7 +190,7 @@ function renderStockTable(stocks) {
     return '<tr class="' + active + '" data-code="' + s.code + '" tabindex="0" aria-label="' + s.code + ' ' + (s.name || '未知') + '">' +
       '<td class="star-cell"><button class="star-btn ' + (watched ? 'active' : '') + '" data-code="' + s.code + '" title="切换自选">' + star + '</button></td>' +
       '<td>' + s.code + '</td>' +
-      '<td>' + (s.name || '未知') + '</td>' +
+      '<td>' + renderStockNameCell(s) + '</td>' +
       '<td class="price" style="text-align:right;color:' + priceColor + '">' + priceDisplay + '</td>' +
       '<td style="text-align:right;color:' + priceColor + '">' + changeDisplay + '</td>' +
       '</tr>';
@@ -257,6 +306,7 @@ window.StockList = {
   setupInfiniteScroll,
   refreshQuotes,
   renderStockTable,
+  primeStock,
   selectStock,
   runRowAction
 };

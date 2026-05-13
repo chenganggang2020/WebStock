@@ -2,6 +2,7 @@ const axios = require('axios');
 const db = require('../db');
 const sectorService = require('./sectorService');
 const newsService = require('./newsService');
+const themeService = require('./themeService');
 const { toSinaSymbol } = require('../utils/market');
 
 const EASTMONEY_HOSTS = [
@@ -154,7 +155,7 @@ function mapBoard(row, kind) {
 }
 
 function mapStock(row, sectorName) {
-  return {
+  return themeService.decorateStock({
     code: String(row.f12 || ''),
     name: String(row.f14 || row.f12 || ''),
     sectorName: sectorName || '',
@@ -165,11 +166,11 @@ function mapStock(row, sectorName) {
     amount: numberOrNull(row.f6),
     totalMarketValue: numberOrNull(row.f20),
     mainNetInflow: numberOrNull(row.f62)
-  };
+  });
 }
 
 function mapSinaStock(row, sectorName) {
-  return {
+  return themeService.decorateStock({
     code: String(row.code || '').replace(/\D/g, '').slice(-6),
     name: String(row.name || row.code || ''),
     sectorName: sectorName || '',
@@ -181,7 +182,7 @@ function mapSinaStock(row, sectorName) {
     totalMarketValue: Number.isFinite(Number(row.mktcap)) ? Number(row.mktcap) * 10000 : null,
     mainNetInflow: null,
     symbol: row.symbol || ''
-  };
+  });
 }
 
 async function fetchBoardRank(kind, limit) {
@@ -229,7 +230,7 @@ async function fetchBoardMembers(board, limit) {
         changePct: board.leaderChangePct,
         amount: null,
         mainNetInflow: null
-      }].filter(item => item.code || item.name);
+      }].filter(item => item.code || item.name).map(themeService.decorateStock);
     }
     return [];
   }
@@ -481,7 +482,7 @@ function buildFallbackBoards() {
   const sectors = sectorService.listSectors();
   return sectors.slice(0, 10).map(function(sector, index) {
     const stocks = sectorService.listLeaders(sector.id).slice(0, 8).map(function(leader) {
-      return {
+      return themeService.decorateStock({
         code: leader.code,
         name: leader.name || leader.code,
         sectorName: sector.name,
@@ -489,7 +490,7 @@ function buildFallbackBoards() {
         changePct: null,
         amount: null,
         mainNetInflow: null
-      };
+      });
     });
     const board = {
       code: 'LOCAL' + sector.id,
@@ -519,6 +520,22 @@ function fallbackHotStocks(boards) {
   }))).slice(0, 20);
 }
 
+function decorateOverview(overview) {
+  if (!overview) return overview;
+  const boards = overview.boards || {};
+  ['day', 'month'].forEach(function(key) {
+    if (!Array.isArray(boards[key])) return;
+    boards[key] = boards[key].map(function(board) {
+      return Object.assign({}, board, {
+        stocks: (board.stocks || []).map(themeService.decorateStock)
+      });
+    });
+  });
+  overview.boards = boards;
+  overview.hotStocks = (overview.hotStocks || []).map(themeService.decorateStock);
+  return overview;
+}
+
 function sortMonthBoards(boards) {
   return boards.slice().sort(function(a, b) {
     return (Number(b.monthChangePct) || -999) - (Number(a.monthChangePct) || -999);
@@ -541,7 +558,9 @@ function latestSnapshotForToday() {
     payload.cached = true;
     payload.cachedSnapshot = true;
     payload.snapshotCreatedAt = row.created_at;
-    return payload;
+    const decorated = decorateOverview(payload);
+    decorated.prompt = buildPrompt(decorated);
+    return decorated;
   } catch (error) {
     return null;
   }
@@ -564,11 +583,13 @@ function dashboardTable(boards) {
 
 function stockTable(stocks) {
   return (stocks || []).slice(0, 20).map(function(stock, index) {
+    const tags = (stock.tags || []).slice(0, 4).join(',');
     return [
       index + 1,
       stock.name,
       stock.code,
       stock.sectorName || '',
+      tags,
       formatPct(stock.changePct),
       formatYi(stock.amount),
       formatYi(stock.mainNetInflow)
@@ -623,7 +644,7 @@ function buildPrompt(snapshot) {
     dashboardTable(monthBoards),
     '',
     '## 热门个股',
-    '排名 | 名称 | 代码 | 所属板块 | 涨跌幅 | 成交额 | 主力净流入',
+    '排名 | 名称 | 代码 | 所属板块 | 标签 | 涨跌幅 | 成交额 | 主力净流入',
     stockTable(snapshot.hotStocks || []),
     '',
     '## 最新财经资讯',
@@ -681,7 +702,9 @@ async function getOverview(options = {}) {
   const refresh = Boolean(options.refresh);
   const fast = Boolean(options.fast);
   if (!refresh && cachedOverview && Date.now() - cachedOverview.ts < CACHE_TTL_MS) {
-    return Object.assign({}, cachedOverview.data, { cached: true });
+    const cached = decorateOverview(Object.assign({}, cachedOverview.data, { cached: true }));
+    cached.prompt = buildPrompt(cached);
+    return cached;
   }
   if (!refresh && fast) {
     const latest = latestSnapshotForToday();
@@ -775,10 +798,11 @@ async function getOverview(options = {}) {
     durationMs: Date.now() - startedAt,
     fastMode: fast
   };
-  overview.prompt = buildPrompt(overview);
-  saveSnapshot(overview);
-  cachedOverview = { ts: Date.now(), data: overview };
-  return overview;
+  const decoratedOverview = decorateOverview(overview);
+  decoratedOverview.prompt = buildPrompt(decoratedOverview);
+  saveSnapshot(decoratedOverview);
+  cachedOverview = { ts: Date.now(), data: decoratedOverview };
+  return decoratedOverview;
 }
 
 module.exports = {

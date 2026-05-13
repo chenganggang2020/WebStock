@@ -329,13 +329,124 @@ a:focus-visible {
   font-size: 12px;
 }
 
-.hot-stock-line span:first-child {
+.hot-stock-line span:first-child,
+.stock-name-cell {
   min-width: 0;
 }
 
 .hot-stock-line strong,
 .hot-stock-line em {
   display: block;
+}
+
+.stock-name-cell {
+  display: grid;
+  gap: 4px;
+}
+
+.stock-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.stock-tag {
+  display: inline-flex;
+  align-items: center;
+  max-width: 82px;
+  min-height: 18px;
+  padding: 1px 5px;
+  border: 1px solid rgba(220, 38, 38, 0.22);
+  border-radius: 4px;
+  color: #b91c1c;
+  background: rgba(254, 226, 226, 0.78);
+  font-size: 11px;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+body.dark .stock-tag {
+  color: #fecaca;
+  border-color: rgba(248, 113, 113, 0.32);
+  background: rgba(127, 29, 29, 0.28);
+}
+
+.theme-search-box {
+  margin-top: 12px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--card-bg);
+}
+
+.theme-search-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 6px;
+}
+
+.theme-search-row input {
+  min-width: 0;
+  padding: 7px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--input-bg);
+  color: var(--text);
+  font-size: 12px;
+}
+
+.theme-quick-row,
+.theme-leader-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.theme-quick-row button,
+.theme-leader-chip {
+  border: 1px solid var(--btn-border);
+  border-radius: 6px;
+  background: var(--btn-bg);
+  color: var(--btn-color);
+  cursor: pointer;
+}
+
+.theme-quick-row button {
+  padding: 3px 7px;
+  font-size: 12px;
+}
+
+.theme-search-results {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.theme-result-card {
+  border-top: 1px solid var(--border);
+  padding-top: 8px;
+}
+
+.theme-result-card header {
+  display: grid;
+  gap: 2px;
+}
+
+.theme-result-card header span,
+.theme-leader-chip span {
+  color: #64748b;
+  font-size: 11px;
+}
+
+.theme-leader-chip {
+  display: grid;
+  gap: 2px;
+  padding: 5px 7px;
+  text-align: left;
+  font-size: 12px;
 }
 
 .hot-news-item {
