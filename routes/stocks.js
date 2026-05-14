@@ -72,6 +72,7 @@ async function refreshFundList() {
 }
 
 function scheduleFundRefresh() {
+  if (process.env.WEBSTOCK_SKIP_FUND_REFRESH === '1') return;
   const stale = !fundListFetchedAt || Date.now() - fundListFetchedAt > FUND_REFRESH_INTERVAL;
   if (!stale || fundRefreshPromise) return;
   fundRefreshPromise = refreshFundList()

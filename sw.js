@@ -3,6 +3,7 @@ const STATIC_ASSETS = [
   '/',
   '/index.html',
   '/css/styles.css',
+  '/vendor/echarts.min.js',
   '/WebStock.png',
   '/icons/webstock-192.png',
   '/icons/webstock-512.png',

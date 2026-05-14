@@ -7,6 +7,7 @@ server_*.log
 analysis.md
 test-results/
 playwright-report/
+dist/
 data/*.db
 data/*.db-*
 .DS_Store
