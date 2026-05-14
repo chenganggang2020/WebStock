@@ -164,6 +164,35 @@ test('news, sector and screener APIs return unified success envelopes', async (t
   assert.equal(detailedTags.json.data[0].code, '300308');
   assert.ok(Array.isArray(detailedTags.json.data[0].tags));
 
+  const db = require('../db');
+  db.prepare('DELETE FROM stock_search_index WHERE code = ?').run('300001');
+  db.prepare('DELETE FROM stock_profiles WHERE code = ?').run('300001');
+  db.prepare(`
+    INSERT INTO stock_profiles (code, source, payload_json, fetched_at, updated_at)
+    VALUES (?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+  `).run('300001', 'test', JSON.stringify({
+    code: '300001',
+    name: '测试科技',
+    industry: '电子设备',
+    boards: ['半导体材料'],
+    businessScope: '计算机、通信和其他电子设备制造',
+    businessSummary: '主营高端控制器和工业软件',
+    mainBusinessItems: [
+      { name: '超高纯靶材', ratio: 61.9, reportDate: '2025-12-31' },
+      { name: '内销', ratio: 65.9, reportDate: '2025-12-31' }
+    ],
+    tags: ['创业板', '电子设备']
+  }));
+  t.after(() => {
+    db.prepare('DELETE FROM stock_search_index WHERE code = ?').run('300001');
+    db.prepare('DELETE FROM stock_profiles WHERE code = ?').run('300001');
+  });
+  const unifiedSearch = await requestJson(server, '/api/stock-search?q=' + encodeURIComponent('超高靶材'));
+  assert.equal(unifiedSearch.json.success, true);
+  assert.equal(unifiedSearch.json.data.stocks[0].code, '300001');
+  assert.equal(unifiedSearch.json.data.stocks[0].mainBusinessItems[0].ratio, 61.9);
+  assert.match(unifiedSearch.json.data.stocks[0].matchReason, /主营|业务|超高纯靶材/);
+
   const savedHotAiResult = await requestJson(server, {
     path: '/api/hot-market/ai-result',
     method: 'POST',

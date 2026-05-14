@@ -132,6 +132,20 @@ CREATE TABLE IF NOT EXISTS stock_profiles (
   updated_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS stock_search_index (
+  code TEXT PRIMARY KEY,
+  name TEXT DEFAULT '',
+  industry TEXT DEFAULT '',
+  boards_text TEXT DEFAULT '',
+  business_scope TEXT DEFAULT '',
+  business_summary TEXT DEFAULT '',
+  main_business_json TEXT DEFAULT '[]',
+  tags_text TEXT DEFAULT '',
+  search_text TEXT NOT NULL,
+  source TEXT DEFAULT '',
+  updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE INDEX IF NOT EXISTS idx_watchlist_group ON watchlist(group_name);
 CREATE INDEX IF NOT EXISTS idx_trades_code ON trades(code);
 CREATE INDEX IF NOT EXISTS idx_trades_date ON trades(trade_date);
@@ -145,3 +159,5 @@ CREATE INDEX IF NOT EXISTS idx_sector_leader_snapshots_leader ON sector_leader_s
 CREATE INDEX IF NOT EXISTS idx_hot_market_snapshots_date ON hot_market_snapshots(snapshot_date, created_at);
 CREATE INDEX IF NOT EXISTS idx_hot_market_ai_results_snapshot ON hot_market_ai_results(snapshot_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_stock_profiles_fetched ON stock_profiles(fetched_at);
+CREATE INDEX IF NOT EXISTS idx_stock_search_index_name ON stock_search_index(name);
+CREATE INDEX IF NOT EXISTS idx_stock_search_index_industry ON stock_search_index(industry);

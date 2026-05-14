@@ -1,6 +1,7 @@
 const axios = require('axios');
 const db = require('../db');
 const themeService = require('./themeService');
+const stockSearchService = require('./stockSearchService');
 
 const EASTMONEY_F10_BASE = 'https://emweb.securities.eastmoney.com/PC_HSF10';
 const CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000;
@@ -128,6 +129,7 @@ function saveCache(profile) {
       fetched_at = CURRENT_TIMESTAMP,
       updated_at = CURRENT_TIMESTAMP
   `).run(profile.code, profile.source || 'Eastmoney F10', payload);
+  stockSearchService.upsertProfile(profile);
   return profile;
 }
 

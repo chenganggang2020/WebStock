@@ -77,13 +77,23 @@ function bindButtons() {
   });
   const searchInput = document.getElementById('searchInput');
   searchInput.addEventListener('input', async function(e) {
+    const keyword = e.target.value;
     Search.toggleClearButton();
     State.currentPage = 0;
-    State.searchResults = Search.searchStocks(e.target.value);
+    State.searchResults = Search.searchStocks(keyword);
     State.filteredStocks = State.searchResults.slice(0, State.PAGE_SIZE);
     StockList.renderStockTable(State.filteredStocks);
     if (window.HotMarket) window.HotMarket.syncSearchMode();
     StockList.refreshQuotes(State.filteredStocks).catch(function(error) { console.warn(error.message); });
+    Search.searchStocksDeep(keyword, State.searchResults).then(function(results) {
+      if (!results || searchInput.value !== keyword) return;
+      State.currentPage = 0;
+      State.searchResults = results;
+      State.filteredStocks = State.searchResults.slice(0, State.PAGE_SIZE);
+      StockList.renderStockTable(State.filteredStocks);
+      if (window.HotMarket) window.HotMarket.syncSearchMode();
+      StockList.refreshQuotes(State.filteredStocks).catch(function(error) { console.warn(error.message); });
+    });
   });
   Search.toggleClearButton();
 

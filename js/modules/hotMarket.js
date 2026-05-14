@@ -218,21 +218,12 @@ function renderHotSidebar() {
     '<div><strong>今日热点</strong><span>' + hotEscape(hotMarketOverview.tradeDate || '') + '</span></div>' +
     '<button class="small-btn" data-hot-action="refresh">刷新</button>' +
     '</div>' +
-    renderThemeSearchBox() +
     (hotSectorFocused
       ? '<div class="hot-sidebar-section"><button class="small-btn" data-hot-action="clearFocus">返回全部热点</button></div>'
       : '<div class="hot-sidebar-section"><div class="hot-sidebar-title">板块热力图</div>' + renderHotHeatmap(boards, 6) + '</div>') +
     '<div class="hot-sidebar-section"><div class="hot-sidebar-title">' + hotEscape(selected.name) + ' 核心股</div>' +
     '<div class="hot-stock-lines">' + stocks.map(renderHotStockLine).join('') + '</div></div>';
   bindHotContainer(panel);
-  const themeInput = panel.querySelector('#themeSearchInput');
-  if (themeInput) {
-    themeInput.addEventListener('keydown', function(event) {
-      if (event.key !== 'Enter') return;
-      event.preventDefault();
-      runThemeSearch().catch(function(error) { alert(error.message || '产业搜索失败'); });
-    });
-  }
   hotSyncSearchMode();
 }
 

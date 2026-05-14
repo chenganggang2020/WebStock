@@ -44,6 +44,49 @@ function searchStocks(query) {
   return res;
 }
 
+let deepSearchSeq = 0;
+
+function mergeSearchResults(localResults, remotePayload) {
+  const State = window.State;
+  const byCode = new Map();
+  (localResults || []).forEach(function(stock) {
+    if (stock && stock.code) byCode.set(stock.code, stock);
+  });
+  function addRemote(stock) {
+    if (!stock || !stock.code) return;
+    const existing = byCode.get(stock.code) || State.allStocks.find(function(item) { return item.code === stock.code; });
+    byCode.set(stock.code, Object.assign({}, existing || {}, stock, {
+      score: Math.max(Number(stock.score) || 0, existing && existing.score ? existing.score : 0)
+    }));
+  }
+  (remotePayload && remotePayload.stocks || []).forEach(addRemote);
+  (remotePayload && remotePayload.themes || []).forEach(function(theme) {
+    (theme.leaders || []).forEach(function(leader) {
+      addRemote(Object.assign({}, leader, {
+        score: Math.max(Number(leader.score) || 0, 72),
+        matchReason: theme.name + '：' + (leader.role || leader.reason || '主题龙头')
+      }));
+    });
+  });
+  return Array.from(byCode.values()).sort(function(a, b) {
+    return (b.score || 0) - (a.score || 0);
+  });
+}
+
+async function searchStocksDeep(query, localResults) {
+  const keyword = String(query || '').trim();
+  const seq = ++deepSearchSeq;
+  if (keyword.length < 2 || /^\d+$/.test(keyword) || !window.ApiClient) return null;
+  try {
+    const payload = await window.ApiClient.fetchJsonData('/api/stock-search?q=' + encodeURIComponent(keyword) + '&limit=80');
+    if (seq !== deepSearchSeq) return null;
+    return mergeSearchResults(localResults || [], payload || {});
+  } catch (error) {
+    console.warn(error.message || error);
+    return localResults || [];
+  }
+}
+
 function toggleClearButton() {
   const input = document.getElementById('searchInput');
   const clearBtn = document.getElementById('clearBtn');
@@ -73,6 +116,8 @@ window.Search = {
   fuzzyMatch,
   matchScore,
   searchStocks,
+  searchStocksDeep,
+  mergeSearchResults,
   toggleClearButton,
   clearSearch
 };

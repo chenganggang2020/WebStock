@@ -120,8 +120,9 @@ function stockTags(stock) {
   if (stock.industry) tags.push(stock.industry);
   (stock.boards || []).slice(0, 4).forEach(function(board) { tags.push(board); });
   (stock.mainBusinessItems || []).slice(0, 2).forEach(function(item) {
-    if (item && item.name) tags.push(item.name);
+    if (item && item.name) tags.push(item.ratio == null ? item.name : item.name + ' ' + item.ratio + '%');
   });
+  if (stock.matchReason) tags.push(stock.matchReason);
   return tags.filter(Boolean).filter(function(tag, index, arr) {
     return arr.indexOf(tag) === index;
   }).slice(0, 5);

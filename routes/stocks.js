@@ -6,6 +6,7 @@ const path = require('path');
 const axios = require('axios');
 const pinyin = require('tiny-pinyin');
 const themeService = require('../services/themeService');
+const stockSearchService = require('../services/stockSearchService');
 
 let stockListCache = [];
 let fundListCache = [];
@@ -111,6 +112,20 @@ router.get('/stocklist', async function (req, res) {
     scheduleFundRefresh();
   }
   res.json({ success: true, data: getMergedStockList() });
+});
+
+router.get('/stock-search', function(req, res, next) {
+  try {
+    res.json({
+      success: true,
+      data: stockSearchService.search(req.query.q || req.query.keyword || '', {
+        limit: req.query.limit,
+        baseStocks: getMergedStockList()
+      })
+    });
+  } catch (error) {
+    next(error);
+  }
 });
 
 module.exports = router;
