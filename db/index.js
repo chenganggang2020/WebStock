@@ -2,10 +2,10 @@ const path = require('path');
 const fs = require('fs');
 const Database = require('better-sqlite3');
 
-const dataDir = path.join(__dirname, '..', 'data');
-if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
-
-const dbPath = process.env.WEBSTOCK_DB_PATH || path.join(dataDir, 'webstock.db');
+const defaultDataDir = path.join(__dirname, '..', 'data');
+const dbPath = process.env.WEBSTOCK_DB_PATH || path.join(defaultDataDir, 'webstock.db');
+const dbDir = path.dirname(dbPath);
+if (!fs.existsSync(dbDir)) fs.mkdirSync(dbDir, { recursive: true });
 
 let db;
 try {

@@ -8,6 +8,8 @@ analysis.md
 test-results/
 playwright-report/
 dist/
+release/
+release-*/
 data/*.db
 data/*.db-*
 .DS_Store

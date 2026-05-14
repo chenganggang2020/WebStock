@@ -1,0 +1,22 @@
+﻿const fs = require('fs');
+const path = require('path');
+
+const root = path.resolve(__dirname, '..');
+const pngPath = path.join(root, 'icons', 'webstock-512.png');
+const icoPath = path.join(root, 'icons', 'webstock.ico');
+const png = fs.readFileSync(pngPath);
+const header = Buffer.alloc(6);
+header.writeUInt16LE(0, 0);
+header.writeUInt16LE(1, 2);
+header.writeUInt16LE(1, 4);
+const dir = Buffer.alloc(16);
+dir.writeUInt8(0, 0);
+dir.writeUInt8(0, 1);
+dir.writeUInt8(0, 2);
+dir.writeUInt8(0, 3);
+dir.writeUInt16LE(1, 4);
+dir.writeUInt16LE(32, 6);
+dir.writeUInt32LE(png.length, 8);
+dir.writeUInt32LE(header.length + dir.length, 12);
+fs.writeFileSync(icoPath, Buffer.concat([header, dir, png]));
+console.log('Created ' + icoPath);

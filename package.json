@@ -2,20 +2,24 @@
   "name": "stock-dashboard",
   "version": "1.0.0",
   "description": "A股实时行情看板，支持K线、均线、MACD、KDJ及拼音搜索",
-  "main": "server.js",
+  "main": "electron/main.js",
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js",
+    "desktop": "electron .",
+    "dist:win": "node scripts/build-electron-win.js nsis",
+    "dist:win:dir": "node scripts/build-electron-win.js dir",
     "test": "node --test test/*.test.js",
     "test:api-json": "node scripts/test-api-json.js",
     "test:frontend": "playwright test test/frontend-click.spec.js",
     "test:portfolio": "node scripts/test-portfolio-api.js",
     "smoke:openai": "node scripts/smoke-openai.js",
-    "package:portable": "node scripts/build-portable-win.js"
+    "package:portable": "node scripts/build-portable-win.js",
+    "icon:win": "node scripts/create-ico.js"
   },
   "dependencies": {
     "axios": "^1.6.0",
-    "better-sqlite3": "^12.9.0",
+    "better-sqlite3": "^12.10.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.18.2",
@@ -23,6 +27,59 @@
     "tiny-pinyin": "^1.3.2"
   },
   "devDependencies": {
-    "@playwright/test": "^1.59.1"
+    "@electron/rebuild": "^4.0.4",
+    "@playwright/test": "^1.59.1",
+    "electron": "^37.10.3",
+    "electron-builder": "^26.8.1"
+  },
+  "build": {
+    "appId": "com.webstock.desktop",
+    "productName": "WebStock",
+    "asar": false,
+    "files": [
+      "electron/**",
+      "css/**",
+      "db/**",
+      "icons/**",
+      "js/**",
+      "prompt-templates/**",
+      "routes/**",
+      "services/**",
+      "utils/**",
+      "vendor/**",
+      "ai-config.json",
+      "funds.json",
+      "index.html",
+      "manifest.webmanifest",
+      "package.json",
+      "prompt.md",
+      "prompt_adv.md",
+      "server.js",
+      "stocks.json",
+      "sw.js"
+    ],
+    "win": {
+      "icon": "icons/webstock.ico",
+      "signAndEditExecutable": false,
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "WebStock"
+    },
+    "directories": {
+      "output": "release"
+    }
   }
 }
