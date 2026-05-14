@@ -144,7 +144,7 @@ function renderPositions() {
       '<td>' + fmt(pos.avgCost, 3) + '</td>' +
       '<td>' + fmt(pos.currentPrice, 3) + '</td>' +
       '<td>' + fmt(pos.marketValue === null ? pos.costValue : pos.marketValue) + '</td>' +
-      '<td class="' + pnlClass(finalPnl) + '" title="净收益：已扣交易手续费/印花税；含已实现收益 ' + fmt(pos.realizedPnl) + '，预估卖出费 ' + fmt(pos.estimatedExitFee) + '">' + fmt(finalPnl) + '</td>' +
+      '<td class="' + pnlClass(finalPnl) + '" title="净收益：已扣实际交易手续费/印花税；含已实现收益 ' + fmt(pos.realizedPnl) + '">' + fmt(finalPnl) + '</td>' +
       '<td class="' + pnlClass(finalRate) + '">' + fmt(finalRate) + '%</td>' +
       '<td class="' + pnlClass(pos.todayPnl) + '">' + fmt(pos.todayPnl) + '</td>' +
       '<td><div class="stock-actions">' +

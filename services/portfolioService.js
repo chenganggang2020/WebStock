@@ -1,7 +1,7 @@
 const db = require('../db');
 
 const VALID_SIDES = new Set(['buy', 'sell', 'dividend', 'fee']);
-const DEFAULT_ESTIMATED_EXIT_FEE = 5;
+const DEFAULT_ESTIMATED_EXIT_FEE = 0;
 const DEFAULT_ESTIMATED_EXIT_TAX = 0;
 
 function round(value, digits = 2) {
@@ -282,7 +282,7 @@ function calculatePositions(trades, quoteMap = {}) {
         grossUnrealizedPnl: grossUnrealizedPnl === null ? null : round(grossUnrealizedPnl, 2),
         estimatedExitFee: round(estimatedExitFee, 2),
         estimatedExitTax: round(estimatedExitTax, 2),
-        totalFee: round(pos.totalFee + estimatedExitFee + estimatedExitTax, 2),
+        totalFee: round(pos.totalFee, 2),
         unrealizedPnl: unrealizedPnl === null ? null : round(unrealizedPnl, 2),
         unrealizedPnlRate: unrealizedPnl === null || pos.costValue === 0 ? null : round(unrealizedPnl / pos.costValue * 100, 2),
         realizedPnl: round(pos.realizedPnl, 2),

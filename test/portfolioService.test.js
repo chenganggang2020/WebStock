@@ -29,8 +29,9 @@ test('portfolio service calculates positions and prevents oversell', () => {
   assert.equal(positions[0].quantity, 1000);
   assert.equal(positions[0].avgCost, 10.005);
   assert.equal(positions[0].grossUnrealizedPnl, 995);
-  assert.equal(positions[0].estimatedExitFee, 5);
-  assert.equal(positions[0].unrealizedPnl, 990);
+  assert.equal(positions[0].estimatedExitFee, 0);
+  assert.equal(positions[0].totalFee, 5);
+  assert.equal(positions[0].unrealizedPnl, 995);
 
   assert.throws(() => portfolio.createTrade({
     code: '000001',
