@@ -885,6 +885,12 @@ body.dark .stock-tag {
   color: var(--btn-color);
 }
 
+.modal-actions button.primary {
+  border-color: #2563eb;
+  background: #2563eb;
+  color: #fff;
+}
+
 .view-toggle {
   display: flex;
   gap: 4px;
@@ -1888,6 +1894,8 @@ body.dark .md-body blockquote { background: rgba(99,102,241,0.12); }
 
 .handoff-modal {
   width: min(900px, 92vw);
+  max-height: 88vh;
+  overflow-y: auto;
 }
 
 .handoff-modal textarea {
@@ -1899,6 +1907,41 @@ body.dark .md-body blockquote { background: rgba(99,102,241,0.12); }
 
 #handoffPromptText {
   min-height: 240px;
+}
+
+.handoff-workbench {
+  margin: 12px 0;
+  padding: 12px;
+  border: 1px solid rgba(37, 99, 235, 0.2);
+  border-radius: 8px;
+  background: rgba(37, 99, 235, 0.08);
+}
+
+.handoff-workbench strong {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 14px;
+}
+
+.handoff-workbench p {
+  margin: 0 0 8px;
+  color: #64748b;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.handoff-status {
+  display: inline-flex;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: rgba(100, 116, 139, 0.12);
+  color: #475569;
+  font-size: 12px;
+}
+
+.handoff-status.ok {
+  background: rgba(5, 150, 105, 0.12);
+  color: #047857;
 }
 
 .analysis-handoff,

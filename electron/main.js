@@ -40,8 +40,24 @@ function configureEnvironment() {
   process.env.WEBSTOCK_SKIP_FUND_REFRESH = process.env.WEBSTOCK_SKIP_FUND_REFRESH || '1';
 }
 
+function shouldOpenExternally(url) {
+  try {
+    const host = new URL(url).hostname.toLowerCase();
+    return host === 'chatgpt.com' ||
+      host.endsWith('.chatgpt.com') ||
+      host === 'chat.openai.com' ||
+      host.endsWith('.chat.openai.com') ||
+      host === 'auth.openai.com' ||
+      host.endsWith('.auth.openai.com') ||
+      host === 'accounts.google.com' ||
+      host.endsWith('.accounts.google.com');
+  } catch (error) {
+    return true;
+  }
+}
+
 function openInternalWindow(url) {
-  if (!/^https?:\/\//i.test(url)) {
+  if (!/^https?:\/\//i.test(url) || shouldOpenExternally(url)) {
     shell.openExternal(url);
     return;
   }

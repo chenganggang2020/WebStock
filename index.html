@@ -719,13 +719,18 @@
     <div class="modal handoff-modal">
       <h3 id="handoffModalTitle">ChatGPT 交接</h3>
       <p id="handoffModalSummary">复制提示词到 ChatGPT，或导入返回结果保存到当前任务。</p>
+      <div class="handoff-workbench">
+        <strong>GPT 工作台</strong>
+        <p>推荐使用系统浏览器打开 ChatGPT：可以保留登录状态，也能避开 Google 在软件内嵌窗口里的登录限制。按钮会先复制提示词，再打开 ChatGPT。</p>
+        <div id="handoffStatus" class="handoff-status">未复制提示词</div>
+      </div>
       <textarea id="handoffPromptText" readonly></textarea>
-      <label>导入 ChatGPT 返回结果</label>
-      <textarea id="handoffResultText"></textarea>
+      <label>粘贴 ChatGPT 返回结果</label>
+      <textarea id="handoffResultText" placeholder="从 ChatGPT 复制回答后粘贴到这里，可以保存并整理到当前任务；临时对话本身不需要保存到 WebStock。"></textarea>
       <div class="modal-actions">
         <button id="handoffCopyBtn">复制提示词</button>
-        <button id="handoffCopyOpenBtn">复制并打开 ChatGPT</button>
-        <button id="handoffOpenChatBtn">打开 ChatGPT</button>
+        <button id="handoffCopyOpenBtn" class="primary">复制并用浏览器打开 ChatGPT</button>
+        <button id="handoffOpenChatBtn">只打开 ChatGPT</button>
         <button id="handoffImportClipboardBtn">从剪贴板导入</button>
         <button id="handoffSaveBtn">保存结果</button>
         <button id="handoffCloseBtn">关闭</button>

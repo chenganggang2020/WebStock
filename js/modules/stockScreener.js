@@ -659,7 +659,7 @@ async function runAI() {
     window.AIAssistant.open({
       title: '智能选股 ChatGPT 交接',
       prompt: data.prompt,
-      summary: data.report,
+      summary: '已生成更严格的 GPT 二次筛选提示词。请复制到 ChatGPT，让它按“优先观察 / 等待确认 / 暂时剔除”重新整理候选股。',
       kind: 'screener',
       context: { view: 'screener', taskId: activeSavedTaskId || null },
       onSave: async function(result) {

@@ -410,7 +410,7 @@ function runScreener(input = {}) {
     .sort((a, b) => b.score - a.score)
     .slice(0, Math.min(Number(input.limit) || 20, 50));
 
-  const prompt = buildPrompt({ strategy, demand, scope, candidates });
+  const prompt = buildSmartPrompt({ strategy, demand, scope, candidates });
   return {
     strategy,
     demand,
@@ -423,6 +423,62 @@ function runScreener(input = {}) {
 
 function buildPrompt(result) {
   return `请作为谨慎的股票研究助手，对以下候选观察清单进行二次分析。\n\n要求：\n1. 只做研究和学习用途，不构成投资建议。\n2. 不承诺收益，不给出真实下单指令。\n3. 输出每只股票的入选逻辑、风险点、观察价位、后续验证条件。\n4. 优先指出数据缺口和需要人工复核的地方。\n\n用户需求：${result.demand || '未填写'}\n策略：${result.strategy}\n范围：${result.scope}\n候选数据：\n${JSON.stringify(result.candidates, null, 2)}\n\n请输出结构化 Markdown 报告，并包含免责声明。`;
+}
+
+function buildSmartPrompt(result) {
+  const candidates = (result.candidates || []).slice(0, 12).map(function(item) {
+    return {
+      code: item.code,
+      name: item.name,
+      score: item.score,
+      strategy: item.strategy,
+      factorTags: item.factorTags,
+      reasons: item.reasons,
+      risks: item.risks,
+      factorBreakdown: item.factorBreakdown,
+      observePrice: item.observePrice,
+      sectorName: item.sectorName,
+      leaderRole: item.leaderRole,
+      inWatchlist: item.inWatchlist,
+      inPortfolio: item.inPortfolio
+    };
+  });
+  return `你是一个谨慎的 A 股投研助手。请对 WebStock 本地初筛出来的候选股做“二次筛选”，不是泛泛点评，也不要直接给买卖指令。
+
+重要约束：
+1. 只用于研究和复盘，不构成投资建议，不承诺收益。
+2. 必须结合候选股的分数、因子、入选理由、风险点、板块/龙头标签、观察价位做分析。
+3. 如果数据不足，要明确写出缺口，例如缺少财报、盘口、资金流、龙虎榜、公告、行业景气度等。
+4. 不要把所有候选都说成好；请主动剔除风险较高或逻辑不清的股票。
+5. 输出要适合复制回 WebStock 保存，重点清楚、可执行、可复盘。
+
+我的筛选需求：${result.demand || '未填写'}
+本地策略：${result.strategy}
+筛选范围：${result.scope}
+
+候选股数据 JSON：
+${JSON.stringify(candidates, null, 2)}
+
+请按下面结构输出 Markdown：
+
+## 结论
+- 给出“优先观察 / 等待确认 / 暂时剔除”的分组结论。
+- 每组最多列 3 只，不够可以少列。
+
+## 优先观察清单
+用表格输出：代码、名称、所属逻辑、为什么优先、需要等待的确认信号、主要风险、观察价位。
+
+## 剔除或降级原因
+说明哪些股票不适合当前策略，以及原因。
+
+## 板块与风格判断
+总结候选股集中在哪些板块/风格，是否存在同质化、追高、流动性不足或板块退潮风险。
+
+## 下一步验证清单
+列出 5-8 条盘中/明日应检查的数据，例如量能、分时承接、板块联动、公告、财报、资金流、关键价位。
+
+## 可复制回 WebStock 的摘要
+用简短 bullet 输出最终摘要，方便粘贴保存。`;
 }
 
 function rowToSavedResult(row) {
@@ -652,7 +708,7 @@ function compareScreenerResults(baseId, headId) {
 module.exports = {
   DISCLAIMER,
   runScreener,
-  buildPrompt,
+  buildPrompt: buildSmartPrompt,
   scoreCandidate,
   saveScreenerResult,
   getScreenerResult,

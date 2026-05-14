@@ -9,6 +9,7 @@ function aiAssistantOpen(options) {
   document.getElementById('handoffModalSummary').textContent = currentHandoff.summary || '复制提示词到 ChatGPT，或导入返回结果保存到当前任务。';
   document.getElementById('handoffPromptText').value = currentHandoff.prompt || '';
   document.getElementById('handoffResultText').value = currentHandoff.result || '';
+  aiAssistantSetStatus('提示词已生成。建议点“复制并用浏览器打开 ChatGPT”，登录状态会由系统浏览器保存。');
   overlay.style.display = 'flex';
 }
 
@@ -30,6 +31,13 @@ function aiAssistantClipboardWrite(text) {
   return Promise.resolve();
 }
 
+function aiAssistantSetStatus(text, isOk) {
+  const target = document.getElementById('handoffStatus');
+  if (!target) return;
+  target.textContent = text;
+  target.className = 'handoff-status' + (isOk ? ' ok' : '');
+}
+
 function aiAssistantCopyPrompt() {
   const text = document.getElementById('handoffPromptText').value;
   if (!text) return Promise.resolve();
@@ -37,6 +45,7 @@ function aiAssistantCopyPrompt() {
     const btn = document.getElementById('handoffCopyBtn');
     const old = btn.textContent;
     btn.textContent = '已复制';
+    aiAssistantSetStatus('提示词已复制到剪贴板。打开 ChatGPT 后按 Ctrl+V 粘贴发送。', true);
     setTimeout(function() { btn.textContent = old; }, 1600);
   }).catch(function() {
     alert('复制失败，请手动复制提示词。');
@@ -48,7 +57,10 @@ function aiAssistantOpenChatGPT() {
 }
 
 function aiAssistantCopyAndOpenChatGPT() {
-  aiAssistantCopyPrompt().finally(aiAssistantOpenChatGPT);
+  aiAssistantCopyPrompt().finally(function() {
+    aiAssistantOpenChatGPT();
+    aiAssistantSetStatus('已打开系统浏览器里的 ChatGPT。若要临时对话，请在 ChatGPT 内切换 Temporary Chat/临时聊天后再粘贴。', true);
+  });
 }
 
 async function aiAssistantImportClipboard() {
