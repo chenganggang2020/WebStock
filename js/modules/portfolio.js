@@ -13,6 +13,14 @@ function pnlClass(value) {
   return n >= 0 ? 'pnl-up' : 'pnl-down';
 }
 
+function finalPnlValue(pos) {
+  return pos && pos.netPnl !== undefined && pos.netPnl !== null ? pos.netPnl : pos.unrealizedPnl;
+}
+
+function finalPnlRateValue(pos) {
+  return pos && pos.netPnlRate !== undefined && pos.netPnlRate !== null ? pos.netPnlRate : pos.unrealizedPnlRate;
+}
+
 function portfolioCsvCell(value) {
   const text = String(value == null ? '' : value);
   const safeText = /^[\t\r\n]/.test(text) || /^\s*[=+@]/.test(text) ? "'" + text : text;
@@ -32,6 +40,12 @@ function downloadPortfolioCsv(filename, rows) {
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
+}
+
+function portfolioFileDate() {
+  return window.WebStockTime && window.WebStockTime.filenameDate
+    ? window.WebStockTime.filenameDate()
+    : new Date().toISOString().slice(0, 10);
 }
 
 async function loadPortfolio() {
@@ -96,8 +110,8 @@ function visiblePositions() {
     });
   }
   positions.sort(function(a, b) {
-    if (sort === 'pnl') return (Number(b.unrealizedPnl) || -999999999) - (Number(a.unrealizedPnl) || -999999999);
-    if (sort === 'return') return (Number(b.unrealizedPnlRate) || -999999999) - (Number(a.unrealizedPnlRate) || -999999999);
+    if (sort === 'pnl') return (Number(finalPnlValue(b)) || -999999999) - (Number(finalPnlValue(a)) || -999999999);
+    if (sort === 'return') return (Number(finalPnlRateValue(b)) || -999999999) - (Number(finalPnlRateValue(a)) || -999999999);
     if (sort === 'code') return String(a.code || '').localeCompare(String(b.code || ''));
     const bValue = Number(b.marketValue === null ? b.costValue : b.marketValue) || 0;
     const aValue = Number(a.marketValue === null ? a.costValue : a.marketValue) || 0;
@@ -121,6 +135,8 @@ function renderPositions() {
   empty.style.display = positions.length ? 'none' : '';
   table.style.display = positions.length ? 'table' : 'none';
   tbody.innerHTML = positions.map(pos => {
+    const finalPnl = finalPnlValue(pos);
+    const finalRate = finalPnlRateValue(pos);
     return '<tr>' +
       '<td><button class="link-btn" data-action="view" data-code="' + pos.code + '">' + pos.code + '</button></td>' +
       '<td>' + pos.name + '</td>' +
@@ -128,8 +144,8 @@ function renderPositions() {
       '<td>' + fmt(pos.avgCost, 3) + '</td>' +
       '<td>' + fmt(pos.currentPrice, 3) + '</td>' +
       '<td>' + fmt(pos.marketValue === null ? pos.costValue : pos.marketValue) + '</td>' +
-      '<td class="' + pnlClass(pos.unrealizedPnl) + '" title="毛收益 ' + fmt(pos.grossUnrealizedPnl) + ' - 预估卖出费 ' + fmt(pos.estimatedExitFee) + '">' + fmt(pos.unrealizedPnl) + '</td>' +
-      '<td class="' + pnlClass(pos.unrealizedPnlRate) + '">' + fmt(pos.unrealizedPnlRate) + '%</td>' +
+      '<td class="' + pnlClass(finalPnl) + '" title="净收益：已扣交易手续费/印花税；含已实现收益 ' + fmt(pos.realizedPnl) + '，预估卖出费 ' + fmt(pos.estimatedExitFee) + '">' + fmt(finalPnl) + '</td>' +
+      '<td class="' + pnlClass(finalRate) + '">' + fmt(finalRate) + '%</td>' +
       '<td class="' + pnlClass(pos.todayPnl) + '">' + fmt(pos.todayPnl) + '</td>' +
       '<td><div class="stock-actions">' +
       '<button class="small-btn primary" data-action="view" data-code="' + pos.code + '">查看</button>' +
@@ -193,8 +209,9 @@ function exportPositionsCsv() {
     'current_price',
     'market_value',
     'cost_value',
-    'unrealized_pnl',
-    'unrealized_pnl_rate',
+    'final_net_pnl',
+    'final_net_pnl_rate',
+    'total_fee',
     'today_pnl'
   ]].concat(rows.map(function(pos) {
     const marketValue = pos.marketValue === null ? pos.costValue : pos.marketValue;
@@ -206,12 +223,13 @@ function exportPositionsCsv() {
       fmt(pos.currentPrice, 3),
       fmt(marketValue),
       fmt(pos.costValue),
-      fmt(pos.unrealizedPnl),
-      fmt(pos.unrealizedPnlRate),
+      fmt(finalPnlValue(pos)),
+      fmt(finalPnlRateValue(pos)),
+      fmt(pos.totalFee),
       fmt(pos.todayPnl)
     ];
   }));
-  downloadPortfolioCsv('webstock-positions-' + new Date().toISOString().slice(0, 10) + '.csv', csvRows);
+  downloadPortfolioCsv('webstock-positions-' + portfolioFileDate() + '.csv', csvRows);
 }
 
 function handleClosedPositionsClick(event) {
@@ -243,7 +261,7 @@ function exportClosedPositionsCsv() {
       item.lastTradeDate
     ];
   }));
-  downloadPortfolioCsv('webstock-closed-positions-' + new Date().toISOString().slice(0, 10) + '.csv', csvRows);
+  downloadPortfolioCsv('webstock-closed-positions-' + portfolioFileDate() + '.csv', csvRows);
 }
 
 function renderStatsOverview() {
@@ -279,7 +297,7 @@ function renderStatsOverview() {
   table.innerHTML = '<h3>Top exposures</h3><table class="mini-table"><thead><tr><th>Code</th><th>Name</th><th>Value</th><th>P/L</th><th>Return</th></tr></thead><tbody>' +
     sorted.map(function(pos) {
       const value = pos.marketValue === null ? pos.costValue : pos.marketValue;
-      return '<tr><td>' + pos.code + '</td><td>' + pos.name + '</td><td>' + fmt(value) + '</td><td class="' + pnlClass(pos.unrealizedPnl) + '">' + fmt(pos.unrealizedPnl) + '</td><td class="' + pnlClass(pos.unrealizedPnlRate) + '">' + fmt(pos.unrealizedPnlRate) + '%</td></tr>';
+      return '<tr><td>' + pos.code + '</td><td>' + pos.name + '</td><td>' + fmt(value) + '</td><td class="' + pnlClass(finalPnlValue(pos)) + '">' + fmt(finalPnlValue(pos)) + '</td><td class="' + pnlClass(finalPnlRateValue(pos)) + '">' + fmt(finalPnlRateValue(pos)) + '%</td></tr>';
     }).join('') +
     '</tbody></table>';
 }

@@ -135,7 +135,7 @@ async function settingsExportUserData() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'webstock-backup-' + new Date().toISOString().slice(0, 10) + '.json';
+    a.download = 'webstock-backup-' + (window.WebStockTime ? window.WebStockTime.filenameDate() : new Date().toISOString().slice(0, 10)) + '.json';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -159,7 +159,7 @@ function settingsDownloadCsvTemplate(type) {
       filename: 'webstock-trades-template.csv',
       rows: [
         ['code', 'name', 'side', 'trade_date', 'price', 'quantity', 'fee', 'note'],
-        ['000001', 'Ping An Bank', 'buy', new Date().toISOString().slice(0, 10), '10.00', '100', '0', 'example note']
+        ['000001', 'Ping An Bank', 'buy', window.WebStockTime ? window.WebStockTime.todayDate() : new Date().toISOString().slice(0, 10), '10.00', '100', '0', 'example note']
       ]
     }
   };

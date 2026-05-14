@@ -278,8 +278,18 @@ function updateSidebarWorkspace() {
   });
 }
 
-function switchMainView(view) {
+function syncMainViewHistory(view, options) {
+  if (!window.history || !view || (options && options.history === false)) return;
+  const state = { mainView: view };
+  const url = '#' + encodeURIComponent(view);
+  if (window.history.state && window.history.state.mainView === view) return;
+  if (options && options.replace) window.history.replaceState(state, '', url);
+  else window.history.pushState(state, '', url);
+}
+
+function switchMainView(view, options) {
   const State = window.State;
+  options = options || {};
   State.currentMainView = view;
 
   document.querySelectorAll('.main-view').forEach(function(el) {
@@ -297,6 +307,7 @@ function switchMainView(view) {
     btn.classList.toggle('active', btn.getAttribute('data-main-view') === view);
   });
   updateSidebarWorkspace();
+  syncMainViewHistory(view, options);
 
   if (view === 'watchlist') window.Watchlist.loadWatchlist().catch(function(error) { alert(error.message); });
   if (view === 'recent') window.RecentStocks.load(50).catch(function(error) { alert(error.message); });
@@ -327,6 +338,11 @@ function switchMainView(view) {
 
 window.switchMainView = switchMainView;
 window.updateSidebarWorkspace = updateSidebarWorkspace;
+
+window.addEventListener('popstate', function(event) {
+  if (!event.state || !event.state.mainView) return;
+  switchMainView(event.state.mainView, { history: false });
+});
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function() {
@@ -363,7 +379,13 @@ async function init() {
   if (window.RecentStocks) await window.RecentStocks.load(20).catch(function() {});
   StockList.renderStockTable(State.filteredStocks);
   bindButtons();
-  updateSidebarWorkspace();
+  const requestedView = window.location.hash ? decodeURIComponent(window.location.hash.slice(1)) : '';
+  if (requestedView && document.getElementById(requestedView + 'View')) {
+    switchMainView(requestedView, { replace: true });
+  } else {
+    updateSidebarWorkspace();
+    syncMainViewHistory(State.currentMainView, { replace: true });
+  }
   if (window.HotMarket) window.HotMarket.load({ silent: true, fast: true }).catch(function(error) { console.warn(error.message); });
   StockList.setupInfiniteScroll();
   setInterval(function() {

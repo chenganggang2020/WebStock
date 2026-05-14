@@ -2,8 +2,8 @@
   --bg: #f5f6fa;
   --card-bg: #ffffff;
   --text: #2c3e50;
-  --up: #e74c3c;
-  --down: #2ecc71;
+  --up: #e11d48;
+  --down: #059669;
   --border: #e0e0e0;
   --hover: #f0f7ff;
   --active: #dbeafe;
@@ -20,8 +20,8 @@ body.dark {
   --bg: #0f172a;
   --card-bg: #1e293b;
   --text: #cbd5e1;
-  --up: #ff6b6b;
-  --down: #51cf66;
+  --up: #fb7185;
+  --down: #34d399;
   --border: #0f172a;
   --hover: #1e293b;
   --active: #334155;
@@ -538,6 +538,82 @@ body.dark .stock-tag {
   overflow-y: auto;
 }
 
+.hot-board-panel {
+  margin: 0 16px 14px;
+}
+
+.hot-board-panel.compact-panel {
+  border: 1px solid var(--border);
+  background: var(--card-bg);
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.hot-heatmap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  min-height: 168px;
+}
+
+.hot-heat-tile {
+  min-width: 28%;
+  min-height: 76px;
+  border: 0;
+  border-radius: 6px;
+  padding: 10px;
+  cursor: pointer;
+  color: #fff;
+  text-align: left;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.14);
+}
+
+.hot-heat-tile strong,
+.hot-heat-tile span,
+.hot-heat-tile em {
+  display: block;
+}
+
+.hot-heat-tile strong {
+  margin-bottom: 6px;
+  font-size: 15px;
+}
+
+.hot-heat-tile span {
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.hot-heat-tile .pnl-up,
+.hot-heat-tile .pnl-down {
+  color: #fff !important;
+}
+
+.hot-heat-tile em {
+  margin-top: 6px;
+  color: rgba(255,255,255,0.82);
+  font-size: 11px;
+  font-style: normal;
+}
+
+.hot-heat-tile.heat-up {
+  background: linear-gradient(145deg, #e11d48, #b91c1c);
+}
+
+.hot-heat-tile.heat-down {
+  background: linear-gradient(145deg, #0f9f85, #047857);
+}
+
+.hot-heat-tile.active,
+.hot-heat-tile:hover {
+  outline: 2px solid rgba(59,130,246,0.82);
+  outline-offset: 1px;
+}
+
+.compact-list {
+  margin-top: 8px;
+}
+
 .hot-news-scroll {
   max-height: 360px;
   overflow-y: auto;
@@ -911,13 +987,17 @@ body.dark .stock-tag {
 
 .stock-info-card {
   background: var(--card-bg);
+  border: 1px solid var(--border);
   border-radius: 8px;
   padding: 12px;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
 }
 
 .info-row {
   display: flex;
   justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
   padding: 8px 0;
   border-bottom: 1px solid var(--border);
 }
@@ -935,6 +1015,8 @@ body.dark .stock-tag {
   font-size: 14px;
   font-weight: 500;
   color: var(--text);
+  text-align: right;
+  white-space: nowrap;
 }
 
 .info-row .price-value {
@@ -1395,6 +1477,17 @@ body.dark .md-body blockquote { background: rgba(99,102,241,0.12); }
   background: var(--card-bg);
   border-radius: 8px;
   padding: 14px;
+}
+
+.news-item.clickable,
+.mini-news.clickable {
+  cursor: pointer;
+}
+
+.news-item.clickable:hover,
+.mini-news.clickable:hover {
+  border-color: rgba(37, 99, 235, 0.38);
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.08);
 }
 
 .provider-status,

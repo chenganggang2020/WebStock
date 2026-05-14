@@ -130,7 +130,7 @@ test('main stock actions and workspace navigation do not throw', async ({ page }
   await expect(page.locator('#clearBtn')).toHaveAttribute('aria-label', /清空/);
 
   await expect(page.locator('#sidebarWorkspaceNav')).toBeVisible();
-  await expect(page.locator('#sidebarWatchlistBtn')).toContainText('泽哥自选');
+  await expect(page.locator('#sidebarWatchlistBtn')).toContainText('自选');
   await expect(page.locator('#stockTbody tr:first-child [data-action]')).toHaveCount(0);
   await page.click('#stockTbody tr:first-child');
   await expect(page.locator('#analysisBtn')).toBeVisible();
@@ -180,7 +180,7 @@ test('main stock actions and workspace navigation do not throw', async ({ page }
 
   await page.click('[data-main-view="news"]');
   await expect(page.locator('#newsView')).toBeVisible();
-  await expect(page.locator('#newsProviderStatus')).toContainText(/News provider|fallback/i);
+  await expect(page.locator('#newsProviderStatus')).toContainText(/News provider|fallback|新闻加载回退|新闻来源/i);
   await page.fill('#newsKeywordInput', 'definitely-no-news-match');
   await page.press('#newsKeywordInput', 'Enter');
   await expect(page.locator('#newsList')).toContainText('No news is available');
@@ -203,7 +203,7 @@ test('main stock actions and workspace navigation do not throw', async ({ page }
   await page.selectOption('#tradeSideInput', 'buy');
   await page.fill('#tradePriceInput', '10');
   await page.fill('#tradeQuantityInput', '1000');
-  await expect(page.locator('#tradeAmountPreview')).toContainText('10000.00');
+  await expect(page.locator('#tradeAmountPreview')).toContainText('10005.00');
   await page.click('#tradeModalOk');
   await expect(page.locator('#positionsTbody')).toContainText('000001', { timeout: 15000 });
   await expect(page.locator('#closedPositionsPanel')).toContainText('No closed positions yet');
@@ -520,6 +520,8 @@ test('mobile dark mode workspace remains usable', async ({ page }) => {
   await expect(page.locator('.dashboard-grid')).toBeVisible();
   await expect(page.locator('#sidebarWorkspaceNav')).toBeVisible();
 
+  await page.fill('#searchInput', '000001');
+  await expect(page.locator('#stockTbody tr:first-child')).toBeVisible();
   await page.click('#stockTbody tr:first-child');
   await expect(page.locator('#marketView')).toBeVisible();
   await expect(page.locator('#analysisBtn')).toBeVisible();

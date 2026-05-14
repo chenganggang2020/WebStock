@@ -223,11 +223,13 @@ function calculatePositionStates(trades) {
         name: trade.name,
         quantity: 0,
         costValue: 0,
-        realizedPnl: 0
+        realizedPnl: 0,
+        totalFee: 0
       });
     }
     const pos = positions.get(trade.code);
     pos.name = trade.name || pos.name;
+    if (trade.side !== 'fee') pos.totalFee += Number(trade.fee || 0) + Number(trade.tax || 0);
 
     if (trade.side === 'buy') {
       pos.quantity += trade.quantity;
@@ -247,6 +249,7 @@ function calculatePositionStates(trades) {
       pos.realizedPnl += trade.amount || trade.price * trade.quantity;
     } else if (trade.side === 'fee') {
       pos.realizedPnl -= trade.amount || trade.fee;
+      pos.totalFee += Number(trade.amount || trade.fee || 0);
     }
   });
 
@@ -266,6 +269,7 @@ function calculatePositions(trades, quoteMap = {}) {
       const estimatedExitFee = marketValue === null ? 0 : DEFAULT_ESTIMATED_EXIT_FEE;
       const estimatedExitTax = marketValue === null ? 0 : DEFAULT_ESTIMATED_EXIT_TAX;
       const unrealizedPnl = grossUnrealizedPnl === null ? null : grossUnrealizedPnl - estimatedExitFee - estimatedExitTax;
+      const netPnl = unrealizedPnl === null ? null : pos.realizedPnl + unrealizedPnl;
       const avgCost = pos.quantity > 0 ? pos.costValue / pos.quantity : 0;
       return {
         code: pos.code,
@@ -278,9 +282,12 @@ function calculatePositions(trades, quoteMap = {}) {
         grossUnrealizedPnl: grossUnrealizedPnl === null ? null : round(grossUnrealizedPnl, 2),
         estimatedExitFee: round(estimatedExitFee, 2),
         estimatedExitTax: round(estimatedExitTax, 2),
+        totalFee: round(pos.totalFee + estimatedExitFee + estimatedExitTax, 2),
         unrealizedPnl: unrealizedPnl === null ? null : round(unrealizedPnl, 2),
         unrealizedPnlRate: unrealizedPnl === null || pos.costValue === 0 ? null : round(unrealizedPnl / pos.costValue * 100, 2),
         realizedPnl: round(pos.realizedPnl, 2),
+        netPnl: netPnl === null ? null : round(netPnl, 2),
+        netPnlRate: netPnl === null || pos.costValue === 0 ? null : round(netPnl / pos.costValue * 100, 2),
         todayChange: Number.isFinite(Number(quote.change)) ? Number(quote.change) : null,
         todayPnl: marketValue === null || !Number.isFinite(Number(quote.change)) ? null : round(marketValue * Number(quote.change) / 100, 2)
       };
@@ -318,6 +325,7 @@ function calculateClosedPositions(trades) {
         code: pos.code,
         name: pos.name || item.name,
         realizedPnl: round(pos.realizedPnl, 2),
+        totalFee: round(pos.totalFee, 2),
         tradeCount: item.tradeCount,
         firstTradeDate: item.firstTradeDate,
         lastTradeDate: item.lastTradeDate
@@ -399,8 +407,8 @@ function getSummary(positions = getPositions()) {
     totalPnl: round(totalPnl, 2),
     totalPnlRate: totalCost > 0 ? round(totalPnl / totalCost * 100, 2) : 0,
     positionCount: positions.length,
-    winCount: positions.filter(pos => (pos.unrealizedPnl || 0) > 0).length,
-    lossCount: positions.filter(pos => (pos.unrealizedPnl || 0) < 0).length
+    winCount: positions.filter(pos => (pos.netPnl !== null ? pos.netPnl : pos.unrealizedPnl || 0) > 0).length,
+    lossCount: positions.filter(pos => (pos.netPnl !== null ? pos.netPnl : pos.unrealizedPnl || 0) < 0).length
   };
 }
 

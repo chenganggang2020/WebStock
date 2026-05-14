@@ -492,7 +492,7 @@ async function exportCurrentCsv() {
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
-  const stamp = new Date().toISOString().slice(0, 10);
+  const stamp = window.WebStockTime ? window.WebStockTime.filenameDate() : new Date().toISOString().slice(0, 10);
   link.href = url;
   link.download = 'webstock-screener-' + stamp + '.csv';
   document.body.appendChild(link);

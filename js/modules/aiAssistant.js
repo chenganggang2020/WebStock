@@ -73,7 +73,7 @@ function aiAssistantSaveHistoryRecord(record) {
     result: record.result || '',
     kind: record.kind || 'general',
     context: record.context || null,
-    savedAt: record.savedAt || new Date().toISOString()
+    savedAt: record.savedAt || (window.WebStockTime && window.WebStockTime.formatDateTime ? window.WebStockTime.formatDateTime(new Date()) : new Date().toISOString())
   };
   saved.unshift(item);
   localStorage.setItem(AI_HANDOFF_RESULTS_KEY, JSON.stringify(saved.slice(0, 80)));

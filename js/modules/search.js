@@ -20,6 +20,9 @@ function matchScore(query, stock) {
     .concat(stock.boards || [])
     .concat(stock.industry || [])
     .concat((stock.mainBusinessItems || []).map(item => item.name))
+    .concat(stock.businessSummary || [])
+    .concat(stock.businessScope || [])
+    .concat((stock.themes || []).flatMap(theme => [theme.name, theme.role, theme.reason]))
     .join('')
     .toLowerCase();
   if (code.startsWith(q)) score = Math.max(score, 100);

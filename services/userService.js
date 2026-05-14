@@ -12,6 +12,23 @@ function numberOrNull(value) {
   return Number.isFinite(n) ? n : null;
 }
 
+function beijingNowSql() {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Shanghai',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false
+  }).formatToParts(new Date()).reduce(function(acc, item) {
+    if (item.type !== 'literal') acc[item.type] = item.value;
+    return acc;
+  }, {});
+  return parts.year + '-' + parts.month + '-' + parts.day + ' ' + parts.hour + ':' + parts.minute + ':' + parts.second;
+}
+
 function rowToRecent(row) {
   return {
     code: row.code,
@@ -41,19 +58,20 @@ function upsertRecentStock(input) {
     code: String(input.code),
     name,
     lastPrice: numberOrNull(input.lastPrice !== undefined ? input.lastPrice : input.price),
-    lastChange: numberOrNull(input.lastChange !== undefined ? input.lastChange : input.change)
+    lastChange: numberOrNull(input.lastChange !== undefined ? input.lastChange : input.change),
+    now: beijingNowSql()
   };
 
   db.prepare(`
-    INSERT INTO recent_stocks (code, name, last_price, last_change)
-    VALUES (@code, @name, @lastPrice, @lastChange)
+    INSERT INTO recent_stocks (code, name, last_viewed_at, last_price, last_change)
+    VALUES (@code, @name, @now, @lastPrice, @lastChange)
     ON CONFLICT(code) DO UPDATE SET
       name = excluded.name,
-      last_viewed_at = CURRENT_TIMESTAMP,
+      last_viewed_at = @now,
       view_count = recent_stocks.view_count + 1,
       last_price = COALESCE(excluded.last_price, recent_stocks.last_price),
       last_change = COALESCE(excluded.last_change, recent_stocks.last_change),
-      updated_at = CURRENT_TIMESTAMP
+      updated_at = @now
   `).run(payload);
 
   return rowToRecent(db.prepare('SELECT * FROM recent_stocks WHERE code = ?').get(payload.code));

@@ -18,6 +18,13 @@ function recentCsvCell(value) {
   return /[",\r\n]/.test(text) ? '"' + text.replace(/"/g, '""') + '"' : text;
 }
 
+function recentTime(value) {
+  if (!value) return '--';
+  return window.WebStockTime && window.WebStockTime.formatDateTime
+    ? window.WebStockTime.formatDateTime(value)
+    : value;
+}
+
 function visibleRecentItems() {
   let items = (window.State.recentStocks || []).slice();
   const keyword = document.getElementById('recentSearchInput') ? document.getElementById('recentSearchInput').value.trim().toLowerCase() : '';
@@ -106,7 +113,7 @@ function recentRowHtml(item) {
     '<td>' + recentFmt(item.lastPrice) + '</td>' +
     '<td class="' + recentChangeClass(item.lastChange) + '">' + changeText + '</td>' +
     '<td>' + (item.viewCount || 1) + '</td>' +
-    '<td>' + (item.lastViewedAt || '--') + '</td>' +
+    '<td>' + recentTime(item.lastViewedAt) + '</td>' +
     '<td><div class="stock-actions">' +
     '<button class="small-btn primary" data-action="view" data-code="' + item.code + '">查看</button>' +
     '<button class="small-btn" data-action="analysis" data-code="' + item.code + '">分析</button>' +
@@ -185,7 +192,7 @@ function exportRecentCsv() {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = 'webstock-recent-stocks-' + new Date().toISOString().slice(0, 10) + '.csv';
+  a.download = 'webstock-recent-stocks-' + (window.WebStockTime ? window.WebStockTime.filenameDate() : new Date().toISOString().slice(0, 10)) + '.csv';
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);

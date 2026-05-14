@@ -54,7 +54,14 @@ async function loadWatchlist(options) {
   options = options || {};
   const State = window.State;
   const group = document.getElementById('watchlistGroupFilter') ? document.getElementById('watchlistGroupFilter').value : '';
-  State.watchlist = await watchlistApi('/watchlist' + (group ? '?group=' + encodeURIComponent(group) : ''));
+  const previousByCode = new Map((State.watchlist || []).map(function(item) { return [item.code, item]; }));
+  State.watchlist = (await watchlistApi('/watchlist' + (group ? '?group=' + encodeURIComponent(group) : ''))).map(function(item) {
+    const previous = previousByCode.get(item.code) || {};
+    ['price', 'change', 'amount', 'quoteStatus', 'open', 'high', 'low', 'prevClose'].forEach(function(field) {
+      if ((item[field] === undefined || item[field] === null) && previous[field] !== undefined) item[field] = previous[field];
+    });
+    return item;
+  });
   renderWatchlist();
   if (!options.skipQuotes && State.watchlist.length) await refreshWatchlistQuotes();
   if (window.StockList) window.StockList.renderStockTable(State.filteredStocks);
@@ -256,7 +263,7 @@ function exportVisibleWatchlistCsv() {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = 'webstock-watchlist-' + new Date().toISOString().slice(0, 10) + '.csv';
+  a.download = 'webstock-watchlist-' + (window.WebStockTime ? window.WebStockTime.filenameDate() : new Date().toISOString().slice(0, 10)) + '.csv';
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);

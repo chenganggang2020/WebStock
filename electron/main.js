@@ -40,6 +40,33 @@ function configureEnvironment() {
   process.env.WEBSTOCK_SKIP_FUND_REFRESH = process.env.WEBSTOCK_SKIP_FUND_REFRESH || '1';
 }
 
+function openInternalWindow(url) {
+  if (!/^https?:\/\//i.test(url)) {
+    shell.openExternal(url);
+    return;
+  }
+  const child = new BrowserWindow({
+    width: 1180,
+    height: 820,
+    minWidth: 900,
+    minHeight: 620,
+    title: 'WebStock',
+    parent: mainWindow || undefined,
+    icon: path.join(__dirname, '..', 'icons', 'webstock-512.png'),
+    backgroundColor: '#ffffff',
+    webPreferences: {
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true
+    }
+  });
+  child.webContents.setWindowOpenHandler(function(details) {
+    openInternalWindow(details.url);
+    return { action: 'deny' };
+  });
+  child.loadURL(url);
+}
+
 function createWindow(url) {
   mainWindow = new BrowserWindow({
     width: 1420,
@@ -57,7 +84,7 @@ function createWindow(url) {
   });
 
   mainWindow.webContents.setWindowOpenHandler(function(details) {
-    shell.openExternal(details.url);
+    openInternalWindow(details.url);
     return { action: 'deny' };
   });
   mainWindow.loadURL(url);

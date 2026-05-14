@@ -11,6 +11,28 @@ function showRealtimeView() {
   }
 }
 
+function stockLimitRatio(quote) {
+  const code = String((quote && quote.code) || '');
+  const name = String((quote && quote.name) || '').toUpperCase();
+  if (name.includes('ST')) return 0.05;
+  if (/^(30|68)/.test(code)) return 0.2;
+  if (/^(8|4|92)/.test(code)) return 0.3;
+  return 0.1;
+}
+
+function realtimeFmtVolume(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n) || n <= 0) return '--';
+  const hands = n / 100;
+  return hands >= 10000 ? (hands / 10000).toFixed(2) + '万手' : hands.toFixed(0) + '手';
+}
+
+function realtimeFmtAmount(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n) || n <= 0) return '--';
+  return n >= 100000000 ? (n / 100000000).toFixed(2) + '亿' : (n / 10000).toFixed(2) + '万';
+}
+
 function showKlineView() {
   const State = window.State;
   const KlineChart = window.KlineChart;
@@ -81,6 +103,9 @@ function updateStockInfo(quote, minuteData) {
   const lowVal = parseFloat(quote.low) || 0;
   const buy1Val = parseFloat(quote.buy1Price) || 0;
   const sell1Val = parseFloat(quote.sell1Price) || 0;
+  const limitRatio = stockLimitRatio(quote);
+  const limitUp = prevClose > 0 ? prevClose * (1 + limitRatio) : 0;
+  const limitDown = prevClose > 0 ? prevClose * (1 - limitRatio) : 0;
 
   const openColor = prevClose > 0 ? (openVal >= prevClose ? upColor : downColor) : '#999';
   const highColor = prevClose > 0 ? (highVal >= prevClose ? upColor : downColor) : '#999';
@@ -97,6 +122,16 @@ function updateStockInfo(quote, minuteData) {
   document.getElementById('infoHigh').style.color = highColor;
   document.getElementById('infoLow').textContent = lowVal > 0 ? lowVal.toFixed(2) : '--';
   document.getElementById('infoLow').style.color = lowColor;
+  if (document.getElementById('infoLimitUp')) {
+    document.getElementById('infoLimitUp').textContent = limitUp > 0 ? limitUp.toFixed(2) : '--';
+    document.getElementById('infoLimitUp').style.color = upColor;
+  }
+  if (document.getElementById('infoLimitDown')) {
+    document.getElementById('infoLimitDown').textContent = limitDown > 0 ? limitDown.toFixed(2) : '--';
+    document.getElementById('infoLimitDown').style.color = downColor;
+  }
+  if (document.getElementById('infoVolume')) document.getElementById('infoVolume').textContent = realtimeFmtVolume(quote.volume);
+  if (document.getElementById('infoAmount')) document.getElementById('infoAmount').textContent = realtimeFmtAmount(quote.amount);
   document.getElementById('infoBuy1').textContent = buy1Val > 0 ? buy1Val.toFixed(2) + ' / ' + ((quote.buy1Vol / 100).toFixed(0)) + '手' : '--';
   document.getElementById('infoBuy1').style.color = buy1Color;
   document.getElementById('infoSell1').textContent = sell1Val > 0 ? sell1Val.toFixed(2) + ' / ' + ((quote.sell1Vol / 100).toFixed(0)) + '手' : '--';
@@ -118,8 +153,7 @@ function updateStockInfo(quote, minuteData) {
     }
   }
   if (!dataDate) {
-    const now = new Date();
-    dataDate = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
+    dataDate = window.WebStockTime && window.WebStockTime.todayDate ? window.WebStockTime.todayDate() : new Date().toISOString().slice(0, 10);
   }
   const chartTitle = document.getElementById('chartTitle');
   if (chartTitle) {
@@ -191,8 +225,9 @@ function renderTimeChart(minuteData) {
   const prevClose = parseFloat(State.currentQuote.prevClose) || parseFloat(State.currentQuote.price) || 10;
   const openPrice = parseFloat(State.currentQuote.open) || prevClose;
 
-  const now = new Date();
-  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+  const currentMinutes = window.WebStockTime && window.WebStockTime.currentMinutes
+    ? window.WebStockTime.currentMinutes()
+    : (new Date().getHours() * 60 + new Date().getMinutes());
 
   const dataMap = {};
   if (Array.isArray(minuteData) && minuteData.length > 0) {

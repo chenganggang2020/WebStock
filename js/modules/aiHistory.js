@@ -40,7 +40,9 @@ function aiHistoryRender() {
     return;
   }
   target.innerHTML = items.slice(0, 60).map(function(item) {
-    const savedAt = item.savedAt ? new Date(item.savedAt).toLocaleString() : '--';
+    const savedAt = item.savedAt
+      ? (window.WebStockTime && window.WebStockTime.formatDateTime ? window.WebStockTime.formatDateTime(item.savedAt) : item.savedAt)
+      : '--';
     const result = item.result || '';
     const prompt = item.prompt || '';
     return '<article class="ai-history-card">' +

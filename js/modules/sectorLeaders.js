@@ -288,12 +288,12 @@ async function exportSnapshotsCsv() {
     .concat(snapshots.map(function(item) {
       return [item.capturedAt, item.sectorName, item.code, item.name, item.price, item.change, item.amount];
     }));
-  downloadSectorCsv('webstock-sector-snapshots-' + new Date().toISOString().slice(0, 10) + '.csv', rows);
+  downloadSectorCsv('webstock-sector-snapshots-' + (window.WebStockTime ? window.WebStockTime.filenameDate() : new Date().toISOString().slice(0, 10)) + '.csv', rows);
 }
 
 async function exportConfigJson() {
   const config = await sectorApi('/api/sector-config');
-  downloadSectorJson('webstock-sector-config-' + new Date().toISOString().slice(0, 10) + '.json', config);
+  downloadSectorJson('webstock-sector-config-' + (window.WebStockTime ? window.WebStockTime.filenameDate() : new Date().toISOString().slice(0, 10)) + '.json', config);
 }
 
 async function importConfigFromFile(file) {

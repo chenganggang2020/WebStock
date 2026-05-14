@@ -7,6 +7,7 @@ const DEFAULT_TRADE_TAX = 0;
 const TRADE_ENTER_FLOW = ['tradeDateInput', 'tradePriceInput', 'tradeQuantityInput', 'tradeFeeInput'];
 
 function todayStr() {
+  if (window.WebStockTime && window.WebStockTime.todayDate) return window.WebStockTime.todayDate();
   const now = new Date();
   return now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
 }

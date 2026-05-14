@@ -26,7 +26,7 @@
     <div class="search-hint">💡 代码/拼音首字母/全拼/中文</div>
     <nav class="sidebar-workspace" id="sidebarWorkspaceNav" aria-label="工作台快捷入口">
       <button id="sidebarWatchlistBtn" class="sidebar-workspace-btn" data-main-view="watchlist">
-        <span>泽哥自选</span><strong id="sidebarWatchlistCount">0</strong>
+        <span>自选</span><strong id="sidebarWatchlistCount">0</strong>
       </button>
       <button id="sidebarPortfolioBtn" class="sidebar-workspace-btn" data-main-view="portfolio">
         <span>持仓</span><strong id="sidebarPortfolioCount">0</strong>
@@ -176,6 +176,22 @@
             <div class="info-row">
               <span class="label">最低</span>
               <span class="value" id="infoLow">--</span>
+            </div>
+            <div class="info-row">
+              <span class="label">涨停</span>
+              <span class="value" id="infoLimitUp">--</span>
+            </div>
+            <div class="info-row">
+              <span class="label">跌停</span>
+              <span class="value" id="infoLimitDown">--</span>
+            </div>
+            <div class="info-row">
+              <span class="label">成交量</span>
+              <span class="value" id="infoVolume">--</span>
+            </div>
+            <div class="info-row">
+              <span class="label">成交额</span>
+              <span class="value" id="infoAmount">--</span>
             </div>
             <div class="info-row">
               <span class="label">买一</span>
@@ -719,6 +735,7 @@
 
   <script src="js/modules/state.js"></script>
   <script src="js/modules/apiClient.js"></script>
+  <script src="js/modules/time.js"></script>
   <script src="js/modules/search.js"></script>
   <script src="js/modules/stockList.js"></script>
   <script src="js/modules/indicators.js"></script>

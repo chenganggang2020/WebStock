@@ -38,6 +38,32 @@ const THEMES = [
     ]
   },
   {
+    id: 'commercial-space',
+    name: '商业航天',
+    aliases: ['商业航天', '卫星互联网', '低空经济', '航天电子', '火箭', '星链'],
+    leaders: [
+      { code: '600118', name: '中国卫星', role: '卫星制造', reason: '卫星研制与应用服务代表' },
+      { code: '002465', name: '海格通信', role: '卫星通信', reason: '北斗导航和卫星通信产业链代表' },
+      { code: '300342', name: '天银机电', role: '星载设备', reason: '星敏感器和航天电子方向' },
+      { code: '300053', name: '航宇微', role: '卫星应用', reason: '卫星大数据和遥感应用代表' },
+      { code: '688066', name: '航天宏图', role: '卫星数据', reason: '遥感与空间信息应用平台' },
+      { code: '688297', name: '中无人机', role: '无人系统', reason: '航天军工与无人装备弹性标的' }
+    ]
+  },
+  {
+    id: 'sci-tech-chip',
+    name: '科创芯片',
+    aliases: ['科创芯片', '科创板芯片', '半导体设备', 'EDA', '国产芯片', '芯片ETF'],
+    leaders: [
+      { code: '688012', name: '中微公司', role: '设备龙头', reason: '科创板半导体设备核心公司' },
+      { code: '688981', name: '中芯国际', role: '晶圆制造', reason: '大陆晶圆代工龙头' },
+      { code: '688008', name: '澜起科技', role: '内存接口', reason: '高端内存接口芯片代表' },
+      { code: '688126', name: '沪硅产业', role: '硅片材料', reason: '半导体硅片国产化平台' },
+      { code: '688256', name: '寒武纪', role: 'AI芯片', reason: '国产AI芯片代表' },
+      { code: '588200', name: '科创芯片ETF', role: '主题ETF', reason: '科创芯片主题ETF，可用于观察板块整体' }
+    ]
+  },
+  {
     id: 'ai-compute',
     name: 'AI算力/芯片',
     aliases: ['算力', 'ai芯片', 'gpu', '服务器', '液冷'],
@@ -147,14 +173,27 @@ function decorateStock(stock) {
 function searchThemes(query) {
   const q = String(query || '').trim().toLowerCase();
   if (!q) return THEMES.slice(0, 6).map(formatTheme);
-  return THEMES.filter(function(theme) {
-    return theme.name.toLowerCase().includes(q) ||
-      theme.id.toLowerCase().includes(q) ||
-      theme.aliases.some(function(alias) { return alias.toLowerCase().includes(q) || q.includes(alias.toLowerCase()); }) ||
-      theme.leaders.some(function(leader) {
-        return leader.code.includes(q) || leader.name.toLowerCase().includes(q) || leader.role.toLowerCase().includes(q);
-      });
-  }).map(formatTheme);
+  return THEMES.map(function(theme) {
+    const name = theme.name.toLowerCase();
+    const aliases = theme.aliases.map(function(alias) { return alias.toLowerCase(); });
+    let score = 0;
+    if (name === q) score = Math.max(score, 100);
+    if (aliases.some(function(alias) { return alias === q; })) score = Math.max(score, 95);
+    if (name.includes(q)) score = Math.max(score, 80);
+    if (aliases.some(function(alias) { return alias.includes(q); })) score = Math.max(score, 75);
+    if (aliases.some(function(alias) { return q.includes(alias); })) score = Math.max(score, 58);
+    if (theme.id.toLowerCase().includes(q)) score = Math.max(score, 55);
+    if (theme.leaders.some(function(leader) {
+      return leader.code.includes(q) || leader.name.toLowerCase().includes(q) || leader.role.toLowerCase().includes(q);
+    })) score = Math.max(score, 50);
+    return { theme, score };
+  }).filter(function(item) {
+    return item.score > 0;
+  }).sort(function(a, b) {
+    return b.score - a.score;
+  }).map(function(item) {
+    return formatTheme(item.theme);
+  });
 }
 
 function formatTheme(theme) {

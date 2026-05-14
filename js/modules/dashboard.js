@@ -24,6 +24,7 @@ const DASHBOARD_DISMISSED_RISKS_KEY = 'webstock_dismissed_risks';
 let dashboardShowDismissedRisks = false;
 
 function dashboardTodayKey() {
+  if (window.WebStockTime && window.WebStockTime.todayDate) return window.WebStockTime.todayDate();
   return new Date().toISOString().slice(0, 10);
 }
 
@@ -75,7 +76,11 @@ function dashboardSetUpdatedAt() {
   const target = document.getElementById('dashboardUpdatedAt');
   if (!target) return;
   target.className = 'muted';
-  target.textContent = 'Last refreshed: ' + new Date().toLocaleString();
+  target.textContent = 'Last refreshed: ' + (
+    window.WebStockTime && window.WebStockTime.formatDateTime
+      ? window.WebStockTime.formatDateTime(new Date())
+      : new Date().toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' })
+  );
 }
 
 function dashboardSetRefreshStatus(message, isError) {

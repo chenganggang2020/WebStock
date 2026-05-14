@@ -4,6 +4,7 @@
 node_modules/
 npm-debug.log
 server_*.log
+logs/
 analysis.md
 test-results/
 playwright-report/
