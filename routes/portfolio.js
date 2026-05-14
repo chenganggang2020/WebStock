@@ -6,6 +6,7 @@ const router = express.Router();
 const portfolio = require('../services/portfolioService');
 const { isValidApiKey, getAIConfig, callAIModel } = require('./ai');
 const { toSinaSymbol } = require('../utils/market');
+const { appendOneClickOutputInstructions } = require('../services/handoffFormat');
 
 function ok(res, data) {
   res.json({ success: true, data });
@@ -202,7 +203,7 @@ router.post('/ai-analysis', async function (req, res) {
     const summary = portfolio.getSummary(positions);
     const allocation = portfolio.getAllocation(positions);
     const trades = portfolio.listTrades().slice(0, 20);
-    const prompt = `你是一名谨慎的投资组合分析助手。请根据以下持仓、盈亏和交易记录，对该投资组合进行结构性分析。请注意：
+    const prompt = appendOneClickOutputInstructions(`你是一名谨慎的投资组合分析助手。请根据以下持仓、盈亏和交易记录，对该投资组合进行结构性分析。请注意：
 1. 不要承诺收益；
 2. 不要给出绝对化买入或卖出指令；
 3. 只能给出风险提示、观察建议和仓位结构建议；
@@ -227,7 +228,16 @@ ${JSON.stringify(trades, null, 2)}
 四、主要风险
 五、后续观察重点
 六、仓位结构建议
-七、免责声明`;
+七、免责声明`, {
+      title: '组合诊断结果',
+      sections: [
+        '组合结论：仓位、集中度、收益来源和主要问题。',
+        '持仓拆解：每个重点持仓的风险、观察点和处理优先级。',
+        '结构建议：只给研究型仓位结构建议，不给下单指令。',
+        '下一步验证：需要跟踪的价格、量能、板块和交易记录。',
+        '免责声明：仅供研究复盘，不构成投资建议。'
+      ]
+    });
 
     ok(res, { report: await callAIModel(prompt) });
   } catch (error) {

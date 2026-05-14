@@ -341,11 +341,19 @@ test('main stock actions and workspace navigation do not throw', async ({ page }
   await expect(page.locator('#screenerResults')).toContainText('Saved screener comparison');
   await page.click('#screenerAiBtn');
   await expect(page.locator('#handoffModalOverlay')).toBeVisible();
-  await page.fill('#handoffResultText', 'ChatGPT 返回结果测试');
+  await page.fill('#handoffResultText', [
+    '前置解释文字',
+    'WEBSTOCK_RESULT_START',
+    '# ChatGPT 返回结果测试',
+    '- 优先观察：测试股票',
+    'WEBSTOCK_RESULT_END',
+    '后置解释文字'
+  ].join('\n'));
   await page.click('#handoffSaveBtn');
   await expect(page.locator('#handoffModalOverlay')).toBeHidden();
   await expect(page.locator('#screenerHistory')).toContainText('AI saved');
   await expect(page.locator('#screenerResults')).toContainText('ChatGPT 返回结果测试');
+  await expect(page.locator('#screenerResults')).not.toContainText('WEBSTOCK_RESULT_START');
   await page.click('[data-main-view="aiHistory"]');
   await expect(page.locator('#aiHistoryView')).toBeVisible();
   await expect(page.locator('#aiHistoryList')).toContainText('ChatGPT 返回结果测试');
@@ -357,6 +365,7 @@ test('main stock actions and workspace navigation do not throw', async ({ page }
   await expect(page.locator('#screenerHistory')).toContainText('No saved screener tasks');
   const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('webstock_ai_handoff_results') || '[]'));
   expect(saved[0].result).toContain('ChatGPT 返回结果测试');
+  expect(saved[0].result).not.toContain('WEBSTOCK_RESULT_START');
 
   await page.click('[data-main-view="settings"]');
   await expect(page.locator('#settingsView')).toBeVisible();

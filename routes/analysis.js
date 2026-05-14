@@ -8,6 +8,7 @@ const fs = require('fs');
 const { isValidApiKey, createAIModelStream, callAIModel, getAIConfig } = require('./ai');
 const { klineCache } = require('./cache');
 const { toSinaSymbol, getEastmoneyMarketId } = require('../utils/market');
+const { appendOneClickOutputInstructions } = require('../services/handoffFormat');
 
 let promptTemplate = '';
 
@@ -141,11 +142,21 @@ function buildPrompt(stockName, code, quote, tech, macd, stockInfo, financial, i
     });
   }
 
-  return promptTemplate
+  const prompt = promptTemplate
     .replace(/\{\{STOCK_NAME\}\}/g, stockName)
     .replace(/\{\{STOCK_CODE\}\}/g, code)
     .replace(/\{\{DATA_TIME\}\}/g, now)
     .replace(/\{\{DATA_SUMMARY\}\}/g, dataSummary);
+  return appendOneClickOutputInstructions(prompt, {
+    title: stockName + '（' + code + '）个股分析结果',
+    sections: [
+      '核心结论：3-5 条，说明当前强弱、位置、主要逻辑。',
+      '关键数据：行情、资金、技术、基本面的主要证据。',
+      '风险提示：短线风险、中线风险、数据缺口。',
+      '后续观察：支撑压力、量能、板块联动、公告或财报验证点。',
+      '免责声明：仅供研究复盘，不构成投资建议。'
+    ]
+  });
 }
 
 async function generateAIAnalysis(stockName, code, quote, tech, macd, stockInfo, financial, industry, klineData) {

@@ -407,10 +407,24 @@ async function runAIAnalysis() {
     if (badge) badge.textContent = 'AI 组合诊断';
   } catch (error) {
     if (window.AIAssistant) {
+      const promptText = [
+        '请对我的投资组合做风险诊断。要求：不承诺收益，不给真实下单指令，仅输出持仓结构、风险、观察点和免责声明。',
+        '持仓数据：' + JSON.stringify(window.State.positions || [], null, 2),
+        '',
+        '请在回答最后输出一个可直接复制回 WebStock 的结果块。不要把边界标记放进代码块；边界标记必须单独占一行。',
+        'WEBSTOCK_RESULT_START',
+        '# 组合诊断结果',
+        '- 组合结论：仓位、集中度、收益来源和主要问题。',
+        '- 持仓拆解：每个重点持仓的风险、观察点和处理优先级。',
+        '- 结构建议：只给研究型仓位结构建议，不给下单指令。',
+        '- 下一步验证：需要跟踪的价格、量能、板块和交易记录。',
+        '- 免责声明：仅供研究复盘，不构成投资建议。',
+        'WEBSTOCK_RESULT_END'
+      ].join('\n');
       window.AIAssistant.open({
         title: '组合分析 ChatGPT 交接',
         summary: 'AI API 不可用，已生成组合分析提示方向。请复制到 ChatGPT。',
-        prompt: '请对我的投资组合做风险诊断。要求：不承诺收益，不给真实下单指令，仅输出持仓结构、风险、观察点和免责声明。持仓数据：' + JSON.stringify(window.State.positions || [], null, 2),
+        prompt: promptText,
         kind: 'portfolio',
         context: { view: 'portfolio' }
       });

@@ -38,6 +38,16 @@ function aiAssistantSetStatus(text, isOk) {
   target.className = 'handoff-status' + (isOk ? ' ok' : '');
 }
 
+function aiAssistantExtractResultBlock(text) {
+  const raw = String(text || '').trim();
+  if (!raw) return { text: '', extracted: false };
+  const standard = raw.match(/WEBSTOCK_RESULT_START\s*([\s\S]*?)\s*WEBSTOCK_RESULT_END/i);
+  if (standard) return { text: standard[1].trim(), extracted: true };
+  const typed = raw.match(/WEBSTOCK_([A-Z0-9_]+)_START\s*([\s\S]*?)\s*WEBSTOCK_\1_END/i);
+  if (typed) return { text: typed[2].trim(), extracted: true };
+  return { text: raw, extracted: false };
+}
+
 function aiAssistantCopyPrompt() {
   const text = document.getElementById('handoffPromptText').value;
   if (!text) return Promise.resolve();
@@ -73,7 +83,9 @@ async function aiAssistantImportClipboard() {
     alert('剪贴板为空。');
     return;
   }
-  document.getElementById('handoffResultText').value = text;
+  const parsed = aiAssistantExtractResultBlock(text);
+  document.getElementById('handoffResultText').value = parsed.text;
+  aiAssistantSetStatus(parsed.extracted ? '已从剪贴板识别并提取 WebStock 结果块。' : '已从剪贴板导入文本。', true);
 }
 
 function aiAssistantSaveHistoryRecord(record) {
@@ -97,11 +109,13 @@ function aiAssistantSaveHistoryRecord(record) {
 
 async function aiAssistantSaveResult() {
   if (!currentHandoff) return;
-  currentHandoff.result = document.getElementById('handoffResultText').value.trim();
+  const parsed = aiAssistantExtractResultBlock(document.getElementById('handoffResultText').value);
+  currentHandoff.result = parsed.text;
   if (!currentHandoff.result) {
     alert('请先粘贴 ChatGPT 返回结果。');
     return;
   }
+  document.getElementById('handoffResultText').value = currentHandoff.result;
   aiAssistantSaveHistoryRecord({
     title: currentHandoff.title || 'ChatGPT 交接结果',
     summary: currentHandoff.summary || '',
@@ -150,6 +164,7 @@ window.AIAssistant = {
   saveResult: aiAssistantSaveResult,
   copyAndOpenChatGPT: aiAssistantCopyAndOpenChatGPT,
   importClipboard: aiAssistantImportClipboard,
+  extractResultBlock: aiAssistantExtractResultBlock,
   saveHistoryRecord: aiAssistantSaveHistoryRecord,
   getSavedResults: function() {
     return JSON.parse(localStorage.getItem(AI_HANDOFF_RESULTS_KEY) || '[]');

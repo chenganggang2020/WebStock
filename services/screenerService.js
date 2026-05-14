@@ -3,6 +3,7 @@ const path = require('path');
 const portfolio = require('./portfolioService');
 const userService = require('./userService');
 const sectors = require('./sectorService');
+const { appendOneClickOutputInstructions } = require('./handoffFormat');
 const db = require('../db');
 
 const DISCLAIMER = '仅供研究和学习，不构成投资建议；市场有风险，决策需自行验证。';
@@ -443,7 +444,7 @@ function buildSmartPrompt(result) {
       inPortfolio: item.inPortfolio
     };
   });
-  return `你是一个谨慎的 A 股投研助手。请对 WebStock 本地初筛出来的候选股做“二次筛选”，不是泛泛点评，也不要直接给买卖指令。
+  const prompt = `你是一个谨慎的 A 股投研助手。请对 WebStock 本地初筛出来的候选股做“二次筛选”，不是泛泛点评，也不要直接给买卖指令。
 
 重要约束：
 1. 只用于研究和复盘，不构成投资建议，不承诺收益。
@@ -479,6 +480,16 @@ ${JSON.stringify(candidates, null, 2)}
 
 ## 可复制回 WebStock 的摘要
 用简短 bullet 输出最终摘要，方便粘贴保存。`;
+  return appendOneClickOutputInstructions(prompt, {
+    title: '智能选股二次筛选结果',
+    sections: [
+      '结论分组：优先观察 / 等待确认 / 暂时剔除。',
+      '优先观察表：代码、名称、理由、确认信号、主要风险、观察价位。',
+      '板块与风格：集中方向、同质化、追高或退潮风险。',
+      '下一步验证：5-8 条明日或盘中检查项。',
+      '免责声明：仅供研究复盘，不构成投资建议。'
+    ]
+  });
 }
 
 function rowToSavedResult(row) {
