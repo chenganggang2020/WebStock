@@ -40,7 +40,7 @@ function configureEnvironment() {
   process.env.WEBSTOCK_SKIP_FUND_REFRESH = process.env.WEBSTOCK_SKIP_FUND_REFRESH || '1';
 }
 
-function shouldOpenExternally(url) {
+function isChatGptHandoffUrl(url) {
   try {
     const host = new URL(url).hostname.toLowerCase();
     return host === 'chatgpt.com' ||
@@ -52,34 +52,58 @@ function shouldOpenExternally(url) {
       host === 'accounts.google.com' ||
       host.endsWith('.accounts.google.com');
   } catch (error) {
-    return true;
+    return false;
   }
 }
 
-function openInternalWindow(url) {
-  if (!/^https?:\/\//i.test(url) || shouldOpenExternally(url)) {
-    shell.openExternal(url);
-    return;
-  }
+function browserLikeUserAgent() {
+  const chromeVersion = process.versions.chrome || '136.0.0.0';
+  return 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ' +
+    '(KHTML, like Gecko) Chrome/' + chromeVersion + ' Safari/537.36';
+}
+
+function createChildWindow(title, webPreferences) {
   const child = new BrowserWindow({
     width: 1180,
     height: 820,
     minWidth: 900,
     minHeight: 620,
-    title: 'WebStock',
+    title: title || 'WebStock',
     parent: mainWindow || undefined,
     icon: path.join(__dirname, '..', 'icons', 'webstock-512.png'),
     backgroundColor: '#ffffff',
-    webPreferences: {
+    webPreferences: Object.assign({
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true
-    }
+    }, webPreferences || {})
   });
   child.webContents.setWindowOpenHandler(function(details) {
     openInternalWindow(details.url);
     return { action: 'deny' };
   });
+  return child;
+}
+
+function openChatGptWindow(url) {
+  const child = createChildWindow('ChatGPT - WebStock', {
+    partition: 'persist:webstock-chatgpt',
+    nativeWindowOpen: true
+  });
+  child.webContents.setUserAgent(browserLikeUserAgent());
+  child.loadURL(url, { userAgent: browserLikeUserAgent() });
+}
+
+function openInternalWindow(url) {
+  if (!/^https?:\/\//i.test(url)) {
+    shell.openExternal(url);
+    return;
+  }
+  if (isChatGptHandoffUrl(url)) {
+    openChatGptWindow(url);
+    return;
+  }
+  const child = createChildWindow('WebStock');
   child.loadURL(url);
 }
 
