@@ -5,6 +5,7 @@ const fs = require('fs');
 const path = require('path');
 const axios = require('axios');
 const pinyin = require('tiny-pinyin');
+const themeService = require('../services/themeService');
 
 let stockListCache = [];
 let fundListCache = [];
@@ -16,6 +17,7 @@ const FUND_REFRESH_INTERVAL = 12 * 60 * 60 * 1000;
 const EXCHANGE_ETF_CODE = /^(159|510|511|512|513|515|516|517|518|519|560|561|562|563|588|589)\d{3}$/;
 
 function addPinyinToStock(stock) {
+  Object.assign(stock, themeService.decorateStock(stock));
   if (pinyin.isSupported() && stock.name) {
     const fullPinyin = pinyin.convertToPinyin(stock.name, '-', true);
     const abbr = fullPinyin.split('-').map(p => p[0]).join('');

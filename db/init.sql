@@ -124,6 +124,14 @@ CREATE TABLE IF NOT EXISTS hot_market_ai_results (
   FOREIGN KEY (snapshot_id) REFERENCES hot_market_snapshots(id) ON DELETE SET NULL
 );
 
+CREATE TABLE IF NOT EXISTS stock_profiles (
+  code TEXT PRIMARY KEY,
+  source TEXT DEFAULT '',
+  payload_json TEXT NOT NULL,
+  fetched_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE INDEX IF NOT EXISTS idx_watchlist_group ON watchlist(group_name);
 CREATE INDEX IF NOT EXISTS idx_trades_code ON trades(code);
 CREATE INDEX IF NOT EXISTS idx_trades_date ON trades(trade_date);
@@ -136,3 +144,4 @@ CREATE INDEX IF NOT EXISTS idx_sector_leader_snapshots_code ON sector_leader_sna
 CREATE INDEX IF NOT EXISTS idx_sector_leader_snapshots_leader ON sector_leader_snapshots(leader_id, captured_at);
 CREATE INDEX IF NOT EXISTS idx_hot_market_snapshots_date ON hot_market_snapshots(snapshot_date, created_at);
 CREATE INDEX IF NOT EXISTS idx_hot_market_ai_results_snapshot ON hot_market_ai_results(snapshot_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_stock_profiles_fetched ON stock_profiles(fetched_at);

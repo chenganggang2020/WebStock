@@ -13,6 +13,7 @@ process.env.WEBSTOCK_DB_PATH = testDbPath;
 process.env.OPENAI_API_KEY = '';
 process.env.WEBSTOCK_DISABLE_SINA_NEWS = '1';
 process.env.WEBSTOCK_HOT_MARKET_OFFLINE = '1';
+process.env.WEBSTOCK_STOCK_PROFILE_OFFLINE = '1';
 
 const app = require('../server');
 const newsService = require('../services/newsService');
@@ -158,6 +159,10 @@ test('news, sector and screener APIs return unified success envelopes', async (t
   assert.ok(stockTags.json.data.find(item => item.code === '300308').tags.length >= 2);
   assert.ok(stockTags.json.data.find(item => item.code === '688981').marketLabel);
   assert.ok(stockTags.json.data.find(item => item.code === '159611').marketLabel);
+  const detailedTags = await requestJson(server, '/api/stock-tags?detail=1&codes=300308');
+  assert.equal(detailedTags.json.success, true);
+  assert.equal(detailedTags.json.data[0].code, '300308');
+  assert.ok(Array.isArray(detailedTags.json.data[0].tags));
 
   const savedHotAiResult = await requestJson(server, {
     path: '/api/hot-market/ai-result',

@@ -1,7 +1,11 @@
 async function refresh(stock) {
   if (!stock) return;
+  renderProfile(stock);
   renderWatchlistStatus(stock);
   renderPositionStatus(stock);
+  if (window.StockList && stock.code && !stock.tagDetailFetched) {
+    window.StockList.enrichStockTags([stock.code], { limit: 1 }).catch(function(error) { console.warn(error.message || error); });
+  }
   if (window.News) {
     try {
       const items = await window.News.loadStockNews(stock, 'detailNewsList');
@@ -63,6 +67,25 @@ function renderPositionStatus(stock) {
   el.className = 'detail-status ' + (Number(pos.unrealizedPnl) >= 0 ? 'pnl-up' : 'pnl-down');
 }
 
+function renderProfile(stock) {
+  const box = document.getElementById('detailProfileBox');
+  if (!box) return;
+  const tags = (stock.tags || []).slice(0, 10).map(function(tag) {
+    return '<span class="stock-tag">' + detailEscapeHtml(tag) + '</span>';
+  }).join('');
+  const mainItems = (stock.mainBusinessItems || []).slice(0, 4).map(function(item) {
+    return '<span>' + detailEscapeHtml(item.name) + (Number.isFinite(Number(item.ratio)) ? ' ' + Number(item.ratio).toFixed(1) + '%' : '') + '</span>';
+  }).join('');
+  const source = stock.sourceUrl
+    ? '<a target="_blank" rel="noopener" href="' + detailEscapeHtml(stock.sourceUrl) + '">' + detailEscapeHtml(stock.source || '来源') + '</a>'
+    : detailEscapeHtml(stock.source || '');
+  box.innerHTML = '<div class="detail-profile-tags">' + tags + '</div>' +
+    (stock.industry || stock.csrcIndustry ? '<div class="detail-profile-line"><strong>行业</strong><span>' + detailEscapeHtml(stock.industry || stock.csrcIndustry) + '</span></div>' : '') +
+    (mainItems ? '<div class="detail-profile-line"><strong>主营</strong><span class="detail-main-items">' + mainItems + '</span></div>' : '') +
+    (stock.businessSummary ? '<div class="detail-profile-summary">' + detailEscapeHtml(stock.businessSummary) + '</div>' : '') +
+    (source ? '<div class="detail-profile-source">数据：' + source + (stock.cached ? '（缓存）' : '') + '</div>' : '<div class="detail-profile-source">正在补充主营业务和板块标签...</div>');
+}
+
 function bindStockDetail() {
   const watch = document.getElementById('detailWatchlistBtn');
   if (watch) watch.addEventListener('click', async function() {
@@ -93,5 +116,6 @@ function bindStockDetail() {
 
 window.StockDetail = {
   refresh,
+  renderProfile,
   bind: bindStockDetail
 };

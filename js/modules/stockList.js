@@ -1,3 +1,7 @@
+const tagEnrichingCodes = new Set();
+let tagEnrichTimer = null;
+let suppressTagSchedule = false;
+
 async function loadMoreStocks() {
   const State = window.State;
   State.currentPage++;
@@ -113,9 +117,14 @@ function stockTags(stock) {
   (stock.themes || []).forEach(function(theme) {
     if (theme && theme.name) tags.push(theme.name);
   });
+  if (stock.industry) tags.push(stock.industry);
+  (stock.boards || []).slice(0, 4).forEach(function(board) { tags.push(board); });
+  (stock.mainBusinessItems || []).slice(0, 2).forEach(function(item) {
+    if (item && item.name) tags.push(item.name);
+  });
   return tags.filter(Boolean).filter(function(tag, index, arr) {
     return arr.indexOf(tag) === index;
-  }).slice(0, 3);
+  }).slice(0, 5);
 }
 
 function renderStockNameCell(stock) {
@@ -135,6 +144,59 @@ function primeStock(stock) {
   if (title) title.textContent = (normalized.name || normalized.code) + ' (' + normalized.code + ')';
   const priceInfo = document.getElementById('priceInfo');
   if (priceInfo) priceInfo.innerHTML = '<span style="color:#999">进入行情页后加载实时行情与K线</span>';
+}
+
+function mergeTagProfile(profile) {
+  if (!profile || !profile.code) return;
+  const State = window.State;
+  [State.allStocks, State.searchResults, State.filteredStocks].forEach(function(list) {
+    (list || []).forEach(function(stock) {
+      if (stock.code === profile.code) Object.assign(stock, profile, { tagDetailFetched: true });
+    });
+  });
+  if (State.currentStock && State.currentStock.code === profile.code) {
+    Object.assign(State.currentStock, profile, { tagDetailFetched: true });
+  }
+}
+
+async function enrichStockTags(codes, options) {
+  options = options || {};
+  const uniqueCodes = codes.filter(Boolean).filter(function(code, index, arr) {
+    return arr.indexOf(code) === index;
+  }).slice(0, options.limit || 50);
+  if (!uniqueCodes.length) return [];
+  uniqueCodes.forEach(function(code) { tagEnrichingCodes.add(code); });
+  try {
+    const query = new URLSearchParams({
+      detail: '1',
+      limit: String(options.limit || 50),
+      codes: uniqueCodes.join(',')
+    });
+    const profiles = await window.ApiClient.fetchJsonData('/api/stock-tags?' + query.toString());
+    (profiles || []).forEach(mergeTagProfile);
+    suppressTagSchedule = true;
+    renderStockTable(window.State.filteredStocks);
+    if (window.StockDetail && window.State.currentStock) window.StockDetail.renderProfile(window.State.currentStock);
+    return profiles || [];
+  } catch (error) {
+    console.warn(error.message || error);
+    return [];
+  } finally {
+    uniqueCodes.forEach(function(code) { tagEnrichingCodes.delete(code); });
+  }
+}
+
+function scheduleTagEnrichment(stocks) {
+  const searchInput = document.getElementById('searchInput');
+  if (!searchInput || !searchInput.value.trim()) return;
+  const candidates = (stocks || []).filter(function(stock) {
+    return stock && stock.code && stock.type !== 'fund' && !stock.tagDetailFetched && !tagEnrichingCodes.has(stock.code);
+  }).slice(0, 36).map(function(stock) { return stock.code; });
+  if (!candidates.length) return;
+  if (tagEnrichTimer) clearTimeout(tagEnrichTimer);
+  tagEnrichTimer = setTimeout(function() {
+    enrichStockTags(candidates, { limit: 36 }).catch(function(error) { console.warn(error.message || error); });
+  }, 350);
 }
 
 async function runRowAction(action, stock) {
@@ -244,6 +306,8 @@ function renderStockTable(stocks) {
       await openRow(row);
     }
   };
+  if (suppressTagSchedule) suppressTagSchedule = false;
+  else scheduleTagEnrichment(stocks);
 }
 
 async function selectStock(stock) {
@@ -258,6 +322,7 @@ async function selectStock(stock) {
   State.currentStock = stock;
   if (window.RecentStocks) window.RecentStocks.record(stock).catch(function(error) { console.warn(error.message); });
   if (window.StockDetail) window.StockDetail.refresh(stock).catch(function(error) { console.warn(error.message); });
+  enrichStockTags([stock.code], { limit: 1 }).catch(function(error) { console.warn(error.message || error); });
 
   document.getElementById('chartTitle').textContent = stock.name + ' (' + stock.code + ')';
   const price = parseFloat(stock.price) || 0;
@@ -307,6 +372,7 @@ window.StockList = {
   refreshQuotes,
   renderStockTable,
   primeStock,
+  enrichStockTags,
   selectStock,
   runRowAction
 };

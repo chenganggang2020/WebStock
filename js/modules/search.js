@@ -15,11 +15,19 @@ function matchScore(query, stock) {
   const abbr = (stock.abbr || '').toLowerCase();
   const pinyin = (stock.pinyin || '').toLowerCase();
   const py = (stock.py || '').toLowerCase();
+  const tagText = []
+    .concat(stock.tags || [])
+    .concat(stock.boards || [])
+    .concat(stock.industry || [])
+    .concat((stock.mainBusinessItems || []).map(item => item.name))
+    .join('')
+    .toLowerCase();
   if (code.startsWith(q)) score = Math.max(score, 100);
   if (abbr && abbr.includes(q)) score = Math.max(score, 90);
   if (py && py.includes(q)) score = Math.max(score, 88);
   if (pinyin && pinyin.includes(q)) score = Math.max(score, 85);
   if (name.includes(q)) score = Math.max(score, 80);
+  if (tagText && tagText.includes(q)) score = Math.max(score, 70);
   if (fuzzyMatch(query, stock.name) || fuzzyMatch(query, stock.code)) score = Math.max(score, 40);
   return score;
 }

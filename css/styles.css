@@ -1843,6 +1843,50 @@ body.dark .md-body blockquote { background: rgba(99,102,241,0.12); }
   border-bottom: 1px solid var(--border);
 }
 
+.detail-profile-box {
+  display: grid;
+  gap: 7px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.detail-profile-tags,
+.detail-main-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.detail-profile-line {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  gap: 8px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.detail-profile-line strong {
+  color: #64748b;
+}
+
+.detail-main-items span {
+  padding: 2px 6px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 11px;
+}
+
+.detail-profile-summary,
+.detail-profile-source {
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.detail-profile-source a {
+  color: var(--focus);
+}
+
 .detail-news {
   margin-top: 8px;
   max-height: 180px;
