@@ -320,7 +320,6 @@ function ensureHotNewsModal() {
     '<p id="hotNewsModalSummary"></p>' +
     '<div id="hotNewsModalTags" class="tag-row"></div>' +
     '<div class="modal-actions">' +
-      '<a id="hotNewsModalLink" class="small-btn primary" target="_blank" rel="noopener">打开原文</a>' +
       '<button id="hotNewsModalClose" type="button">关闭</button>' +
     '</div>' +
     '</div>';
@@ -342,7 +341,7 @@ function openHotNews(index) {
   overlay.querySelector('#hotNewsModalMeta').textContent = (item.source || 'WebStock') + ' · ' + (
     window.WebStockTime && window.WebStockTime.formatDateTime ? window.WebStockTime.formatDateTime(item.time) : (item.time || '')
   );
-  overlay.querySelector('#hotNewsModalSummary').textContent = item.summary || '该资讯没有摘要，可打开原文查看。';
+  overlay.querySelector('#hotNewsModalSummary').textContent = item.summary || '该资讯没有摘要。';
   const tags = []
     .concat(item.relatedStocks || [])
     .concat(item.relatedSectors || [])
@@ -350,8 +349,6 @@ function openHotNews(index) {
   overlay.querySelector('#hotNewsModalTags').innerHTML = tags.map(function(tag) {
     return '<span class="tag">' + hotEscape(tag) + '</span>';
   }).join('');
-  const link = overlay.querySelector('#hotNewsModalLink');
-  link.href = item.link && item.link !== '#' ? item.link : 'https://finance.sina.com.cn/';
   overlay.style.display = 'flex';
 }
 

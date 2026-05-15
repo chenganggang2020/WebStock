@@ -32,7 +32,7 @@ function setupInfiniteScroll() {
 
 async function refreshQuotes(stocks) {
   const State = window.State;
-  if (!stocks.length) return;
+  if (!stocks || !stocks.length) return;
   const codes = stocks.map(s => s.code).join(',');
   try {
     const quotes = await window.ApiClient.fetchJsonData('/api/quote?codes=' + codes);
@@ -126,6 +126,29 @@ function stockTags(stock) {
   return tags.filter(Boolean).filter(function(tag, index, arr) {
     return arr.indexOf(tag) === index;
   }).slice(0, 5);
+}
+
+function stockMiniChart(stock, color) {
+  const open = Number(stock.open);
+  const high = Number(stock.high);
+  const low = Number(stock.low);
+  const price = Number(stock.price);
+  if (![open, high, low, price].every(Number.isFinite) || price <= 0) {
+    return '<svg class="stock-mini-chart" viewBox="0 0 66 30" aria-hidden="true"><path d="M4 18 C18 13 30 17 42 12 S58 15 62 10" fill="none" stroke="#cbd5e1" stroke-width="2" opacity="0.55"/></svg>';
+  }
+  const values = [open, low, (open + high) / 2, high, price];
+  const min = Math.min.apply(null, values);
+  const max = Math.max.apply(null, values);
+  const span = max - min || 1;
+  const points = values.map(function(value, index) {
+    const x = 4 + index * 14.5;
+    const y = 26 - ((value - min) / span) * 22;
+    return x.toFixed(1) + ',' + y.toFixed(1);
+  }).join(' ');
+  return '<svg class="stock-mini-chart" viewBox="0 0 66 30" aria-hidden="true">' +
+    '<polyline points="' + points + '" fill="none" stroke="' + stockEscape(color) + '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>' +
+    '<circle cx="62" cy="' + (26 - ((price - min) / span) * 22).toFixed(1) + '" r="2" fill="' + stockEscape(color) + '"/>' +
+    '</svg>';
 }
 
 function renderStockNameCell(stock) {
@@ -223,7 +246,67 @@ async function runRowAction(action, stock) {
   if (action === 'trade') {
     if (window.Portfolio) window.Portfolio.openBuyTrade(stock);
     else if (window.Trades) window.Trades.openTradeModal('new', null, Object.assign({ side: 'buy' }, stock));
+    return;
   }
+  if (action === 'sell') {
+    if (window.Portfolio) window.Portfolio.openSellTradeByCode(stock.code);
+    return;
+  }
+  if (action === 'trades') {
+    if (window.Portfolio) window.Portfolio.viewTrades(stock.code);
+    return;
+  }
+  if (action === 'news') {
+    if (window.switchMainView) window.switchMainView('news');
+    const type = document.getElementById('newsTypeFilter');
+    const keyword = document.getElementById('newsKeywordInput');
+    if (type) type.value = 'stock';
+    if (keyword) keyword.value = stock.code;
+    if (window.News) await window.News.load({ cacheBust: true });
+    return;
+  }
+  if (action === 'sector') {
+    if (window.switchMainView) window.switchMainView('sectors');
+  }
+}
+
+function hideStockContextMenu() {
+  const menu = document.getElementById('stockContextMenu');
+  if (menu) menu.style.display = 'none';
+}
+
+function showStockContextMenu(event, stock) {
+  const menu = document.getElementById('stockContextMenu');
+  if (!menu || !stock) return;
+  event.preventDefault();
+  const watched = window.State.watchlist.some(item => item.code === stock.code);
+  menu.innerHTML =
+    '<button data-action="view">打开行情</button>' +
+    '<button data-action="analysis">AI 个股分析</button>' +
+    '<button data-action="trade">买入记录</button>' +
+    '<button data-action="sell">卖出记录</button>' +
+    '<button data-action="trades">交易记录</button>' +
+    '<button data-action="news">资讯查看</button>' +
+    '<button data-action="sector">板块龙头</button>' +
+    '<button data-action="watchlist">' + (watched ? '移出自选' : '加入自选') + '</button>';
+  const x = Math.min(event.clientX, window.innerWidth - 190);
+  const y = Math.min(event.clientY, window.innerHeight - 250);
+  menu.style.left = x + 'px';
+  menu.style.top = y + 'px';
+  menu.style.display = 'block';
+  setTimeout(function() {
+    document.addEventListener('click', hideStockContextMenu, { once: true });
+  }, 0);
+  menu.onclick = async function(clickEvent) {
+    const btn = clickEvent.target.closest('[data-action]');
+    if (!btn) return;
+    hideStockContextMenu();
+    try {
+      await runRowAction(btn.getAttribute('data-action'), stock);
+    } catch (error) {
+      alert(error.message || '操作失败');
+    }
+  };
 }
 
 function renderStockTable(stocks) {
@@ -231,7 +314,7 @@ function renderStockTable(stocks) {
   const tbody = document.getElementById('stockTbody');
   if (!tbody) return;
   if (!stocks.length) {
-    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:30px;">无结果</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:30px;">无结果</td></tr>';
     return;
   }
 
@@ -256,12 +339,15 @@ function renderStockTable(stocks) {
       '<td>' + renderStockNameCell(s) + '</td>' +
       '<td class="price" style="text-align:right;color:' + priceColor + '">' + priceDisplay + '</td>' +
       '<td style="text-align:right;color:' + priceColor + '">' + changeDisplay + '</td>' +
+      '<td style="text-align:right">' + stockMiniChart(s, priceColor) + '</td>' +
       '</tr>';
   }).join('');
 
   async function openRow(row) {
     const stock = findStockByCode(stocks, row.getAttribute('data-code'));
     if (!stock) return;
+    const searchInput = document.getElementById('searchInput');
+    if (window.Search && searchInput) window.Search.saveSearchHistory(searchInput.value || stock.code, stock);
     if (window.switchMainView) window.switchMainView('market');
     await selectStock(stock);
   }
@@ -296,6 +382,13 @@ function renderStockTable(stocks) {
     if (row) {
       await openRow(row);
     }
+  };
+
+  tbody.oncontextmenu = function(event) {
+    const row = event.target.closest('tr[data-code]');
+    if (!row) return;
+    const stock = findStockByCode(stocks, row.getAttribute('data-code'));
+    showStockContextMenu(event, stock);
   };
 
   tbody.onkeydown = async function(event) {
@@ -336,15 +429,6 @@ async function selectStock(stock) {
   }
 
   renderStockTable(State.filteredStocks);
-  const searchInput = document.getElementById('searchInput');
-  if (searchInput) {
-    searchInput.value = '';
-    window.Search.toggleClearButton();
-    if (window.HotMarket) window.HotMarket.syncSearchMode();
-  }
-  State.currentPage = 0;
-  State.filteredStocks = State.allStocks.slice(0, State.PAGE_SIZE);
-  renderStockTable(State.filteredStocks);
   await refreshQuotes([stock]);
   if (window.Dashboard) Promise.resolve(window.Dashboard.refreshCards()).catch(function(error) { console.warn(error.message); });
 
@@ -375,5 +459,6 @@ window.StockList = {
   primeStock,
   enrichStockTags,
   selectStock,
-  runRowAction
+  runRowAction,
+  showContextMenu: showStockContextMenu
 };

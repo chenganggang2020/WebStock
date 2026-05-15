@@ -76,24 +76,64 @@ function bindButtons() {
     window.Dashboard.load().catch(function(error) { alert(error.message || '刷新工作台失败'); });
   });
   const searchInput = document.getElementById('searchInput');
-  searchInput.addEventListener('input', async function(e) {
-    const keyword = e.target.value;
-    Search.toggleClearButton();
+  let searchTimer = null;
+  let quoteTimer = null;
+  let historyTimer = null;
+  let searchSeq = 0;
+  function runSearch(keyword, seq) {
     State.currentPage = 0;
-    State.searchResults = Search.searchStocks(keyword);
-    State.filteredStocks = State.searchResults.slice(0, State.PAGE_SIZE);
+    State.searchResults = keyword.trim() ? Search.searchStocks(keyword) : [];
+    const source = keyword.trim() ? State.searchResults : State.allStocks;
+    State.filteredStocks = source.slice(0, State.PAGE_SIZE);
     StockList.renderStockTable(State.filteredStocks);
     if (window.HotMarket) window.HotMarket.syncSearchMode();
-    StockList.refreshQuotes(State.filteredStocks).catch(function(error) { console.warn(error.message); });
+    if (quoteTimer) clearTimeout(quoteTimer);
+    quoteTimer = setTimeout(function() {
+      if (seq !== searchSeq) return;
+      StockList.refreshQuotes(State.filteredStocks).catch(function(error) { console.warn(error.message); });
+    }, 360);
     Search.searchStocksDeep(keyword, State.searchResults).then(function(results) {
-      if (!results || searchInput.value !== keyword) return;
+      if (!results || seq !== searchSeq || searchInput.value !== keyword) return;
       State.currentPage = 0;
       State.searchResults = results;
-      State.filteredStocks = State.searchResults.slice(0, State.PAGE_SIZE);
+      State.filteredStocks = results.slice(0, State.PAGE_SIZE);
       StockList.renderStockTable(State.filteredStocks);
-      if (window.HotMarket) window.HotMarket.syncSearchMode();
-      StockList.refreshQuotes(State.filteredStocks).catch(function(error) { console.warn(error.message); });
     });
+  }
+  searchInput.addEventListener('input', function(e) {
+    const keyword = e.target.value;
+    const seq = ++searchSeq;
+    Search.toggleClearButton();
+    Search.renderSearchHistory(keyword);
+    if (searchTimer) clearTimeout(searchTimer);
+    if (historyTimer) clearTimeout(historyTimer);
+    if (keyword.trim()) {
+      historyTimer = setTimeout(function() {
+        if (searchInput.value === keyword) Search.saveSearchHistory(keyword);
+      }, 800);
+    }
+    searchTimer = setTimeout(function() { runSearch(keyword, seq); }, 140);
+  });
+  searchInput.addEventListener('keydown', function(event) {
+    if (event.key !== 'Enter') return;
+    const keyword = searchInput.value.trim();
+    if (keyword) Search.saveSearchHistory(keyword);
+    Search.hideSearchHistory();
+  });
+  searchInput.addEventListener('focus', function() {
+    Search.renderSearchHistory(searchInput.value);
+  });
+  document.getElementById('searchHistoryPanel').addEventListener('mousedown', function(event) {
+    const item = event.target.closest('[data-keyword]');
+    if (!item) return;
+    event.preventDefault();
+    searchInput.value = item.getAttribute('data-keyword');
+    Search.toggleClearButton();
+    Search.hideSearchHistory();
+    runSearch(searchInput.value, ++searchSeq);
+  });
+  document.addEventListener('click', function(event) {
+    if (!event.target.closest('.search-box')) Search.hideSearchHistory();
   });
   Search.toggleClearButton();
 
@@ -122,6 +162,14 @@ function bindButtons() {
   document.getElementById('analysisCloseBtn').addEventListener('click', Analysis.closeAnalysisPanel);
   document.getElementById('analysisOverlay').addEventListener('click', function(e) {
     if (e.target === this) Analysis.closeAnalysisPanel();
+  });
+  const newsDetailCloseBtn = document.getElementById('newsDetailCloseBtn');
+  const newsDetailOverlay = document.getElementById('newsDetailOverlay');
+  if (newsDetailCloseBtn) newsDetailCloseBtn.addEventListener('click', function() {
+    if (newsDetailOverlay) newsDetailOverlay.style.display = 'none';
+  });
+  if (newsDetailOverlay) newsDetailOverlay.addEventListener('click', function(e) {
+    if (e.target === this) newsDetailOverlay.style.display = 'none';
   });
   document.getElementById('analysisRefreshBtn').addEventListener('click', function() {
     if (State.currentStock) Analysis.openAnalysisPanel(State.currentStock, true);

@@ -1,21 +1,51 @@
 let currentHandoff = null;
 const AI_HANDOFF_RESULTS_KEY = 'webstock_ai_handoff_results';
+let handoffClipboardTimer = null;
+let handoffPendingClipboardText = '';
+
+const HANDOFF_PROMPT_STYLES = {
+  default: '',
+  technical: '请切换为“技术走势专家模式”：重点分析趋势结构、K线位置、均线系统、成交量、分时承接、支撑压力、突破/回踩/破位条件，并给出明确的强弱判断。',
+  'sector-chain': '请切换为“板块产业链选股模式”：重点分析所属板块、产业链位置、上下游、龙头与补涨关系、板块热度、题材持续性，并在候选中做优先级排序。',
+  'short-term': '请切换为“短线强弱排序模式”：重点分析当日强弱、量价配合、资金关注度、分时承接、隔日确认条件，输出强势/等待/剔除分组。',
+  fundamental: '请切换为“产业前景与主营业务模式”：重点分析主营业务、营收结构、行业空间、竞争格局、政策/技术周期、估值和未来产业链位置。',
+  portfolio: '请切换为“持仓交易复盘模式”：重点结合持仓成本、交易记录、浮盈浮亏、仓位暴露、回撤风险和下一步交易计划做复盘。'
+};
+
+function aiAssistantBuildPrompt() {
+  if (!currentHandoff) return '';
+  const styleEl = document.getElementById('handoffPromptStyle');
+  const style = styleEl ? styleEl.value : 'default';
+  const prefix = HANDOFF_PROMPT_STYLES[style] || '';
+  const prompt = currentHandoff.originalPrompt || currentHandoff.prompt || '';
+  return prefix ? prefix + '\n\n' + prompt : prompt;
+}
+
+function aiAssistantRefreshPromptText() {
+  const textarea = document.getElementById('handoffPromptText');
+  if (textarea) textarea.value = aiAssistantBuildPrompt();
+}
 
 function aiAssistantOpen(options) {
   currentHandoff = options || {};
+  currentHandoff.originalPrompt = currentHandoff.prompt || '';
   const overlay = document.getElementById('handoffModalOverlay');
   if (!overlay) return;
   document.getElementById('handoffModalTitle').textContent = currentHandoff.title || 'ChatGPT 交接';
   document.getElementById('handoffModalSummary').textContent = currentHandoff.summary || '复制提示词到 ChatGPT，或导入返回结果保存到当前任务。';
-  document.getElementById('handoffPromptText').value = currentHandoff.prompt || '';
+  const styleEl = document.getElementById('handoffPromptStyle');
+  if (styleEl) styleEl.value = currentHandoff.promptStyle || 'default';
+  aiAssistantRefreshPromptText();
   document.getElementById('handoffResultText').value = currentHandoff.result || '';
   aiAssistantSetStatus('提示词已生成。建议点“复制并打开 ChatGPT”，会跳到系统浏览器里的 ChatGPT。');
   overlay.style.display = 'flex';
+  aiAssistantStartClipboardWatch();
 }
 
 function aiAssistantClose() {
   const overlay = document.getElementById('handoffModalOverlay');
   if (overlay) overlay.style.display = 'none';
+  aiAssistantStopClipboardWatch();
 }
 
 function aiAssistantClipboardWrite(text) {
@@ -49,6 +79,7 @@ function aiAssistantExtractResultBlock(text) {
 }
 
 function aiAssistantCopyPrompt() {
+  aiAssistantRefreshPromptText();
   const text = document.getElementById('handoffPromptText').value;
   if (!text) return Promise.resolve();
   return aiAssistantClipboardWrite(text).then(function() {
@@ -86,6 +117,32 @@ async function aiAssistantImportClipboard() {
   const parsed = aiAssistantExtractResultBlock(text);
   document.getElementById('handoffResultText').value = parsed.text;
   aiAssistantSetStatus(parsed.extracted ? '已从剪贴板识别并提取 WebStock 结果块。' : '已从剪贴板导入文本。', true);
+}
+
+function aiAssistantLooksLikeResult(text) {
+  const value = String(text || '').trim();
+  if (!value || value === aiAssistantBuildPrompt().trim()) return false;
+  return /WEBSTOCK_[A-Z0-9_]+_START/i.test(value) || value.length > 80;
+}
+
+function aiAssistantStartClipboardWatch() {
+  aiAssistantStopClipboardWatch();
+  if (!navigator.clipboard || !navigator.clipboard.readText) return;
+  handoffClipboardTimer = setInterval(function() {
+    if (!currentHandoff) return;
+    navigator.clipboard.readText().then(function(text) {
+      if (!aiAssistantLooksLikeResult(text)) return;
+      if (text === handoffPendingClipboardText) return;
+      handoffPendingClipboardText = text;
+      aiAssistantSetStatus('检测到剪贴板里可能是 ChatGPT 返回结果，按 Enter 可自动导入。', true);
+    }).catch(function() {});
+  }, 1800);
+}
+
+function aiAssistantStopClipboardWatch() {
+  if (handoffClipboardTimer) clearInterval(handoffClipboardTimer);
+  handoffClipboardTimer = null;
+  handoffPendingClipboardText = '';
 }
 
 function aiAssistantSaveHistoryRecord(record) {
@@ -142,6 +199,8 @@ function bindAIAssistant() {
   if (openBtn) openBtn.addEventListener('click', aiAssistantOpenChatGPT);
   const copyOpenBtn = document.getElementById('handoffCopyOpenBtn');
   if (copyOpenBtn) copyOpenBtn.addEventListener('click', aiAssistantCopyAndOpenChatGPT);
+  const style = document.getElementById('handoffPromptStyle');
+  if (style) style.addEventListener('change', aiAssistantRefreshPromptText);
   const importBtn = document.getElementById('handoffImportClipboardBtn');
   if (importBtn) importBtn.addEventListener('click', function() {
     aiAssistantImportClipboard().catch(function(error) { alert(error.message || '剪贴板导入失败'); });
@@ -153,6 +212,14 @@ function bindAIAssistant() {
   const overlay = document.getElementById('handoffModalOverlay');
   if (overlay) overlay.addEventListener('click', function(event) {
     if (event.target === overlay) aiAssistantClose();
+  });
+  if (overlay) overlay.addEventListener('keydown', function(event) {
+    if (event.key !== 'Enter' || event.shiftKey || !handoffPendingClipboardText) return;
+    event.preventDefault();
+    const parsed = aiAssistantExtractResultBlock(handoffPendingClipboardText);
+    document.getElementById('handoffResultText').value = parsed.text;
+    aiAssistantSetStatus('已自动导入剪贴板中的 ChatGPT 返回结果。', true);
+    handoffPendingClipboardText = '';
   });
 }
 

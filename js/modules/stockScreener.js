@@ -53,6 +53,7 @@ function collectInput() {
   return {
     strategy: document.getElementById('screenerStrategy').value,
     scope: document.getElementById('screenerScope').value,
+    promptStyle: (document.getElementById('screenerPromptStyle') || {}).value || 'sector-chain',
     demand: document.getElementById('screenerDemand').value.trim(),
     marketSnapshot,
     klineSnapshot,
@@ -538,9 +539,9 @@ function renderScreenerResults(result) {
     box.innerHTML = '<div class="empty-state">暂无候选结果，请调整策略或范围。</div>';
     return;
   }
-  box.innerHTML = '<table class="data-table screener-table"><thead><tr><th>代码</th><th>名称</th><th>得分</th><th>策略</th><th>因子</th><th>贡献</th><th>入选理由</th><th>风险点</th><th>观察价位</th><th>操作</th></tr></thead><tbody>' +
+  box.innerHTML = '<table class="data-table screener-table"><thead><tr><th>代码</th><th>名称</th><th>得分</th><th>策略</th><th>因子</th><th>贡献</th><th>入选理由</th><th>风险点</th><th>观察价位</th></tr></thead><tbody>' +
     result.candidates.map(function(item) {
-      return '<tr>' +
+      return '<tr data-code="' + screenerEscapeHtml(item.code) + '" tabindex="0">' +
         '<td>' + screenerEscapeHtml(item.code) + '</td>' +
         '<td>' + screenerEscapeHtml(item.name) + '</td>' +
         '<td><span class="score-pill">' + screenerEscapeHtml(item.score) + '</span></td>' +
@@ -550,13 +551,6 @@ function renderScreenerResults(result) {
         '<td>' + renderTextList(item.reasons) + '</td>' +
         '<td>' + renderTextList(item.risks) + '</td>' +
         '<td>' + screenerEscapeHtml(item.observePrice) + '</td>' +
-        '<td><div class="stock-actions">' +
-        '<button class="small-btn primary" data-action="view" data-code="' + screenerEscapeHtml(item.code) + '">查看</button>' +
-        '<button class="small-btn" data-action="watchlist" data-code="' + screenerEscapeHtml(item.code) + '">自选</button>' +
-        '<button class="small-btn" data-action="trade" data-code="' + screenerEscapeHtml(item.code) + '">持仓</button>' +
-        '<button class="small-btn" data-action="sector" data-code="' + screenerEscapeHtml(item.code) + '">板块监控</button>' +
-        '<button class="small-btn" data-action="analysis" data-code="' + screenerEscapeHtml(item.code) + '">AI分析</button>' +
-        '</div></td>' +
         '</tr>';
     }).join('') + '</tbody></table>' +
     '<div class="disclaimer">' + result.disclaimer + '</div>' +
@@ -580,9 +574,9 @@ function renderFilteredScreenerResults(result) {
     return;
   }
   box.innerHTML = summary +
-    '<table class="data-table screener-table"><thead><tr><th>Code</th><th>Name</th><th>Score</th><th>Strategy</th><th>Factors</th><th>Contributions</th><th>Reasons</th><th>Risks</th><th>Observe</th><th>Actions</th></tr></thead><tbody>' +
+    '<table class="data-table screener-table"><thead><tr><th>Code</th><th>Name</th><th>Score</th><th>Strategy</th><th>Factors</th><th>Contributions</th><th>Reasons</th><th>Risks</th><th>Observe</th></tr></thead><tbody>' +
     candidates.map(function(item) {
-      return '<tr>' +
+      return '<tr data-code="' + screenerEscapeHtml(item.code) + '" tabindex="0">' +
         '<td>' + screenerEscapeHtml(item.code) + '</td>' +
         '<td>' + screenerEscapeHtml(item.name) + '</td>' +
         '<td><span class="score-pill">' + screenerEscapeHtml(item.score) + '</span></td>' +
@@ -592,13 +586,6 @@ function renderFilteredScreenerResults(result) {
         '<td>' + renderTextList(item.reasons) + '</td>' +
         '<td>' + renderTextList(item.risks) + '</td>' +
         '<td>' + screenerEscapeHtml(item.observePrice) + '</td>' +
-        '<td><div class="stock-actions">' +
-        '<button class="small-btn primary" data-action="view" data-code="' + screenerEscapeHtml(item.code) + '">查看</button>' +
-        '<button class="small-btn" data-action="watchlist" data-code="' + screenerEscapeHtml(item.code) + '">自选</button>' +
-        '<button class="small-btn" data-action="trade" data-code="' + screenerEscapeHtml(item.code) + '">持仓</button>' +
-        '<button class="small-btn" data-action="sector" data-code="' + screenerEscapeHtml(item.code) + '">板块监控</button>' +
-        '<button class="small-btn" data-action="analysis" data-code="' + screenerEscapeHtml(item.code) + '">AI分析</button>' +
-        '</div></td>' +
         '</tr>';
     }).join('') + '</tbody></table>' +
     '<div class="disclaimer">' + screenerEscapeHtml(result.disclaimer || '') + '</div>' +
@@ -619,8 +606,20 @@ function screenerStockByCode(code) {
 }
 
 function bindScreenerActions(box) {
+  async function openCandidate(row) {
+    const code = row && row.getAttribute('data-code');
+    if (!code) return;
+    window.switchMainView('market');
+    await window.StockList.selectStock(screenerStockByCode(code));
+  }
+
   box.onclick = async function(event) {
     const btn = event.target.closest('[data-action]');
+    const row = event.target.closest('tr[data-code]');
+    if (!btn && row) {
+      await openCandidate(row);
+      return;
+    }
     if (!btn) return;
     const action = btn.getAttribute('data-action');
     const code = btn.getAttribute('data-code');
@@ -646,6 +645,20 @@ function bindScreenerActions(box) {
       alert(error.message || '候选操作失败');
     }
   };
+
+  box.oncontextmenu = function(event) {
+    const row = event.target.closest('tr[data-code]');
+    if (!row || !window.StockList || !window.StockList.showContextMenu) return;
+    window.StockList.showContextMenu(event, screenerStockByCode(row.getAttribute('data-code')));
+  };
+
+  box.onkeydown = async function(event) {
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    const row = event.target.closest('tr[data-code]');
+    if (!row) return;
+    event.preventDefault();
+    await openCandidate(row);
+  };
 }
 
 async function runAI() {
@@ -659,6 +672,7 @@ async function runAI() {
     window.AIAssistant.open({
       title: '智能选股 ChatGPT 交接',
       prompt: data.prompt,
+      promptStyle: lastResult.promptStyle || 'sector-chain',
       summary: '已生成更严格的 GPT 二次筛选提示词。请复制到 ChatGPT，让它按“优先观察 / 等待确认 / 暂时剔除”重新整理候选股。',
       kind: 'screener',
       context: { view: 'screener', taskId: activeSavedTaskId || null },

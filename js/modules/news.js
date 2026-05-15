@@ -36,15 +36,28 @@ function newsFormatTime(value) {
     : String(value);
 }
 
-function bindNewsLinks(box) {
+function showNewsDetail(item) {
+  const overlay = document.getElementById('newsDetailOverlay');
+  if (!overlay || !item) return;
+  document.getElementById('newsDetailTitle').textContent = item.title || '资讯详情';
+  document.getElementById('newsDetailMeta').textContent = [item.source || 'WebStock', newsFormatTime(item.time)].filter(Boolean).join(' | ');
+  document.getElementById('newsDetailSummary').textContent = item.summary || '该资讯没有摘要。';
+  const tags = []
+    .concat(item.relatedStocks || [])
+    .concat(item.relatedSectors || [])
+    .filter(Boolean)
+    .map(tag => '<span class="tag">' + newsEscapeHtml(tag) + '</span>')
+    .join('');
+  document.getElementById('newsDetailTags').innerHTML = tags;
+  overlay.style.display = 'flex';
+}
+
+function bindNewsLinks(box, items) {
   if (!box) return;
   box.onclick = function(event) {
-    const link = event.target.closest('a[href]');
-    if (link) return;
-    const item = event.target.closest('[data-news-link]');
-    if (!item) return;
-    const url = item.getAttribute('data-news-link');
-    if (url) window.open(url, '_blank');
+    const card = event.target.closest('[data-news-index]');
+    if (!card) return;
+    showNewsDetail((items || [])[Number(card.getAttribute('data-news-index'))]);
   };
 }
 
@@ -115,24 +128,21 @@ function renderNews(result, containerId) {
     box.innerHTML = newsStatusHtml(meta) + '<div class="empty-state">No news is available. If external providers fail, WebStock keeps the page usable with a friendly empty state.</div>';
     return;
   }
-  box.innerHTML = newsStatusHtml(meta) + items.map(function(item) {
+  box.innerHTML = newsStatusHtml(meta) + items.map(function(item, index) {
     const tags = []
       .concat(item.relatedStocks || [])
       .concat(item.relatedSectors || [])
       .filter(Boolean)
       .map(tag => '<span class="tag">' + newsEscapeHtml(tag) + '</span>')
       .join('');
-    const link = item.link && item.link !== '#' ? item.link : '';
-    return '<article class="news-item' + (link ? ' clickable' : '') + '"' +
-      (link ? ' data-news-link="' + newsEscapeHtml(link) + '" tabindex="0"' : '') + '>' +
+    return '<article class="news-item clickable" data-news-index="' + index + '" tabindex="0">' +
       '<div class="news-meta"><span>' + newsEscapeHtml(item.source || 'WebStock') + '</span><span>' + newsEscapeHtml(newsFormatTime(item.time)) + '</span></div>' +
       '<h3>' + newsEscapeHtml(item.title) + '</h3>' +
       '<p>' + newsEscapeHtml(item.summary || '') + '</p>' +
       '<div class="tag-row">' + tags + '</div>' +
-      (link ? '<a target="_blank" rel="noopener" href="' + newsEscapeHtml(link) + '">打开原文</a>' : '') +
       '</article>';
   }).join('');
-  bindNewsLinks(box);
+  bindNewsLinks(box, items);
 }
 
 function renderNewsProviderStatus(meta) {
@@ -162,13 +172,12 @@ async function loadDashboardNews() {
     box.innerHTML = '<div class="empty-state compact">No news.</div>';
     return result.items;
   }
-  box.innerHTML = newsStatusHtml(result.meta) + result.items.slice(0, 4).map(function(item) {
-    const link = item.link && item.link !== '#' ? item.link : '';
-    return '<div class="mini-news' + (link ? ' clickable' : '') + '"' +
-      (link ? ' data-news-link="' + newsEscapeHtml(link) + '" tabindex="0"' : '') + '><strong>' +
+  const visible = result.items.slice(0, 4);
+  box.innerHTML = newsStatusHtml(result.meta) + visible.map(function(item, index) {
+    return '<div class="mini-news clickable" data-news-index="' + index + '" tabindex="0"><strong>' +
       newsEscapeHtml(item.title) + '</strong><p>' + newsEscapeHtml(item.summary || '') + '</p></div>';
   }).join('');
-  bindNewsLinks(box);
+  bindNewsLinks(box, visible);
   return result.items;
 }
 
@@ -183,5 +192,6 @@ window.News = {
   load,
   loadDashboardNews,
   loadStockNews,
-  renderNews
+  renderNews,
+  showNewsDetail
 };

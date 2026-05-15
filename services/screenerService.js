@@ -405,17 +405,19 @@ function runScreener(input = {}) {
   const strategy = input.strategy || 'stable';
   const demand = input.demand || '';
   const scope = input.scope || 'all';
+  const promptStyle = input.promptStyle || 'sector-chain';
   const universe = getUniverse(scope, input);
   const candidates = universe
     .map(stock => scoreCandidate(stock, strategy, demand))
     .sort((a, b) => b.score - a.score)
     .slice(0, Math.min(Number(input.limit) || 20, 50));
 
-  const prompt = buildSmartPrompt({ strategy, demand, scope, candidates });
+  const prompt = buildSmartPrompt({ strategy, demand, scope, promptStyle, candidates });
   return {
     strategy,
     demand,
     scope,
+    promptStyle,
     candidates,
     prompt,
     disclaimer: DISCLAIMER
@@ -423,7 +425,7 @@ function runScreener(input = {}) {
 }
 
 function buildPrompt(result) {
-  return `请作为谨慎的股票研究助手，对以下候选观察清单进行二次分析。\n\n要求：\n1. 只做研究和学习用途，不构成投资建议。\n2. 不承诺收益，不给出真实下单指令。\n3. 输出每只股票的入选逻辑、风险点、观察价位、后续验证条件。\n4. 优先指出数据缺口和需要人工复核的地方。\n\n用户需求：${result.demand || '未填写'}\n策略：${result.strategy}\n范围：${result.scope}\n候选数据：\n${JSON.stringify(result.candidates, null, 2)}\n\n请输出结构化 Markdown 报告，并包含免责声明。`;
+  return buildSmartPrompt(Object.assign({ promptStyle: 'sector-chain' }, result || {}));
 }
 
 function buildSmartPrompt(result) {
@@ -444,50 +446,82 @@ function buildSmartPrompt(result) {
       inPortfolio: item.inPortfolio
     };
   });
-  const prompt = `你是一个谨慎的 A 股投研助手。请对 WebStock 本地初筛出来的候选股做“二次筛选”，不是泛泛点评，也不要直接给买卖指令。
+  const promptStyle = result.promptStyle || 'sector-chain';
+  const styleGuideMap = {
+    'sector-chain': [
+      '重点目标：从板块、产业链位置、龙头/补涨、上下游映射中选出优先级。',
+      '请把候选股按“主线龙头 / 弹性补涨 / 观察备选 / 暂时剔除”分组。',
+      '必须说明每只优先股属于哪条产业链逻辑，以及这个逻辑当天是否还在扩散。'
+    ],
+    technical: [
+      '重点目标：做技术走势和交易节奏分析。',
+      '请分析趋势结构、均线位置、量价配合、分时承接、支撑压力、突破/回踩/破位条件。',
+      '输出要给出明确的强弱排序和关键价位，不要只写泛泛描述。'
+    ],
+    'short-term': [
+      '重点目标：做短线强弱和隔日确认清单。',
+      '请关注当日涨跌幅、成交额、资金关注度、分时承接、板块联动、追高风险。',
+      '输出要区分“可继续盯盘 / 等确认 / 不追”的候选。'
+    ],
+    fundamental: [
+      '重点目标：结合主营业务、营收结构、行业空间、竞争格局和未来产业链位置。',
+      '请说明公司到底做什么、收入来自哪里、和热门板块的关联是真主业还是概念标签。',
+      '输出要突出产业前景、业绩兑现路径和需要补充的数据。'
+    ],
+    portfolio: [
+      '重点目标：结合当前持仓、自选、最近查看和交易复盘来判断优先级。',
+      '请关注仓位暴露、已有持仓的加减仓条件、同板块重复暴露、回撤风险。',
+      '输出要把“适合观察新机会”和“适合处理已有持仓”的股票分开。'
+    ]
+  };
+  const styleGuide = styleGuideMap[promptStyle] || styleGuideMap['sector-chain'];
+  const prompt = `你现在扮演一位 A 股股票专家和产业链研究员。请基于 WebStock 提供的本地行情、板块标签、主营业务标签、技术因子和候选评分，对候选股做一次真正可用的二次选股分析。
 
-重要约束：
-1. 只用于研究和复盘，不构成投资建议，不承诺收益。
-2. 必须结合候选股的分数、因子、入选理由、风险点、板块/龙头标签、观察价位做分析。
-3. 如果数据不足，要明确写出缺口，例如缺少财报、盘口、资金流、龙虎榜、公告、行业景气度等。
-4. 不要把所有候选都说成好；请主动剔除风险较高或逻辑不清的股票。
-5. 输出要适合复制回 WebStock 保存，重点清楚、可执行、可复盘。
+分析目标：
+${styleGuide.map(item => '- ' + item).join('\n')}
+
+基本要求：
+- 必须结合候选股的分数、因子、入选理由、风险点、板块/龙头标签、观察价位做分析。
+- 不要把所有候选都说成好；请主动剔除风险较高、逻辑不清、位置不合适或数据不充分的股票。
+- 如果数据不足，请明确写出缺口，例如财报、盘口、资金流、龙虎榜、公告、行业景气度、主营业务占比等。
+- 结论要具体，优先给出排序、理由、触发条件、失败条件和下一步需要盯的数据。
+- 输出不要模板化，不要空话套话。请像给交易员做盘前/盘后复盘一样写。
 
 我的筛选需求：${result.demand || '未填写'}
 本地策略：${result.strategy}
 筛选范围：${result.scope}
+提示词风格：${promptStyle}
 
 候选股数据 JSON：
 ${JSON.stringify(candidates, null, 2)}
 
 请按下面结构输出 Markdown：
 
-## 结论
-- 给出“优先观察 / 等待确认 / 暂时剔除”的分组结论。
-- 每组最多列 3 只，不够可以少列。
+## 一句话结论
+直接给出最值得看的 1-3 条方向，以及为什么。
 
-## 优先观察清单
-用表格输出：代码、名称、所属逻辑、为什么优先、需要等待的确认信号、主要风险、观察价位。
+## 候选分组
+按“优先观察 / 等待确认 / 暂时剔除”分组，每组最多 4 只，少于 4 只也可以。
 
-## 剔除或降级原因
-说明哪些股票不适合当前策略，以及原因。
+## 重点股票深度分析
+用表格输出：代码、名称、所属逻辑、核心看点、技术位置、产业链位置、确认信号、失败信号、主要风险。
 
-## 板块与风格判断
-总结候选股集中在哪些板块/风格，是否存在同质化、追高、流动性不足或板块退潮风险。
+## 板块与产业链判断
+说明候选股集中在哪些板块、哪些是主线龙头、哪些可能只是补涨或概念映射，是否存在追高、同质化、退潮或流动性风险。
 
-## 下一步验证清单
-列出 5-8 条盘中/明日应检查的数据，例如量能、分时承接、板块联动、公告、财报、资金流、关键价位。
+## 下一步盯盘清单
+列出 5-8 条明日或盘中必须检查的数据，例如量能、分时承接、板块联动、公告、财报、资金流、关键价位。
 
 ## 可复制回 WebStock 的摘要
 用简短 bullet 输出最终摘要，方便粘贴保存。`;
   return appendOneClickOutputInstructions(prompt, {
     title: '智能选股二次筛选结果',
     sections: [
-      '结论分组：优先观察 / 等待确认 / 暂时剔除。',
-      '优先观察表：代码、名称、理由、确认信号、主要风险、观察价位。',
-      '板块与风格：集中方向、同质化、追高或退潮风险。',
-      '下一步验证：5-8 条明日或盘中检查项。',
-      '免责声明：仅供研究复盘，不构成投资建议。'
+      '一句话结论：最值得看的方向和理由。',
+      '候选分组：优先观察 / 等待确认 / 暂时剔除。',
+      '重点股票表：代码、名称、逻辑、技术位置、确认信号、失败信号、风险。',
+      '板块与产业链：主线龙头、补涨、概念映射、退潮或追高风险。',
+      '下一步盯盘：5-8 条明日或盘中检查项。'
     ]
   });
 }

@@ -318,7 +318,7 @@ function renderTimeChart(minuteData) {
 
   const option = {
     backgroundColor: bgColor,
-    grid: { top: 30, right: 30, bottom: 30, left: 50 },
+    grid: { top: 30, right: 58, bottom: 30, left: 50 },
     xAxis: {
       type: 'category',
       data: times,
@@ -326,20 +326,40 @@ function renderTimeChart(minuteData) {
       axisLabel: { color: textColor, fontSize: 10 },
       splitLine: { show: false }
     },
-    yAxis: {
-      type: 'value',
-      min: yMin,
-      max: yMax,
-      axisLine: { lineStyle: { color: gridColor } },
-      axisLabel: { color: textColor, fontSize: 10 },
-      splitLine: { lineStyle: { color: gridColor, type: 'dashed' } },
-      axisTick: { show: true },
-      splitNumber: 5
-    },
+    yAxis: [
+      {
+        type: 'value',
+        min: yMin,
+        max: yMax,
+        axisLine: { lineStyle: { color: gridColor } },
+        axisLabel: { color: textColor, fontSize: 10 },
+        splitLine: { lineStyle: { color: gridColor, type: 'dashed' } },
+        axisTick: { show: true },
+        splitNumber: 5
+      },
+      {
+        type: 'value',
+        min: yMin,
+        max: yMax,
+        axisLine: { lineStyle: { color: gridColor } },
+        axisLabel: {
+          color: textColor,
+          fontSize: 10,
+          formatter: function(v) {
+            if (!prevClose) return '--';
+            const pct = (v - prevClose) / prevClose * 100;
+            return (pct > 0 ? '+' : '') + pct.toFixed(2) + '%';
+          }
+        },
+        splitLine: { show: false },
+        axisTick: { show: true }
+      }
+    ],
     series: [
       {
         name: '昨收',
         type: 'line',
+        yAxisIndex: 0,
         data: times.map(function() { return prevClose; }),
         smooth: false,
         symbol: 'none',
@@ -371,6 +391,7 @@ function renderTimeChart(minuteData) {
       {
         name: '分时价格',
         type: 'line',
+        yAxisIndex: 0,
         data: prices,
         smooth: true,
         symbol: 'none',
@@ -391,6 +412,7 @@ function renderTimeChart(minuteData) {
       {
         name: '均价',
         type: 'line',
+        yAxisIndex: 0,
         data: avgPrices,
         smooth: true,
         symbol: 'none',

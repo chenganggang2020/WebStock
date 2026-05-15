@@ -22,6 +22,7 @@
       <input id="searchInput" type="text" placeholder="代码/名称/行业/主营/板块" autocomplete="off">
       <button id="clearBtn" class="clear-btn" aria-label="清空搜索" title="清空搜索">✕</button>
       <button id="themeToggle" class="theme-btn" aria-label="切换深浅色" title="切换深浅色">🌙</button>
+      <div id="searchHistoryPanel" class="search-history-panel" style="display:none;"></div>
     </div>
     <div class="search-hint">💡 搜代码/名称/拼音/行业/主营/板块</div>
     <nav class="sidebar-workspace" id="sidebarWorkspaceNav" aria-label="工作台快捷入口">
@@ -51,6 +52,7 @@
             <th>名称</th>
             <th style="text-align:right">最新价</th>
             <th style="text-align:right">涨跌幅</th>
+            <th style="text-align:right">走势</th>
           </tr>
         </thead>
         <tbody id="stockTbody"></tbody>
@@ -411,6 +413,14 @@
         </select>
         <label>需求描述</label>
         <textarea id="screenerDemand" placeholder="例如：短线强势、回调到均线附近、低估值观察、自选股中筛选..."></textarea>
+        <label>AI 提示词模式</label>
+        <select id="screenerPromptStyle">
+          <option value="sector-chain">板块产业链选股</option>
+          <option value="technical">技术走势专家</option>
+          <option value="short-term">短线强弱排序</option>
+          <option value="fundamental">产业前景与主营业务</option>
+          <option value="portfolio">持仓交易复盘</option>
+        </select>
       </div>
       <div class="disclaimer">仅供研究和学习，不构成投资建议；市场有风险，决策需自行验证。</div>
       <div class="screener-result-tools">
@@ -724,6 +734,15 @@
         <p>按钮会先复制提示词，再打开系统浏览器里的 ChatGPT。GPT 回答里如果包含 WebStock 结果块，导入时会自动提取块内内容。</p>
         <div id="handoffStatus" class="handoff-status">未复制提示词</div>
       </div>
+      <label>提示词模式</label>
+      <select id="handoffPromptStyle">
+        <option value="default">沿用当前任务</option>
+        <option value="technical">技术走势专家</option>
+        <option value="sector-chain">板块产业链选股</option>
+        <option value="short-term">短线强弱排序</option>
+        <option value="fundamental">产业前景与主营业务</option>
+        <option value="portfolio">持仓交易复盘</option>
+      </select>
       <textarea id="handoffPromptText" readonly></textarea>
       <label>粘贴 ChatGPT 返回结果</label>
       <textarea id="handoffResultText" placeholder="从 ChatGPT 复制回答后粘贴到这里，可以保存并整理到当前任务；临时对话本身不需要保存到 WebStock。"></textarea>
@@ -734,6 +753,20 @@
         <button id="handoffImportClipboardBtn">从剪贴板导入</button>
         <button id="handoffSaveBtn">保存结果</button>
         <button id="handoffCloseBtn">关闭</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="stockContextMenu" class="stock-context-menu" style="display:none;"></div>
+
+  <div id="newsDetailOverlay" class="modal-overlay" style="display:none;">
+    <div class="modal news-detail-modal">
+      <h3 id="newsDetailTitle">资讯详情</h3>
+      <div id="newsDetailMeta" class="news-detail-meta"></div>
+      <p id="newsDetailSummary"></p>
+      <div id="newsDetailTags" class="tag-row"></div>
+      <div class="modal-actions">
+        <button id="newsDetailCloseBtn">关闭</button>
       </div>
     </div>
   </div>

@@ -45,6 +45,69 @@ function searchStocks(query) {
 }
 
 let deepSearchSeq = 0;
+const SEARCH_HISTORY_KEY = 'webstock_search_history';
+
+function searchHistoryEscape(value) {
+  return String(value == null ? '' : value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function getSearchHistory() {
+  try {
+    return JSON.parse(localStorage.getItem(SEARCH_HISTORY_KEY) || '[]');
+  } catch (error) {
+    return [];
+  }
+}
+
+function saveSearchHistory(keyword, stock) {
+  const text = String(keyword || '').trim();
+  if (!text) return;
+  const item = {
+    keyword: text,
+    code: stock && stock.code ? stock.code : '',
+    name: stock && stock.name ? stock.name : '',
+    time: Date.now()
+  };
+  const next = [item].concat(getSearchHistory().filter(function(entry) {
+    return entry.keyword !== item.keyword;
+  })).slice(0, 12);
+  localStorage.setItem(SEARCH_HISTORY_KEY, JSON.stringify(next));
+}
+
+function renderSearchHistory(filter) {
+  const panel = document.getElementById('searchHistoryPanel');
+  if (!panel) return;
+  const keyword = String(filter || '').trim().toLowerCase();
+  const items = getSearchHistory().filter(function(item) {
+    if (!keyword) return true;
+    return String(item.keyword || '').toLowerCase().includes(keyword) ||
+      String(item.code || '').includes(keyword) ||
+      String(item.name || '').toLowerCase().includes(keyword);
+  }).slice(0, 8);
+  if (!items.length) {
+    panel.style.display = 'none';
+    panel.innerHTML = '';
+    return;
+  }
+  panel.innerHTML = items.map(function(item) {
+    const sub = [item.code, item.name].filter(Boolean).join(' ');
+    return '<button class="search-history-item" type="button" data-keyword="' + searchHistoryEscape(item.keyword) + '">' +
+      '<strong>' + searchHistoryEscape(item.keyword) + '</strong>' +
+      '<span>' + searchHistoryEscape(sub) + '</span>' +
+      '</button>';
+  }).join('');
+  panel.style.display = 'block';
+}
+
+function hideSearchHistory() {
+  const panel = document.getElementById('searchHistoryPanel');
+  if (panel) panel.style.display = 'none';
+}
 
 function mergeSearchResults(localResults, remotePayload) {
   const State = window.State;
@@ -108,7 +171,8 @@ function clearSearch() {
   State.filteredStocks = State.allStocks.slice(0, State.PAGE_SIZE);
   StockList.renderStockTable(State.filteredStocks);
   if (window.HotMarket) window.HotMarket.syncSearchMode();
-  StockList.refreshQuotes(State.filteredStocks);
+  StockList.refreshQuotes(State.filteredStocks).catch(function(error) { console.warn(error.message || error); });
+  renderSearchHistory('');
   input.focus();
 }
 
@@ -119,5 +183,9 @@ window.Search = {
   searchStocksDeep,
   mergeSearchResults,
   toggleClearButton,
-  clearSearch
+  clearSearch,
+  getSearchHistory,
+  saveSearchHistory,
+  renderSearchHistory,
+  hideSearchHistory
 };

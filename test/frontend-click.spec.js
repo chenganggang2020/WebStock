@@ -132,6 +132,7 @@ test('main stock actions and workspace navigation do not throw', async ({ page }
   await expect(page.locator('#sidebarWorkspaceNav')).toBeVisible();
   await expect(page.locator('#sidebarWatchlistBtn')).toContainText('自选');
   await expect(page.locator('#stockTbody tr:first-child [data-action]')).toHaveCount(0);
+  await page.fill('#searchInput', '000001');
   await page.click('#stockTbody tr:first-child');
   await expect(page.locator('#analysisBtn')).toBeVisible();
   await expect(page.locator('#chartTitle')).toContainText('平安银行');

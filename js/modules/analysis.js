@@ -73,24 +73,28 @@ function renderPromptHandoff(body, prompt) {
     '<h3>ChatGPT 交接模式</h3>' +
     '<p>当前未配置可用 OpenAI API Key，系统已生成完整提示词。复制后可在 ChatGPT 中继续分析，返回内容可手动保存到当前任务。</p>' +
     '<div class="handoff-actions">' +
-    '<button class="small-btn primary" data-copy-analysis onclick="copyAnalysisData()">复制提示词</button>' +
-    '<button class="small-btn" onclick="window.open(&quot;https://chatgpt.com/&quot;,&quot;_blank&quot;)">打开 ChatGPT</button>' +
+    '<button class="small-btn primary" onclick="window.Analysis.openPromptHandoff(true)">复制并打开 ChatGPT</button>' +
+    '<button class="small-btn" data-copy-analysis onclick="copyAnalysisData()">仅复制提示词</button>' +
     '<button class="small-btn" onclick="window.Analysis.openPromptHandoff()">保存返回结果</button>' +
     '</div>' +
     '</div>' +
     '<div class="md-body prompt-preview">' + simpleMarkdown(prompt) + '</div>';
 }
 
-function openPromptHandoff() {
+function openPromptHandoff(copyAndOpen) {
   if (!window.AIAssistant) return;
   const stock = window.State && window.State.currentStock ? window.State.currentStock : {};
   window.AIAssistant.open({
     title: '个股分析 ChatGPT 交接',
     summary: '保存 ChatGPT 返回的个股分析结果，便于后续回看。',
     prompt: window.currentPromptText || '',
+    promptStyle: 'technical',
     kind: 'stock',
     context: { view: 'market', code: stock.code || '', name: stock.name || '' }
   });
+  if (copyAndOpen && window.AIAssistant.copyAndOpenChatGPT) {
+    setTimeout(window.AIAssistant.copyAndOpenChatGPT, 0);
+  }
 }
 
 function openAnalysisPanel(stock) {
