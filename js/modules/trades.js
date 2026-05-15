@@ -2,8 +2,7 @@ function tradesApi(path, options) {
   return window.apiFetch('/api/portfolio' + path, options);
 }
 
-const TRADE_LOT_SIZE = 100;
-const TRADE_FEE_PER_LOT = 5;
+const DEFAULT_TRADE_FEE = 5;
 const DEFAULT_TRADE_TAX = 0;
 const TRADE_ENTER_FLOW = ['tradeDateInput', 'tradePriceInput', 'tradeQuantityInput', 'tradeFeeInput'];
 
@@ -20,27 +19,6 @@ function sideLabel(side) {
 function formatNumber(value, digits) {
   const n = Number(value);
   return Number.isFinite(n) ? n.toFixed(digits === undefined ? 2 : digits) : '--';
-}
-
-function calculateDefaultTradeFee(side, quantity) {
-  if (side !== 'buy' && side !== 'sell') return 0;
-  const q = Math.trunc(Number(quantity) || 0);
-  if (q <= 0) return TRADE_FEE_PER_LOT;
-  return Math.ceil(q / TRADE_LOT_SIZE) * TRADE_FEE_PER_LOT;
-}
-
-function syncTradeFeeInput(event) {
-  const sideEl = document.getElementById('tradeSideInput');
-  const quantityEl = document.getElementById('tradeQuantityInput');
-  const feeEl = document.getElementById('tradeFeeInput');
-  if (!sideEl || !quantityEl || !feeEl) return;
-  if (event && event.target && !['tradeSideInput', 'tradeQuantityInput'].includes(event.target.id)) return;
-  feeEl.value = calculateDefaultTradeFee(sideEl.value, quantityEl.value);
-}
-
-function normalizeTradePayloadFee(payload) {
-  const expected = calculateDefaultTradeFee(payload.side, payload.quantity);
-  return Math.max(Number(payload.fee) || 0, expected);
 }
 
 function calculateTradeAmount(payload) {
@@ -64,10 +42,9 @@ function calculateTradeAmount(payload) {
   return null;
 }
 
-function updateTradeAmountPreview(event) {
+function updateTradeAmountPreview() {
   const box = document.getElementById('tradeAmountPreview');
   if (!box) return;
-  syncTradeFeeInput(event);
   const payload = collectTradeForm();
   const amount = calculateTradeAmount(payload);
   const labels = {
@@ -239,7 +216,7 @@ function openTradeModal(mode, tradeOrId, preset) {
   document.getElementById('tradeDateInput').value = data.tradeDate || todayStr();
   document.getElementById('tradePriceInput').value = defaultPrice;
   document.getElementById('tradeQuantityInput').value = data.quantity || '';
-  document.getElementById('tradeFeeInput').value = data.fee !== undefined ? data.fee : calculateDefaultTradeFee(side, data.quantity);
+  document.getElementById('tradeFeeInput').value = data.fee !== undefined ? data.fee : DEFAULT_TRADE_FEE;
   document.getElementById('tradeTaxInput').value = data.tax !== undefined ? data.tax : DEFAULT_TRADE_TAX;
   document.getElementById('tradeNoteInput').value = data.note || '';
   updateTradeAmountPreview();
@@ -262,11 +239,7 @@ function collectTradeForm() {
     tradeDate: document.getElementById('tradeDateInput').value,
     price: Number(document.getElementById('tradePriceInput').value || 0),
     quantity: Number(document.getElementById('tradeQuantityInput').value || 0),
-    fee: normalizeTradePayloadFee({
-      side: document.getElementById('tradeSideInput').value,
-      quantity: Number(document.getElementById('tradeQuantityInput').value || 0),
-      fee: Number(document.getElementById('tradeFeeInput').value || 0)
-    }),
+    fee: Number(document.getElementById('tradeFeeInput').value || 0),
     tax: Number(document.getElementById('tradeTaxInput').value || 0),
     note: document.getElementById('tradeNoteInput').value.trim()
   };
@@ -361,7 +334,6 @@ window.Trades = {
   collectTradeForm,
   validateTradeForm,
   calculateTradeAmount,
-  calculateDefaultTradeFee,
   updateTradeAmountPreview,
   resetFilters,
   exportTrades,

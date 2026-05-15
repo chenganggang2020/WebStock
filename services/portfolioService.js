@@ -3,8 +3,6 @@ const db = require('../db');
 const VALID_SIDES = new Set(['buy', 'sell', 'dividend', 'fee']);
 const DEFAULT_ESTIMATED_EXIT_FEE = 0;
 const DEFAULT_ESTIMATED_EXIT_TAX = 0;
-const TRADE_LOT_SIZE = 100;
-const TRADE_FEE_PER_LOT = 5;
 
 function round(value, digits = 2) {
   const n = Number(value);
@@ -23,19 +21,6 @@ function normalizeNumber(value, defaultValue = 0) {
   if (value === undefined || value === null || value === '') return defaultValue;
   const n = Number(value);
   return Number.isFinite(n) ? n : defaultValue;
-}
-
-function lotBasedTradeFee(side, quantity) {
-  if (side !== 'buy' && side !== 'sell') return 0;
-  const q = Math.trunc(normalizeNumber(quantity, 0));
-  if (q <= 0) return 0;
-  return round(Math.ceil(q / TRADE_LOT_SIZE) * TRADE_FEE_PER_LOT, 2);
-}
-
-function normalizeTradeFee(side, quantity, fee) {
-  const actual = normalizeNumber(fee, 0);
-  const lotFee = lotBasedTradeFee(side, quantity);
-  return Math.max(actual, lotFee);
 }
 
 function assertCode(code) {
@@ -195,12 +180,10 @@ function normalizeTradeInput(input, existing = {}) {
   const tradeDate = input.tradeDate !== undefined ? String(input.tradeDate) : existing.tradeDate;
   const price = normalizeNumber(input.price !== undefined ? input.price : existing.price, 0);
   const quantity = Math.trunc(normalizeNumber(input.quantity !== undefined ? input.quantity : existing.quantity, 0));
-  let fee = normalizeNumber(input.fee !== undefined ? input.fee : existing.fee, 0);
+  const fee = normalizeNumber(input.fee !== undefined ? input.fee : existing.fee, 0);
   const tax = normalizeNumber(input.tax !== undefined ? input.tax : existing.tax, 0);
   const note = input.note !== undefined ? String(input.note || '') : (existing.note || '');
-  const explicitAmount = input.amount !== undefined && side !== 'buy' && side !== 'sell'
-    ? normalizeNumber(input.amount, 0)
-    : undefined;
+  const explicitAmount = input.amount !== undefined ? normalizeNumber(input.amount, 0) : undefined;
 
   assertCode(code);
   if (!name) throw new Error('股票名称不能为空');
@@ -213,7 +196,6 @@ function normalizeTradeInput(input, existing = {}) {
   if ((side === 'buy' || side === 'sell') && (price <= 0 || quantity <= 0)) {
     throw new Error('买入和卖出必须填写大于 0 的价格和数量');
   }
-  fee = normalizeTradeFee(side, quantity, fee);
 
   let amount = explicitAmount;
   if (amount === undefined) {
@@ -225,37 +207,6 @@ function normalizeTradeInput(input, existing = {}) {
   if (amount < 0 && side !== 'fee') throw new Error('金额不能小于 0');
 
   return { code, name, side, tradeDate, price, quantity, fee, tax, amount: round(amount, 4), note };
-}
-
-function normalizeStoredLotFees() {
-  const rows = db.prepare(`
-    SELECT id, side, price, quantity, fee, tax
-    FROM trades
-    WHERE side IN ('buy', 'sell')
-  `).all();
-  if (!rows.length) return 0;
-
-  const update = db.prepare(`
-    UPDATE trades
-    SET fee = @fee,
-        amount = @amount,
-        updated_at = CURRENT_TIMESTAMP
-    WHERE id = @id
-  `);
-  const run = db.transaction(function() {
-    let changed = 0;
-    rows.forEach(function(row) {
-      const fee = normalizeTradeFee(row.side, row.quantity, row.fee);
-      if (fee <= Number(row.fee || 0)) return;
-      const gross = Number(row.price || 0) * Number(row.quantity || 0);
-      const tax = Number(row.tax || 0);
-      const amount = row.side === 'buy' ? gross + fee : gross - fee - tax;
-      update.run({ id: row.id, fee: round(fee, 2), amount: round(amount, 4) });
-      changed += 1;
-    });
-    return changed;
-  });
-  return run();
 }
 
 function calculatePositionStates(trades) {
@@ -477,13 +428,8 @@ function getAllocation(positions = getPositions()) {
   });
 }
 
-normalizeStoredLotFees();
-
 module.exports = {
   VALID_SIDES,
-  lotBasedTradeFee,
-  normalizeTradeFee,
-  normalizeStoredLotFees,
   listWatchlist,
   addWatchlistItem,
   updateWatchlistItem,

@@ -79,7 +79,7 @@ async function main() {
     const pos = positions.body.data.find(item => item.code === '990001');
     assert.ok(pos);
     assert.equal(pos.quantity, 1000);
-    assert.equal(pos.avgCost, 10.05);
+    assert.equal(pos.avgCost, 10.005);
 
     const summary = await request(server, 'GET', '/api/portfolio/summary');
     assert.equal(summary.body.success, true);
@@ -115,8 +115,8 @@ async function main() {
     const afterSell = await request(server, 'GET', '/api/portfolio/positions');
     const afterPos = afterSell.body.data.find(item => item.code === '990001');
     assert.equal(afterPos.quantity, 700);
-    assert.equal(afterPos.costValue, 7035);
-    assert.equal(afterPos.realizedPnl, 266.7);
+    assert.equal(afterPos.costValue, 7003.5);
+    assert.equal(afterPos.realizedPnl, 290.2);
 
     await request(server, 'DELETE', '/api/portfolio/trades/' + ids.sell);
     await request(server, 'DELETE', '/api/portfolio/trades/' + ids.buy);
