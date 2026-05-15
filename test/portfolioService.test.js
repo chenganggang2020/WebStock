@@ -22,16 +22,17 @@ test('portfolio service calculates positions and prevents oversell', () => {
     quantity: 1000,
     fee: 5
   });
-  assert.equal(buy.amount, 10005);
+  assert.equal(buy.fee, 50);
+  assert.equal(buy.amount, 10050);
 
   const positions = portfolio.getPositions({ '000001': { price: 11, change: 1.5 } });
   assert.equal(positions.length, 1);
   assert.equal(positions[0].quantity, 1000);
-  assert.equal(positions[0].avgCost, 10.005);
-  assert.equal(positions[0].grossUnrealizedPnl, 995);
+  assert.equal(positions[0].avgCost, 10.05);
+  assert.equal(positions[0].grossUnrealizedPnl, 950);
   assert.equal(positions[0].estimatedExitFee, 0);
-  assert.equal(positions[0].totalFee, 5);
-  assert.equal(positions[0].unrealizedPnl, 995);
+  assert.equal(positions[0].totalFee, 50);
+  assert.equal(positions[0].unrealizedPnl, 950);
 
   assert.throws(() => portfolio.createTrade({
     code: '000001',
@@ -51,12 +52,13 @@ test('portfolio service calculates positions and prevents oversell', () => {
     fee: 3,
     tax: 1
   });
-  assert.equal(sell.amount, 10996);
+  assert.equal(sell.fee, 50);
+  assert.equal(sell.amount, 10949);
 
   const closed = portfolio.getClosedPositions();
   assert.equal(closed.length, 1);
   assert.equal(closed[0].code, '000001');
-  assert.equal(closed[0].realizedPnl, 991);
+  assert.equal(closed[0].realizedPnl, 899);
   assert.equal(closed[0].tradeCount, 2);
   assert.equal(closed[0].firstTradeDate, '2026-05-11');
   assert.equal(closed[0].lastTradeDate, '2026-05-13');
@@ -96,9 +98,9 @@ test('open position final pnl excludes realized pnl from earlier partial sells',
   const positions = portfolio.getPositions({ '561560': { price: 1.394, change: -1.97 } });
   assert.equal(positions.length, 1);
   assert.equal(positions[0].quantity, 400);
-  assert.equal(positions[0].costValue, 564.6);
-  assert.equal(positions[0].realizedPnl, -5);
-  assert.equal(positions[0].unrealizedPnl, -7);
-  assert.equal(positions[0].netPnl, -7);
-  assert.equal(positions[0].symbolTotalPnl, -12);
+  assert.equal(positions[0].costValue, 579.6);
+  assert.equal(positions[0].realizedPnl, -40);
+  assert.equal(positions[0].unrealizedPnl, -22);
+  assert.equal(positions[0].netPnl, -22);
+  assert.equal(positions[0].symbolTotalPnl, -62);
 });

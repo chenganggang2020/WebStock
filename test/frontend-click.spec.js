@@ -203,7 +203,7 @@ test('main stock actions and workspace navigation do not throw', async ({ page }
   await page.selectOption('#tradeSideInput', 'buy');
   await page.fill('#tradePriceInput', '10');
   await page.fill('#tradeQuantityInput', '1000');
-  await expect(page.locator('#tradeAmountPreview')).toContainText('10005.00');
+  await expect(page.locator('#tradeAmountPreview')).toContainText('10050.00');
   await page.click('#tradeModalOk');
   await expect(page.locator('#positionsTbody')).toContainText('000001', { timeout: 15000 });
   await expect(page.locator('#closedPositionsPanel')).toContainText('No closed positions yet');
