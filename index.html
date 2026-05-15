@@ -419,6 +419,14 @@
           <option value="technical">技术走势专家</option>
           <option value="short-term">短线强弱排序</option>
           <option value="fundamental">产业前景与主营业务</option>
+          <option value="quant-factor">量化因子打分</option>
+          <option value="valuation">估值安全边际</option>
+          <option value="news-sentiment">资讯情绪催化</option>
+          <option value="event-driven">事件驱动复盘</option>
+          <option value="macro-sector">宏观行业轮动</option>
+          <option value="liquidity-flow">资金流动性</option>
+          <option value="scenario">多空情景推演</option>
+          <option value="risk-control">风控止损计划</option>
           <option value="portfolio">持仓交易复盘</option>
         </select>
       </div>
@@ -741,6 +749,14 @@
         <option value="sector-chain">板块产业链选股</option>
         <option value="short-term">短线强弱排序</option>
         <option value="fundamental">产业前景与主营业务</option>
+        <option value="quant-factor">量化因子打分</option>
+        <option value="valuation">估值安全边际</option>
+        <option value="news-sentiment">资讯情绪催化</option>
+        <option value="event-driven">事件驱动复盘</option>
+        <option value="macro-sector">宏观行业轮动</option>
+        <option value="liquidity-flow">资金流动性</option>
+        <option value="scenario">多空情景推演</option>
+        <option value="risk-control">风控止损计划</option>
         <option value="portfolio">持仓交易复盘</option>
       </select>
       <textarea id="handoffPromptText" readonly></textarea>
@@ -766,6 +782,7 @@
       <p id="newsDetailSummary"></p>
       <div id="newsDetailTags" class="tag-row"></div>
       <div class="modal-actions">
+        <button id="newsDetailOriginalBtn" class="primary" type="button">打开原文</button>
         <button id="newsDetailCloseBtn">关闭</button>
       </div>
     </div>

@@ -137,8 +137,8 @@ function renderPositions() {
   tbody.innerHTML = positions.map(pos => {
     const finalPnl = finalPnlValue(pos);
     const finalRate = finalPnlRateValue(pos);
-    return '<tr>' +
-      '<td><button class="link-btn" data-action="view" data-code="' + pos.code + '">' + pos.code + '</button></td>' +
+    return '<tr data-code="' + pos.code + '" tabindex="0" title="双击查看行情，右键打开持仓操作">' +
+      '<td><span class="position-code">' + pos.code + '</span></td>' +
       '<td>' + pos.name + '</td>' +
       '<td>' + pos.quantity + '</td>' +
       '<td>' + fmt(pos.avgCost, 3) + '</td>' +
@@ -147,16 +147,13 @@ function renderPositions() {
       '<td class="' + pnlClass(finalPnl) + '" title="当前剩余持仓浮动收益：市值 - 剩余持仓成本；该代码历史已实现盈亏 ' + fmt(pos.realizedPnl) + '">' + fmt(finalPnl) + '</td>' +
       '<td class="' + pnlClass(finalRate) + '">' + fmt(finalRate) + '%</td>' +
       '<td class="' + pnlClass(pos.todayPnl) + '">' + fmt(pos.todayPnl) + '</td>' +
-      '<td><div class="stock-actions">' +
-      '<button class="small-btn primary" data-action="view" data-code="' + pos.code + '">查看</button>' +
-      '<button class="small-btn" data-action="buy" data-code="' + pos.code + '">买入</button>' +
-      '<button class="small-btn" data-action="sell" data-code="' + pos.code + '">卖出</button>' +
-      '<button class="small-btn" data-action="analysis" data-code="' + pos.code + '">AI持仓分析</button>' +
-      '<button class="small-btn" data-action="trades" data-code="' + pos.code + '">交易</button>' +
-      '</div></td>' +
+      '<td><span class="position-action-hint">双击查看 · 右键操作</span></td>' +
       '</tr>';
   }).join('');
   tbody.onclick = handlePositionClick;
+  tbody.ondblclick = handlePositionDoubleClick;
+  tbody.oncontextmenu = handlePositionContextMenu;
+  tbody.onkeydown = handlePositionKeydown;
 }
 
 function renderClosedPositions() {
@@ -315,20 +312,86 @@ function stockLookup(code) {
     { code, name: code };
 }
 
+async function runPositionAction(action, code) {
+  if (action === 'view') selectPositionStock(code);
+  else if (action === 'buy') openBuyTradeByCode(code);
+  else if (action === 'sell') openSellTradeByCode(code);
+  else if (action === 'analysis') await runHoldingAnalysis(code);
+  else if (action === 'trades') viewTrades(code);
+}
+
 async function handlePositionClick(event) {
   const btn = event.target.closest('[data-action]');
   if (!btn) return;
   const action = btn.getAttribute('data-action');
   const code = btn.getAttribute('data-code');
   try {
-    if (action === 'view') selectPositionStock(code);
-    else if (action === 'buy') openBuyTradeByCode(code);
-    else if (action === 'sell') openSellTradeByCode(code);
-    else if (action === 'analysis') await runHoldingAnalysis(code);
-    else if (action === 'trades') viewTrades(code);
+    await runPositionAction(action, code);
   } catch (error) {
     alert(error.message || '持仓操作失败');
   }
+}
+
+function positionRowCode(event) {
+  const row = event.target.closest('tr[data-code]');
+  return row ? row.getAttribute('data-code') : '';
+}
+
+function handlePositionDoubleClick(event) {
+  const code = positionRowCode(event);
+  if (code) selectPositionStock(code);
+}
+
+function hidePositionContextMenu() {
+  const menu = document.getElementById('stockContextMenu');
+  if (menu && menu.getAttribute('data-owner') === 'portfolio') {
+    menu.style.display = 'none';
+    menu.removeAttribute('data-owner');
+  }
+}
+
+function showPositionContextMenu(event, code) {
+  const menu = document.getElementById('stockContextMenu');
+  if (!menu || !code) return;
+  event.preventDefault();
+  menu.setAttribute('data-owner', 'portfolio');
+  menu.innerHTML =
+    '<button data-action="view" data-code="' + code + '">查看行情</button>' +
+    '<button data-action="buy" data-code="' + code + '">买入</button>' +
+    '<button data-action="sell" data-code="' + code + '">卖出</button>' +
+    '<button data-action="analysis" data-code="' + code + '">AI持仓分析</button>' +
+    '<button data-action="trades" data-code="' + code + '">交易记录</button>';
+  const left = Math.min(event.clientX, window.innerWidth - 190);
+  const top = Math.min(event.clientY, window.innerHeight - 220);
+  menu.style.left = Math.max(8, left) + 'px';
+  menu.style.top = Math.max(8, top) + 'px';
+  menu.style.display = 'block';
+  setTimeout(function() {
+    document.addEventListener('click', hidePositionContextMenu, { once: true });
+  }, 0);
+  menu.onclick = async function(clickEvent) {
+    const btn = clickEvent.target.closest('[data-action]');
+    if (!btn) return;
+    hidePositionContextMenu();
+    try {
+      await runPositionAction(btn.getAttribute('data-action'), btn.getAttribute('data-code'));
+    } catch (error) {
+      alert(error.message || '持仓操作失败');
+    }
+  };
+}
+
+function handlePositionContextMenu(event) {
+  const code = positionRowCode(event);
+  if (code) showPositionContextMenu(event, code);
+}
+
+function handlePositionKeydown(event) {
+  if (event.key !== 'Enter' && event.key !== ' ') return;
+  const code = positionRowCode(event);
+  if (!code) return;
+  event.preventDefault();
+  selectPositionStock(code);
 }
 
 function openBuyTrade(stock) {

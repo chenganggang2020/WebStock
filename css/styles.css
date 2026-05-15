@@ -2280,6 +2280,25 @@ body.dark .md-body blockquote { background: rgba(99,102,241,0.12); }
   background: var(--hover);
 }
 
+#positionsTbody tr[data-code] {
+  cursor: pointer;
+}
+
+#positionsTbody tr[data-code]:focus-visible td {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+}
+
+.position-code {
+  color: var(--focus);
+  font-weight: 700;
+}
+
+.position-action-hint {
+  color: #64748b;
+  font-size: 12px;
+}
+
 .empty-state {
   margin: 20px;
   padding: 28px;

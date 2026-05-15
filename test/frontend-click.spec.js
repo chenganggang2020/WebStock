@@ -226,7 +226,11 @@ test('main stock actions and workspace navigation do not throw', async ({ page }
   await page.click('#exportTradesFromPortfolioBtn');
   const tradesDownload = await tradesDownloadPromise;
   expect(tradesDownload.suggestedFilename()).toBe('webstock-trades.csv');
-  await page.click('#positionsTbody [data-action="sell"]');
+  await page.dblclick('#positionsTbody tr[data-code="000001"]');
+  await expect(page.locator('#marketView')).toBeVisible();
+  await page.click('[data-main-view="portfolio"]');
+  await page.click('#positionsTbody tr[data-code="000001"]', { button: 'right' });
+  await page.click('#stockContextMenu [data-action="sell"]');
   await expect(page.locator('#tradeModalOverlay')).toBeVisible();
   await expect(page.locator('#tradeAmountPreview')).toContainText('Estimated inflow');
   await page.fill('#tradeQuantityInput', '2000');
@@ -244,7 +248,8 @@ test('main stock actions and workspace navigation do not throw', async ({ page }
   await page.fill('#tradeQuantityInput', '100');
   await page.click('#tradeModalOk');
   await expect(page.locator('#positionsTbody')).toContainText('000002');
-  await page.click('#positionsTbody [data-action="sell"][data-code="000002"]');
+  await page.click('#positionsTbody tr[data-code="000002"]', { button: 'right' });
+  await page.click('#stockContextMenu [data-action="sell"]');
   await expect(page.locator('#tradeModalOverlay')).toBeVisible();
   await page.fill('#tradeQuantityInput', '100');
   await page.click('#tradeModalOk');

@@ -36,6 +36,21 @@ function newsFormatTime(value) {
     : String(value);
 }
 
+function newsOriginalUrl(item) {
+  const url = item && (item.link || item.url || item.originalUrl);
+  return /^https?:\/\//i.test(String(url || '')) ? String(url) : '';
+}
+
+function updateNewsOriginalButton(item) {
+  const btn = document.getElementById('newsDetailOriginalBtn');
+  if (!btn) return;
+  const url = newsOriginalUrl(item);
+  btn.style.display = url ? '' : 'none';
+  btn.onclick = url ? function() {
+    window.open(url, '_blank');
+  } : null;
+}
+
 function showNewsDetail(item) {
   const overlay = document.getElementById('newsDetailOverlay');
   if (!overlay || !item) return;
@@ -49,6 +64,7 @@ function showNewsDetail(item) {
     .map(tag => '<span class="tag">' + newsEscapeHtml(tag) + '</span>')
     .join('');
   document.getElementById('newsDetailTags').innerHTML = tags;
+  updateNewsOriginalButton(item);
   overlay.style.display = 'flex';
 }
 

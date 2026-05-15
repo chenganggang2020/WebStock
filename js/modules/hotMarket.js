@@ -31,6 +31,11 @@ function hotPnlClass(value) {
   return n >= 0 ? 'pnl-up' : 'pnl-down';
 }
 
+function hotOriginalUrl(item) {
+  const url = item && (item.link || item.url || item.originalUrl);
+  return /^https?:\/\//i.test(String(url || '')) ? String(url) : '';
+}
+
 function hotStockLookup(stock) {
   if (!stock) return null;
   const code = stock.code || '';
@@ -320,6 +325,7 @@ function ensureHotNewsModal() {
     '<p id="hotNewsModalSummary"></p>' +
     '<div id="hotNewsModalTags" class="tag-row"></div>' +
     '<div class="modal-actions">' +
+      '<button id="hotNewsModalOriginal" class="primary" type="button">打开原文</button>' +
       '<button id="hotNewsModalClose" type="button">关闭</button>' +
     '</div>' +
     '</div>';
@@ -349,6 +355,12 @@ function openHotNews(index) {
   overlay.querySelector('#hotNewsModalTags').innerHTML = tags.map(function(tag) {
     return '<span class="tag">' + hotEscape(tag) + '</span>';
   }).join('');
+  const originalBtn = overlay.querySelector('#hotNewsModalOriginal');
+  const url = hotOriginalUrl(item);
+  if (originalBtn) {
+    originalBtn.style.display = url ? '' : 'none';
+    originalBtn.onclick = url ? function() { window.open(url, '_blank'); } : null;
+  }
   overlay.style.display = 'flex';
 }
 
