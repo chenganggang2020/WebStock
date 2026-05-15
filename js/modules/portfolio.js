@@ -14,11 +14,11 @@ function pnlClass(value) {
 }
 
 function finalPnlValue(pos) {
-  return pos && pos.netPnl !== undefined && pos.netPnl !== null ? pos.netPnl : pos.unrealizedPnl;
+  return pos && pos.unrealizedPnl !== undefined && pos.unrealizedPnl !== null ? pos.unrealizedPnl : pos.netPnl;
 }
 
 function finalPnlRateValue(pos) {
-  return pos && pos.netPnlRate !== undefined && pos.netPnlRate !== null ? pos.netPnlRate : pos.unrealizedPnlRate;
+  return pos && pos.unrealizedPnlRate !== undefined && pos.unrealizedPnlRate !== null ? pos.unrealizedPnlRate : pos.netPnlRate;
 }
 
 function portfolioCsvCell(value) {
@@ -90,7 +90,7 @@ function renderSummary() {
   document.getElementById('summaryCost').textContent = fmt(summary.totalCost);
   const unrealized = document.getElementById('summaryUnrealizedPnl');
   unrealized.textContent = fmt(summary.unrealizedPnl);
-  unrealized.title = '已扣除买入成本中的手续费，并预估扣除卖出手续费。';
+  unrealized.title = '当前剩余持仓浮动收益：市值 - 剩余持仓成本。买入手续费已计入成本，不叠加已实现盈亏。';
   unrealized.className = 'summary-value ' + pnlClass(summary.unrealizedPnl);
   const realized = document.getElementById('summaryRealizedPnl');
   realized.textContent = fmt(summary.realizedPnl);
@@ -144,7 +144,7 @@ function renderPositions() {
       '<td>' + fmt(pos.avgCost, 3) + '</td>' +
       '<td>' + fmt(pos.currentPrice, 3) + '</td>' +
       '<td>' + fmt(pos.marketValue === null ? pos.costValue : pos.marketValue) + '</td>' +
-      '<td class="' + pnlClass(finalPnl) + '" title="净收益：已扣实际交易手续费/印花税；含已实现收益 ' + fmt(pos.realizedPnl) + '">' + fmt(finalPnl) + '</td>' +
+      '<td class="' + pnlClass(finalPnl) + '" title="当前剩余持仓浮动收益：市值 - 剩余持仓成本；该代码历史已实现盈亏 ' + fmt(pos.realizedPnl) + '">' + fmt(finalPnl) + '</td>' +
       '<td class="' + pnlClass(finalRate) + '">' + fmt(finalRate) + '%</td>' +
       '<td class="' + pnlClass(pos.todayPnl) + '">' + fmt(pos.todayPnl) + '</td>' +
       '<td><div class="stock-actions">' +
@@ -209,8 +209,8 @@ function exportPositionsCsv() {
     'current_price',
     'market_value',
     'cost_value',
-    'final_net_pnl',
-    'final_net_pnl_rate',
+    'final_unrealized_pnl',
+    'final_unrealized_pnl_rate',
     'total_fee',
     'today_pnl'
   ]].concat(rows.map(function(pos) {

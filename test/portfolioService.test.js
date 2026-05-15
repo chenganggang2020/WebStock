@@ -62,3 +62,43 @@ test('portfolio service calculates positions and prevents oversell', () => {
   assert.equal(closed[0].lastTradeDate, '2026-05-13');
   assert.equal(portfolio.getPositions().length, 0);
 });
+
+test('open position final pnl excludes realized pnl from earlier partial sells', () => {
+  portfolio.createTrade({
+    code: '561560',
+    name: '电力ETF',
+    side: 'buy',
+    tradeDate: '2026-05-11',
+    price: 1.399,
+    quantity: 400,
+    fee: 5
+  });
+  portfolio.createTrade({
+    code: '561560',
+    name: '电力ETF',
+    side: 'buy',
+    tradeDate: '2026-05-12',
+    price: 1.399,
+    quantity: 400,
+    fee: 5
+  });
+  portfolio.createTrade({
+    code: '561560',
+    name: '电力ETF',
+    side: 'sell',
+    tradeDate: '2026-05-13',
+    price: 1.399,
+    quantity: 400,
+    fee: 0,
+    tax: 0
+  });
+
+  const positions = portfolio.getPositions({ '561560': { price: 1.394, change: -1.97 } });
+  assert.equal(positions.length, 1);
+  assert.equal(positions[0].quantity, 400);
+  assert.equal(positions[0].costValue, 564.6);
+  assert.equal(positions[0].realizedPnl, -5);
+  assert.equal(positions[0].unrealizedPnl, -7);
+  assert.equal(positions[0].netPnl, -7);
+  assert.equal(positions[0].symbolTotalPnl, -12);
+});

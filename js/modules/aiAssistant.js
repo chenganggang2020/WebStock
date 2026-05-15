@@ -9,7 +9,7 @@ function aiAssistantOpen(options) {
   document.getElementById('handoffModalSummary').textContent = currentHandoff.summary || '复制提示词到 ChatGPT，或导入返回结果保存到当前任务。';
   document.getElementById('handoffPromptText').value = currentHandoff.prompt || '';
   document.getElementById('handoffResultText').value = currentHandoff.result || '';
-  aiAssistantSetStatus('提示词已生成。建议点“复制并内嵌打开 ChatGPT”，登录状态会保存在软件内置窗口。');
+  aiAssistantSetStatus('提示词已生成。建议点“复制并打开 ChatGPT”，会跳到系统浏览器里的 ChatGPT。');
   overlay.style.display = 'flex';
 }
 
@@ -55,7 +55,7 @@ function aiAssistantCopyPrompt() {
     const btn = document.getElementById('handoffCopyBtn');
     const old = btn.textContent;
     btn.textContent = '已复制';
-    aiAssistantSetStatus('提示词已复制到剪贴板。内嵌 ChatGPT 打开后按 Ctrl+V 粘贴发送。', true);
+    aiAssistantSetStatus('提示词已复制到剪贴板。ChatGPT 打开后按 Ctrl+V 粘贴发送。', true);
     setTimeout(function() { btn.textContent = old; }, 1600);
   }).catch(function() {
     alert('复制失败，请手动复制提示词。');
@@ -69,7 +69,7 @@ function aiAssistantOpenChatGPT() {
 function aiAssistantCopyAndOpenChatGPT() {
   aiAssistantCopyPrompt().finally(function() {
     aiAssistantOpenChatGPT();
-    aiAssistantSetStatus('已打开软件内置 ChatGPT。若要临时对话，请在 ChatGPT 内切换 Temporary Chat/临时聊天后再粘贴。', true);
+    aiAssistantSetStatus('已打开系统浏览器里的 ChatGPT。若要临时对话或 Thinking 深入模式，请在 ChatGPT 页面切换后再粘贴。', true);
   });
 }
 

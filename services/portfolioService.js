@@ -269,7 +269,8 @@ function calculatePositions(trades, quoteMap = {}) {
       const estimatedExitFee = marketValue === null ? 0 : DEFAULT_ESTIMATED_EXIT_FEE;
       const estimatedExitTax = marketValue === null ? 0 : DEFAULT_ESTIMATED_EXIT_TAX;
       const unrealizedPnl = grossUnrealizedPnl === null ? null : grossUnrealizedPnl - estimatedExitFee - estimatedExitTax;
-      const netPnl = unrealizedPnl === null ? null : pos.realizedPnl + unrealizedPnl;
+      const netPnl = unrealizedPnl;
+      const symbolTotalPnl = unrealizedPnl === null ? null : pos.realizedPnl + unrealizedPnl;
       const avgCost = pos.quantity > 0 ? pos.costValue / pos.quantity : 0;
       return {
         code: pos.code,
@@ -288,6 +289,8 @@ function calculatePositions(trades, quoteMap = {}) {
         realizedPnl: round(pos.realizedPnl, 2),
         netPnl: netPnl === null ? null : round(netPnl, 2),
         netPnlRate: netPnl === null || pos.costValue === 0 ? null : round(netPnl / pos.costValue * 100, 2),
+        symbolTotalPnl: symbolTotalPnl === null ? null : round(symbolTotalPnl, 2),
+        symbolTotalPnlRate: symbolTotalPnl === null || pos.costValue === 0 ? null : round(symbolTotalPnl / pos.costValue * 100, 2),
         todayChange: Number.isFinite(Number(quote.change)) ? Number(quote.change) : null,
         todayPnl: marketValue === null || !Number.isFinite(Number(quote.change)) ? null : round(marketValue * Number(quote.change) / 100, 2)
       };
@@ -407,8 +410,8 @@ function getSummary(positions = getPositions()) {
     totalPnl: round(totalPnl, 2),
     totalPnlRate: totalCost > 0 ? round(totalPnl / totalCost * 100, 2) : 0,
     positionCount: positions.length,
-    winCount: positions.filter(pos => (pos.netPnl !== null ? pos.netPnl : pos.unrealizedPnl || 0) > 0).length,
-    lossCount: positions.filter(pos => (pos.netPnl !== null ? pos.netPnl : pos.unrealizedPnl || 0) < 0).length
+    winCount: positions.filter(pos => (pos.unrealizedPnl || 0) > 0).length,
+    lossCount: positions.filter(pos => (pos.unrealizedPnl || 0) < 0).length
   };
 }
 
