@@ -8,7 +8,7 @@
     "dev": "node server.js",
     "desktop": "electron .",
     "dist:win": "node scripts/build-electron-win.js nsis",
-    "dist:win:dir": "node scripts/build-electron-win.js dir",
+    "dist:win:dir": "node scripts/build-electron-win.js dir --config.directories.output=dist/unpacked",
     "test": "node --test test/*.test.js",
     "test:api-json": "node scripts/test-api-json.js",
     "test:frontend": "playwright test test/frontend-click.spec.js",
@@ -35,7 +35,11 @@
   "build": {
     "appId": "com.webstock.desktop",
     "productName": "WebStock",
-    "asar": false,
+    "asar": true,
+    "asarUnpack": [
+      "node_modules/better-sqlite3/**"
+    ],
+    "artifactName": "WebStock-Setup-${version}.${ext}",
     "files": [
       "electron/**",
       "css/**",
@@ -79,7 +83,7 @@
       "shortcutName": "WebStock"
     },
     "directories": {
-      "output": "release"
+      "output": "dist/installer"
     }
   }
 }

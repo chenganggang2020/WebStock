@@ -1,4 +1,5 @@
 const { spawnSync } = require('child_process');
+const fs = require('fs');
 const path = require('path');
 
 const root = path.resolve(__dirname, '..');
@@ -31,9 +32,43 @@ const target = firstArg && !firstArg.startsWith('-') ? firstArg : 'nsis';
 const extraArgs = firstArg && firstArg.startsWith('-') ? process.argv.slice(2) : process.argv.slice(3);
 const electronVersion = String(pkg.devDependencies.electron || '').replace(/^[^\d]*/, '');
 
+function outputDirFromArgs() {
+  const configArg = extraArgs.find(arg => arg.startsWith('--config.directories.output='));
+  const configured = configArg
+    ? configArg.slice('--config.directories.output='.length)
+    : (pkg.build && pkg.build.directories && pkg.build.directories.output) || 'dist';
+  return path.resolve(root, configured);
+}
+
+function assertInsideRoot(targetPath) {
+  const relative = path.relative(root, targetPath);
+  if (!relative || relative.startsWith('..') || path.isAbsolute(relative)) {
+    throw new Error('Refusing to remove build output outside project: ' + targetPath);
+  }
+}
+
+function prepareOutputDir(outputDir) {
+  assertInsideRoot(outputDir);
+  if (fs.existsSync(outputDir)) fs.rmSync(outputDir, { recursive: true, force: true });
+  fs.mkdirSync(outputDir, { recursive: true });
+}
+
+function keepOnlyInstaller(outputDir) {
+  assertInsideRoot(outputDir);
+  if (!fs.existsSync(outputDir)) return;
+  for (const entry of fs.readdirSync(outputDir, { withFileTypes: true })) {
+    const fullPath = path.join(outputDir, entry.name);
+    const isInstaller = entry.isFile() && /\.exe$/i.test(entry.name) && !/\.__uninstaller\.exe$/i.test(entry.name);
+    if (!isInstaller) fs.rmSync(fullPath, { recursive: true, force: true });
+  }
+}
+
 let buildError = null;
 
 try {
+  const outputDir = outputDirFromArgs();
+  prepareOutputDir(outputDir);
+
   const electronRebuild = nodeScript(path.join(root, 'node_modules', '@electron', 'rebuild', 'lib', 'cli.js'));
   run('Rebuild native modules for Electron ' + electronVersion, electronRebuild[0], electronRebuild[1].concat([
     '--force',
@@ -45,6 +80,7 @@ try {
 
   const electronBuilder = nodeScript(path.join(root, 'node_modules', 'electron-builder', 'cli.js'));
   run('Build Windows ' + target + ' package', electronBuilder[0], electronBuilder[1].concat(['--win', target], extraArgs));
+  if (target === 'nsis') keepOnlyInstaller(outputDir);
 } catch (error) {
   buildError = error;
 } finally {
