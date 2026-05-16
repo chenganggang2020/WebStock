@@ -2,11 +2,29 @@
   "name": "WebStock 股票工作台",
   "short_name": "WebStock",
   "description": "A股行情、热门板块、持仓和资讯工作台",
-  "start_url": "/",
+  "id": "/#dashboard",
+  "start_url": "/#dashboard",
   "scope": "/",
   "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "browser"],
+  "orientation": "any",
   "background_color": "#ffffff",
   "theme_color": "#dc2626",
+  "categories": ["finance", "productivity"],
+  "shortcuts": [
+    {
+      "name": "工作台",
+      "short_name": "工作台",
+      "url": "/#dashboard",
+      "icons": [{ "src": "/icons/webstock-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "智能选股",
+      "short_name": "选股",
+      "url": "/#screener",
+      "icons": [{ "src": "/icons/webstock-192.png", "sizes": "192x192", "type": "image/png" }]
+    }
+  ],
   "icons": [
     {
       "src": "/icons/webstock-192.png",

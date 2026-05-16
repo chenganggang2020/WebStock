@@ -13,6 +13,7 @@ process.env.WEBSTOCK_DB_PATH = testDbPath;
 process.env.OPENAI_API_KEY = '';
 process.env.WEBSTOCK_DISABLE_SINA_NEWS = '1';
 process.env.WEBSTOCK_HOT_MARKET_OFFLINE = '1';
+process.env.WEBSTOCK_SENTIMENT_OFFLINE = '1';
 process.env.WEBSTOCK_STOCK_PROFILE_OFFLINE = '1';
 
 const app = require('../server');
@@ -148,6 +149,13 @@ test('news, sector and screener APIs return unified success envelopes', async (t
   const hotSnapshots = await requestJson(server, '/api/hot-market/snapshots?limit=3');
   assert.equal(hotSnapshots.json.success, true);
   assert.ok(hotSnapshots.json.data.length >= 1);
+
+  const sentiment = await requestJson(server, '/api/sentiment/overview?refresh=1');
+  assert.equal(sentiment.statusCode, 200);
+  assert.equal(sentiment.json.success, true);
+  assert.ok(Number.isFinite(sentiment.json.data.aShare.score));
+  assert.equal(sentiment.json.data.vix.name, 'Cboe VIX');
+  assert.match(sentiment.json.data.fearGreed.meaning, /Fear & Greed/);
 
   const cpoThemes = await requestJson(server, '/api/themes/search?q=CPO');
   assert.equal(cpoThemes.json.success, true);

@@ -1506,6 +1506,112 @@ body.dark .md-body blockquote { background: rgba(99,102,241,0.12); }
   color: #64748b;
 }
 
+.sentiment-layout {
+  display: grid;
+  grid-template-columns: 150px minmax(260px, 1fr) minmax(260px, 1fr);
+  gap: 14px;
+  align-items: stretch;
+}
+
+.sentiment-score {
+  border-radius: 8px;
+  padding: 14px;
+  color: #fff;
+  background: #64748b;
+  display: grid;
+  align-content: center;
+  gap: 4px;
+  min-height: 136px;
+}
+
+.sentiment-score strong {
+  font-size: 40px;
+  line-height: 1;
+}
+
+.sentiment-score span {
+  font-size: 17px;
+  font-weight: 800;
+}
+
+.sentiment-score em,
+.sentiment-row em,
+.sentiment-component em,
+.sentiment-note p {
+  font-style: normal;
+}
+
+.sentiment-score.fear {
+  background: linear-gradient(145deg, #047857, #0f766e);
+}
+
+.sentiment-score.neutral {
+  background: linear-gradient(145deg, #475569, #334155);
+}
+
+.sentiment-score.greed {
+  background: linear-gradient(145deg, #dc2626, #b91c1c);
+}
+
+.sentiment-score.hot {
+  background: linear-gradient(145deg, #e11d48, #9f1239);
+}
+
+.sentiment-details,
+.sentiment-note {
+  display: grid;
+  gap: 8px;
+}
+
+.sentiment-row,
+.sentiment-component {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  background: rgba(148, 163, 184, 0.08);
+}
+
+.sentiment-row {
+  display: grid;
+  grid-template-columns: 120px 70px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+}
+
+.sentiment-row span,
+.sentiment-row em,
+.sentiment-component span,
+.sentiment-component em,
+.sentiment-note p {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.sentiment-row strong,
+.sentiment-component strong {
+  font-size: 15px;
+}
+
+.sentiment-components {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.sentiment-component {
+  display: grid;
+  gap: 2px;
+}
+
+.sentiment-note {
+  align-content: start;
+}
+
+.sentiment-note p {
+  line-height: 1.6;
+  margin: 0;
+}
+
 .empty-state.compact {
   padding: 18px 6px;
   font-size: 13px;
@@ -2626,6 +2732,22 @@ body.dark .md-body blockquote { background: rgba(99,102,241,0.12); }
 
   .dashboard-grid,
   .news-list {
+    grid-template-columns: 1fr;
+  }
+
+  .sentiment-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .sentiment-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .sentiment-row em {
+    grid-column: 1 / -1;
+  }
+
+  .sentiment-components {
     grid-template-columns: 1fr;
   }
 

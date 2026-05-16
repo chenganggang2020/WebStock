@@ -22,6 +22,7 @@ let portfolioSummary = null;
 let portfolioAllocation = [];
 let klineSnapshots = {};
 let screenerReviewSummary = [];
+let marketSentiment = null;
 
 const State = {
   get allStocks() { return allStocks; },
@@ -70,7 +71,9 @@ const State = {
   get klineSnapshots() { return klineSnapshots; },
   set klineSnapshots(val) { klineSnapshots = val || {}; },
   get screenerReviewSummary() { return screenerReviewSummary; },
-  set screenerReviewSummary(val) { screenerReviewSummary = Array.isArray(val) ? val : []; }
+  set screenerReviewSummary(val) { screenerReviewSummary = Array.isArray(val) ? val : []; },
+  get marketSentiment() { return marketSentiment; },
+  set marketSentiment(val) { marketSentiment = val || null; }
 };
 
 window.State = State;

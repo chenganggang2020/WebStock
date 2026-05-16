@@ -66,6 +66,7 @@ async function dashboardLoad() {
     window.Portfolio ? window.Portfolio.loadPortfolio().catch(function() {}) : Promise.resolve(),
     window.News ? window.News.loadDashboardNews().catch(function() {}) : Promise.resolve(),
     window.SectorLeaders ? window.SectorLeaders.loadDashboardSummary().catch(function() {}) : Promise.resolve(),
+    dashboardLoadSentiment().catch(function(error) { console.warn(error.message); }),
     dashboardLoadScreenerReviewSummary().catch(function() {})
   ]);
   dashboardSetUpdatedAt();
@@ -91,6 +92,7 @@ function dashboardSetRefreshStatus(message, isError) {
 }
 
 function dashboardRefreshCards() {
+  dashboardRenderSentiment();
   dashboardRenderWatchlist();
   dashboardRenderPortfolio();
   dashboardRenderScreenerReview();
@@ -100,6 +102,69 @@ function dashboardRefreshCards() {
 
 async function dashboardLoadScreenerReviewSummary() {
   window.State.screenerReviewSummary = await window.apiFetch('/api/screener/review-summary?limit=5');
+}
+
+async function dashboardLoadSentiment() {
+  window.State.marketSentiment = await window.apiFetch('/api/sentiment/overview');
+}
+
+function dashboardSentimentClass(score) {
+  const n = Number(score);
+  if (!Number.isFinite(n)) return '';
+  if (n < 45) return 'fear';
+  if (n <= 55) return 'neutral';
+  if (n <= 75) return 'greed';
+  return 'hot';
+}
+
+function dashboardRenderSentiment() {
+  const box = document.getElementById('dashboardSentimentPanel');
+  if (!box) return;
+  const data = window.State.marketSentiment;
+  if (!data) {
+    box.innerHTML = '<div class="empty-state compact">正在加载市场情绪...</div>';
+    return;
+  }
+  const aShare = data.aShare || {};
+  const vix = data.vix || {};
+  const components = (aShare.components || []).map(function(item) {
+    return '<div class="sentiment-component"><span>' + item.name + '</span><strong>' + item.score + '</strong><em>' + item.value + '</em></div>';
+  }).join('');
+  const sourceStatus = aShare.sourceStatus || '';
+  const providerNote = sourceStatus === 'sina'
+    ? '<div class="provider-status">东方财富连接受限，已切换为新浪财经跨页抽样估算。</div>'
+    : (sourceStatus === 'fallback' ? '<div class="provider-status">外部行情暂不可用，当前为内置样本兜底。</div>' : '');
+  box.innerHTML = '<div class="sentiment-layout">' +
+    '<div class="sentiment-score ' + dashboardSentimentClass(aShare.score) + '">' +
+      '<strong>' + dashboardMiniFmt(aShare.score, 0) + '</strong>' +
+      '<span>' + (aShare.label || '--') + '</span>' +
+      '<em>A股情绪分</em>' +
+    '</div>' +
+    '<div class="sentiment-details">' +
+      '<div class="sentiment-row"><span>上涨家数占比</span><strong>' + dashboardMiniFmt(aShare.breadthPct) + '%</strong><em>' + (aShare.advancing || 0) + '/' + (aShare.total || 0) + '</em></div>' +
+      '<div class="sentiment-row"><span>平均涨跌幅</span><strong class="' + dashboardMiniChangeClass(aShare.avgChangePct) + '">' + dashboardMiniFmt(aShare.avgChangePct) + '%</strong><em>强 ' + (aShare.strongCount || 0) + ' / 弱 ' + (aShare.weakCount || 0) + '</em></div>' +
+      '<div class="sentiment-row"><span>VIX 美股恐慌指数</span><strong>' + dashboardMiniFmt(vix.value) + '</strong><em>' + (vix.label || '--') + ' / ' + (vix.date || '--') + '</em></div>' +
+      '<div class="sentiment-components">' + components + '</div>' +
+    '</div>' +
+    '<div class="sentiment-note">' +
+      '<p><strong>怎么算：</strong>A股情绪分用上涨占比、平均涨跌幅、强弱股差和大跌尾部风险合成。VIX 是标普 500 期权隐含的未来 30 天预期波动率。</p>' +
+      '<p><strong>Fear & Greed：</strong>常见版本会综合动量、股价强度、市场宽度、期权、波动率、避险需求和垃圾债需求七类指标。</p>' +
+      '<button class="small-btn" id="refreshSentimentBtn">刷新情绪</button>' +
+    '</div>' +
+    '</div>' + providerNote;
+  const refresh = document.getElementById('refreshSentimentBtn');
+  if (refresh) refresh.onclick = async function() {
+    refresh.disabled = true;
+    refresh.textContent = '刷新中...';
+    try {
+      window.State.marketSentiment = await window.apiFetch('/api/sentiment/overview?refresh=1');
+      dashboardRenderSentiment();
+    } catch (error) {
+      alert(error.message || '情绪指标刷新失败');
+      refresh.disabled = false;
+      refresh.textContent = '刷新情绪';
+    }
+  };
 }
 
 function dashboardRenderWatchlist() {
@@ -330,6 +395,7 @@ window.Dashboard = {
   load: dashboardLoad,
   refreshCards: dashboardRefreshCards,
   renderWatchlist: dashboardRenderWatchlist,
+  renderSentiment: dashboardRenderSentiment,
   renderPortfolio: dashboardRenderPortfolio,
   renderScreenerReview: dashboardRenderScreenerReview,
   renderRisks: dashboardRenderRisks,
