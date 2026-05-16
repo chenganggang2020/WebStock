@@ -57,6 +57,7 @@ function isChatGptHandoffUrl(url) {
 }
 
 function createChildWindow(title, webPreferences) {
+  const appIcon = path.join(__dirname, '..', 'icons', process.platform === 'win32' ? 'webstock.ico' : 'webstock-512.png');
   const child = new BrowserWindow({
     width: 1180,
     height: 820,
@@ -64,7 +65,7 @@ function createChildWindow(title, webPreferences) {
     minHeight: 620,
     title: title || 'WebStock',
     parent: mainWindow || undefined,
-    icon: path.join(__dirname, '..', 'icons', 'webstock-512.png'),
+    icon: appIcon,
     backgroundColor: '#ffffff',
     webPreferences: Object.assign({
       contextIsolation: true,
@@ -93,13 +94,14 @@ function openInternalWindow(url) {
 }
 
 function createWindow(url) {
+  const appIcon = path.join(__dirname, '..', 'icons', process.platform === 'win32' ? 'webstock.ico' : 'webstock-512.png');
   mainWindow = new BrowserWindow({
     width: 1420,
     height: 900,
     minWidth: 1100,
     minHeight: 720,
     title: 'WebStock',
-    icon: path.join(__dirname, '..', 'icons', 'webstock-512.png'),
+    icon: appIcon,
     backgroundColor: '#ffffff',
     webPreferences: {
       contextIsolation: true,
