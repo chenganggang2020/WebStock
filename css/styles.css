@@ -1508,7 +1508,7 @@ body.dark .md-body blockquote { background: rgba(99,102,241,0.12); }
 
 .sentiment-layout {
   display: grid;
-  grid-template-columns: 150px minmax(260px, 1fr) minmax(260px, 1fr);
+  grid-template-columns: 150px minmax(260px, 1fr);
   gap: 14px;
   align-items: stretch;
 }
@@ -1542,7 +1542,7 @@ body.dark .md-body blockquote { background: rgba(99,102,241,0.12); }
 }
 
 .sentiment-score.fear {
-  background: linear-gradient(145deg, #047857, #0f766e);
+  background: linear-gradient(145deg, #047857, #065f46);
 }
 
 .sentiment-score.neutral {
@@ -1612,6 +1612,14 @@ body.dark .md-body blockquote { background: rgba(99,102,241,0.12); }
   margin: 0;
 }
 
+#dashboardSentimentPanel {
+  transition: opacity 0.18s ease;
+}
+
+#dashboardSentimentPanel.loading-soft {
+  opacity: 0.65;
+}
+
 .empty-state.compact {
   padding: 18px 6px;
   font-size: 13px;
@@ -1640,13 +1648,16 @@ body.dark .md-body blockquote { background: rgba(99,102,241,0.12); }
 }
 
 .risk-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
   border-left: 3px solid #94a3b8;
-  padding: 8px 0 8px 10px;
+  padding: 9px 10px;
   border-bottom: 1px solid var(--border);
+  cursor: default;
+  user-select: none;
+}
+
+.risk-item:hover,
+.risk-item.selected {
+  background: rgba(37, 99, 235, 0.08);
 }
 
 .risk-item.high {
@@ -1670,6 +1681,14 @@ body.dark .md-body blockquote { background: rgba(99,102,241,0.12); }
   margin: 4px 0 0;
   color: #64748b;
   font-size: 12px;
+}
+
+.risk-item em {
+  display: block;
+  margin-top: 4px;
+  color: #94a3b8;
+  font-size: 11px;
+  font-style: normal;
 }
 
 .risk-actions {

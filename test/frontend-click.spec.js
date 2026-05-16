@@ -505,15 +505,18 @@ test('main stock actions and workspace navigation do not throw', async ({ page }
     window.State.positions = [{ code: '000002', name: 'Risk Position', unrealizedPnlRate: -12, todayChange: -4 }];
     window.Dashboard.renderRisks();
   });
-  await expect(page.locator('#dashboardRiskList')).toContainText('alert low reached');
-  await expect(page.locator('#dashboardRiskList')).toContainText('position drawdown');
+  await expect(page.locator('#dashboardRiskList')).toContainText('触及低价提醒');
+  await expect(page.locator('#dashboardRiskList')).toContainText('持仓回撤');
   const riskCount = await page.locator('#dashboardRiskList .risk-item').count();
-  await page.locator('#dashboardRiskList [data-risk-key]').first().click();
+  await page.locator('#dashboardRiskList .risk-item').first().click({ button: 'right' });
+  await page.click('#stockContextMenu [data-dashboard-risk-action="dismiss"]');
   await expect.poll(() => page.locator('#dashboardRiskList .risk-item').count()).toBeLessThan(riskCount);
-  await expect(page.locator('#dashboardRiskList')).toContainText('dismissed today');
-  await page.click('#dashboardRiskList [data-risk-toggle]');
+  await expect(page.locator('#dashboardRiskList')).toContainText('今日已忽略');
+  await page.locator('#dashboardRiskList').click({ button: 'right' });
+  await page.click('#stockContextMenu [data-dashboard-risk-action="toggle-dismissed"]');
   await expect(page.locator('#dashboardRiskList .risk-item.dismissed')).toHaveCount(1);
-  await page.click('#dashboardRiskList [data-risk-restore]');
+  await page.locator('#dashboardRiskList .risk-item.dismissed').click({ button: 'right' });
+  await page.click('#stockContextMenu [data-dashboard-risk-action="restore"]');
   await expect.poll(() => page.locator('#dashboardRiskList .risk-item').count()).toBe(riskCount);
 
   await page.click('[data-main-view="stats"]');

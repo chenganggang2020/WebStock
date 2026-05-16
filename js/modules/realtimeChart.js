@@ -526,15 +526,17 @@ function renderVolumeChart(minuteData) {
 
   const isDark = document.body.classList.contains('dark');
   const upColor = isDark ? '#ff6b6b' : '#e74c3c';
-  const downColor = isDark ? '#51cf66' : '#2c3e50';
+  const downColor = isDark ? '#51cf66' : '#2ecc71';
   const textColor = isDark ? '#cbd5e1' : '#2c3e50';
   const bgColor = isDark ? '#1e293b' : '#ffffff';
   const gridColor = isDark ? '#4a5568' : '#e0e0e0';
 
   const times = [];
   const volumes = [];
+  const volumeColors = [];
 
   const currentMinutes = realtimeCutoffMinutes(minuteData);
+  let lastPrice = parseFloat(State.currentQuote.prevClose) || parseFloat(State.currentQuote.open) || parseFloat(State.currentQuote.price) || 0;
 
   const dataMap = {};
   if (Array.isArray(minuteData) && minuteData.length > 0) {
@@ -560,6 +562,7 @@ function renderVolumeChart(minuteData) {
     if (itemMinutes > currentMinutes + 5) {
       times.push(timeStr);
       volumes.push(null);
+      volumeColors.push('rgba(148, 163, 184, 0.25)');
       return;
     }
 
@@ -567,7 +570,14 @@ function renderVolumeChart(minuteData) {
 
     const dataItem = dataMap[timeStr];
     const volume = dataItem ? (parseFloat(dataItem.volume) || 0) : 0;
+    const price = dataItem ? (parseFloat(dataItem.price) || 0) : 0;
     volumes.push(volume);
+    if (!dataItem || volume <= 0) {
+      volumeColors.push('rgba(148, 163, 184, 0.45)');
+    } else {
+      volumeColors.push(price >= lastPrice ? upColor : downColor);
+      if (price > 0) lastPrice = price;
+    }
   });
 
   if (volumes.filter(function(v) { return v !== null && v > 0; }).length === 0) {
@@ -596,7 +606,9 @@ function renderVolumeChart(minuteData) {
       {
         name: '成交量(万手)',
         type: 'bar',
-        data: volumes.map(function(v, i) { return { value: v / 10000, itemStyle: { color: i % 2 === 0 ? upColor : downColor, opacity: 0.6 } }; }),
+        data: volumes.map(function(v, i) {
+          return { value: v === null ? null : v / 10000, itemStyle: { color: volumeColors[i], opacity: 0.78 } };
+        }),
         barWidth: '60%'
       }
     ],
@@ -609,7 +621,7 @@ function renderVolumeChart(minuteData) {
         if (!params || params.length === 0) return '';
         const idx = params[0].dataIndex;
         return '<strong>' + times[idx] + '</strong><br/>' +
-          '成交量: ' + (volumes[idx] / 10000).toFixed(2) + '万手';
+          '成交量: ' + (volumes[idx] == null ? '--' : (volumes[idx] / 10000).toFixed(2) + '万手');
       }
     }
   };

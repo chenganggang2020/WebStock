@@ -9,6 +9,27 @@ function dashboardMiniFmt(value, digits) {
   return Number.isFinite(n) ? n.toFixed(digits === undefined ? 2 : digits) : '--';
 }
 
+function dashboardEscapeHtml(value) {
+  return String(value == null ? '' : value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function dashboardScoreClass(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return '';
+  return n >= 50 ? 'pnl-up' : 'pnl-down';
+}
+
+function dashboardBreadthClass(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return '';
+  return n >= 50 ? 'pnl-up' : 'pnl-down';
+}
+
 function dashboardWatchlistAlertLabel(item) {
   const price = Number(item.price);
   const high = Number(item.alertHigh);
@@ -21,7 +42,10 @@ function dashboardWatchlistAlertLabel(item) {
 }
 
 const DASHBOARD_DISMISSED_RISKS_KEY = 'webstock_dismissed_risks';
+const DASHBOARD_SENTIMENT_REFRESH_MS = 5 * 60 * 1000;
 let dashboardShowDismissedRisks = false;
+let dashboardSentimentTimer = null;
+let dashboardSelectedRiskKey = '';
 
 function dashboardTodayKey() {
   if (window.WebStockTime && window.WebStockTime.todayDate) return window.WebStockTime.todayDate();
@@ -71,6 +95,7 @@ async function dashboardLoad() {
   ]);
   dashboardSetUpdatedAt();
   dashboardRefreshCards();
+  dashboardStartSentimentAutoRefresh();
 }
 
 function dashboardSetUpdatedAt() {
@@ -108,6 +133,57 @@ async function dashboardLoadSentiment() {
   window.State.marketSentiment = await window.apiFetch('/api/sentiment/overview');
 }
 
+async function dashboardRefreshSentiment(options) {
+  const box = document.getElementById('dashboardSentimentPanel');
+  if (box && !(options && options.silent)) {
+    box.classList.add('loading-soft');
+  }
+  try {
+    window.State.marketSentiment = await window.apiFetch('/api/sentiment/overview?refresh=1');
+    dashboardRenderSentiment();
+  } catch (error) {
+    if (!(options && options.silent)) alert(error.message || '情绪指标刷新失败');
+  } finally {
+    if (box) box.classList.remove('loading-soft');
+  }
+}
+
+function dashboardStartSentimentAutoRefresh() {
+  if (dashboardSentimentTimer) return;
+  dashboardSentimentTimer = setInterval(function() {
+    dashboardRefreshSentiment({ silent: true }).catch(function(error) {
+      console.warn(error.message || error);
+    });
+  }, DASHBOARD_SENTIMENT_REFRESH_MS);
+}
+
+function dashboardHideContextMenu() {
+  const menu = document.getElementById('stockContextMenu');
+  if (menu) menu.style.display = 'none';
+}
+
+function dashboardShowSentimentContextMenu(event) {
+  const menu = document.getElementById('stockContextMenu');
+  if (!menu) return;
+  event.preventDefault();
+  menu.setAttribute('data-owner', 'dashboard-sentiment');
+  menu.innerHTML = '<button data-dashboard-action="refresh-sentiment">刷新情绪指数</button>';
+  menu.style.left = Math.min(event.clientX, window.innerWidth - 190) + 'px';
+  menu.style.top = Math.min(event.clientY, window.innerHeight - 80) + 'px';
+  menu.style.display = 'block';
+  setTimeout(function() {
+    document.addEventListener('click', dashboardHideContextMenu, { once: true });
+  }, 0);
+  menu.onclick = function(clickEvent) {
+    const btn = clickEvent.target.closest('[data-dashboard-action]');
+    if (!btn) return;
+    dashboardHideContextMenu();
+    if (btn.getAttribute('data-dashboard-action') === 'refresh-sentiment') {
+      dashboardRefreshSentiment().catch(function(error) { alert(error.message || '情绪指标刷新失败'); });
+    }
+  };
+}
+
 function dashboardSentimentClass(score) {
   const n = Number(score);
   if (!Number.isFinite(n)) return '';
@@ -128,43 +204,27 @@ function dashboardRenderSentiment() {
   const aShare = data.aShare || {};
   const vix = data.vix || {};
   const components = (aShare.components || []).map(function(item) {
-    return '<div class="sentiment-component"><span>' + item.name + '</span><strong>' + item.score + '</strong><em>' + item.value + '</em></div>';
+    const valueClass = /-/.test(String(item.value || '')) ? 'pnl-down' : dashboardScoreClass(item.score);
+    return '<div class="sentiment-component"><span>' + dashboardEscapeHtml(item.name) + '</span><strong class="' + dashboardScoreClass(item.score) + '">' + dashboardEscapeHtml(item.score) + '</strong><em class="' + valueClass + '">' + dashboardEscapeHtml(item.value) + '</em></div>';
   }).join('');
   const sourceStatus = aShare.sourceStatus || '';
   const providerNote = sourceStatus === 'sina'
-    ? '<div class="provider-status">东方财富连接受限，已切换为新浪财经跨页抽样估算。</div>'
-    : (sourceStatus === 'fallback' ? '<div class="provider-status">外部行情暂不可用，当前为内置样本兜底。</div>' : '');
+    ? '<div class="provider-status">东方财富连接受限，已切换为新浪财经跨页抽样估算。情绪指数每 5 分钟自动刷新，可右键手动刷新。</div>'
+    : (sourceStatus === 'fallback' ? '<div class="provider-status">外部行情暂不可用，当前为内置样本兜底。情绪指数每 5 分钟自动刷新，可右键手动刷新。</div>' : '<div class="provider-status">情绪指数每 5 分钟自动刷新，可右键手动刷新。</div>');
   box.innerHTML = '<div class="sentiment-layout">' +
     '<div class="sentiment-score ' + dashboardSentimentClass(aShare.score) + '">' +
       '<strong>' + dashboardMiniFmt(aShare.score, 0) + '</strong>' +
-      '<span>' + (aShare.label || '--') + '</span>' +
+      '<span>' + dashboardEscapeHtml(aShare.label || '--') + '</span>' +
       '<em>A股情绪分</em>' +
     '</div>' +
     '<div class="sentiment-details">' +
-      '<div class="sentiment-row"><span>上涨家数占比</span><strong>' + dashboardMiniFmt(aShare.breadthPct) + '%</strong><em>' + (aShare.advancing || 0) + '/' + (aShare.total || 0) + '</em></div>' +
-      '<div class="sentiment-row"><span>平均涨跌幅</span><strong class="' + dashboardMiniChangeClass(aShare.avgChangePct) + '">' + dashboardMiniFmt(aShare.avgChangePct) + '%</strong><em>强 ' + (aShare.strongCount || 0) + ' / 弱 ' + (aShare.weakCount || 0) + '</em></div>' +
-      '<div class="sentiment-row"><span>VIX 美股恐慌指数</span><strong>' + dashboardMiniFmt(vix.value) + '</strong><em>' + (vix.label || '--') + ' / ' + (vix.date || '--') + '</em></div>' +
+      '<div class="sentiment-row"><span>上涨家数占比</span><strong class="' + dashboardBreadthClass(aShare.breadthPct) + '">' + dashboardMiniFmt(aShare.breadthPct) + '%</strong><em><span class="pnl-up">' + (aShare.advancing || 0) + '</span> / <span class="pnl-down">' + (aShare.declining || 0) + '</span> / ' + (aShare.total || 0) + '</em></div>' +
+      '<div class="sentiment-row"><span>平均涨跌幅</span><strong class="' + dashboardMiniChangeClass(aShare.avgChangePct) + '">' + dashboardMiniFmt(aShare.avgChangePct) + '%</strong><em><span class="pnl-up">强 ' + (aShare.strongCount || 0) + '</span> / <span class="pnl-down">弱 ' + (aShare.weakCount || 0) + '</span></em></div>' +
+      '<div class="sentiment-row"><span>VIX 美股恐慌指数</span><strong>' + dashboardMiniFmt(vix.value) + '</strong><em>' + dashboardEscapeHtml(vix.label || '--') + ' / ' + dashboardEscapeHtml(vix.date || '--') + '</em></div>' +
       '<div class="sentiment-components">' + components + '</div>' +
     '</div>' +
-    '<div class="sentiment-note">' +
-      '<p><strong>怎么算：</strong>A股情绪分用上涨占比、平均涨跌幅、强弱股差和大跌尾部风险合成。VIX 是标普 500 期权隐含的未来 30 天预期波动率。</p>' +
-      '<p><strong>Fear & Greed：</strong>常见版本会综合动量、股价强度、市场宽度、期权、波动率、避险需求和垃圾债需求七类指标。</p>' +
-      '<button class="small-btn" id="refreshSentimentBtn">刷新情绪</button>' +
-    '</div>' +
     '</div>' + providerNote;
-  const refresh = document.getElementById('refreshSentimentBtn');
-  if (refresh) refresh.onclick = async function() {
-    refresh.disabled = true;
-    refresh.textContent = '刷新中...';
-    try {
-      window.State.marketSentiment = await window.apiFetch('/api/sentiment/overview?refresh=1');
-      dashboardRenderSentiment();
-    } catch (error) {
-      alert(error.message || '情绪指标刷新失败');
-      refresh.disabled = false;
-      refresh.textContent = '刷新情绪';
-    }
-  };
+  box.oncontextmenu = dashboardShowSentimentContextMenu;
 }
 
 function dashboardRenderWatchlist() {
@@ -251,8 +311,8 @@ function dashboardCollectRisks() {
         key: 'position-drawdown:' + pos.code,
         severity: pnlRate <= drawdownLimit * 1.8 ? 'high' : 'medium',
         code: pos.code,
-        title: pos.code + ' position drawdown',
-        detail: 'Unrealized P/L rate is ' + dashboardMiniFmt(pnlRate) + '%. Review size, thesis, and exit criteria.'
+        title: pos.code + ' 持仓回撤',
+        detail: '浮动盈亏率 ' + dashboardMiniFmt(pnlRate) + '%，请复核仓位、买入逻辑和止损/退出条件。'
       });
     }
     if (Number.isFinite(todayChange) && todayChange <= dailyDropLimit) {
@@ -260,8 +320,8 @@ function dashboardCollectRisks() {
         key: 'daily-drop:' + pos.code,
         severity: todayChange <= dailyDropLimit * 1.6 ? 'high' : 'medium',
         code: pos.code,
-        title: pos.code + ' weak today',
-        detail: 'Today change is ' + dashboardMiniFmt(todayChange) + '%. Check whether the move is stock-specific or sector-wide.'
+        title: pos.code + ' 今日走弱',
+        detail: '今日涨跌幅 ' + dashboardMiniFmt(todayChange) + '%，请区分是个股问题还是板块共振。'
       });
     }
   });
@@ -275,8 +335,8 @@ function dashboardCollectRisks() {
         key: 'watchlist-high:' + item.code,
         severity: 'medium',
         code: item.code,
-        title: item.code + ' alert high reached',
-        detail: 'Current price ' + dashboardMiniFmt(price) + ' is above alert high ' + dashboardMiniFmt(high) + '.'
+        title: item.code + ' 触及高价提醒',
+        detail: '当前价 ' + dashboardMiniFmt(price) + ' 已高于提醒价 ' + dashboardMiniFmt(high) + '。'
       });
     }
     if (Number.isFinite(price) && Number.isFinite(low) && low > 0 && price <= low) {
@@ -284,8 +344,8 @@ function dashboardCollectRisks() {
         key: 'watchlist-low:' + item.code,
         severity: 'high',
         code: item.code,
-        title: item.code + ' alert low reached',
-        detail: 'Current price ' + dashboardMiniFmt(price) + ' is below alert low ' + dashboardMiniFmt(low) + '.'
+        title: item.code + ' 触及低价提醒',
+        detail: '当前价 ' + dashboardMiniFmt(price) + ' 已低于提醒价 ' + dashboardMiniFmt(low) + '。'
       });
     }
     if (item.quoteStatus === 'stale') {
@@ -293,8 +353,8 @@ function dashboardCollectRisks() {
         key: 'quote-stale:' + item.code,
         severity: 'low',
         code: item.code,
-        title: item.code + ' quote retained',
-        detail: 'Latest refresh failed for this watchlist item. Existing quote data is retained.'
+        title: item.code + ' 行情保留',
+        detail: '该自选股最新刷新失败，当前仍显示上一次保留行情。'
       });
     }
   });
@@ -307,8 +367,8 @@ function dashboardCollectRisks() {
         key: 'leader-drop:' + item.code + ':' + (item.sectorName || ''),
         severity: change <= leaderDropLimit * 1.6 ? 'high' : 'medium',
         code: item.code,
-        title: (item.sectorName || 'Sector') + ' leader weakening',
-        detail: item.code + ' ' + item.name + ' is down ' + dashboardMiniFmt(change) + '%. Compare with other leaders before acting.'
+        title: (item.sectorName || '板块') + ' 龙头走弱',
+        detail: item.code + ' ' + item.name + ' 下跌 ' + dashboardMiniFmt(change) + '%，操作前请对比同板块其他龙头强弱。'
       });
     }
   });
@@ -331,6 +391,72 @@ function dashboardBuildRisks(options) {
   });
 }
 
+function dashboardStockForCode(code) {
+  return window.State.allStocks.find(item => item.code === code) ||
+    (window.State.watchlist || []).find(item => item.code === code) ||
+    (window.State.positions || []).find(item => item.code === code) ||
+    { code, name: code };
+}
+
+async function dashboardOpenStock(code) {
+  if (!code || !window.StockList) return;
+  const stock = dashboardStockForCode(code);
+  window.switchMainView('market');
+  await window.StockList.selectStock(stock);
+}
+
+function dashboardShowRiskContextMenu(event, risk) {
+  const menu = document.getElementById('stockContextMenu');
+  if (!menu) return;
+  event.preventDefault();
+  const hasCode = risk && risk.code;
+  const dismissed = risk && risk.dismissed;
+  menu.setAttribute('data-owner', 'dashboard-risk');
+  menu.innerHTML =
+    (hasCode ? '<button data-dashboard-risk-action="view">打开行情</button>' : '') +
+    (hasCode ? '<button data-dashboard-risk-action="analysis">AI 个股分析</button>' : '') +
+    (hasCode ? '<button data-dashboard-risk-action="news">查看资讯</button>' : '') +
+    (hasCode ? '<button data-dashboard-risk-action="trades">交易记录</button>' : '') +
+    (risk ? '<button data-dashboard-risk-action="' + (dismissed ? 'restore' : 'dismiss') + '">' + (dismissed ? '恢复提醒' : '今日忽略') + '</button>' : '') +
+    '<button data-dashboard-risk-action="toggle-dismissed">' + (dashboardShowDismissedRisks ? '隐藏已忽略提醒' : '显示已忽略提醒') + '</button>';
+  menu.style.left = Math.min(event.clientX, window.innerWidth - 190) + 'px';
+  menu.style.top = Math.min(event.clientY, window.innerHeight - 240) + 'px';
+  menu.style.display = 'block';
+  setTimeout(function() {
+    document.addEventListener('click', dashboardHideContextMenu, { once: true });
+  }, 0);
+  menu.onclick = async function(clickEvent) {
+    const btn = clickEvent.target.closest('[data-dashboard-risk-action]');
+    if (!btn) return;
+    const action = btn.getAttribute('data-dashboard-risk-action');
+    dashboardHideContextMenu();
+    try {
+      if (action === 'view' && hasCode) await dashboardOpenStock(risk.code);
+      else if (action === 'analysis' && hasCode && window.StockList) {
+        const stock = dashboardStockForCode(risk.code);
+        window.switchMainView('market');
+        await window.StockList.selectStock(stock);
+        if (window.Analysis) window.Analysis.openAnalysisPanel(stock);
+      } else if (action === 'news' && hasCode && window.StockList) {
+        await window.StockList.runRowAction('news', dashboardStockForCode(risk.code));
+      } else if (action === 'trades' && hasCode && window.Portfolio) {
+        window.Portfolio.viewTrades(risk.code);
+      } else if (action === 'dismiss' && risk) {
+        dashboardDismissRisk(risk.key);
+        dashboardRenderRisks();
+      } else if (action === 'restore' && risk) {
+        dashboardRestoreRisk(risk.key);
+        dashboardRenderRisks();
+      } else if (action === 'toggle-dismissed') {
+        dashboardShowDismissedRisks = !dashboardShowDismissedRisks;
+        dashboardRenderRisks();
+      }
+    } catch (error) {
+      alert(error.message || '操作失败');
+    }
+  };
+}
+
 function dashboardRenderRisks() {
   const box = document.getElementById('dashboardRiskList');
   if (!box) return;
@@ -338,55 +464,43 @@ function dashboardRenderRisks() {
   const activeRisks = allRisks.filter(function(item) { return !item.dismissed; });
   const dismissedRisks = allRisks.filter(function(item) { return item.dismissed; });
   const toolbar = dismissedRisks.length
-    ? '<div class="risk-toolbar"><span>' + dismissedRisks.length + ' dismissed today</span><button class="small-btn" data-risk-toggle="dismissed">' + (dashboardShowDismissedRisks ? 'Hide dismissed' : 'Show dismissed today') + '</button></div>'
+    ? '<div class="risk-toolbar"><span>今日已忽略 ' + dismissedRisks.length + ' 条，右键可' + (dashboardShowDismissedRisks ? '隐藏' : '显示') + '</span></div>'
     : '';
   box.onclick = function(event) {
-    const toggle = event.target.closest('[data-risk-toggle]');
-    if (toggle) {
-      dashboardShowDismissedRisks = !dashboardShowDismissedRisks;
-      dashboardRenderRisks();
+    const item = event.target.closest('.risk-item[data-risk-key]');
+    if (!item) return;
+    dashboardSelectedRiskKey = decodeURIComponent(item.getAttribute('data-risk-key'));
+    box.querySelectorAll('.risk-item.selected').forEach(function(row) { row.classList.remove('selected'); });
+    item.classList.add('selected');
+  };
+  box.ondblclick = function(event) {
+    const item = event.target.closest('.risk-item[data-code]');
+    if (!item) return;
+    dashboardOpenStock(item.getAttribute('data-code')).catch(function(error) { alert(error.message || '打开行情失败'); });
+  };
+  box.oncontextmenu = function(event) {
+    const item = event.target.closest('.risk-item[data-risk-key]');
+    if (!item) {
+      dashboardShowRiskContextMenu(event, null);
       return;
     }
-    const restore = event.target.closest('[data-risk-restore]');
-    if (restore) {
-      dashboardRestoreRisk(decodeURIComponent(restore.getAttribute('data-risk-restore')));
-      dashboardRenderRisks();
-      return;
-    }
-    const dismiss = event.target.closest('[data-risk-key]');
-    if (dismiss) {
-      dashboardDismissRisk(decodeURIComponent(dismiss.getAttribute('data-risk-key')));
-      dashboardRenderRisks();
-      return;
-    }
-    const btn = event.target.closest('[data-code]');
-    if (!btn) return;
-    const code = btn.getAttribute('data-code');
-    const stock = window.State.allStocks.find(item => item.code === code) ||
-      (window.State.watchlist || []).find(item => item.code === code) ||
-      (window.State.positions || []).find(item => item.code === code) ||
-      { code, name: code };
-    window.switchMainView('market');
-    window.StockList.selectStock(stock);
+    const key = decodeURIComponent(item.getAttribute('data-risk-key'));
+    const risk = allRisks.find(function(row) { return row.key === key; });
+    dashboardSelectedRiskKey = key;
+    dashboardShowRiskContextMenu(event, risk);
   };
   if (!activeRisks.length && !dismissedRisks.length) {
-    box.innerHTML = '<div class="empty-state compact">No obvious risk alerts right now.</div>';
+    box.innerHTML = '<div class="empty-state compact">当前没有明显风险提醒。</div>';
     return;
   }
   if (!activeRisks.length && dismissedRisks.length && !dashboardShowDismissedRisks) {
-    box.innerHTML = toolbar + '<div class="empty-state compact">No active risk alerts. Dismissed items can still be reviewed today.</div>';
+    box.innerHTML = toolbar + '<div class="empty-state compact">当前没有未处理风险提醒，右键可查看今日已忽略项目。</div>';
     return;
   }
   const visibleRisks = dashboardShowDismissedRisks ? activeRisks.concat(dismissedRisks) : activeRisks;
   box.innerHTML = toolbar + '<ul class="risk-list detailed">' + visibleRisks.slice(0, 10).map(function(item) {
-    return '<li class="risk-item ' + item.severity + (item.dismissed ? ' dismissed' : '') + '">' +
-      '<div><strong>' + item.title + '</strong><p>' + item.detail + '</p></div>' +
-      '<div class="risk-actions">' +
-      (item.code ? '<button class="small-btn" data-code="' + item.code + '">View</button>' : '') +
-      (item.dismissed
-        ? '<button class="small-btn" data-risk-restore="' + encodeURIComponent(item.key) + '">Restore</button>'
-        : '<button class="small-btn" data-risk-key="' + encodeURIComponent(item.key) + '">Dismiss today</button>') +
-      '</div>' +
+    return '<li class="risk-item ' + item.severity + (item.dismissed ? ' dismissed' : '') + (dashboardSelectedRiskKey === item.key ? ' selected' : '') + '" data-risk-key="' + encodeURIComponent(item.key) + '"' + (item.code ? ' data-code="' + dashboardEscapeHtml(item.code) + '"' : '') + ' tabindex="0" title="双击打开行情，右键操作">' +
+      '<div><strong>' + dashboardEscapeHtml(item.title) + '</strong><p>' + dashboardEscapeHtml(item.detail) + '</p><em>双击查看 · 右键操作</em></div>' +
       '</li>';
   }).join('') + '</ul>';
 }
