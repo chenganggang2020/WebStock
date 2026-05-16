@@ -3,7 +3,6 @@ const path = require('path');
 const { execFileSync } = require('child_process');
 
 const root = path.resolve(__dirname, '..');
-const sourcePngPath = path.join(root, 'WebStock.png');
 const iconsDir = path.join(root, 'icons');
 const png192Path = path.join(iconsDir, 'webstock-192.png');
 const png512Path = path.join(iconsDir, 'webstock-512.png');
@@ -14,26 +13,57 @@ function psString(value) {
   return "'" + String(value).replace(/'/g, "''") + "'";
 }
 
-function renderSquarePng(size, outputPath) {
+function renderIconPng(size, outputPath) {
   const script = [
     'Add-Type -AssemblyName System.Drawing',
-    '$source = [System.Drawing.Image]::FromFile(' + psString(sourcePngPath) + ')',
-    '$canvas = New-Object System.Drawing.Bitmap ' + size + ', ' + size,
-    '$graphics = [System.Drawing.Graphics]::FromImage($canvas)',
-    '$graphics.SmoothingMode = [System.Drawing.Drawing2D.SmoothingMode]::HighQuality',
-    '$graphics.InterpolationMode = [System.Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic',
-    '$graphics.PixelOffsetMode = [System.Drawing.Drawing2D.PixelOffsetMode]::HighQuality',
-    '$graphics.Clear([System.Drawing.Color]::White)',
-    '$scale = [Math]::Min(' + size + ' / $source.Width, ' + size + ' / $source.Height)',
-    '$w = [int][Math]::Round($source.Width * $scale)',
-    '$h = [int][Math]::Round($source.Height * $scale)',
-    '$x = [int]((' + size + ' - $w) / 2)',
-    '$y = [int]((' + size + ' - $h) / 2)',
-    '$graphics.DrawImage($source, $x, $y, $w, $h)',
-    '$canvas.Save(' + psString(outputPath) + ', [System.Drawing.Imaging.ImageFormat]::Png)',
-    '$graphics.Dispose()',
-    '$canvas.Dispose()',
-    '$source.Dispose()'
+    'Add-Type -AssemblyName System.Drawing',
+    '$size = ' + size,
+    '$out = ' + psString(outputPath),
+    '$bmp = New-Object System.Drawing.Bitmap $size, $size',
+    '$g = [System.Drawing.Graphics]::FromImage($bmp)',
+    '$g.SmoothingMode = [System.Drawing.Drawing2D.SmoothingMode]::HighQuality',
+    '$g.InterpolationMode = [System.Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic',
+    '$g.PixelOffsetMode = [System.Drawing.Drawing2D.PixelOffsetMode]::HighQuality',
+    '$g.Clear([System.Drawing.Color]::Transparent)',
+    'function New-RoundRect($x,$y,$w,$h,$r){ $p = New-Object System.Drawing.Drawing2D.GraphicsPath; $d = $r * 2; $p.AddArc($x,$y,$d,$d,180,90); $p.AddArc($x+$w-$d,$y,$d,$d,270,90); $p.AddArc($x+$w-$d,$y+$h-$d,$d,$d,0,90); $p.AddArc($x,$y+$h-$d,$d,$d,90,90); $p.CloseFigure(); return $p }',
+    '$pad = [int]($size * 0.07)',
+    '$rect = New-RoundRect $pad $pad ($size - $pad * 2) ($size - $pad * 2) ([int]($size * 0.18))',
+    '$bg1 = [System.Drawing.Color]::FromArgb(255, 10, 15, 24)',
+    '$bg2 = [System.Drawing.Color]::FromArgb(255, 20, 30, 45)',
+    '$brush = New-Object System.Drawing.Drawing2D.LinearGradientBrush ([System.Drawing.RectangleF]::new($pad,$pad,$size-$pad*2,$size-$pad*2)), $bg2, $bg1, 45',
+    '$g.FillPath($brush, $rect)',
+    '$border = New-Object System.Drawing.Pen ([System.Drawing.Color]::FromArgb(255, 94, 234, 212)), ([Math]::Max(1.0, $size * 0.025))',
+    '$g.DrawPath($border, $rect)',
+    '$glow = New-Object System.Drawing.Pen ([System.Drawing.Color]::FromArgb(95, 45, 212, 191)), ([Math]::Max(2.0, $size * 0.055))',
+    '$line = New-Object System.Drawing.Pen ([System.Drawing.Color]::FromArgb(235, 232, 255, 250)), ([Math]::Max(1.4, $size * 0.028))',
+    '$line.StartCap = [System.Drawing.Drawing2D.LineCap]::Round',
+    '$line.EndCap = [System.Drawing.Drawing2D.LineCap]::Round',
+    '$line.LineJoin = [System.Drawing.Drawing2D.LineJoin]::Round',
+    '$cx = $size / 2.0',
+    '$cy = $size / 2.0',
+    '$loopW = $size * 0.18',
+    '$loopH = $size * 0.38',
+    '$loopX = -$loopW / 2.0',
+    '$loopY = -$loopH * 0.82',
+    'for($i=0; $i -lt 6; $i++){ $state = $g.Save(); $g.TranslateTransform($cx,$cy); $g.RotateTransform($i * 60); $g.DrawEllipse($glow, [float]$loopX, [float]$loopY, [float]$loopW, [float]$loopH); $g.DrawEllipse($line, [float]$loopX, [float]$loopY, [float]$loopW, [float]$loopH); $g.Restore($state) }',
+    '$dotBrush = New-Object System.Drawing.SolidBrush ([System.Drawing.Color]::FromArgb(255, 94, 234, 212))',
+    '$g.FillEllipse($dotBrush, [float]($cx-$size*0.042), [float]($cy-$size*0.042), [float]($size*0.084), [float]($size*0.084))',
+    '$chartPen = New-Object System.Drawing.Pen ([System.Drawing.Color]::FromArgb(255, 45, 212, 191)), ([Math]::Max(1.2, $size * 0.022))',
+    '$chartPen.StartCap = [System.Drawing.Drawing2D.LineCap]::Round',
+    '$chartPen.EndCap = [System.Drawing.Drawing2D.LineCap]::Round',
+    '$pts = @(' +
+      '([System.Drawing.PointF]::new($size*0.25,$size*0.69)),' +
+      '([System.Drawing.PointF]::new($size*0.36,$size*0.63)),' +
+      '([System.Drawing.PointF]::new($size*0.45,$size*0.66)),' +
+      '([System.Drawing.PointF]::new($size*0.56,$size*0.55)),' +
+      '([System.Drawing.PointF]::new($size*0.72,$size*0.49))' +
+    ')',
+    '$g.DrawLines($chartPen, $pts)',
+    '$arrowBrush = New-Object System.Drawing.SolidBrush ([System.Drawing.Color]::FromArgb(255, 45, 212, 191))',
+    '$arrow = @(([System.Drawing.PointF]::new($size*0.72,$size*0.49)),([System.Drawing.PointF]::new($size*0.66,$size*0.49)),([System.Drawing.PointF]::new($size*0.71,$size*0.55)))',
+    '$g.FillPolygon($arrowBrush, $arrow)',
+    '$bmp.Save($out, [System.Drawing.Imaging.ImageFormat]::Png)',
+    '$chartPen.Dispose(); $arrowBrush.Dispose(); $dotBrush.Dispose(); $glow.Dispose(); $line.Dispose(); $border.Dispose(); $brush.Dispose(); $rect.Dispose(); $g.Dispose(); $bmp.Dispose()'
   ].join('; ');
   execFileSync('powershell.exe', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', script], {
     stdio: 'inherit'
@@ -41,12 +71,12 @@ function renderSquarePng(size, outputPath) {
 }
 
 fs.mkdirSync(iconsDir, { recursive: true });
-renderSquarePng(192, png192Path);
-renderSquarePng(512, png512Path);
+renderIconPng(192, png192Path);
+renderIconPng(512, png512Path);
 
 const entries = sizes.map(size => {
   const tmpPath = path.join(iconsDir, 'webstock-' + size + '.tmp.png');
-  renderSquarePng(size, tmpPath);
+  renderIconPng(size, tmpPath);
   const data = fs.readFileSync(tmpPath);
   fs.unlinkSync(tmpPath);
   return { size, data };
