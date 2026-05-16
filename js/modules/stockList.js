@@ -460,5 +460,6 @@ window.StockList = {
   enrichStockTags,
   selectStock,
   runRowAction,
+  miniChart: stockMiniChart,
   showContextMenu: showStockContextMenu
 };

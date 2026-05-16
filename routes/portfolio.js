@@ -36,6 +36,12 @@ async function fetchQuotesSafe(codes) {
       const prevClose = parseFloat(fields[2]) || price;
       map[code] = {
         price,
+        open: parseFloat(fields[1]) || 0,
+        high: parseFloat(fields[4]) || 0,
+        low: parseFloat(fields[5]) || 0,
+        prevClose,
+        volume: parseFloat(fields[8]) || 0,
+        amount: parseFloat(fields[9]) || 0,
         change: prevClose ? Number(((price - prevClose) / prevClose * 100).toFixed(2)) : 0
       };
     });

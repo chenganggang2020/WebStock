@@ -30,6 +30,17 @@ function dashboardBreadthClass(value) {
   return n >= 50 ? 'pnl-up' : 'pnl-down';
 }
 
+function dashboardSignedPctHtml(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return '';
+  return '<span class="' + dashboardMiniChangeClass(n) + '">' + (n >= 0 ? '+' : '') + dashboardMiniFmt(n) + '%</span>';
+}
+
+function dashboardRiskMetricHtml(item) {
+  if (!item || !Number.isFinite(Number(item.metricValue))) return '';
+  return '<span class="risk-metric">' + dashboardEscapeHtml(item.metricLabel || '涨跌幅') + ' ' + dashboardSignedPctHtml(item.metricValue) + '</span>';
+}
+
 function dashboardWatchlistAlertLabel(item) {
   const price = Number(item.price);
   const high = Number(item.alertHigh);
@@ -204,8 +215,9 @@ function dashboardRenderSentiment() {
   const aShare = data.aShare || {};
   const vix = data.vix || {};
   const components = (aShare.components || []).map(function(item) {
-    const valueClass = /-/.test(String(item.value || '')) ? 'pnl-down' : dashboardScoreClass(item.score);
-    return '<div class="sentiment-component"><span>' + dashboardEscapeHtml(item.name) + '</span><strong class="' + dashboardScoreClass(item.score) + '">' + dashboardEscapeHtml(item.score) + '</strong><em class="' + valueClass + '">' + dashboardEscapeHtml(item.value) + '</em></div>';
+    const isBreadth = String(item.name || '').indexOf('上涨家数') >= 0;
+    const valueClass = /-/.test(String(item.value || '')) ? 'pnl-down' : (isBreadth ? '' : dashboardScoreClass(item.score));
+    return '<div class="sentiment-component"><span>' + dashboardEscapeHtml(item.name) + '</span><strong class="' + (isBreadth ? '' : dashboardScoreClass(item.score)) + '">' + dashboardEscapeHtml(item.score) + '</strong><em class="' + valueClass + '">' + dashboardEscapeHtml(item.value) + '</em></div>';
   }).join('');
   const sourceStatus = aShare.sourceStatus || '';
   const providerNote = sourceStatus === 'sina'
@@ -218,7 +230,7 @@ function dashboardRenderSentiment() {
       '<em>A股情绪分</em>' +
     '</div>' +
     '<div class="sentiment-details">' +
-      '<div class="sentiment-row"><span>上涨家数占比</span><strong class="' + dashboardBreadthClass(aShare.breadthPct) + '">' + dashboardMiniFmt(aShare.breadthPct) + '%</strong><em><span class="pnl-up">' + (aShare.advancing || 0) + '</span> / <span class="pnl-down">' + (aShare.declining || 0) + '</span> / ' + (aShare.total || 0) + '</em></div>' +
+      '<div class="sentiment-row"><span>上涨家数占比</span><strong>' + dashboardMiniFmt(aShare.breadthPct) + '%</strong><em><span class="pnl-up">' + (aShare.advancing || 0) + '</span> / <span class="pnl-down">' + (aShare.declining || 0) + '</span> / ' + (aShare.total || 0) + '</em></div>' +
       '<div class="sentiment-row"><span>平均涨跌幅</span><strong class="' + dashboardMiniChangeClass(aShare.avgChangePct) + '">' + dashboardMiniFmt(aShare.avgChangePct) + '%</strong><em><span class="pnl-up">强 ' + (aShare.strongCount || 0) + '</span> / <span class="pnl-down">弱 ' + (aShare.weakCount || 0) + '</span></em></div>' +
       '<div class="sentiment-row"><span>VIX 美股恐慌指数</span><strong>' + dashboardMiniFmt(vix.value) + '</strong><em>' + dashboardEscapeHtml(vix.label || '--') + ' / ' + dashboardEscapeHtml(vix.date || '--') + '</em></div>' +
       '<div class="sentiment-components">' + components + '</div>' +
@@ -301,7 +313,9 @@ function dashboardCollectRisks() {
     : { drawdown: 8, dailyDrop: 3, leaderDrop: 3 };
   const drawdownLimit = -Math.abs(Number(settings.drawdown) || 8);
   const dailyDropLimit = -Math.abs(Number(settings.dailyDrop) || 3);
+  const dailyRiseLimit = Math.abs(Number(settings.dailyDrop) || 3);
   const leaderDropLimit = -Math.abs(Number(settings.leaderDrop) || 3);
+  const positionCodes = new Set((window.State.positions || []).map(function(pos) { return pos.code; }));
 
   (window.State.positions || []).forEach(function(pos) {
     const pnlRate = Number(pos.unrealizedPnlRate);
@@ -312,7 +326,9 @@ function dashboardCollectRisks() {
         severity: pnlRate <= drawdownLimit * 1.8 ? 'high' : 'medium',
         code: pos.code,
         title: pos.code + ' 持仓回撤',
-        detail: '浮动盈亏率 ' + dashboardMiniFmt(pnlRate) + '%，请复核仓位、买入逻辑和止损/退出条件。'
+        detail: '请复核仓位、买入逻辑和止损/退出条件。',
+        metricLabel: '浮动盈亏率',
+        metricValue: pnlRate
       });
     }
     if (Number.isFinite(todayChange) && todayChange <= dailyDropLimit) {
@@ -321,13 +337,27 @@ function dashboardCollectRisks() {
         severity: todayChange <= dailyDropLimit * 1.6 ? 'high' : 'medium',
         code: pos.code,
         title: pos.code + ' 今日走弱',
-        detail: '今日涨跌幅 ' + dashboardMiniFmt(todayChange) + '%，请区分是个股问题还是板块共振。'
+        detail: '请区分是个股问题还是板块共振，必要时收紧止损或降低仓位。',
+        metricLabel: '今日涨跌幅',
+        metricValue: todayChange
+      });
+    }
+    if (Number.isFinite(todayChange) && todayChange >= dailyRiseLimit) {
+      risks.push({
+        key: 'daily-rise:' + pos.code,
+        severity: 'positive',
+        code: pos.code,
+        title: pos.code + ' 今日走强',
+        detail: '关注是否放量、是否突破压力位；持仓可复核止盈计划，避免追高失控。',
+        metricLabel: '今日涨跌幅',
+        metricValue: todayChange
       });
     }
   });
 
   (window.State.watchlist || []).forEach(function(item) {
     const price = Number(item.price);
+    const change = Number(item.change);
     const high = Number(item.alertHigh);
     const low = Number(item.alertLow);
     if (Number.isFinite(price) && Number.isFinite(high) && high > 0 && price >= high) {
@@ -357,6 +387,28 @@ function dashboardCollectRisks() {
         detail: '该自选股最新刷新失败，当前仍显示上一次保留行情。'
       });
     }
+    if (!positionCodes.has(item.code) && Number.isFinite(change) && change <= dailyDropLimit) {
+      risks.push({
+        key: 'watchlist-daily-drop:' + item.code,
+        severity: 'medium',
+        code: item.code,
+        title: item.code + ' 自选走弱',
+        detail: '观察是否跌破关键均线或板块同步走弱，先确认原因再决定是否移出或等待企稳。',
+        metricLabel: '今日涨跌幅',
+        metricValue: change
+      });
+    }
+    if (!positionCodes.has(item.code) && Number.isFinite(change) && change >= dailyRiseLimit) {
+      risks.push({
+        key: 'watchlist-daily-rise:' + item.code,
+        severity: 'positive',
+        code: item.code,
+        title: item.code + ' 自选走强',
+        detail: '可观察是否有量价配合、是否属于热点板块扩散；追入前先看回踩和承接。',
+        metricLabel: '今日涨跌幅',
+        metricValue: change
+      });
+    }
   });
 
   const sectorDashboard = window.SectorLeaders && window.SectorLeaders.getDashboard ? window.SectorLeaders.getDashboard() : null;
@@ -373,7 +425,7 @@ function dashboardCollectRisks() {
     }
   });
 
-  const severityRank = { high: 0, medium: 1, low: 2 };
+  const severityRank = { high: 0, medium: 1, positive: 2, low: 3 };
   return risks.sort(function(a, b) {
     return (severityRank[a.severity] || 9) - (severityRank[b.severity] || 9);
   });
@@ -498,9 +550,9 @@ function dashboardRenderRisks() {
     return;
   }
   const visibleRisks = dashboardShowDismissedRisks ? activeRisks.concat(dismissedRisks) : activeRisks;
-  box.innerHTML = toolbar + '<ul class="risk-list detailed">' + visibleRisks.slice(0, 10).map(function(item) {
+  box.innerHTML = toolbar + '<ul class="risk-list detailed">' + visibleRisks.slice(0, 16).map(function(item) {
     return '<li class="risk-item ' + item.severity + (item.dismissed ? ' dismissed' : '') + (dashboardSelectedRiskKey === item.key ? ' selected' : '') + '" data-risk-key="' + encodeURIComponent(item.key) + '"' + (item.code ? ' data-code="' + dashboardEscapeHtml(item.code) + '"' : '') + ' tabindex="0" title="双击打开行情，右键操作">' +
-      '<div><strong>' + dashboardEscapeHtml(item.title) + '</strong><p>' + dashboardEscapeHtml(item.detail) + '</p><em>双击查看 · 右键操作</em></div>' +
+      '<div><strong>' + dashboardEscapeHtml(item.title) + '</strong><p>' + dashboardRiskMetricHtml(item) + dashboardEscapeHtml(item.detail) + '</p><em>双击查看 · 右键操作</em></div>' +
       '</li>';
   }).join('') + '</ul>';
 }

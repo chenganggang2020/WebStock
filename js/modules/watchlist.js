@@ -170,13 +170,17 @@ function renderWatchlist() {
   tbody.innerHTML = items.map(item => {
     const change = Number(item.change);
     const colorClass = Number.isFinite(change) && change >= 0 ? 'pnl-up' : 'pnl-down';
+    const trendColor = Number.isFinite(change) && change >= 0 ? 'var(--up)' : 'var(--down)';
+    const miniChart = window.StockList && window.StockList.miniChart
+      ? window.StockList.miniChart(item, trendColor)
+      : '';
     const alertStatus = watchlistAlertStatus(item);
     const quoteStatus = item.quoteStatus === 'stale'
       ? '<span class="status-warn">行情保留</span>'
       : '<span class="status-ok">正常</span>';
     return '<tr>' +
       '<td><button class="link-btn" data-action="view" data-code="' + item.code + '">' + item.code + '</button></td>' +
-      '<td>' + item.name + '</td>' +
+      '<td><div class="holding-name-cell"><span>' + item.name + '</span>' + miniChart + '</div></td>' +
       '<td>' + money(item.price) + '</td>' +
       '<td class="' + colorClass + '">' + (Number.isFinite(change) ? (change >= 0 ? '+' : '') + change.toFixed(2) + '%' : '--') + '</td>' +
       '<td>' + (item.groupName || '默认分组') + '</td>' +

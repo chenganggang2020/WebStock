@@ -137,9 +137,13 @@ function renderPositions() {
   tbody.innerHTML = positions.map(pos => {
     const finalPnl = finalPnlValue(pos);
     const finalRate = finalPnlRateValue(pos);
+    const trendColor = Number(pos.todayChange) >= 0 ? 'var(--up)' : 'var(--down)';
+    const miniChart = window.StockList && window.StockList.miniChart
+      ? window.StockList.miniChart(Object.assign({}, pos, { price: pos.currentPrice, change: pos.todayChange }), trendColor)
+      : '';
     return '<tr data-code="' + pos.code + '" tabindex="0" title="双击查看行情，右键打开持仓操作">' +
       '<td><span class="position-code">' + pos.code + '</span></td>' +
-      '<td>' + pos.name + '</td>' +
+      '<td><div class="holding-name-cell"><span>' + pos.name + '</span>' + miniChart + '</div></td>' +
       '<td>' + pos.quantity + '</td>' +
       '<td>' + fmt(pos.avgCost, 3) + '</td>' +
       '<td>' + fmt(pos.currentPrice, 3) + '</td>' +

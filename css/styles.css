@@ -1668,6 +1668,10 @@ body.dark .md-body blockquote { background: rgba(99,102,241,0.12); }
   border-left-color: #f59e0b;
 }
 
+.risk-item.positive {
+  border-left-color: var(--up);
+}
+
 .risk-item.low {
   border-left-color: #64748b;
 }
@@ -1683,6 +1687,13 @@ body.dark .md-body blockquote { background: rgba(99,102,241,0.12); }
   font-size: 12px;
 }
 
+.risk-metric {
+  display: inline-flex;
+  gap: 4px;
+  margin-right: 8px;
+  font-weight: 700;
+}
+
 .risk-item em {
   display: block;
   margin-top: 4px;
@@ -1696,6 +1707,33 @@ body.dark .md-body blockquote { background: rgba(99,102,241,0.12); }
   gap: 6px;
   flex-wrap: wrap;
   justify-content: flex-end;
+}
+
+#positionsTable tbody tr,
+#watchlistTable tbody tr {
+  min-height: 58px;
+}
+
+#positionsTable td,
+#watchlistTable td {
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+
+.holding-name-cell {
+  display: grid;
+  grid-template-columns: minmax(82px, max-content) 92px;
+  align-items: center;
+  gap: 12px;
+}
+
+.holding-name-cell > span {
+  font-weight: 700;
+}
+
+.holding-name-cell .stock-mini-chart {
+  width: 92px;
+  height: 34px;
 }
 
 .news-list {
