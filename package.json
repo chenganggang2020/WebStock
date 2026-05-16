@@ -8,13 +8,15 @@
     "dev": "node server.js",
     "desktop": "electron .",
     "dist:win": "node scripts/build-electron-win.js nsis",
+    "dist:win:portable": "node scripts/build-electron-win.js portable --config.directories.output=dist/portable",
+    "dist:win:all": "npm run dist:win && npm run dist:win:portable",
     "dist:win:dir": "node scripts/build-electron-win.js dir --config.directories.output=dist/unpacked",
     "test": "node --test test/*.test.js",
     "test:api-json": "node scripts/test-api-json.js",
     "test:frontend": "playwright test test/frontend-click.spec.js",
     "test:portfolio": "node scripts/test-portfolio-api.js",
     "smoke:openai": "node scripts/smoke-openai.js",
-    "package:portable": "node scripts/build-portable-win.js",
+    "package:portable": "npm run dist:win:portable",
     "icon:win": "node scripts/create-ico.js"
   },
   "dependencies": {
@@ -76,11 +78,15 @@
     },
     "nsis": {
       "oneClick": false,
-      "perMachine": false,
+      "perMachine": true,
       "allowToChangeInstallationDirectory": true,
+      "include": "build/installer.nsh",
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "WebStock"
+    },
+    "portable": {
+      "artifactName": "WebStock-Portable-${version}.${ext}"
     },
     "directories": {
       "output": "dist/installer"

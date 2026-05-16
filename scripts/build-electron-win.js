@@ -53,13 +53,13 @@ function prepareOutputDir(outputDir) {
   fs.mkdirSync(outputDir, { recursive: true });
 }
 
-function keepOnlyInstaller(outputDir) {
+function keepOnlyRunnableExe(outputDir) {
   assertInsideRoot(outputDir);
   if (!fs.existsSync(outputDir)) return;
   for (const entry of fs.readdirSync(outputDir, { withFileTypes: true })) {
     const fullPath = path.join(outputDir, entry.name);
-    const isInstaller = entry.isFile() && /\.exe$/i.test(entry.name) && !/\.__uninstaller\.exe$/i.test(entry.name);
-    if (!isInstaller) fs.rmSync(fullPath, { recursive: true, force: true });
+    const isRunnableExe = entry.isFile() && /\.exe$/i.test(entry.name) && !/\.__uninstaller\.exe$/i.test(entry.name);
+    if (!isRunnableExe) fs.rmSync(fullPath, { recursive: true, force: true });
   }
 }
 
@@ -80,7 +80,7 @@ try {
 
   const electronBuilder = nodeScript(path.join(root, 'node_modules', 'electron-builder', 'cli.js'));
   run('Build Windows ' + target + ' package', electronBuilder[0], electronBuilder[1].concat(['--win', target], extraArgs));
-  if (target === 'nsis') keepOnlyInstaller(outputDir);
+  if (target === 'nsis' || target === 'portable') keepOnlyRunnableExe(outputDir);
 } catch (error) {
   buildError = error;
 } finally {

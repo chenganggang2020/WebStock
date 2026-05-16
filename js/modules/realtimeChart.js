@@ -193,17 +193,52 @@ function generateFullTimeAxis() {
   const times = [];
   for (let h = 9; h <= 11; h++) {
     const startMin = h === 9 ? 30 : 0;
-    const endMin = h === 11 ? 30 : 60;
-    for (let m = startMin; m < endMin; m += 5) {
+    const endMin = h === 11 ? 30 : 55;
+    for (let m = startMin; m <= endMin; m += 5) {
       times.push(String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0'));
     }
   }
-  for (let h = 13; h < 15; h++) {
-    for (let m = 0; m < 60; m += 5) {
+  for (let h = 13; h <= 15; h++) {
+    const endMin = h === 15 ? 0 : 55;
+    for (let m = 0; m <= endMin; m += 5) {
       times.push(String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0'));
     }
   }
   return times;
+}
+
+function minuteItemMinutes(item) {
+  const match = item && item.time ? String(item.time).match(/(\d{2}):(\d{2})(?::\d{2})?/) : null;
+  if (!match) return null;
+  return Number(match[1]) * 60 + Number(match[2]);
+}
+
+function minuteDataDate(minuteData) {
+  if (!Array.isArray(minuteData)) return '';
+  const item = minuteData.find(function(row) {
+    return row && row.time && /\d{4}-\d{2}-\d{2}/.test(row.time);
+  });
+  const match = item && String(item.time).match(/\d{4}-\d{2}-\d{2}/);
+  return match ? match[0] : '';
+}
+
+function latestMinuteFromData(minuteData) {
+  if (!Array.isArray(minuteData)) return null;
+  return minuteData.reduce(function(max, item) {
+    const minutes = minuteItemMinutes(item);
+    return Number.isFinite(minutes) ? Math.max(max, minutes) : max;
+  }, -1);
+}
+
+function realtimeCutoffMinutes(minuteData) {
+  const latest = latestMinuteFromData(minuteData);
+  const today = window.WebStockTime && window.WebStockTime.todayDate ? window.WebStockTime.todayDate() : '';
+  const dataDate = minuteDataDate(minuteData);
+  if (dataDate && today && dataDate !== today && latest >= 0) return latest;
+  const current = window.WebStockTime && window.WebStockTime.currentMinutes
+    ? window.WebStockTime.currentMinutes()
+    : (new Date().getHours() * 60 + new Date().getMinutes());
+  return latest >= 0 ? Math.max(current, latest) : current;
 }
 
 function renderTimeChart(minuteData) {
@@ -225,9 +260,7 @@ function renderTimeChart(minuteData) {
   const prevClose = parseFloat(State.currentQuote.prevClose) || parseFloat(State.currentQuote.price) || 10;
   const openPrice = parseFloat(State.currentQuote.open) || prevClose;
 
-  const currentMinutes = window.WebStockTime && window.WebStockTime.currentMinutes
-    ? window.WebStockTime.currentMinutes()
-    : (new Date().getHours() * 60 + new Date().getMinutes());
+  const currentMinutes = realtimeCutoffMinutes(minuteData);
 
   const dataMap = {};
   if (Array.isArray(minuteData) && minuteData.length > 0) {
@@ -501,8 +534,7 @@ function renderVolumeChart(minuteData) {
   const times = [];
   const volumes = [];
 
-  const now = new Date();
-  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+  const currentMinutes = realtimeCutoffMinutes(minuteData);
 
   const dataMap = {};
   if (Array.isArray(minuteData) && minuteData.length > 0) {
