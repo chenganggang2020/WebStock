@@ -1,4 +1,4 @@
-const CACHE_NAME = 'webstock-static-v3';
+const CACHE_NAME = 'webstock-static-v4';
 const STATIC_ASSETS = [
   '/',
   '/index.html',

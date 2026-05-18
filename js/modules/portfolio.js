@@ -21,6 +21,10 @@ function finalPnlRateValue(pos) {
   return pos && pos.unrealizedPnlRate !== undefined && pos.unrealizedPnlRate !== null ? pos.unrealizedPnlRate : pos.netPnlRate;
 }
 
+function todayReferencePnlValue(pos) {
+  return pos && pos.todayReferencePnl !== undefined && pos.todayReferencePnl !== null ? pos.todayReferencePnl : pos.todayPnl;
+}
+
 function portfolioCsvCell(value) {
   const text = String(value == null ? '' : value);
   const safeText = /^[\t\r\n]/.test(text) || /^\s*[=+@]/.test(text) ? "'" + text : text;
@@ -92,6 +96,12 @@ function renderSummary() {
   unrealized.textContent = fmt(summary.unrealizedPnl);
   unrealized.title = '当前剩余持仓浮动收益：市值 - 剩余持仓成本。买入手续费已计入成本，不叠加已实现盈亏。';
   unrealized.className = 'summary-value ' + pnlClass(summary.unrealizedPnl);
+  const todayReference = document.getElementById('summaryTodayReferencePnl');
+  if (todayReference) {
+    todayReference.textContent = fmt(summary.todayReferencePnl);
+    todayReference.title = '当日参考盈亏：持仓数量 × (当前价 - 昨收价)。缺少昨收价时会退回到涨跌幅估算。';
+    todayReference.className = 'summary-value ' + pnlClass(summary.todayReferencePnl);
+  }
   const realized = document.getElementById('summaryRealizedPnl');
   realized.textContent = fmt(summary.realizedPnl);
   realized.className = 'summary-value ' + pnlClass(summary.realizedPnl);
@@ -137,6 +147,7 @@ function renderPositions() {
   tbody.innerHTML = positions.map(pos => {
     const finalPnl = finalPnlValue(pos);
     const finalRate = finalPnlRateValue(pos);
+    const todayReferencePnl = todayReferencePnlValue(pos);
     const trendColor = Number(pos.todayChange) >= 0 ? 'var(--up)' : 'var(--down)';
     const miniChart = window.StockList && window.StockList.miniChart
       ? window.StockList.miniChart(Object.assign({}, pos, { price: pos.currentPrice, change: pos.todayChange }), trendColor)
@@ -148,9 +159,9 @@ function renderPositions() {
       '<td>' + fmt(pos.avgCost, 3) + '</td>' +
       '<td>' + fmt(pos.currentPrice, 3) + '</td>' +
       '<td>' + fmt(pos.marketValue === null ? pos.costValue : pos.marketValue) + '</td>' +
-      '<td class="' + pnlClass(finalPnl) + '" title="当前剩余持仓浮动收益：市值 - 剩余持仓成本；该代码历史已实现盈亏 ' + fmt(pos.realizedPnl) + '">' + fmt(finalPnl) + '</td>' +
+      '<td class="' + pnlClass(finalPnl) + '" title="浮动盈亏：当前市值 - 剩余持仓成本；该代码历史已实现盈亏 ' + fmt(pos.realizedPnl) + '">' + fmt(finalPnl) + '</td>' +
       '<td class="' + pnlClass(finalRate) + '">' + fmt(finalRate) + '%</td>' +
-      '<td class="' + pnlClass(pos.todayPnl) + '">' + fmt(pos.todayPnl) + '</td>' +
+      '<td class="' + pnlClass(todayReferencePnl) + '" title="当日参考盈亏：持仓数量 × (当前价 - 昨收价)">' + fmt(todayReferencePnl) + '</td>' +
       '<td><span class="position-action-hint">双击查看 · 右键操作</span></td>' +
       '</tr>';
   }).join('');
@@ -213,7 +224,7 @@ function exportPositionsCsv() {
     'final_unrealized_pnl',
     'final_unrealized_pnl_rate',
     'total_fee',
-    'today_pnl'
+    'today_reference_pnl'
   ]].concat(rows.map(function(pos) {
     const marketValue = pos.marketValue === null ? pos.costValue : pos.marketValue;
     return [
@@ -227,7 +238,7 @@ function exportPositionsCsv() {
       fmt(finalPnlValue(pos)),
       fmt(finalPnlRateValue(pos)),
       fmt(pos.totalFee),
-      fmt(pos.todayPnl)
+      fmt(todayReferencePnlValue(pos))
     ];
   }));
   downloadPortfolioCsv('webstock-positions-' + portfolioFileDate() + '.csv', csvRows);

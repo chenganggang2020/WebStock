@@ -63,6 +63,35 @@ test('portfolio service calculates positions and prevents oversell', () => {
   assert.equal(portfolio.getPositions().length, 0);
 });
 
+test('today reference pnl uses current price minus previous close', () => {
+  portfolio.createTrade({
+    code: '300001',
+    name: '特锐德',
+    side: 'buy',
+    tradeDate: '2026-05-14',
+    price: 10,
+    quantity: 100,
+    fee: 5
+  });
+
+  const positions = portfolio.getPositions({ '300001': { price: 10.52, prevClose: 10.49, change: 0.29 } });
+  assert.equal(positions.length, 1);
+  assert.equal(positions[0].unrealizedPnl, 47);
+  assert.equal(positions[0].todayReferencePnl, 3);
+  assert.equal(positions[0].todayPnl, 3);
+
+  portfolio.createTrade({
+    code: '300001',
+    name: '特锐德',
+    side: 'sell',
+    tradeDate: '2026-05-15',
+    price: 10.52,
+    quantity: 100,
+    fee: 5,
+    tax: 0
+  });
+});
+
 test('open position final pnl counts one fee per trade record', () => {
   portfolio.createTrade({
     code: '561560',

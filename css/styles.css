@@ -797,8 +797,8 @@ body.dark .stock-tag {
 }
 
 .stock-mini-chart {
-  width: 70px;
-  height: 34px;
+  width: 92px;
+  height: 38px;
   display: block;
 }
 
@@ -1711,18 +1711,18 @@ body.dark .md-body blockquote { background: rgba(99,102,241,0.12); }
 
 #positionsTable tbody tr,
 #watchlistTable tbody tr {
-  min-height: 58px;
+  min-height: 68px;
 }
 
 #positionsTable td,
 #watchlistTable td {
-  padding-top: 10px;
-  padding-bottom: 10px;
+  padding-top: 12px;
+  padding-bottom: 12px;
 }
 
 .holding-name-cell {
   display: grid;
-  grid-template-columns: minmax(82px, max-content) 92px;
+  grid-template-columns: minmax(82px, max-content) 132px;
   align-items: center;
   gap: 12px;
 }
@@ -1732,8 +1732,8 @@ body.dark .md-body blockquote { background: rgba(99,102,241,0.12); }
 }
 
 .holding-name-cell .stock-mini-chart {
-  width: 92px;
-  height: 34px;
+  width: 132px;
+  height: 46px;
 }
 
 .news-list {
@@ -2386,7 +2386,7 @@ body.dark .md-body blockquote { background: rgba(99,102,241,0.12); }
 
 .summary-cards {
   display: grid;
-  grid-template-columns: repeat(5, minmax(120px, 1fr));
+  grid-template-columns: repeat(6, minmax(118px, 1fr));
   gap: 12px;
   padding: 16px 20px 6px;
 }

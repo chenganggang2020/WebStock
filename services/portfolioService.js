@@ -264,6 +264,7 @@ function calculatePositions(trades, quoteMap = {}) {
     .map(pos => {
       const quote = quoteMap[pos.code] || {};
       const currentPrice = Number.isFinite(Number(quote.price)) && Number(quote.price) > 0 ? Number(quote.price) : null;
+      const previousClose = Number.isFinite(Number(quote.prevClose)) && Number(quote.prevClose) > 0 ? Number(quote.prevClose) : null;
       const marketValue = currentPrice === null ? null : currentPrice * pos.quantity;
       const grossUnrealizedPnl = marketValue === null ? null : marketValue - pos.costValue;
       const estimatedExitFee = marketValue === null ? 0 : DEFAULT_ESTIMATED_EXIT_FEE;
@@ -271,6 +272,13 @@ function calculatePositions(trades, quoteMap = {}) {
       const unrealizedPnl = grossUnrealizedPnl === null ? null : grossUnrealizedPnl - estimatedExitFee - estimatedExitTax;
       const netPnl = unrealizedPnl;
       const symbolTotalPnl = unrealizedPnl === null ? null : pos.realizedPnl + unrealizedPnl;
+      const todayReferencePnl = marketValue === null
+        ? null
+        : previousClose !== null
+          ? (currentPrice - previousClose) * pos.quantity
+          : Number.isFinite(Number(quote.change))
+            ? marketValue * Number(quote.change) / 100
+            : null;
       const avgCost = pos.quantity > 0 ? pos.costValue / pos.quantity : 0;
       return {
         code: pos.code,
@@ -282,7 +290,7 @@ function calculatePositions(trades, quoteMap = {}) {
         open: Number.isFinite(Number(quote.open)) ? round(quote.open, 3) : null,
         high: Number.isFinite(Number(quote.high)) ? round(quote.high, 3) : null,
         low: Number.isFinite(Number(quote.low)) ? round(quote.low, 3) : null,
-        prevClose: Number.isFinite(Number(quote.prevClose)) ? round(quote.prevClose, 3) : null,
+        prevClose: previousClose === null ? null : round(previousClose, 3),
         change: Number.isFinite(Number(quote.change)) ? Number(quote.change) : null,
         marketValue: marketValue === null ? null : round(marketValue, 2),
         costValue: round(pos.costValue, 2),
@@ -298,7 +306,8 @@ function calculatePositions(trades, quoteMap = {}) {
         symbolTotalPnl: symbolTotalPnl === null ? null : round(symbolTotalPnl, 2),
         symbolTotalPnlRate: symbolTotalPnl === null || pos.costValue === 0 ? null : round(symbolTotalPnl / pos.costValue * 100, 2),
         todayChange: Number.isFinite(Number(quote.change)) ? Number(quote.change) : null,
-        todayPnl: marketValue === null || !Number.isFinite(Number(quote.change)) ? null : round(marketValue * Number(quote.change) / 100, 2)
+        todayReferencePnl: todayReferencePnl === null ? null : round(todayReferencePnl, 2),
+        todayPnl: todayReferencePnl === null ? null : round(todayReferencePnl, 2)
       };
     });
 }
@@ -405,6 +414,10 @@ function getSummary(positions = getPositions()) {
   const totalMarketValue = positions.reduce((sum, pos) => sum + (pos.marketValue === null ? pos.costValue : pos.marketValue), 0);
   const totalCost = positions.reduce((sum, pos) => sum + pos.costValue, 0);
   const unrealizedPnl = positions.reduce((sum, pos) => sum + (pos.unrealizedPnl || 0), 0);
+  const todayReferencePnl = positions.reduce((sum, pos) => {
+    const value = pos.todayReferencePnl !== undefined && pos.todayReferencePnl !== null ? pos.todayReferencePnl : pos.todayPnl;
+    return sum + (value || 0);
+  }, 0);
   const realizedPnl = calculatePositionStates(listTradesAscending()).reduce((sum, pos) => sum + pos.realizedPnl, 0);
   const totalPnl = realizedPnl + unrealizedPnl;
 
@@ -412,6 +425,7 @@ function getSummary(positions = getPositions()) {
     totalMarketValue: round(totalMarketValue, 2),
     totalCost: round(totalCost, 2),
     unrealizedPnl: round(unrealizedPnl, 2),
+    todayReferencePnl: round(todayReferencePnl, 2),
     realizedPnl: round(realizedPnl, 2),
     totalPnl: round(totalPnl, 2),
     totalPnlRate: totalCost > 0 ? round(totalPnl / totalCost * 100, 2) : 0,
