@@ -80,6 +80,24 @@ function bindButtons() {
     if (State.currentStock) Analysis.openAnalysisPanel(State.currentStock, true);
   });
 
+  // 行业简报按钮事件绑定
+  var industryBtn = document.getElementById('industryBtn');
+  if (industryBtn) {
+    industryBtn.addEventListener('click', function () {
+      Industry.openIndustryPanel();
+    });
+  }
+  var industryCloseBtn = document.getElementById('industryCloseBtn');
+  if (industryCloseBtn) {
+    industryCloseBtn.addEventListener('click', Industry.closeIndustryPanel);
+  }
+  var industryOverlay = document.getElementById('industryOverlay');
+  if (industryOverlay) {
+    industryOverlay.addEventListener('click', function (e) {
+      if (e.target === this) Industry.closeIndustryPanel();
+    });
+  }
+
   document.querySelectorAll('.main-tab').forEach(function(btn) {
     btn.addEventListener('click', function() {
       switchMainView(btn.getAttribute('data-main-view'));
