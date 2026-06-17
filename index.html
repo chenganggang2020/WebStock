@@ -36,6 +36,18 @@
       </table>
     </div>
   </div>
+
+  <!-- 行业简报面板 -->
+  <div id="industryOverlay" class="industry-overlay" style="display:none;">
+    <div class="industry-panel">
+      <div class="industry-panel-header">
+        <h3>📈 行业简报</h3>
+        <button class="analysis-close-btn" id="industryCloseBtn">×</button>
+      </div>
+      <div class="industry-panel-body" id="industryPanelBody">
+      </div>
+    </div>
+  </div>
   <div class="main">
     <div class="main-tabs" id="mainTabs">
       <button class="main-tab active" data-main-view="market">行情</button>
@@ -67,6 +79,7 @@
           </div>
           <button class="ma-set-btn" id="maSettingsBtn" title="设置均线周期">⚙️</button>
           <button class="analysis-btn" id="analysisBtn" title="生成个股AI分析报告">🤖 AI分析</button>
+          <button class="industry-btn" id="industryBtn" title="查看行业简报">📈 产业简报</button>
         </div>
       </div>
       <div id="realtimeView" class="main-content">
@@ -374,6 +387,7 @@
   <script src="js/modules/klineChart.js"></script>
   <script src="js/modules/realtimeChart.js"></script>
   <script src="js/modules/analysis.js"></script>
+  <script src="js/modules/industry.js"></script>
   <script src="js/modules/portfolioCharts.js"></script>
   <script src="js/modules/watchlist.js"></script>
   <script src="js/modules/trades.js"></script>
