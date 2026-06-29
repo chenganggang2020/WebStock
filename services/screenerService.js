@@ -105,6 +105,11 @@ function demandThemeLeaders(parsedDemand) {
   return leaders;
 }
 
+function isStStock(stock) {
+  const name = String(stock && stock.name || '').trim();
+  return /^\*?ST/i.test(name);
+}
+
 function snapshotMap(input) {
   const map = new Map();
   (input.marketSnapshot || []).forEach(item => {
@@ -200,7 +205,7 @@ function getUniverse(scope, input = {}) {
   else if (scope === 'leaders') base = leaderData;
   else {
     const merged = new Map();
-    allStocks.slice(0, 500).forEach(item => merged.set(themeService.normalizeCode(item.code), item));
+    allStocks.forEach(item => merged.set(themeService.normalizeCode(item.code), item));
     watchlist.forEach(item => merged.set(themeService.normalizeCode(item.code), item));
     positions.forEach(item => merged.set(themeService.normalizeCode(item.code), item));
     recent.forEach(item => merged.set(themeService.normalizeCode(item.code), item));
@@ -240,6 +245,8 @@ function getUniverse(scope, input = {}) {
       note: item.note || '',
       demandMatch: matchCandidateDemand(Object.assign({}, decorated, profile, leader || {}, { code }), parsedDemand)
     };
+  }).filter(function(stock) {
+    return !isStStock(stock);
   });
 }
 

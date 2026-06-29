@@ -69,3 +69,23 @@ test('smart screener parses demand and promotes matching theme business candidat
   assert.ok(overheated.risks.some(risk => /过热|涨幅/.test(risk)));
   assert.ok(preferred.score > overheated.score);
 });
+
+test('smart screener all scope scans full stock list and excludes ST names', () => {
+  const result = screener.runScreener({
+    strategy: 'short-strong',
+    scope: 'all',
+    demand: '全市场短线强势',
+    limit: 50,
+    marketSnapshot: [
+      { code: '001356', price: 28.8, change: 8.8, amount: 2800000000 },
+      { code: '000004', price: 9.9, change: 9.9, amount: 3000000000 }
+    ],
+    klineSnapshot: [
+      { code: '001356', data: risingKline(20, 0.12) },
+      { code: '000004', data: risingKline(5, 0.1) }
+    ]
+  });
+
+  assert.ok(result.candidates.some(item => item.code === '001356'), 'expected non-ST stock beyond previous first-500 slice to be scanned');
+  assert.ok(!result.candidates.some(item => item.code === '000004'), 'expected ST stock to be excluded from screener universe');
+});
