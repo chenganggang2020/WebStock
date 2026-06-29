@@ -3,6 +3,8 @@ const path = require('path');
 const portfolio = require('./portfolioService');
 const userService = require('./userService');
 const sectors = require('./sectorService');
+const themeService = require('./themeService');
+const stockProfile = require('./stockProfileService');
 const { appendOneClickOutputInstructions } = require('./handoffFormat');
 const db = require('../db');
 
@@ -19,14 +21,94 @@ function loadStocks() {
 
 function mapByCode(items) {
   const map = new Map();
-  items.forEach(item => map.set(item.code, item));
+  items.forEach(item => map.set(themeService.normalizeCode(item.code), item));
   return map;
+}
+
+function unique(items) {
+  return (items || []).filter(Boolean).filter(function(item, index, arr) {
+    return arr.indexOf(item) === index;
+  });
+}
+
+function compactText(value) {
+  return String(value || '').replace(/\s+/g, '').toLowerCase();
+}
+
+function textIncludesAny(text, tokens) {
+  const compact = compactText(text);
+  return (tokens || []).filter(Boolean).some(function(token) {
+    return compact.includes(compactText(token));
+  });
+}
+
+function marketTokensFromDemand(text) {
+  const value = String(text || '');
+  const markets = [];
+  if (/创业板/.test(value)) markets.push('创业板');
+  if (/科创板|科创/.test(value)) markets.push('科创板');
+  if (/北交所|北证/.test(value)) markets.push('北交所');
+  if (/ETF|etf|基金/.test(value)) markets.push('ETF');
+  if (/沪主板|上海主板/.test(value)) markets.push('沪主板');
+  if (/深主板|深圳主板/.test(value)) markets.push('深主板');
+  return unique(markets);
+}
+
+function demandKeywords(text, themes) {
+  const value = String(text || '');
+  const stopWords = new Set(['只看', '优先', '方向', '已经', '不要', '不能', '最好', '或者', '以及', '真实', '相关', '涨太高', '主营业务']);
+  const tokens = [];
+  (themes || []).forEach(function(theme) {
+    tokens.push(theme.name);
+    (theme.aliases || []).forEach(function(alias) {
+      if (textIncludesAny(value, [alias])) tokens.push(alias);
+    });
+  });
+  (value.match(/[A-Za-z0-9.]+|[\u4e00-\u9fa5]{2,}/g) || []).forEach(function(token) {
+    if (!stopWords.has(token) && token.length <= 12) tokens.push(token);
+  });
+  return unique(tokens).slice(0, 16);
+}
+
+function parseScreenerDemand(input = {}) {
+  const text = String(input.demand || '').trim();
+  const themes = text ? themeService.searchThemes(text).slice(0, 6) : [];
+  return {
+    text,
+    themes: themes.map(function(theme) {
+      return {
+        id: theme.id,
+        name: theme.name,
+        aliases: theme.aliases || [],
+        leaders: theme.leaders || []
+      };
+    }),
+    markets: marketTokensFromDemand(text),
+    avoidOverheated: /不追高|不要.*涨太高|涨太高|高位|过热/.test(text),
+    preferBusinessMatch: /主营|主业|业务|营收|产业链|真概念|真实相关/.test(text),
+    preferPullback: /回调|低吸|缩量|企稳|不追/.test(text),
+    keywords: demandKeywords(text, themes)
+  };
+}
+
+function demandThemeLeaders(parsedDemand) {
+  const leaders = [];
+  (parsedDemand.themes || []).forEach(function(theme) {
+    (theme.leaders || []).forEach(function(leader) {
+      leaders.push(Object.assign({}, leader, {
+        sectorName: theme.name,
+        leaderRole: leader.role,
+        themeDemandMatched: true
+      }));
+    });
+  });
+  return leaders;
 }
 
 function snapshotMap(input) {
   const map = new Map();
   (input.marketSnapshot || []).forEach(item => {
-    if (item && item.code) map.set(String(item.code), item);
+    if (item && item.code) map.set(themeService.normalizeCode(item.code), item);
   });
   return map;
 }
@@ -83,7 +165,7 @@ function klineFactorMap(input) {
         signal: dif >= dea && dif >= 0 ? '多头' : dif >= dea ? '金叉观察' : dif < 0 ? '空头' : '回落'
       };
     }
-    map.set(String(item.code), {
+    map.set(themeService.normalizeCode(item.code), {
       latest,
       ma5,
       ma20,
@@ -100,12 +182,14 @@ function klineFactorMap(input) {
 }
 
 function getUniverse(scope, input = {}) {
+  const parsedDemand = input.parsedDemand || parseScreenerDemand(input);
   const allStocks = loadStocks();
   const watchlist = portfolio.listWatchlist();
   const positions = portfolio.getPositions();
   const recent = userService.listRecentStocks(80);
   const dashboardPromiseData = sectors.listSectors().flatMap(sector => sectors.listLeaders(sector.id).map(leader => Object.assign({}, leader, { sectorName: sector.name })));
-  const leaderMap = mapByCode(dashboardPromiseData);
+  const leaderData = dashboardPromiseData.concat(demandThemeLeaders(parsedDemand));
+  const leaderMap = mapByCode(leaderData);
   const marketMap = snapshotMap(input);
   const klineMap = klineFactorMap(input);
 
@@ -113,38 +197,100 @@ function getUniverse(scope, input = {}) {
   if (scope === 'watchlist') base = watchlist;
   else if (scope === 'portfolio') base = positions;
   else if (scope === 'recent') base = recent;
-  else if (scope === 'leaders') base = dashboardPromiseData;
+  else if (scope === 'leaders') base = leaderData;
   else {
     const merged = new Map();
-    allStocks.slice(0, 500).forEach(item => merged.set(item.code, item));
-    watchlist.forEach(item => merged.set(item.code, item));
-    positions.forEach(item => merged.set(item.code, item));
-    recent.forEach(item => merged.set(item.code, item));
-    dashboardPromiseData.forEach(item => merged.set(item.code, item));
+    allStocks.slice(0, 500).forEach(item => merged.set(themeService.normalizeCode(item.code), item));
+    watchlist.forEach(item => merged.set(themeService.normalizeCode(item.code), item));
+    positions.forEach(item => merged.set(themeService.normalizeCode(item.code), item));
+    recent.forEach(item => merged.set(themeService.normalizeCode(item.code), item));
+    leaderData.forEach(item => merged.set(themeService.normalizeCode(item.code), item));
     base = Array.from(merged.values());
   }
 
   return base.map(item => {
-    const leader = leaderMap.get(item.code);
-    const snapshot = marketMap.get(item.code) || {};
-    const technical = klineMap.get(item.code) || {};
+    const code = themeService.normalizeCode(item.code);
+    const profile = stockProfile.readCache(code) || {};
+    const decorated = themeService.decorateStock(Object.assign({}, item, profile, { code }));
+    const leader = leaderMap.get(code);
+    const snapshot = marketMap.get(code) || {};
+    const technical = klineMap.get(code) || {};
     return {
-      code: item.code,
-      name: item.name || item.code,
+      code,
+      name: decorated.name || item.name || code,
       price: Number.isFinite(Number(snapshot.price)) ? Number(snapshot.price) : null,
       change: Number.isFinite(Number(snapshot.change)) ? Number(snapshot.change) : null,
       amount: Number.isFinite(Number(snapshot.amount)) ? Number(snapshot.amount) : null,
       volume: Number.isFinite(Number(snapshot.volume)) ? Number(snapshot.volume) : null,
       technical,
-      inWatchlist: watchlist.some(row => row.code === item.code),
-      inPortfolio: positions.some(row => row.code === item.code),
-      inRecent: recent.some(row => row.code === item.code),
+      marketLabel: decorated.marketLabel || themeService.marketLabel(code),
+      themes: decorated.themes || [],
+      tags: unique((decorated.tags || []).concat(profile.tags || [])),
+      industry: decorated.industry || profile.industry || '',
+      boards: unique(decorated.boards || profile.boards || []),
+      mainBusinessItems: Array.isArray(decorated.mainBusinessItems) ? decorated.mainBusinessItems : [],
+      businessSummary: decorated.businessSummary || profile.businessSummary || '',
+      businessScope: decorated.businessScope || profile.businessScope || '',
+      inWatchlist: watchlist.some(row => themeService.normalizeCode(row.code) === code),
+      inPortfolio: positions.some(row => themeService.normalizeCode(row.code) === code),
+      inRecent: recent.some(row => themeService.normalizeCode(row.code) === code),
       isLeader: !!leader,
       sectorName: leader ? leader.sectorName : '',
-      leaderRole: leader ? leader.role : '',
-      note: item.note || ''
+      leaderRole: leader ? (leader.leaderRole || leader.role) : '',
+      note: item.note || '',
+      demandMatch: matchCandidateDemand(Object.assign({}, decorated, profile, leader || {}, { code }), parsedDemand)
     };
   });
+}
+
+function candidateDemandText(stock) {
+  return [
+    stock.code,
+    stock.name,
+    stock.marketLabel,
+    stock.sectorName,
+    stock.leaderRole,
+    stock.industry,
+    (stock.boards || []).join(' '),
+    (stock.tags || []).join(' '),
+    (stock.themes || []).map(function(theme) { return [theme.name, theme.role, theme.reason].join(' '); }).join(' '),
+    (stock.mainBusinessItems || []).map(function(item) { return item.name; }).join(' '),
+    stock.businessSummary,
+    stock.businessScope
+  ].join(' ');
+}
+
+function businessDemandText(stock) {
+  return [
+    stock.industry,
+    (stock.boards || []).join(' '),
+    (stock.mainBusinessItems || []).map(function(item) { return item.name; }).join(' '),
+    stock.businessSummary,
+    stock.businessScope
+  ].join(' ');
+}
+
+function matchCandidateDemand(stock, parsedDemand = {}) {
+  const fullText = candidateDemandText(stock);
+  const businessText = businessDemandText(stock);
+  const themeMatches = (parsedDemand.themes || []).filter(function(theme) {
+    const aliases = [theme.name].concat(theme.aliases || []);
+    const leaderMatch = (theme.leaders || []).some(function(leader) {
+      return themeService.normalizeCode(leader.code) === themeService.normalizeCode(stock.code);
+    });
+    return leaderMatch || textIncludesAny(fullText, aliases);
+  }).map(function(theme) { return theme.name; });
+  const marketRequested = (parsedDemand.markets || []).length > 0;
+  const marketMatched = !marketRequested || (parsedDemand.markets || []).includes(stock.marketLabel);
+  const businessKeywords = (parsedDemand.keywords || []).filter(function(keyword) {
+    return textIncludesAny(businessText, [keyword]);
+  }).slice(0, 6);
+  return {
+    themeNames: unique(themeMatches),
+    marketRequested,
+    marketMatched,
+    businessKeywords
+  };
 }
 
 function pushFactorBreakdown(items, label, impact, note, kind = 'positive') {
@@ -152,12 +298,23 @@ function pushFactorBreakdown(items, label, impact, note, kind = 'positive') {
   items.push({ label, impact, note, kind });
 }
 
-function buildFactorBreakdown(stock, strategy, demand) {
+function buildFactorBreakdown(stock, strategy, demand, parsedDemand) {
   const items = [];
   const lowerDemand = String(demand || '').toLowerCase();
+  const demandMatch = stock.demandMatch || matchCandidateDemand(stock, parsedDemand || {});
 
   if (stock.isLeader) {
     pushFactorBreakdown(items, '板块龙头', strategy === 'sector-leader' || lowerDemand.includes('龙头') ? 28 : 12, stock.sectorName || stock.leaderRole || 'leader context');
+  }
+  if (demandMatch.themeNames && demandMatch.themeNames.length) {
+    pushFactorBreakdown(items, '需求板块', 24, demandMatch.themeNames.join(' / '));
+  }
+  if (demandMatch.marketRequested) {
+    if (demandMatch.marketMatched) pushFactorBreakdown(items, '市场板块', 10, stock.marketLabel || 'matched market');
+    else pushFactorBreakdown(items, '市场不匹配', -14, stock.marketLabel || 'market mismatch', 'risk');
+  }
+  if (demandMatch.businessKeywords && demandMatch.businessKeywords.length) {
+    pushFactorBreakdown(items, '主营匹配', 14, demandMatch.businessKeywords.join(' / '));
   }
   if (Number.isFinite(Number(stock.change))) {
     const change = Number(stock.change);
@@ -166,6 +323,8 @@ function buildFactorBreakdown(stock, strategy, demand) {
     else if (strategy === 'pullback' && change <= -1 && change >= -5) pushFactorBreakdown(items, '回调幅度', 10, `${change.toFixed(2)}% pullback`);
     else if (strategy === 'portfolio-risk' && change <= -3) pushFactorBreakdown(items, '持仓跌幅', 16, `${change.toFixed(2)}% risk review`);
     if (Math.abs(change) >= 6) pushFactorBreakdown(items, '当日波动', 0, `${change.toFixed(2)}% requires manual review`, 'risk');
+    if (parsedDemand && parsedDemand.avoidOverheated && change >= 7) pushFactorBreakdown(items, '过热扣分', -18, `${change.toFixed(2)}% overheated for demand`, 'risk');
+    if (parsedDemand && parsedDemand.preferPullback && change <= 3 && change >= -5) pushFactorBreakdown(items, '回调偏好', 6, `${change.toFixed(2)}% controlled move`);
   }
   if (Number.isFinite(Number(stock.amount)) && Number(stock.amount) > 0) {
     const amountYi = Number(stock.amount) / 100000000;
@@ -228,15 +387,36 @@ function buildFactorBreakdown(stock, strategy, demand) {
   return items;
 }
 
-function scoreCandidate(stock, strategy, demand) {
+function scoreCandidate(stock, strategy, demand, parsedDemand) {
   let score = 45;
   const reasons = [];
   const risks = [];
   const lowerDemand = String(demand || '').toLowerCase();
+  const demandMatch = stock.demandMatch || matchCandidateDemand(stock, parsedDemand || {});
 
   if (stock.isLeader) {
     score += strategy === 'sector-leader' || lowerDemand.includes('龙头') ? 28 : 12;
     reasons.push(`属于${stock.sectorName || '板块'}${stock.leaderRole || '观察股'}`);
+  }
+  if (demandMatch.themeNames && demandMatch.themeNames.length) {
+    score += 24;
+    reasons.push(`命中需求板块：${demandMatch.themeNames.join(' / ')}`);
+  }
+  if (demandMatch.marketRequested) {
+    if (demandMatch.marketMatched) {
+      score += 10;
+      reasons.push(`市场板块符合需求：${stock.marketLabel}`);
+    } else {
+      score -= 14;
+      risks.push(`市场板块为${stock.marketLabel || '未知'}，不符合本次指定范围`);
+    }
+  }
+  if (demandMatch.businessKeywords && demandMatch.businessKeywords.length) {
+    score += parsedDemand && parsedDemand.preferBusinessMatch ? 18 : 12;
+    reasons.push(`主营/业务资料匹配：${demandMatch.businessKeywords.join(' / ')}`);
+  } else if (parsedDemand && parsedDemand.preferBusinessMatch) {
+    score -= 6;
+    risks.push('主营业务匹配证据不足，需要补充公司业务资料');
   }
   if (Number.isFinite(Number(stock.change))) {
     const change = Number(stock.change);
@@ -256,6 +436,14 @@ function scoreCandidate(stock, strategy, demand) {
       reasons.push(`本地行情涨跌幅 ${change.toFixed(2)}%，作为辅助因子`);
     }
     if (Math.abs(change) >= 6) risks.push('当日波动较大，需避免追涨杀跌');
+    if (parsedDemand && parsedDemand.avoidOverheated && change >= 7) {
+      score -= 18;
+      risks.push(`当日涨幅 ${change.toFixed(2)}%，不符合“不追高/不要涨太高”的需求`);
+    }
+    if (parsedDemand && parsedDemand.preferPullback && change <= 3 && change >= -5) {
+      score += 6;
+      reasons.push('涨跌幅处于可继续观察区间，符合回调/不追高偏好');
+    }
   }
   if (Number.isFinite(Number(stock.amount)) && Number(stock.amount) > 0) {
     const amountYi = Number(stock.amount) / 100000000;
@@ -367,6 +555,11 @@ function scoreCandidate(stock, strategy, demand) {
   if (!risks.length) risks.push('外部行情或财务数据可能缺失，需人工复核');
 
   const factorTags = [];
+  if (stock.marketLabel) factorTags.push(stock.marketLabel);
+  (stock.themes || []).slice(0, 3).forEach(function(theme) { if (theme && theme.name) factorTags.push(theme.name); });
+  (demandMatch.themeNames || []).forEach(function(name) { factorTags.push(name); });
+  if (demandMatch.businessKeywords && demandMatch.businessKeywords.length) factorTags.push('主营匹配');
+  if (demandMatch.marketRequested && !demandMatch.marketMatched) factorTags.push('范围不匹配');
   if (stock.isLeader) factorTags.push('板块龙头');
   if (stock.inWatchlist) factorTags.push('自选');
   if (stock.inPortfolio) factorTags.push('持仓');
@@ -387,15 +580,22 @@ function scoreCandidate(stock, strategy, demand) {
   return {
     code: stock.code,
     name: stock.name,
-    score: Math.min(Math.round(score), 100),
+    score: Math.max(0, Math.min(Math.round(score), 100)),
     reasons,
     risks,
-    factorTags,
-    factorBreakdown: buildFactorBreakdown(stock, strategy, demand),
+    factorTags: unique(factorTags),
+    factorBreakdown: buildFactorBreakdown(stock, strategy, demand, parsedDemand),
     observePrice: stock.price ? `当前价 ${Number(stock.price).toFixed(2)}；结合 20 日均线和前高/前低人工确认` : '结合最新价、20日均线和前高/前低人工确认',
     strategy,
     sectorName: stock.sectorName,
     leaderRole: stock.leaderRole,
+    marketLabel: stock.marketLabel,
+    themes: (stock.themes || []).map(function(theme) { return theme.name; }).filter(Boolean),
+    industry: stock.industry || '',
+    boards: stock.boards || [],
+    mainBusinessItems: stock.mainBusinessItems || [],
+    businessSummary: stock.businessSummary || '',
+    demandMatch,
     inWatchlist: stock.inWatchlist,
     inPortfolio: stock.inPortfolio
   };
@@ -406,18 +606,20 @@ function runScreener(input = {}) {
   const demand = input.demand || '';
   const scope = input.scope || 'all';
   const promptStyle = input.promptStyle || 'sector-chain';
-  const universe = getUniverse(scope, input);
+  const parsedDemand = parseScreenerDemand(input);
+  const universe = getUniverse(scope, Object.assign({}, input, { parsedDemand }));
   const candidates = universe
-    .map(stock => scoreCandidate(stock, strategy, demand))
+    .map(stock => scoreCandidate(stock, strategy, demand, parsedDemand))
     .sort((a, b) => b.score - a.score)
     .slice(0, Math.min(Number(input.limit) || 20, 50));
 
-  const prompt = buildSmartPrompt({ strategy, demand, scope, promptStyle, candidates });
+  const prompt = buildSmartPrompt({ strategy, demand, scope, promptStyle, candidates, parsedDemand });
   return {
     strategy,
     demand,
     scope,
     promptStyle,
+    parsedDemand,
     candidates,
     prompt,
     disclaimer: DISCLAIMER
@@ -442,6 +644,13 @@ function buildSmartPrompt(result) {
       observePrice: item.observePrice,
       sectorName: item.sectorName,
       leaderRole: item.leaderRole,
+      marketLabel: item.marketLabel,
+      themes: item.themes,
+      industry: item.industry,
+      boards: item.boards,
+      mainBusinessItems: item.mainBusinessItems,
+      businessSummary: item.businessSummary,
+      demandMatch: item.demandMatch,
       inWatchlist: item.inWatchlist,
       inPortfolio: item.inPortfolio
     };
@@ -531,6 +740,8 @@ ${styleGuide.map(item => '- ' + item).join('\n')}
 本地策略：${result.strategy}
 筛选范围：${result.scope}
 提示词风格：${promptStyle}
+系统解析出的需求：
+${JSON.stringify(result.parsedDemand || {}, null, 2)}
 
 候选股数据 JSON：
 ${JSON.stringify(candidates, null, 2)}
@@ -794,6 +1005,7 @@ module.exports = {
   DISCLAIMER,
   runScreener,
   buildPrompt: buildSmartPrompt,
+  parseScreenerDemand,
   scoreCandidate,
   saveScreenerResult,
   getScreenerResult,

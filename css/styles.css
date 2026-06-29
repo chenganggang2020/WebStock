@@ -1883,6 +1883,28 @@ body.dark .md-body blockquote { background: rgba(99,102,241,0.12); }
   color: #b45309;
 }
 
+.candidate-context {
+  min-width: 180px;
+  max-width: 320px;
+}
+
+.candidate-business {
+  margin-top: 4px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.parsed-demand {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 0 0 10px;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
 .strategy-hint {
   grid-column: 2 / -1;
   color: #64748b;

@@ -83,7 +83,13 @@ function candidateSearchText(candidate) {
     candidate.code,
     candidate.name,
     candidate.strategy,
+    candidate.marketLabel,
+    candidate.industry,
+    candidate.businessSummary,
     candidate.observePrice,
+    ...(candidate.themes || []),
+    ...(candidate.boards || []),
+    ...((candidate.mainBusinessItems || []).map(function(item) { return item.name; })),
     ...(candidate.factorTags || []),
     ...(candidate.reasons || []),
     ...(candidate.risks || [])
@@ -289,6 +295,40 @@ function renderTextList(items) {
   return screenerEscapeHtml((items || []).join('\n')).replace(/\n/g, '<br>');
 }
 
+function renderCandidateContext(item) {
+  const businessItems = (item.mainBusinessItems || []).slice(0, 2).map(function(entry) {
+    if (!entry || !entry.name) return '';
+    return entry.name + (entry.ratio == null ? '' : ' ' + entry.ratio + '%');
+  }).filter(Boolean);
+  const chips = []
+    .concat(item.marketLabel ? [item.marketLabel] : [])
+    .concat((item.themes || []).slice(0, 3))
+    .concat((item.boards || []).slice(0, 2))
+    .concat(businessItems);
+  if (!chips.length && !item.industry && !item.businessSummary) return '<span class="muted">-</span>';
+  return '<div class="candidate-context">' +
+    chips.slice(0, 7).map(function(chip) {
+      return '<span class="factor-tag">' + screenerEscapeHtml(chip) + '</span>';
+    }).join('') +
+    (item.industry ? '<div class="muted">行业：' + screenerEscapeHtml(item.industry) + '</div>' : '') +
+    (item.businessSummary ? '<div class="candidate-business">' + screenerEscapeHtml(item.businessSummary) + '</div>' : '') +
+    '</div>';
+}
+
+function renderParsedDemand(parsed) {
+  if (!parsed || (!parsed.text && !(parsed.themes || []).length && !(parsed.markets || []).length)) return '';
+  const chips = []
+    .concat((parsed.themes || []).map(function(theme) { return '主题：' + theme.name; }))
+    .concat((parsed.markets || []).map(function(market) { return '市场：' + market; }))
+    .concat(parsed.avoidOverheated ? ['不追高'] : [])
+    .concat(parsed.preferBusinessMatch ? ['主营优先'] : [])
+    .concat(parsed.preferPullback ? ['回调偏好'] : []);
+  return '<div class="parsed-demand">' +
+    '<strong>需求解析</strong>' +
+    chips.map(function(chip) { return '<span class="factor-tag">' + screenerEscapeHtml(chip) + '</span>'; }).join('') +
+    '</div>';
+}
+
 function renderCompareResult(result) {
   const box = document.getElementById('screenerResults');
   if (!box) return;
@@ -405,6 +445,7 @@ function renderSavedTaskDetail(item, notesByCode) {
       '<td>' + screenerEscapeHtml(candidate.name || '') + '</td>' +
       '<td><span class="score-pill">' + screenerEscapeHtml(candidate.score) + '</span></td>' +
       '<td>' + screenerEscapeHtml(candidate.strategy || '') + '</td>' +
+      '<td>' + renderCandidateContext(candidate) + '</td>' +
       '<td>' + renderFactorBreakdown(candidate.factorBreakdown) + '</td>' +
       '<td>' + (note ? '<span class="review-status">' + screenerEscapeHtml(note.status) + '</span><div class="muted">' + screenerEscapeHtml(note.note) + '</div>' : '<span class="muted">-</span>') + '</td>' +
       '<td>' + screenerEscapeHtml((candidate.reasons || []).join('; ')) + '</td>' +
@@ -419,7 +460,7 @@ function renderSavedTaskDetail(item, notesByCode) {
     '<h3>Saved screener task</h3>' +
     '<p class="muted">' + screenerEscapeHtml(item.taskName) + ' / ' + screenerEscapeHtml(item.strategy) + ' / ' + item.candidateCount + ' candidates</p>' +
     '<div class="review-tools">' + renderReviewSummary(candidates, notesByCode) + renderReviewFilter(activeDetailStatusFilter) + '<button class="small-btn" data-detail-action="bulkReview">Bulk mark filtered</button></div>' +
-    (rows ? '<table class="data-table"><thead><tr><th>Code</th><th>Name</th><th>Score</th><th>Strategy</th><th>Contributions</th><th>Review</th><th>Reasons</th><th>Risks</th><th>Actions</th></tr></thead><tbody>' + rows + '</tbody></table>' : '<div class="empty-state compact">No candidates match the review filter.</div>') +
+    (rows ? '<table class="data-table"><thead><tr><th>Code</th><th>Name</th><th>Score</th><th>Strategy</th><th>Context</th><th>Contributions</th><th>Review</th><th>Reasons</th><th>Risks</th><th>Actions</th></tr></thead><tbody>' + rows + '</tbody></table>' : '<div class="empty-state compact">No candidates match the review filter.</div>') +
     (item.aiResult ? '<section class="saved-ai-result"><h3>Saved AI explanation</h3><pre>' + screenerEscapeHtml(item.aiResult) + '</pre></section>' : '') +
     '</section>';
   box.onchange = function(event) {
@@ -462,13 +503,21 @@ function csvCell(value) {
 }
 
 function buildCandidatesCsv(result) {
-  const header = ['code', 'name', 'score', 'strategy', 'factorTags', 'factorBreakdown', 'reasons', 'risks', 'observePrice'];
+  const header = ['code', 'name', 'score', 'strategy', 'marketLabel', 'themes', 'industry', 'boards', 'mainBusiness', 'businessSummary', 'factorTags', 'factorBreakdown', 'reasons', 'risks', 'observePrice'];
   const rows = (result.candidates || []).map(function(item) {
     return [
       item.code,
       item.name,
       item.score,
       item.strategy,
+      item.marketLabel,
+      (item.themes || []).join('; '),
+      item.industry,
+      (item.boards || []).join('; '),
+      (item.mainBusinessItems || []).map(function(entry) {
+        return entry.name + (entry.ratio == null ? '' : ' ' + entry.ratio + '%');
+      }).join('; '),
+      item.businessSummary,
       (item.factorTags || []).join('; '),
       (item.factorBreakdown || []).map(function(factor) {
         const impact = Number(factor.impact || 0);
@@ -539,13 +588,15 @@ function renderScreenerResults(result) {
     box.innerHTML = '<div class="empty-state">暂无候选结果，请调整策略或范围。</div>';
     return;
   }
-  box.innerHTML = '<table class="data-table screener-table"><thead><tr><th>代码</th><th>名称</th><th>得分</th><th>策略</th><th>因子</th><th>贡献</th><th>入选理由</th><th>风险点</th><th>观察价位</th></tr></thead><tbody>' +
+  box.innerHTML = renderParsedDemand(result.parsedDemand) +
+    '<table class="data-table screener-table"><thead><tr><th>代码</th><th>名称</th><th>得分</th><th>策略</th><th>上下文</th><th>因子</th><th>贡献</th><th>入选理由</th><th>风险点</th><th>观察价位</th></tr></thead><tbody>' +
     result.candidates.map(function(item) {
       return '<tr data-code="' + screenerEscapeHtml(item.code) + '" tabindex="0">' +
         '<td>' + screenerEscapeHtml(item.code) + '</td>' +
         '<td>' + screenerEscapeHtml(item.name) + '</td>' +
         '<td><span class="score-pill">' + screenerEscapeHtml(item.score) + '</span></td>' +
         '<td>' + screenerEscapeHtml(item.strategy) + '</td>' +
+        '<td>' + renderCandidateContext(item) + '</td>' +
         '<td>' + renderFactorTags(item.factorTags) + '</td>' +
         '<td>' + renderFactorBreakdown(item.factorBreakdown) + '</td>' +
         '<td>' + renderTextList(item.reasons) + '</td>' +
@@ -567,20 +618,21 @@ function renderFilteredScreenerResults(result) {
     return;
   }
   const candidates = filterResultCandidates(allCandidates);
-  const summary = '<div class="screener-result-summary">Showing ' + candidates.length + ' of ' + allCandidates.length + ' candidates after local filters.</div>';
+  const summary = '<div class="screener-result-summary">Showing ' + candidates.length + ' of ' + allCandidates.length + ' candidates after local filters.</div>' + renderParsedDemand(result.parsedDemand);
   if (!candidates.length) {
     box.innerHTML = summary + '<div class="empty-state compact">No candidates match current result filters.</div>' +
       '<div class="disclaimer">' + screenerEscapeHtml(result.disclaimer || '') + '</div>';
     return;
   }
   box.innerHTML = summary +
-    '<table class="data-table screener-table"><thead><tr><th>Code</th><th>Name</th><th>Score</th><th>Strategy</th><th>Factors</th><th>Contributions</th><th>Reasons</th><th>Risks</th><th>Observe</th></tr></thead><tbody>' +
+    '<table class="data-table screener-table"><thead><tr><th>Code</th><th>Name</th><th>Score</th><th>Strategy</th><th>Context</th><th>Factors</th><th>Contributions</th><th>Reasons</th><th>Risks</th><th>Observe</th></tr></thead><tbody>' +
     candidates.map(function(item) {
       return '<tr data-code="' + screenerEscapeHtml(item.code) + '" tabindex="0">' +
         '<td>' + screenerEscapeHtml(item.code) + '</td>' +
         '<td>' + screenerEscapeHtml(item.name) + '</td>' +
         '<td><span class="score-pill">' + screenerEscapeHtml(item.score) + '</span></td>' +
         '<td>' + screenerEscapeHtml(item.strategy) + '</td>' +
+        '<td>' + renderCandidateContext(item) + '</td>' +
         '<td>' + renderFactorTags(item.factorTags) + '</td>' +
         '<td>' + renderFactorBreakdown(item.factorBreakdown) + '</td>' +
         '<td>' + renderTextList(item.reasons) + '</td>' +
