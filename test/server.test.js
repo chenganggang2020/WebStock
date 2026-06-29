@@ -4,6 +4,9 @@ const http = require('node:http');
 
 process.env.OPENAI_API_KEY = 'sk-proj-serversecretabcdefghijklmnopqrstuvwxyz1234567890';
 process.env.OPENAI_MODEL = 'gpt-5-mini';
+process.env.LEVEL2_PROVIDER = 'tonghuashun-http';
+process.env.LEVEL2_BASE_URL = 'http://127.0.0.1:18180';
+process.env.LEVEL2_API_KEY = 'level2-secret-token-1234567890';
 
 const app = require('../server');
 
@@ -35,4 +38,19 @@ test('/ai-status returns public OpenAI status without leaking the key', async (t
   assert.equal(result.json.hasApiKey, true);
   assert.equal(result.body.includes(process.env.OPENAI_API_KEY), false);
   assert.equal(result.body.includes('sk-proj-serversecret'), false);
+});
+
+test('/api/level2/status returns public provider status without leaking the key', async (t) => {
+  const server = app.listen(0);
+  t.after(() => server.close());
+
+  const result = await requestJson(server, '/api/level2/status');
+
+  assert.equal(result.statusCode, 200);
+  assert.equal(result.json.success, true);
+  assert.equal(result.json.data.provider, 'tonghuashun-http');
+  assert.equal(result.json.data.configured, true);
+  assert.equal(result.json.data.hasApiKey, true);
+  assert.equal(result.body.includes(process.env.LEVEL2_API_KEY), false);
+  assert.equal(result.body.includes('level2-secret-token'), false);
 });

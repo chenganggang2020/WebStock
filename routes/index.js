@@ -13,6 +13,7 @@ const recommendationRouter = require('./recommendation');
 const hotMarketRouter = require('./hotMarket');
 const themesRouter = require('./themes');
 const sentimentRouter = require('./sentiment');
+const level2Router = require('./level2');
 
 router.use('/api', stocksRouter);
 router.use('/api', marketRouter);
@@ -25,6 +26,7 @@ router.use('/api', recommendationRouter);
 router.use('/api', hotMarketRouter);
 router.use('/api', themesRouter);
 router.use('/api', sentimentRouter);
+router.use('/api', level2Router);
 router.use('/api/portfolio', portfolioRouter);
 
 module.exports = router;
