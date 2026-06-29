@@ -131,6 +131,57 @@ test('Level-2 normalizers accept common depth and tick trade shapes', () => {
   assert.equal(trades[1].side, 'sell');
 });
 
+test('free Eastmoney money-flow rows normalize to simulated large-order fields', () => {
+  const flow = level2.normalizeEastmoneyMoneyFlow({
+    f12: '000001',
+    f14: '平安银行',
+    f2: 10.24,
+    f3: 0.1,
+    f62: 48532210,
+    f66: 85580728,
+    f69: 7.48,
+    f72: -37048518,
+    f75: -3.24,
+    f78: 593888,
+    f81: 0.05,
+    f84: -49126100,
+    f87: -4.29,
+    f184: 4.24
+  });
+
+  assert.equal(flow.provider, 'eastmoney-free-flow');
+  assert.equal(flow.sourceType, 'free-estimated');
+  assert.equal(flow.mainNetAmount, 48532210);
+  assert.equal(flow.superLargeNetAmount, 85580728);
+  assert.equal(flow.largeNetAmount, -37048518);
+  assert.equal(flow.simulatedLargeNetAmount, 48532210);
+});
+
+test('manual retail Level-2 paste parses trades and calculates large-order stats', () => {
+  const pasted = [
+    '时间 成交价 成交量 方向',
+    '09:30:01 10.25 60000 买入',
+    '09:30:02 10.21 50000 卖出',
+    '09:30:03 10.22 1000 中性'
+  ].join('\n');
+
+  const result = level2.analyzeManualTrades({
+    code: '000001',
+    text: pasted,
+    threshold: 500000,
+    volumeUnit: 'share'
+  });
+
+  assert.equal(result.provider, 'manual-level2-paste');
+  assert.equal(result.trades.length, 3);
+  assert.equal(result.trades[0].side, 'buy');
+  assert.equal(result.trades[1].side, 'sell');
+  assert.equal(result.stats.largeTradeCount, 2);
+  assert.equal(result.stats.largeBuyAmount, 615000);
+  assert.equal(result.stats.largeSellAmount, 510500);
+  assert.equal(result.stats.largeNetAmount, 104500);
+});
+
 test('Level-2 HTTP provider fetches depth and calculates large order stats', async (t) => {
   const gateway = await createMockGateway();
   t.after(function () { gateway.close(); });

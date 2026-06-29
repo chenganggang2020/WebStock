@@ -90,3 +90,25 @@ test('/api/level2/config saves gateway settings without returning the key', asyn
   assert.equal(status.json.data.configured, true);
   assert.equal(status.body.includes('level2-ui-secret-token'), false);
 });
+
+test('/api/level2/manual-trades analyzes pasted retail Level-2 rows', async (t) => {
+  const server = app.listen(0);
+  t.after(() => server.close());
+
+  const result = await requestJson(server, {
+    path: '/api/level2/manual-trades',
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' }
+  }, {
+    code: '000001',
+    threshold: 500000,
+    volumeUnit: 'share',
+    text: '09:30:01 10.25 60000 买入\n09:30:02 10.21 50000 卖出'
+  });
+
+  assert.equal(result.statusCode, 200);
+  assert.equal(result.json.success, true);
+  assert.equal(result.json.data.provider, 'manual-level2-paste');
+  assert.equal(result.json.data.stats.largeTradeCount, 2);
+  assert.equal(result.json.data.stats.largeNetAmount, 104500);
+});

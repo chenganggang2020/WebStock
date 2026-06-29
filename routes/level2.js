@@ -72,4 +72,22 @@ router.get('/level2/large-orders', async function (req, res) {
   }
 });
 
+router.get('/level2/free-flow', async function (req, res) {
+  const code = requireCode(req, res);
+  if (!code) return;
+  try {
+    ok(res, await level2.getFreeMoneyFlow(code));
+  } catch (error) {
+    fail(res, error, 502);
+  }
+});
+
+router.post('/level2/manual-trades', function (req, res) {
+  try {
+    ok(res, level2.analyzeManualTrades(req.body || {}));
+  } catch (error) {
+    fail(res, error, 400);
+  }
+});
+
 module.exports = router;

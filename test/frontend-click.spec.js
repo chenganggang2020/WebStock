@@ -385,6 +385,11 @@ test('main stock actions and workspace navigation do not throw', async ({ page }
   await expect(page.locator('#settingsLevel2TestResult')).toContainText('saved');
   await expect(page.locator('#settingsLevel2Status')).toContainText('Configured');
   await expect(page.locator('#settingsLevel2Status')).not.toContainText('front-end-secret-token');
+  await expect(page.locator('#testFreeFlowCurrentStockBtn')).toBeVisible();
+  await page.fill('#manualLevel2PasteInput', '09:30:01 10.25 60000 买入\n09:30:02 10.21 50000 卖出');
+  await page.click('#analyzeManualLevel2Btn');
+  await expect(page.locator('#settingsLevel2TestResult')).toContainText('粘贴模拟');
+  await expect(page.locator('#settingsLevel2TestResult')).toContainText('大单净额 104500');
   await expect(page.locator('#savedHandoffResults')).toContainText('ChatGPT');
   await expect(page.locator('#exportUserDataBtn')).toBeVisible();
   await expect(page.locator('#importUserDataBtn')).toBeVisible();

@@ -47,6 +47,18 @@ LEVEL2_VOLUME_UNIT=share
 - `GET /api/level2/depth?code=000001`
 - `GET /api/level2/trades?code=000001&limit=200`
 - `GET /api/level2/large-orders?code=000001&threshold=500000`
+- `GET /api/level2/free-flow?code=000001`
+- `POST /api/level2/manual-trades`
+
+## 免费资金流模拟
+
+`free-flow` 当前使用东方财富公开资金流统计，返回主力净额、超大单净额、大单净额、中单净额、小单净额等字段。它适合免费试用和智能选股因子，但不是交易所原始 Level-2 逐笔成交。
+
+## 普通同花顺 Level-2 辅助模式
+
+如果只有普通同花顺 Level-2 会员，可以从同花顺逐笔成交/成交明细表复制可见行，粘贴到 WebStock 的“设置 -> Level-2 接入 -> 同花顺普通 Level-2 粘贴模拟”。WebStock 会按成交价、成交量、买卖方向估算大单净额。
+
+该模式只分析你粘贴进来的可见数据，不会自动登录同花顺，也不会读取同花顺客户端缓存。
 
 ## 大单统计口径
 

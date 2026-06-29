@@ -276,8 +276,8 @@ function normalizeDepth(payload, options = {}) {
 
 function normalizeSide(value) {
   const text = String(value || '').trim().toLowerCase();
-  if (['b', 'buy', '1', 'bid', '主动买入', '买入', '外盘'].includes(text)) return 'buy';
-  if (['s', 'sell', '2', 'ask', '主动卖出', '卖出', '内盘'].includes(text)) return 'sell';
+  if (['b', 'buy', '1', 'bid', '主动买入', '买入', '外盘'].includes(text) || /买|外盘|主动买入/i.test(text)) return 'buy';
+  if (['s', 'sell', '2', 'ask', '主动卖出', '卖出', '内盘'].includes(text) || /卖|内盘|主动卖出/i.test(text)) return 'sell';
   return 'neutral';
 }
 
@@ -415,12 +415,132 @@ async function getLargeOrderStats(code, options = {}, env = process.env) {
   };
 }
 
+function toEastmoneySecid(code) {
+  const normalized = normalizeCode(code);
+  const first = normalized.charAt(0);
+  const market = first === '6' || first === '5' || first === '9' ? '1' : '0';
+  return market + '.' + normalized;
+}
+
+function normalizeEastmoneyMoneyFlow(row, options = {}) {
+  const data = row || {};
+  const mainNetAmount = roundMoney(valueFrom(data, ['f62', 'mainNetAmount'], 0));
+  const superLargeNetAmount = roundMoney(valueFrom(data, ['f66', 'superLargeNetAmount'], 0));
+  const largeNetAmount = roundMoney(valueFrom(data, ['f72', 'largeNetAmount'], 0));
+  const mediumNetAmount = roundMoney(valueFrom(data, ['f78', 'mediumNetAmount'], 0));
+  const smallNetAmount = roundMoney(valueFrom(data, ['f84', 'smallNetAmount'], 0));
+  return {
+    code: normalizeCode(options.code || data.f12 || data.code),
+    name: data.f14 || data.name || '',
+    provider: 'eastmoney-free-flow',
+    sourceType: 'free-estimated',
+    timestamp: new Date().toISOString(),
+    price: toNumber(valueFrom(data, ['f2', 'price'], 0)),
+    changePct: toNumber(valueFrom(data, ['f3', 'changePct'], 0)),
+    mainNetAmount,
+    mainNetRatio: toNumber(valueFrom(data, ['f184', 'mainNetRatio'], 0)),
+    superLargeNetAmount,
+    superLargeNetRatio: toNumber(valueFrom(data, ['f69', 'superLargeNetRatio'], 0)),
+    largeNetAmount,
+    largeNetRatio: toNumber(valueFrom(data, ['f75', 'largeNetRatio'], 0)),
+    mediumNetAmount,
+    mediumNetRatio: toNumber(valueFrom(data, ['f81', 'mediumNetRatio'], 0)),
+    smallNetAmount,
+    smallNetRatio: toNumber(valueFrom(data, ['f87', 'smallNetRatio'], 0)),
+    simulatedLargeNetAmount: roundMoney(superLargeNetAmount + largeNetAmount),
+    note: 'Free Eastmoney fund-flow estimate. This is not raw exchange Level-2 tick data.'
+  };
+}
+
+async function getFreeMoneyFlow(code) {
+  const normalized = normalizeCode(code);
+  const response = await axios.get('https://push2.eastmoney.com/api/qt/ulist.np/get', {
+    timeout: 8000,
+    headers: { Referer: 'https://quote.eastmoney.com/' },
+    params: {
+      fltt: 2,
+      secids: toEastmoneySecid(normalized),
+      fields: 'f2,f3,f12,f14,f62,f66,f69,f72,f75,f78,f81,f84,f87,f184'
+    }
+  });
+  const diff = response.data && response.data.data && Array.isArray(response.data.data.diff)
+    ? response.data.data.diff
+    : [];
+  if (!diff.length) {
+    const error = new Error('Free money-flow data is unavailable for ' + normalized);
+    error.statusCode = 502;
+    throw error;
+  }
+  return normalizeEastmoneyMoneyFlow(diff[0], { code: normalized });
+}
+
+function parseManualTrades(text, options = {}) {
+  const config = Object.assign({ volumeUnit: 'share' }, options);
+  const multiplier = config.volumeUnit === 'lot' ? 100 : 1;
+  const lines = String(text || '').split(/\r?\n/);
+  const trades = [];
+
+  lines.forEach(function (line, index) {
+    const raw = line.trim();
+    if (!raw || /时间|成交|价格|方向|买卖|现手|总手/.test(raw)) return;
+    const columns = raw.split(/\t|,|，|\s{2,}/).map(function (part) { return part.trim(); }).filter(Boolean);
+    const parts = columns.length > 1 ? columns : raw.split(/\s+/).filter(Boolean);
+    const joined = parts.join(' ');
+    const timeMatch = joined.match(/\b\d{1,2}:\d{2}(?::\d{2})?\b/);
+    const side = normalizeSide(joined);
+    const numbers = parts
+      .map(function (part) { return String(part).replace(/[,+]/g, '').replace(/[手股元万亿]/g, ''); })
+      .filter(function (part) { return /^-?\d+(?:\.\d+)?$/.test(part); })
+      .map(Number);
+    if (numbers.length < 2) return;
+
+    const price = numbers.find(function (number) { return number > 0 && number < 10000; }) || 0;
+    const priceIndex = numbers.indexOf(price);
+    const volume = numbers[priceIndex + 1] || numbers[1] || 0;
+    let amount = numbers.find(function (number, numberIndex) {
+      return numberIndex > priceIndex + 1 && number >= 10000;
+    }) || 0;
+    if (!amount && price && volume) amount = price * volume * multiplier;
+
+    trades.push({
+      sequence: index + 1,
+      time: timeMatch ? timeMatch[0] : '',
+      price: toNumber(price),
+      volume: toNumber(volume),
+      amount: roundMoney(amount),
+      side
+    });
+  });
+
+  return trades;
+}
+
+function analyzeManualTrades(input = {}) {
+  const trades = parseManualTrades(input.text || '', {
+    volumeUnit: input.volumeUnit || 'share'
+  });
+  const threshold = toNumber(input.threshold, DEFAULT_LARGE_ORDER_THRESHOLD);
+  return {
+    code: normalizeCode(input.code || ''),
+    provider: 'manual-level2-paste',
+    sourceType: 'manual-simulation',
+    timestamp: new Date().toISOString(),
+    trades,
+    stats: calculateLargeOrderStats(trades, { threshold }),
+    note: 'Manual paste simulation from a retail Level-2 screen. Accuracy depends on copied columns and visible rows.'
+  };
+}
+
 module.exports = {
   DEFAULT_LARGE_ORDER_THRESHOLD,
   getLevel2Config,
   getPublicStatus,
   getEditableConfig,
   saveLevel2Config,
+  normalizeEastmoneyMoneyFlow,
+  getFreeMoneyFlow,
+  parseManualTrades,
+  analyzeManualTrades,
   normalizeDepth,
   normalizeTrades,
   calculateLargeOrderStats,

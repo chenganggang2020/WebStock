@@ -2699,7 +2699,8 @@ body.dark .md-body blockquote { background: rgba(99,102,241,0.12); }
 }
 
 .settings-field input,
-.settings-field select {
+.settings-field select,
+.settings-field textarea {
   width: 100%;
   padding: 7px 8px;
   border: 1px solid var(--border);
@@ -2707,6 +2708,11 @@ body.dark .md-body blockquote { background: rgba(99,102,241,0.12); }
   background: var(--bg);
   color: var(--text);
   font: inherit;
+}
+
+.settings-field textarea {
+  min-height: 96px;
+  resize: vertical;
 }
 
 a.small-btn {

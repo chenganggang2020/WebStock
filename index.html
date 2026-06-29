@@ -466,7 +466,8 @@
           <div class="template-actions">
             <a id="level2OfficialLoginLink" class="small-btn" href="https://quantapi.10jqka.com.cn/" target="_blank" rel="noopener">打开同花顺接口入口</a>
             <button id="refreshLevel2StatusBtn" class="small-btn">刷新状态</button>
-            <button id="testLevel2CurrentStockBtn" class="small-btn">测试当前股票</button>
+            <button id="testLevel2CurrentStockBtn" class="small-btn">测试授权接口</button>
+            <button id="testFreeFlowCurrentStockBtn" class="small-btn">免费资金流测试</button>
           </div>
           <div id="settingsLevel2Status" class="settings-status">--</div>
           <div class="settings-form-grid">
@@ -507,6 +508,12 @@
           <div class="template-actions">
             <button id="saveLevel2ConfigBtn" class="small-btn primary">保存 Level-2 配置</button>
             <button id="clearLevel2KeyBtn" class="small-btn">清除 Key</button>
+          </div>
+          <label class="settings-field stack">同花顺普通 Level-2 粘贴模拟
+            <textarea id="manualLevel2PasteInput" placeholder="从同花顺逐笔成交/成交明细表复制几行到这里，例如：09:30:01 10.25 60000 买入"></textarea>
+          </label>
+          <div class="template-actions">
+            <button id="analyzeManualLevel2Btn" class="small-btn">分析粘贴数据</button>
           </div>
           <div id="settingsLevel2TestResult" class="settings-status-detail"></div>
         </section>

@@ -154,6 +154,57 @@ async function settingsTestLevel2CurrentStock() {
   }
 }
 
+async function settingsTestFreeFlowCurrentStock() {
+  const code = window.State && window.State.currentStock ? window.State.currentStock.code : '000001';
+  settingsSetLevel2Result('Fetching free fund-flow estimate for ' + code + '...');
+  try {
+    const data = await window.ApiClient.fetchJsonData('/api/level2/free-flow?code=' + encodeURIComponent(code));
+    settingsSetLevel2Result(
+      '免费资金流: ' + data.code + ' ' + (data.name || '') +
+      ' 主力净额 ' + (data.mainNetAmount || 0) +
+      ', 超大单 ' + (data.superLargeNetAmount || 0) +
+      ', 大单 ' + (data.largeNetAmount || 0) +
+      ', 模拟大单净额 ' + (data.simulatedLargeNetAmount || 0) +
+      ', 主力占比 ' + (Number(data.mainNetRatio || 0)).toFixed(2) + '%.'
+    );
+  } catch (error) {
+    settingsSetLevel2Result('Free flow failed: ' + error.message, true);
+  }
+}
+
+async function settingsAnalyzeManualLevel2Paste() {
+  const textarea = document.getElementById('manualLevel2PasteInput');
+  const text = textarea ? textarea.value : '';
+  if (!text.trim()) {
+    settingsSetLevel2Result('请先粘贴同花顺逐笔成交/成交明细文本。', true);
+    return;
+  }
+  const code = window.State && window.State.currentStock ? window.State.currentStock.code : '000001';
+  const thresholdInput = document.getElementById('level2ThresholdInput');
+  const volumeUnitInput = document.getElementById('level2VolumeUnitInput');
+  settingsSetLevel2Result('Analyzing pasted Level-2 rows...');
+  try {
+    const data = await window.ApiClient.fetchJsonData('/api/level2/manual-trades', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        code,
+        text,
+        threshold: thresholdInput ? thresholdInput.value : 500000,
+        volumeUnit: volumeUnitInput ? volumeUnitInput.value : 'share'
+      })
+    });
+    settingsSetLevel2Result(
+      '粘贴模拟: 解析 ' + data.trades.length +
+      ' 笔，超过阈值 ' + data.stats.largeTradeCount +
+      ' 笔，大单净额 ' + data.stats.largeNetAmount +
+      '，大单占比 ' + ((Number(data.stats.largeAmountRatio) || 0) * 100).toFixed(2) + '%.'
+    );
+  } catch (error) {
+    settingsSetLevel2Result('Manual analysis failed: ' + error.message, true);
+  }
+}
+
 function settingsSetBackupStatus(message, isError) {
   const target = document.getElementById('settingsBackupStatus');
   if (!target) return;
@@ -403,6 +454,16 @@ function settingsBind() {
     settingsTestLevel2CurrentStock().catch(function(error) { settingsSetLevel2Result(error.message, true); });
   });
 
+  const testFreeFlow = document.getElementById('testFreeFlowCurrentStockBtn');
+  if (testFreeFlow) testFreeFlow.addEventListener('click', function() {
+    settingsTestFreeFlowCurrentStock().catch(function(error) { settingsSetLevel2Result(error.message, true); });
+  });
+
+  const analyzeManual = document.getElementById('analyzeManualLevel2Btn');
+  if (analyzeManual) analyzeManual.addEventListener('click', function() {
+    settingsAnalyzeManualLevel2Paste().catch(function(error) { settingsSetLevel2Result(error.message, true); });
+  });
+
   const exportBtn = document.getElementById('exportUserDataBtn');
   if (exportBtn) exportBtn.addEventListener('click', settingsExportUserData);
 
@@ -438,6 +499,8 @@ window.Settings = {
   loadLevel2Config: settingsLoadLevel2Config,
   saveLevel2Config: settingsSaveLevel2Config,
   testLevel2CurrentStock: settingsTestLevel2CurrentStock,
+  testFreeFlowCurrentStock: settingsTestFreeFlowCurrentStock,
+  analyzeManualLevel2Paste: settingsAnalyzeManualLevel2Paste,
   getRiskSettings: settingsGetRiskSettings,
   saveRiskSettings: settingsSaveRiskSettings,
   resetRiskSettings: settingsResetRiskSettings
