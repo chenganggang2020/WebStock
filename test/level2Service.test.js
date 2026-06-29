@@ -1,6 +1,9 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const http = require('node:http');
+const fs = require('node:fs');
+const os = require('node:os');
+const path = require('node:path');
 
 const level2 = require('../services/level2Service');
 
@@ -69,6 +72,39 @@ test('Level-2 status is disabled until an authorized provider is configured', ()
 
   assert.equal(status.configured, false);
   assert.equal(status.hasApiKey, false);
+});
+
+test('Level-2 config save persists local gateway settings without returning secret keys', async () => {
+  const configPath = path.join(os.tmpdir(), 'webstock-level2-config-' + process.pid + '-' + Date.now() + '.json');
+  try { fs.rmSync(configPath, { force: true }); } catch (error) {}
+
+  await withEnv({ WEBSTOCK_LEVEL2_CONFIG_PATH: configPath }, async function () {
+    const saved = level2.saveLevel2Config({
+      provider: 'tonghuashun-http',
+      baseUrl: 'http://127.0.0.1:18180/',
+      apiKey: 'secret-level2-key',
+      loginUrl: 'https://quantapi.10jqka.com.cn/',
+      largeOrderThreshold: '800000'
+    });
+
+    assert.equal(saved.provider, 'tonghuashun-http');
+    assert.equal(saved.baseUrl, 'http://127.0.0.1:18180');
+    assert.equal(saved.hasApiKey, true);
+    assert.equal(Object.prototype.hasOwnProperty.call(saved, 'apiKey'), false);
+    assert.equal(JSON.stringify(saved).includes('secret-level2-key'), false);
+
+    const status = level2.getPublicStatus();
+    assert.equal(status.configured, true);
+    assert.equal(status.largeOrderThreshold, 800000);
+    assert.equal(status.hasApiKey, true);
+    assert.equal(JSON.stringify(status).includes('secret-level2-key'), false);
+
+    const preserved = level2.saveLevel2Config({ baseUrl: 'http://127.0.0.1:18181', apiKey: '' });
+    assert.equal(preserved.baseUrl, 'http://127.0.0.1:18181');
+    assert.equal(preserved.hasApiKey, true);
+  });
+
+  try { fs.rmSync(configPath, { force: true }); } catch (error) {}
 });
 
 test('Level-2 normalizers accept common depth and tick trade shapes', () => {

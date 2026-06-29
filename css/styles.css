@@ -2683,13 +2683,36 @@ body.dark .md-body blockquote { background: rgba(99,102,241,0.12); }
   font-size: 13px;
 }
 
-.settings-field input {
+.settings-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 14px;
+  margin: 12px 0;
+}
+
+.settings-field.stack {
+  display: flex;
+  align-items: stretch;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+}
+
+.settings-field input,
+.settings-field select {
   width: 100%;
   padding: 7px 8px;
   border: 1px solid var(--border);
   border-radius: 6px;
   background: var(--bg);
   color: var(--text);
+  font: inherit;
+}
+
+a.small-btn {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
 }
 
 .settings-card p {

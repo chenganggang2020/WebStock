@@ -1,8 +1,47 @@
 require('dotenv').config();
 
 const axios = require('axios');
+const fs = require('fs');
+const path = require('path');
+const db = require('../db');
 
 const DEFAULT_LARGE_ORDER_THRESHOLD = 500000;
+const CONFIG_KEYS = [
+  'provider',
+  'baseUrl',
+  'apiKey',
+  'authHeader',
+  'authPrefix',
+  'depthEndpoint',
+  'tradesEndpoint',
+  'ordersEndpoint',
+  'timeoutMs',
+  'largeOrderThreshold',
+  'volumeUnit',
+  'loginUrl'
+];
+
+function getConfigPath(env = process.env) {
+  return env.WEBSTOCK_LEVEL2_CONFIG_PATH || path.join(path.dirname(db.dbPath), 'level2-config.json');
+}
+
+function readSavedConfig(env = process.env) {
+  const file = getConfigPath(env);
+  try {
+    if (!fs.existsSync(file)) return {};
+    const parsed = JSON.parse(fs.readFileSync(file, 'utf8'));
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch (error) {
+    console.warn('[Level2] Could not read saved config:', error.message);
+    return {};
+  }
+}
+
+function writeSavedConfig(config, env = process.env) {
+  const file = getConfigPath(env);
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.writeFileSync(file, JSON.stringify(config, null, 2));
+}
 
 function envFirst(env, names, fallback) {
   for (let i = 0; i < names.length; i++) {
@@ -27,9 +66,10 @@ function normalizeCode(code) {
 }
 
 function getLevel2Config(env = process.env) {
+  const saved = readSavedConfig(env);
   const provider = envFirst(env, ['LEVEL2_PROVIDER', 'TONGHUASHUN_LEVEL2_PROVIDER'], 'disabled').toLowerCase();
   const baseUrl = envFirst(env, ['LEVEL2_BASE_URL', 'TONGHUASHUN_LEVEL2_BASE_URL'], '');
-  return {
+  const envConfig = {
     provider,
     baseUrl: baseUrl.replace(/\/+$/, ''),
     apiKey: envFirst(env, ['LEVEL2_API_KEY', 'TONGHUASHUN_LEVEL2_API_KEY'], ''),
@@ -40,8 +80,10 @@ function getLevel2Config(env = process.env) {
     ordersEndpoint: envFirst(env, ['LEVEL2_ORDERS_ENDPOINT', 'TONGHUASHUN_LEVEL2_ORDERS_ENDPOINT'], '/orders?code={code}&limit={limit}'),
     timeoutMs: toNumber(envFirst(env, ['LEVEL2_TIMEOUT_MS', 'TONGHUASHUN_LEVEL2_TIMEOUT_MS'], '5000'), 5000),
     largeOrderThreshold: toNumber(envFirst(env, ['LEVEL2_LARGE_ORDER_THRESHOLD'], String(DEFAULT_LARGE_ORDER_THRESHOLD)), DEFAULT_LARGE_ORDER_THRESHOLD),
-    volumeUnit: envFirst(env, ['LEVEL2_VOLUME_UNIT'], 'share').toLowerCase()
+    volumeUnit: envFirst(env, ['LEVEL2_VOLUME_UNIT'], 'share').toLowerCase(),
+    loginUrl: envFirst(env, ['LEVEL2_LOGIN_URL', 'TONGHUASHUN_LEVEL2_LOGIN_URL'], 'https://quantapi.10jqka.com.cn/')
   };
+  return normalizeConfig(Object.assign({}, envConfig, saved));
 }
 
 function maskSecret(value) {
@@ -62,8 +104,55 @@ function getPublicStatus(env = process.env) {
     tradesEndpoint: config.tradesEndpoint,
     ordersEndpoint: config.ordersEndpoint,
     largeOrderThreshold: config.largeOrderThreshold,
-    volumeUnit: config.volumeUnit
+    volumeUnit: config.volumeUnit,
+    loginUrl: config.loginUrl
   };
+}
+
+function normalizeConfig(input) {
+  const config = {};
+  CONFIG_KEYS.forEach(function (key) {
+    if (input[key] !== undefined) config[key] = input[key];
+  });
+  config.provider = String(config.provider || 'disabled').trim().toLowerCase();
+  config.baseUrl = String(config.baseUrl || '').trim().replace(/\/+$/, '');
+  config.apiKey = String(config.apiKey || '').trim();
+  config.authHeader = String(config.authHeader || 'Authorization').trim();
+  config.authPrefix = String(config.authPrefix || 'Bearer').trim();
+  config.depthEndpoint = String(config.depthEndpoint || '/depth?code={code}').trim();
+  config.tradesEndpoint = String(config.tradesEndpoint || '/trades?code={code}&limit={limit}').trim();
+  config.ordersEndpoint = String(config.ordersEndpoint || '/orders?code={code}&limit={limit}').trim();
+  config.timeoutMs = toNumber(config.timeoutMs, 5000);
+  config.largeOrderThreshold = toNumber(config.largeOrderThreshold, DEFAULT_LARGE_ORDER_THRESHOLD);
+  config.volumeUnit = String(config.volumeUnit || 'share').trim().toLowerCase() === 'lot' ? 'lot' : 'share';
+  config.loginUrl = String(config.loginUrl || 'https://quantapi.10jqka.com.cn/').trim();
+  return config;
+}
+
+function getEditableConfig(env = process.env) {
+  const config = getLevel2Config(env);
+  const result = Object.assign({}, config);
+  delete result.apiKey;
+  result.hasApiKey = !!config.apiKey;
+  result.apiKeyPreview = maskSecret(config.apiKey);
+  result.configured = config.provider !== 'disabled' && !!config.baseUrl;
+  return result;
+}
+
+function saveLevel2Config(input, env = process.env) {
+  const current = getLevel2Config(env);
+  const nextInput = {};
+  CONFIG_KEYS.forEach(function (key) {
+    if (Object.prototype.hasOwnProperty.call(input, key)) nextInput[key] = input[key];
+  });
+  const shouldPreserveApiKey = !Object.prototype.hasOwnProperty.call(nextInput, 'apiKey') || String(nextInput.apiKey || '').trim() === '';
+  const merged = Object.assign({}, current, nextInput);
+  if (shouldPreserveApiKey && input.clearApiKey !== true) merged.apiKey = current.apiKey;
+  if (input.clearApiKey === true) merged.apiKey = '';
+
+  const saved = normalizeConfig(merged);
+  writeSavedConfig(saved, env);
+  return getEditableConfig(env);
 }
 
 function ensureConfigured(config) {
@@ -330,6 +419,8 @@ module.exports = {
   DEFAULT_LARGE_ORDER_THRESHOLD,
   getLevel2Config,
   getPublicStatus,
+  getEditableConfig,
+  saveLevel2Config,
   normalizeDepth,
   normalizeTrades,
   calculateLargeOrderStats,

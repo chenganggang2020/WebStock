@@ -376,6 +376,15 @@ test('main stock actions and workspace navigation do not throw', async ({ page }
   await page.click('[data-main-view="settings"]');
   await expect(page.locator('#settingsView')).toBeVisible();
   await expect(page.locator('#settingsAiStatus')).toContainText(/Handoff mode|Enabled/);
+  await expect(page.locator('#settingsLevel2Status')).toContainText(/Not configured|Configured/);
+  await expect(page.locator('#level2OfficialLoginLink')).toHaveAttribute('href', /quantapi\.10jqka\.com\.cn/);
+  await page.selectOption('#level2ProviderInput', 'tonghuashun-http');
+  await page.fill('#level2BaseUrlInput', 'http://127.0.0.1:18180');
+  await page.fill('#level2ApiKeyInput', 'front-end-secret-token');
+  await page.click('#saveLevel2ConfigBtn');
+  await expect(page.locator('#settingsLevel2TestResult')).toContainText('saved');
+  await expect(page.locator('#settingsLevel2Status')).toContainText('Configured');
+  await expect(page.locator('#settingsLevel2Status')).not.toContainText('front-end-secret-token');
   await expect(page.locator('#savedHandoffResults')).toContainText('ChatGPT');
   await expect(page.locator('#exportUserDataBtn')).toBeVisible();
   await expect(page.locator('#importUserDataBtn')).toBeVisible();

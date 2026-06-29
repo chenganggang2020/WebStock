@@ -25,6 +25,18 @@ router.get('/level2/status', function (req, res) {
   ok(res, level2.getPublicStatus());
 });
 
+router.get('/level2/config', function (req, res) {
+  ok(res, level2.getEditableConfig());
+});
+
+router.put('/level2/config', function (req, res) {
+  try {
+    ok(res, level2.saveLevel2Config(req.body || {}));
+  } catch (error) {
+    fail(res, error, 500);
+  }
+});
+
 router.get('/level2/depth', async function (req, res) {
   const code = requireCode(req, res);
   if (!code) return;

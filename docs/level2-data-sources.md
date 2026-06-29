@@ -22,8 +22,11 @@ WebStock 现在支持通过授权 Level-2 HTTP 网关接入十档盘口、逐笔
 
 ## WebStock 配置
 
+可以在软件的“设置 -> Level-2 接入”中填写，也可以用环境变量：
+
 ```env
 LEVEL2_PROVIDER=tonghuashun-http
+LEVEL2_LOGIN_URL=https://quantapi.10jqka.com.cn/
 LEVEL2_BASE_URL=http://127.0.0.1:18180
 LEVEL2_API_KEY=
 LEVEL2_AUTH_HEADER=Authorization

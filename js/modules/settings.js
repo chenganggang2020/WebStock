@@ -1,6 +1,7 @@
 let settingsBound = false;
 const RISK_SETTINGS_KEY = 'webstock_risk_settings';
 const DEFAULT_RISK_SETTINGS = { drawdown: 8, dailyDrop: 3, leaderDrop: 3 };
+const DEFAULT_LEVEL2_LOGIN_URL = 'https://quantapi.10jqka.com.cn/';
 
 function settingsEscapeHtml(value) {
   return String(value == null ? '' : value)
@@ -34,6 +35,122 @@ async function settingsLoadAIStatus() {
     ].join('');
   } catch (error) {
     target.innerHTML = '<div class="error-text">AI status unavailable: ' + settingsEscapeHtml(error.message) + '</div>';
+  }
+}
+
+function settingsSetLevel2Result(message, isError) {
+  const target = document.getElementById('settingsLevel2TestResult');
+  if (!target) return;
+  target.classList.toggle('error-text', !!isError);
+  target.textContent = message || '';
+}
+
+function settingsLevel2Field(id) {
+  return document.getElementById(id);
+}
+
+function settingsFillLevel2Form(config) {
+  const provider = settingsLevel2Field('level2ProviderInput');
+  const loginUrl = settingsLevel2Field('level2LoginUrlInput');
+  const baseUrl = settingsLevel2Field('level2BaseUrlInput');
+  const apiKey = settingsLevel2Field('level2ApiKeyInput');
+  const depthEndpoint = settingsLevel2Field('level2DepthEndpointInput');
+  const tradesEndpoint = settingsLevel2Field('level2TradesEndpointInput');
+  const threshold = settingsLevel2Field('level2ThresholdInput');
+  const volumeUnit = settingsLevel2Field('level2VolumeUnitInput');
+  const officialLink = settingsLevel2Field('level2OfficialLoginLink');
+
+  if (provider) provider.value = config.provider || 'disabled';
+  if (loginUrl) loginUrl.value = config.loginUrl || DEFAULT_LEVEL2_LOGIN_URL;
+  if (baseUrl) baseUrl.value = config.baseUrl || '';
+  if (apiKey) apiKey.value = '';
+  if (depthEndpoint) depthEndpoint.value = config.depthEndpoint || '/depth?code={code}';
+  if (tradesEndpoint) tradesEndpoint.value = config.tradesEndpoint || '/trades?code={code}&limit={limit}';
+  if (threshold) threshold.value = config.largeOrderThreshold || 500000;
+  if (volumeUnit) volumeUnit.value = config.volumeUnit || 'share';
+  if (officialLink) officialLink.href = config.loginUrl || DEFAULT_LEVEL2_LOGIN_URL;
+}
+
+function settingsRenderLevel2Status(config) {
+  const target = document.getElementById('settingsLevel2Status');
+  if (!target) return;
+  const configured = !!config.configured;
+  const keyText = config.hasApiKey
+    ? 'Key: ' + settingsEscapeHtml(config.apiKeyPreview || 'saved')
+    : 'Key: not saved';
+  target.innerHTML = [
+    '<div class="settings-status-row">',
+    '<span class="status-pill ' + (configured ? 'good' : 'muted') + '">' + (configured ? 'Configured' : 'Not configured') + '</span>',
+    '<span>' + settingsEscapeHtml(config.provider || 'disabled') + '</span>',
+    '<span>' + settingsEscapeHtml(config.baseUrl || 'No gateway URL') + '</span>',
+    '</div>',
+    '<div class="settings-status-detail">',
+    keyText + ' · Threshold: ' + settingsEscapeHtml(config.largeOrderThreshold || 500000) +
+    ' · Volume unit: ' + settingsEscapeHtml(config.volumeUnit || 'share'),
+    '</div>'
+  ].join('');
+}
+
+async function settingsLoadLevel2Config() {
+  const target = document.getElementById('settingsLevel2Status');
+  if (target) target.innerHTML = '<span class="muted">Loading...</span>';
+  try {
+    const config = await window.ApiClient.fetchJsonData('/api/level2/config');
+    settingsFillLevel2Form(config);
+    settingsRenderLevel2Status(config);
+  } catch (error) {
+    if (target) target.innerHTML = '<div class="error-text">Level-2 status unavailable: ' + settingsEscapeHtml(error.message) + '</div>';
+  }
+}
+
+function settingsReadLevel2Form(extra) {
+  return Object.assign({
+    provider: settingsLevel2Field('level2ProviderInput') ? settingsLevel2Field('level2ProviderInput').value : 'disabled',
+    loginUrl: settingsLevel2Field('level2LoginUrlInput') ? settingsLevel2Field('level2LoginUrlInput').value : DEFAULT_LEVEL2_LOGIN_URL,
+    baseUrl: settingsLevel2Field('level2BaseUrlInput') ? settingsLevel2Field('level2BaseUrlInput').value : '',
+    apiKey: settingsLevel2Field('level2ApiKeyInput') ? settingsLevel2Field('level2ApiKeyInput').value : '',
+    depthEndpoint: settingsLevel2Field('level2DepthEndpointInput') ? settingsLevel2Field('level2DepthEndpointInput').value : '/depth?code={code}',
+    tradesEndpoint: settingsLevel2Field('level2TradesEndpointInput') ? settingsLevel2Field('level2TradesEndpointInput').value : '/trades?code={code}&limit={limit}',
+    largeOrderThreshold: settingsLevel2Field('level2ThresholdInput') ? settingsLevel2Field('level2ThresholdInput').value : 500000,
+    volumeUnit: settingsLevel2Field('level2VolumeUnitInput') ? settingsLevel2Field('level2VolumeUnitInput').value : 'share'
+  }, extra || {});
+}
+
+async function settingsSaveLevel2Config(extra) {
+  settingsSetLevel2Result('Saving Level-2 config...');
+  try {
+    const config = await window.ApiClient.fetchJsonData('/api/level2/config', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(settingsReadLevel2Form(extra))
+    });
+    settingsFillLevel2Form(config);
+    settingsRenderLevel2Status(config);
+    settingsSetLevel2Result('Level-2 config saved. You can now test the gateway.');
+  } catch (error) {
+    settingsSetLevel2Result('Save failed: ' + error.message, true);
+  }
+}
+
+async function settingsClearLevel2Key() {
+  if (!confirm('Clear saved Level-2 API Key?')) return;
+  await settingsSaveLevel2Config({ clearApiKey: true, apiKey: '' });
+}
+
+async function settingsTestLevel2CurrentStock() {
+  const code = window.State && window.State.currentStock ? window.State.currentStock.code : '000001';
+  settingsSetLevel2Result('Testing Level-2 gateway with ' + code + '...');
+  try {
+    const data = await window.ApiClient.fetchJsonData('/api/level2/large-orders?code=' + encodeURIComponent(code) + '&limit=200');
+    const stats = data.stats || {};
+    settingsSetLevel2Result(
+      'Level-2 OK: ' + data.code +
+      ' large trades ' + (stats.largeTradeCount || 0) +
+      ', net amount ' + (stats.largeNetAmount || 0) +
+      ', ratio ' + ((Number(stats.largeAmountRatio) || 0) * 100).toFixed(2) + '%.'
+    );
+  } catch (error) {
+    settingsSetLevel2Result('Test failed: ' + error.message, true);
   }
 }
 
@@ -123,6 +240,7 @@ function settingsRenderSavedResults() {
 
 async function settingsLoad() {
   await settingsLoadAIStatus();
+  await settingsLoadLevel2Config();
   settingsRenderSavedResults();
   settingsRenderRiskSettings();
 }
@@ -257,6 +375,34 @@ function settingsBind() {
   const resetRisk = document.getElementById('resetRiskSettingsBtn');
   if (resetRisk) resetRisk.addEventListener('click', settingsResetRiskSettings);
 
+  const level2LoginUrl = document.getElementById('level2LoginUrlInput');
+  const level2OfficialLoginLink = document.getElementById('level2OfficialLoginLink');
+  if (level2LoginUrl && level2OfficialLoginLink) {
+    level2LoginUrl.addEventListener('input', function() {
+      level2OfficialLoginLink.href = level2LoginUrl.value || DEFAULT_LEVEL2_LOGIN_URL;
+    });
+  }
+
+  const refreshLevel2 = document.getElementById('refreshLevel2StatusBtn');
+  if (refreshLevel2) refreshLevel2.addEventListener('click', function() {
+    settingsLoadLevel2Config().catch(function(error) { settingsSetLevel2Result(error.message, true); });
+  });
+
+  const saveLevel2 = document.getElementById('saveLevel2ConfigBtn');
+  if (saveLevel2) saveLevel2.addEventListener('click', function() {
+    settingsSaveLevel2Config().catch(function(error) { settingsSetLevel2Result(error.message, true); });
+  });
+
+  const clearLevel2Key = document.getElementById('clearLevel2KeyBtn');
+  if (clearLevel2Key) clearLevel2Key.addEventListener('click', function() {
+    settingsClearLevel2Key().catch(function(error) { settingsSetLevel2Result(error.message, true); });
+  });
+
+  const testLevel2 = document.getElementById('testLevel2CurrentStockBtn');
+  if (testLevel2) testLevel2.addEventListener('click', function() {
+    settingsTestLevel2CurrentStock().catch(function(error) { settingsSetLevel2Result(error.message, true); });
+  });
+
   const exportBtn = document.getElementById('exportUserDataBtn');
   if (exportBtn) exportBtn.addEventListener('click', settingsExportUserData);
 
@@ -289,6 +435,9 @@ window.Settings = {
   exportUserData: settingsExportUserData,
   downloadCsvTemplate: settingsDownloadCsvTemplate,
   importUserDataFromFile: settingsImportUserDataFromFile,
+  loadLevel2Config: settingsLoadLevel2Config,
+  saveLevel2Config: settingsSaveLevel2Config,
+  testLevel2CurrentStock: settingsTestLevel2CurrentStock,
   getRiskSettings: settingsGetRiskSettings,
   saveRiskSettings: settingsSaveRiskSettings,
   resetRiskSettings: settingsResetRiskSettings

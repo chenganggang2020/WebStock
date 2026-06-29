@@ -13,4 +13,5 @@ release/
 release-*/
 data/*.db
 data/*.db-*
+data/level2-config.json
 .DS_Store

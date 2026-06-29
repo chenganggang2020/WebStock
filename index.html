@@ -460,6 +460,56 @@
           <h3>AI API 状态</h3>
           <div id="settingsAiStatus" class="settings-status">--</div>
         </section>
+        <section class="settings-card wide">
+          <h3>Level-2 接入</h3>
+          <p>用于连接已授权的同花顺 DataFeed / iFinD / 券商本地网关。请在官方窗口或本地网关中自行登录，WebStock 只保存接口地址和授权 Key。</p>
+          <div class="template-actions">
+            <a id="level2OfficialLoginLink" class="small-btn" href="https://quantapi.10jqka.com.cn/" target="_blank" rel="noopener">打开同花顺接口入口</a>
+            <button id="refreshLevel2StatusBtn" class="small-btn">刷新状态</button>
+            <button id="testLevel2CurrentStockBtn" class="small-btn">测试当前股票</button>
+          </div>
+          <div id="settingsLevel2Status" class="settings-status">--</div>
+          <div class="settings-form-grid">
+            <label class="settings-field stack">Provider
+              <select id="level2ProviderInput">
+                <option value="disabled">disabled</option>
+                <option value="tonghuashun-http">tonghuashun-http</option>
+                <option value="ifind-http">ifind-http</option>
+                <option value="qmt-http">qmt-http</option>
+                <option value="ptrade-http">ptrade-http</option>
+              </select>
+            </label>
+            <label class="settings-field stack">登录 / 网关入口
+              <input id="level2LoginUrlInput" placeholder="https://quantapi.10jqka.com.cn/">
+            </label>
+            <label class="settings-field stack">本地网关地址
+              <input id="level2BaseUrlInput" placeholder="http://127.0.0.1:18180">
+            </label>
+            <label class="settings-field stack">API Key / Token
+              <input id="level2ApiKeyInput" type="password" autocomplete="off" placeholder="留空则保留已保存 Key">
+            </label>
+            <label class="settings-field stack">盘口接口
+              <input id="level2DepthEndpointInput" placeholder="/depth?code={code}">
+            </label>
+            <label class="settings-field stack">逐笔成交接口
+              <input id="level2TradesEndpointInput" placeholder="/trades?code={code}&limit={limit}">
+            </label>
+            <label class="settings-field stack">大单阈值
+              <input id="level2ThresholdInput" type="number" min="1" step="10000" placeholder="500000">
+            </label>
+            <label class="settings-field stack">成交量单位
+              <select id="level2VolumeUnitInput">
+                <option value="share">股</option>
+                <option value="lot">手</option>
+              </select>
+            </label>
+          </div>
+          <div class="template-actions">
+            <button id="saveLevel2ConfigBtn" class="small-btn primary">保存 Level-2 配置</button>
+            <button id="clearLevel2KeyBtn" class="small-btn">清除 Key</button>
+          </div>
+          <div id="settingsLevel2TestResult" class="settings-status-detail"></div>
+        </section>
         <section class="settings-card">
           <h3>Data Backup</h3>
           <p>Export or restore recent stocks, watchlist, trades, sectors, sector leaders, leader snapshots, saved screener tasks, and candidate review notes. Import replaces local workstation data after confirmation.</p>
