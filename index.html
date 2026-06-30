@@ -218,6 +218,21 @@
             <div id="detailProfileBox" class="detail-profile-box"></div>
             <div id="detailWatchlistStatus" class="detail-status">自选：--</div>
             <div id="detailPositionStatus" class="detail-status">持仓：--</div>
+            <div id="detailLevel2Panel" class="detail-level2-panel">
+              <div class="detail-level2-head">
+                <strong>资金与 Level-2</strong>
+                <button id="detailFreeFlowBtn" class="small-btn">免费资金流</button>
+              </div>
+              <div id="detailFreeFlowBox" class="detail-flow-box">选中股票后查看免费资金流估算。</div>
+              <label class="detail-level2-paste">
+                <span>同花顺逐笔成交粘贴</span>
+                <textarea id="detailManualLevel2Input" placeholder="从同花顺逐笔成交/成交明细复制几行，例如：09:30:01 10.25 60000 买入"></textarea>
+              </label>
+              <div class="template-actions">
+                <button id="detailAnalyzeManualLevel2Btn" class="small-btn">分析同花顺粘贴</button>
+              </div>
+              <div id="detailLevel2Result" class="detail-status"></div>
+            </div>
             <div id="detailNewsList" class="detail-news"></div>
           </div>
           <div class="order-book">

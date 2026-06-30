@@ -2317,6 +2317,76 @@ body.dark .md-body blockquote { background: rgba(99,102,241,0.12); }
   overflow: auto;
 }
 
+.detail-level2-panel {
+  display: grid;
+  gap: 8px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.detail-level2-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.detail-flow-box {
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: rgba(248, 250, 252, 0.72);
+  color: #475569;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.detail-flow-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.detail-flow-item {
+  display: grid;
+  gap: 2px;
+}
+
+.detail-flow-item span,
+.detail-flow-note,
+.detail-level2-paste span {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.detail-flow-item strong {
+  font-size: 13px;
+}
+
+.detail-flow-note {
+  margin-top: 6px;
+}
+
+.detail-level2-paste {
+  display: grid;
+  gap: 5px;
+}
+
+.detail-level2-paste textarea {
+  width: 100%;
+  min-height: 70px;
+  resize: vertical;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px;
+  font: inherit;
+  font-size: 12px;
+  line-height: 1.45;
+  background: var(--card-bg);
+  color: var(--text);
+}
+
 .mini-news {
   padding: 7px 0;
   border-bottom: 1px solid var(--border);

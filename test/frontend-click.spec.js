@@ -58,6 +58,49 @@ test.beforeEach(async ({ page }) => {
     if (url.includes('/api/analysis-stream')) {
       return route.fulfill({ contentType: 'text/event-stream', body: 'data: {"type":"simulated","prompt":"测试提示词：仅供研究，不构成投资建议。"}\n\n' });
     }
+    if (url.includes('/api/level2/free-flow')) {
+      return route.fulfill({
+        contentType: 'application/json',
+        body: JSON.stringify({
+          success: true,
+          data: {
+            code: '000001',
+            name: '平安银行',
+            provider: 'eastmoney-free-flow',
+            mainNetAmount: 60000,
+            superLargeNetAmount: 20000,
+            largeNetAmount: 40000,
+            simulatedLargeNetAmount: 60000,
+            mainNetRatio: 2.5,
+            timestamp: '2026-05-12T00:00:00.000Z'
+          }
+        })
+      });
+    }
+    if (url.includes('/api/level2/manual-trades')) {
+      return route.fulfill({
+        contentType: 'application/json',
+        body: JSON.stringify({
+          success: true,
+          data: {
+            code: '000001',
+            provider: 'manual-level2-paste',
+            sourceType: 'manual-simulation',
+            trades: [
+              { sequence: 1, time: '09:30:01', price: 10.25, volume: 60000, amount: 615000, side: 'buy' },
+              { sequence: 2, time: '09:30:02', price: 10.21, volume: 50000, amount: 510500, side: 'sell' }
+            ],
+            stats: {
+              largeTradeCount: 2,
+              largeBuyAmount: 615000,
+              largeSellAmount: 510500,
+              largeNetAmount: 104500,
+              largeAmountRatio: 1
+            }
+          }
+        })
+      });
+    }
     if (url.includes('/api/sector-leaders/1') && route.request().method() === 'PUT') {
       return route.fulfill({
         contentType: 'application/json',
@@ -136,6 +179,12 @@ test('main stock actions and workspace navigation do not throw', async ({ page }
   await page.click('#stockTbody tr:first-child');
   await expect(page.locator('#analysisBtn')).toBeVisible();
   await expect(page.locator('#chartTitle')).toContainText('平安银行');
+  await expect(page.locator('#detailLevel2Panel')).toBeVisible();
+  await page.click('#detailFreeFlowBtn');
+  await expect(page.locator('#detailFreeFlowBox')).toContainText('6.00');
+  await page.fill('#detailManualLevel2Input', '09:30:01 10.25 60000 买入\n09:30:02 10.21 50000 卖出');
+  await page.click('#detailAnalyzeManualLevel2Btn');
+  await expect(page.locator('#detailLevel2Result')).toContainText('104500');
   await expect.poll(() => page.evaluate(() => Object.keys(window.State.klineSnapshots || {}).length)).toBeGreaterThan(0);
 
   await page.click('#stockTbody tr:first-child .star-btn');
