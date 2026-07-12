@@ -155,3 +155,63 @@ test('deleting an earlier buy is rejected when it would leave an oversold histor
   assert.throws(() => portfolio.deleteTrade(buy.id), /卖出数量|超过当前持仓|trade history/i);
   assert.equal(portfolio.listTrades({ code: '600001' }).length, 2);
 });
+
+test('today pnl includes same-day buy cash flow and deducts its trade fee once', () => {
+  portfolio.createTrade({
+    code: '600002',
+    name: 'Same day buy',
+    side: 'buy',
+    tradeDate: '2026-06-10',
+    price: 10,
+    quantity: 100,
+    fee: 5
+  });
+
+  const position = portfolio.getPositions({
+    '600002': { price: 10.1, prevClose: 9.8, change: 3.06, tradeDate: '2026-06-10' }
+  }).find(item => item.code === '600002');
+
+  assert.equal(position.todayPnl, 5);
+  assert.equal(position.todayReferencePnl, 5);
+  assert.equal(position.todayPnlMethod, 'transaction-adjusted');
+  assert.equal(position.todayPnlDate, '2026-06-10');
+});
+
+test('today pnl adjusts for same-day buys, sells, fees and taxes', () => {
+  portfolio.createTrade({
+    code: '600003',
+    name: 'Intraday cash flow',
+    side: 'buy',
+    tradeDate: '2026-06-09',
+    price: 10,
+    quantity: 100,
+    fee: 5
+  });
+  portfolio.createTrade({
+    code: '600003',
+    name: 'Intraday cash flow',
+    side: 'buy',
+    tradeDate: '2026-06-10',
+    price: 11,
+    quantity: 50,
+    fee: 5
+  });
+  portfolio.createTrade({
+    code: '600003',
+    name: 'Intraday cash flow',
+    side: 'sell',
+    tradeDate: '2026-06-10',
+    price: 11.2,
+    quantity: 30,
+    fee: 5,
+    tax: 1
+  });
+
+  const position = portfolio.getPositions({
+    '600003': { price: 11.5, prevClose: 10.8, change: 6.48, tradeDate: '2026-06-10' }
+  }).find(item => item.code === '600003');
+
+  assert.equal(position.quantity, 120);
+  assert.equal(position.todayPnl, 75);
+  assert.notEqual(position.todayPnl, 84);
+});

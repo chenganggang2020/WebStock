@@ -3,21 +3,25 @@
 }
 
 function fmt(value, digits) {
+  if (value === null || value === undefined || value === '') return '--';
   const n = Number(value);
   return Number.isFinite(n) ? n.toFixed(digits === undefined ? 2 : digits) : '--';
 }
 
 function pnlClass(value) {
+  if (value === null || value === undefined || value === '') return '';
   const n = Number(value);
   if (!Number.isFinite(n)) return '';
   return n >= 0 ? 'pnl-up' : 'pnl-down';
 }
 
 function finalPnlValue(pos) {
+  if (pos && pos.symbolTotalPnl !== undefined && pos.symbolTotalPnl !== null) return pos.symbolTotalPnl;
   return pos && pos.unrealizedPnl !== undefined && pos.unrealizedPnl !== null ? pos.unrealizedPnl : pos.netPnl;
 }
 
 function finalPnlRateValue(pos) {
+  if (pos && pos.symbolTotalPnlRate !== undefined && pos.symbolTotalPnlRate !== null) return pos.symbolTotalPnlRate;
   return pos && pos.unrealizedPnlRate !== undefined && pos.unrealizedPnlRate !== null ? pos.unrealizedPnlRate : pos.netPnlRate;
 }
 
@@ -98,15 +102,24 @@ function renderSummary() {
   unrealized.className = 'summary-value ' + pnlClass(summary.unrealizedPnl);
   const todayReference = document.getElementById('summaryTodayReferencePnl');
   if (todayReference) {
-    todayReference.textContent = fmt(summary.todayReferencePnl);
-    todayReference.title = '当日参考盈亏：持仓数量 × (当前价 - 昨收价)。缺少昨收价时会退回到涨跌幅估算。';
-    todayReference.className = 'summary-value ' + pnlClass(summary.todayReferencePnl);
+    const todayPnl = summary.todayPnl !== undefined ? summary.todayPnl : summary.todayReferencePnl;
+    todayReference.textContent = fmt(todayPnl);
+    todayReference.title = '当日盈亏：日末市值 + 当天卖出/分红收入 - 当天买入/费用支出 - 日初市值。每条交易记录的手续费和印花税只扣一次。';
+    todayReference.className = 'summary-value ' + pnlClass(todayPnl);
   }
   const realized = document.getElementById('summaryRealizedPnl');
   realized.textContent = fmt(summary.realizedPnl);
+  realized.title = '已实现盈亏：历史卖出、分红和独立费用记录产生的已结算盈亏。';
   realized.className = 'summary-value ' + pnlClass(summary.realizedPnl);
+  const total = document.getElementById('summaryTotalPnl');
+  if (total) {
+    total.textContent = fmt(summary.totalPnl);
+    total.title = '累计盈亏：已实现盈亏 + 当前持仓浮动盈亏。';
+    total.className = 'summary-value ' + pnlClass(summary.totalPnl);
+  }
   const rate = document.getElementById('summaryPnlRate');
   rate.textContent = fmt(summary.totalPnlRate) + '%';
+  rate.title = '累计收益率：累计盈亏 ÷ 历史买入总投入。';
   rate.className = 'summary-value ' + pnlClass(summary.totalPnlRate);
 }
 
@@ -148,6 +161,8 @@ function renderPositions() {
     const finalPnl = finalPnlValue(pos);
     const finalRate = finalPnlRateValue(pos);
     const todayReferencePnl = todayReferencePnlValue(pos);
+    const floatingPnl = pos.unrealizedPnl;
+    const realizedPnl = pos.realizedPnl;
     const trendColor = Number(pos.todayChange) >= 0 ? 'var(--up)' : 'var(--down)';
     const miniChart = window.StockList && window.StockList.miniChart
       ? window.StockList.miniChart(Object.assign({}, pos, { price: pos.currentPrice, change: pos.todayChange }), trendColor)
@@ -159,9 +174,11 @@ function renderPositions() {
       '<td>' + fmt(pos.avgCost, 3) + '</td>' +
       '<td>' + fmt(pos.currentPrice, 3) + '</td>' +
       '<td>' + fmt(pos.marketValue === null ? pos.costValue : pos.marketValue) + '</td>' +
-      '<td class="' + pnlClass(finalPnl) + '" title="浮动盈亏：当前市值 - 剩余持仓成本；该代码历史已实现盈亏 ' + fmt(pos.realizedPnl) + '">' + fmt(finalPnl) + '</td>' +
-      '<td class="' + pnlClass(finalRate) + '">' + fmt(finalRate) + '%</td>' +
-      '<td class="' + pnlClass(todayReferencePnl) + '" title="当日参考盈亏：持仓数量 × (当前价 - 昨收价)">' + fmt(todayReferencePnl) + '</td>' +
+      '<td class="' + pnlClass(floatingPnl) + '" title="浮动盈亏：当前市值 - 剩余持仓成本；买入手续费已计入剩余成本">' + fmt(floatingPnl) + '</td>' +
+      '<td class="' + pnlClass(realizedPnl) + '" title="该股票历史卖出、分红和费用形成的已实现盈亏">' + fmt(realizedPnl) + '</td>' +
+      '<td class="' + pnlClass(finalPnl) + '" title="累计盈亏：浮动盈亏 + 已实现盈亏">' + fmt(finalPnl) + '</td>' +
+      '<td class="' + pnlClass(finalRate) + '" title="累计盈亏 ÷ 该股票历史买入总投入">' + fmt(finalRate) + '%</td>' +
+      '<td class="' + pnlClass(todayReferencePnl) + '" title="按日初市值、日末市值和当天交易现金流计算；交易费税只扣一次">' + fmt(todayReferencePnl) + '</td>' +
       '<td><span class="position-action-hint">双击查看 · 右键操作</span></td>' +
       '</tr>';
   }).join('');
@@ -221,10 +238,12 @@ function exportPositionsCsv() {
     'current_price',
     'market_value',
     'cost_value',
-    'final_unrealized_pnl',
-    'final_unrealized_pnl_rate',
+    'floating_pnl',
+    'realized_pnl',
+    'cumulative_pnl',
+    'cumulative_pnl_rate',
     'total_fee',
-    'today_reference_pnl'
+    'today_pnl'
   ]].concat(rows.map(function(pos) {
     const marketValue = pos.marketValue === null ? pos.costValue : pos.marketValue;
     return [
@@ -235,6 +254,8 @@ function exportPositionsCsv() {
       fmt(pos.currentPrice, 3),
       fmt(marketValue),
       fmt(pos.costValue),
+      fmt(pos.unrealizedPnl),
+      fmt(pos.realizedPnl),
       fmt(finalPnlValue(pos)),
       fmt(finalPnlRateValue(pos)),
       fmt(pos.totalFee),

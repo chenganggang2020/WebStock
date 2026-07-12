@@ -23,6 +23,15 @@ function normalizeNumber(value, defaultValue = 0) {
   return Number.isFinite(n) ? n : defaultValue;
 }
 
+function beijingDateString() {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Shanghai',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).format(new Date());
+}
+
 function assertCode(code) {
   if (!/^\d{6}$/.test(String(code || ''))) {
     throw new Error('股票代码必须是 6 位数字');
@@ -224,7 +233,8 @@ function calculatePositionStates(trades) {
         quantity: 0,
         costValue: 0,
         realizedPnl: 0,
-        totalFee: 0
+        totalFee: 0,
+        investedCapital: 0
       });
     }
     const pos = positions.get(trade.code);
@@ -234,6 +244,7 @@ function calculatePositionStates(trades) {
     if (trade.side === 'buy') {
       pos.quantity += trade.quantity;
       pos.costValue += trade.price * trade.quantity + trade.fee;
+      pos.investedCapital += Number(trade.amount || (trade.price * trade.quantity + trade.fee));
     } else if (trade.side === 'sell') {
       if (trade.quantity > pos.quantity) {
         throw new Error(`${trade.code} 卖出数量超过当前持仓`);
@@ -256,6 +267,47 @@ function calculatePositionStates(trades) {
   return Array.from(positions.values());
 }
 
+function calculateTodayPnl(trades, code, quote, currentPrice) {
+  if (currentPrice === null) return { value: null, date: null };
+
+  const quoteDate = String(quote.tradeDate || quote.quoteDate || beijingDateString());
+  const previousClose = Number.isFinite(Number(quote.prevClose)) && Number(quote.prevClose) > 0
+    ? Number(quote.prevClose)
+    : null;
+  let startQuantity = 0;
+  let endQuantity = 0;
+  let dayCashFlow = 0;
+
+  trades.forEach(function(trade) {
+    if (trade.code !== code || trade.tradeDate > quoteDate) return;
+    if (trade.tradeDate < quoteDate) {
+      if (trade.side === 'buy') startQuantity += trade.quantity;
+      else if (trade.side === 'sell') startQuantity -= trade.quantity;
+      return;
+    }
+
+    const amount = Number(trade.amount || 0);
+    if (trade.side === 'buy') dayCashFlow -= amount;
+    else if (trade.side === 'sell' || trade.side === 'dividend') dayCashFlow += amount;
+    else if (trade.side === 'fee') dayCashFlow -= amount || Number(trade.fee || 0);
+  });
+
+  endQuantity = startQuantity;
+  trades.forEach(function(trade) {
+    if (trade.code !== code || trade.tradeDate !== quoteDate) return;
+    if (trade.side === 'buy') endQuantity += trade.quantity;
+    else if (trade.side === 'sell') endQuantity -= trade.quantity;
+  });
+
+  if (startQuantity > 0 && previousClose === null) return { value: null, date: quoteDate };
+  const startMarketValue = startQuantity * (previousClose || 0);
+  const endMarketValue = endQuantity * currentPrice;
+  return {
+    value: round(endMarketValue + dayCashFlow - startMarketValue, 2),
+    date: quoteDate
+  };
+}
+
 function calculatePositions(trades, quoteMap = {}) {
   const positions = calculatePositionStates(trades);
 
@@ -272,13 +324,8 @@ function calculatePositions(trades, quoteMap = {}) {
       const unrealizedPnl = grossUnrealizedPnl === null ? null : grossUnrealizedPnl - estimatedExitFee - estimatedExitTax;
       const netPnl = unrealizedPnl;
       const symbolTotalPnl = unrealizedPnl === null ? null : pos.realizedPnl + unrealizedPnl;
-      const todayReferencePnl = marketValue === null
-        ? null
-        : previousClose !== null
-          ? (currentPrice - previousClose) * pos.quantity
-          : Number.isFinite(Number(quote.change))
-            ? marketValue * Number(quote.change) / 100
-            : null;
+      const todayResult = calculateTodayPnl(trades, pos.code, quote, currentPrice);
+      const todayPnl = todayResult.value;
       const avgCost = pos.quantity > 0 ? pos.costValue / pos.quantity : 0;
       return {
         code: pos.code,
@@ -298,16 +345,19 @@ function calculatePositions(trades, quoteMap = {}) {
         estimatedExitFee: round(estimatedExitFee, 2),
         estimatedExitTax: round(estimatedExitTax, 2),
         totalFee: round(pos.totalFee, 2),
+        investedCapital: round(pos.investedCapital, 2),
         unrealizedPnl: unrealizedPnl === null ? null : round(unrealizedPnl, 2),
         unrealizedPnlRate: unrealizedPnl === null || pos.costValue === 0 ? null : round(unrealizedPnl / pos.costValue * 100, 2),
         realizedPnl: round(pos.realizedPnl, 2),
         netPnl: netPnl === null ? null : round(netPnl, 2),
         netPnlRate: netPnl === null || pos.costValue === 0 ? null : round(netPnl / pos.costValue * 100, 2),
         symbolTotalPnl: symbolTotalPnl === null ? null : round(symbolTotalPnl, 2),
-        symbolTotalPnlRate: symbolTotalPnl === null || pos.costValue === 0 ? null : round(symbolTotalPnl / pos.costValue * 100, 2),
+        symbolTotalPnlRate: symbolTotalPnl === null || pos.investedCapital === 0 ? null : round(symbolTotalPnl / pos.investedCapital * 100, 2),
         todayChange: Number.isFinite(Number(quote.change)) ? Number(quote.change) : null,
-        todayReferencePnl: todayReferencePnl === null ? null : round(todayReferencePnl, 2),
-        todayPnl: todayReferencePnl === null ? null : round(todayReferencePnl, 2)
+        todayReferencePnl: todayPnl,
+        todayPnl,
+        todayPnlDate: todayResult.date,
+        todayPnlMethod: 'transaction-adjusted'
       };
     });
 }
@@ -416,24 +466,28 @@ function getClosedPositions() {
 }
 
 function getSummary(positions = getPositions()) {
+  const trades = listTradesAscending();
   const totalMarketValue = positions.reduce((sum, pos) => sum + (pos.marketValue === null ? pos.costValue : pos.marketValue), 0);
   const totalCost = positions.reduce((sum, pos) => sum + pos.costValue, 0);
   const unrealizedPnl = positions.reduce((sum, pos) => sum + (pos.unrealizedPnl || 0), 0);
-  const todayReferencePnl = positions.reduce((sum, pos) => {
-    const value = pos.todayReferencePnl !== undefined && pos.todayReferencePnl !== null ? pos.todayReferencePnl : pos.todayPnl;
+  const todayPnl = positions.reduce((sum, pos) => {
+    const value = pos.todayPnl !== undefined && pos.todayPnl !== null ? pos.todayPnl : pos.todayReferencePnl;
     return sum + (value || 0);
   }, 0);
-  const realizedPnl = calculatePositionStates(listTradesAscending()).reduce((sum, pos) => sum + pos.realizedPnl, 0);
+  const realizedPnl = calculatePositionStates(trades).reduce((sum, pos) => sum + pos.realizedPnl, 0);
   const totalPnl = realizedPnl + unrealizedPnl;
+  const lifetimeBuyCost = trades.reduce((sum, trade) => trade.side === 'buy' ? sum + Number(trade.amount || 0) : sum, 0);
 
   return {
     totalMarketValue: round(totalMarketValue, 2),
     totalCost: round(totalCost, 2),
     unrealizedPnl: round(unrealizedPnl, 2),
-    todayReferencePnl: round(todayReferencePnl, 2),
+    todayReferencePnl: round(todayPnl, 2),
+    todayPnl: round(todayPnl, 2),
     realizedPnl: round(realizedPnl, 2),
     totalPnl: round(totalPnl, 2),
-    totalPnlRate: totalCost > 0 ? round(totalPnl / totalCost * 100, 2) : 0,
+    lifetimeBuyCost: round(lifetimeBuyCost, 2),
+    totalPnlRate: lifetimeBuyCost > 0 ? round(totalPnl / lifetimeBuyCost * 100, 2) : 0,
     positionCount: positions.length,
     winCount: positions.filter(pos => (pos.unrealizedPnl || 0) > 0).length,
     lossCount: positions.filter(pos => (pos.unrealizedPnl || 0) < 0).length

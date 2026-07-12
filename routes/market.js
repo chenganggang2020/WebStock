@@ -53,6 +53,8 @@ router.get('/quote', async function (req, res) {
           low: parseFloat(f[5]) || 0,
           volume: parseFloat(f[8]) || 0,
           amount: parseFloat(f[9]) || 0,
+          tradeDate: f[30] || '',
+          tradeTime: f[31] || '',
           prevClose: prevClose,
           change: prevClose ? Number(((price - prevClose) / prevClose * 100).toFixed(2)) : 0,
           buy1Price: parseFloat(f[11]) || 0,

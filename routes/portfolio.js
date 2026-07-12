@@ -42,6 +42,8 @@ async function fetchQuotesSafe(codes) {
         prevClose,
         volume: parseFloat(fields[8]) || 0,
         amount: parseFloat(fields[9]) || 0,
+        tradeDate: fields[30] || '',
+        tradeTime: fields[31] || '',
         change: prevClose ? Number(((price - prevClose) / prevClose * 100).toFixed(2)) : 0
       };
     });
