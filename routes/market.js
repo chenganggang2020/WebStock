@@ -76,7 +76,8 @@ router.get('/quote', async function (req, res) {
           sell2Vol: parseFloat(f[22]) || 0,
           sell3Vol: parseFloat(f[24]) || 0,
           sell4Vol: parseFloat(f[26]) || 0,
-          sell5Vol: parseFloat(f[28]) || 0
+          sell5Vol: parseFloat(f[28]) || 0,
+          quoteStatus: 'live'
         };
       });
       await new Promise(function (r) { setTimeout(r, 100); });
@@ -85,7 +86,7 @@ router.get('/quote', async function (req, res) {
   } catch (e) {
     console.error('Get quote failed:', e.message);
     ok(res, codes.map(function(code) {
-      return { code: code, name: code, price: 0, change: 0, open: 0, high: 0, low: 0, volume: 0, amount: 0, prevClose: 0, quoteStatus: 'fallback' };
+      return { code: code, name: code, price: 0, change: 0, open: 0, high: 0, low: 0, volume: 0, amount: 0, prevClose: 0, quoteStatus: 'unavailable' };
     }));
   }
 });

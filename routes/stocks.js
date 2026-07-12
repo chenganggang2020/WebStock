@@ -101,6 +101,17 @@ console.log('Stock count:', stockListCache.length);
 console.log('Local ETF fund count:', fundListCache.length);
 scheduleFundRefresh();
 
+if (process.env.NODE_ENV !== 'test') {
+  const searchIndexTimer = setTimeout(function() {
+    try {
+      stockSearchService.ensureIndex(getMergedStockList());
+    } catch (error) {
+      console.warn('Background stock search indexing failed:', error.message);
+    }
+  }, 750);
+  if (searchIndexTimer.unref) searchIndexTimer.unref();
+}
+
 router.get('/stocklist', async function (req, res) {
   if (req.query.refreshFunds === '1') {
     try {

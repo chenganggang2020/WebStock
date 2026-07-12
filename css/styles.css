@@ -2639,6 +2639,21 @@ body.dark .md-body blockquote { background: rgba(99,102,241,0.12); }
   font-size: 13px;
 }
 
+.screener-coverage {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  margin: 0 0 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.screener-coverage strong {
+  color: var(--text-primary);
+}
+
 .trade-amount-preview {
   margin: 8px 0 10px;
   padding: 8px 10px;

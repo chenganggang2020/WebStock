@@ -31,13 +31,13 @@ function screenerEscapeHtml(value) {
 function collectInput() {
   const marketSnapshot = (window.State.allStocks || [])
     .filter(item => item.price !== undefined || item.change !== undefined || item.amount !== undefined)
-    .slice(0, 800)
     .map(item => ({
       code: item.code,
       price: item.price,
       change: item.change,
       amount: item.amount,
-      volume: item.volume
+      volume: item.volume,
+      quoteStatus: item.quoteStatus
     }));
   const snapshots = window.State.klineSnapshots || {};
   const klineSnapshot = Object.keys(snapshots).slice(0, 50).map(code => ({
@@ -329,6 +329,24 @@ function renderParsedDemand(parsed) {
     '</div>';
 }
 
+function renderCoverage(coverage) {
+  if (!coverage) return '';
+  const metrics = [
+    ['股票范围', coverage.universeCount, 100],
+    ['实时行情', coverage.quoteCount, coverage.quoteRate],
+    ['技术数据', coverage.technicalCount, coverage.technicalRate],
+    ['主营资料', coverage.profileCount, coverage.profileRate]
+  ];
+  return '<div class="screener-coverage" title="' + screenerEscapeHtml((coverage.limitations || []).join(' ')) + '">' +
+    metrics.map(function(metric) {
+      return '<span><strong>' + screenerEscapeHtml(metric[0]) + '</strong> ' +
+        screenerEscapeHtml(metric[1] == null ? 0 : metric[1]) +
+        (metric[0] === '股票范围' ? '' : ' (' + screenerEscapeHtml(Number(metric[2] || 0).toFixed(2)) + '%)') +
+        '</span>';
+    }).join('') +
+    '</div>';
+}
+
 function renderCompareResult(result) {
   const box = document.getElementById('screenerResults');
   if (!box) return;
@@ -459,6 +477,7 @@ function renderSavedTaskDetail(item, notesByCode) {
   box.innerHTML = '<section class="saved-task-detail">' +
     '<h3>Saved screener task</h3>' +
     '<p class="muted">' + screenerEscapeHtml(item.taskName) + ' / ' + screenerEscapeHtml(item.strategy) + ' / ' + item.candidateCount + ' candidates</p>' +
+    renderCoverage(result.coverage) +
     '<div class="review-tools">' + renderReviewSummary(candidates, notesByCode) + renderReviewFilter(activeDetailStatusFilter) + '<button class="small-btn" data-detail-action="bulkReview">Bulk mark filtered</button></div>' +
     (rows ? '<table class="data-table"><thead><tr><th>Code</th><th>Name</th><th>Score</th><th>Strategy</th><th>Context</th><th>Contributions</th><th>Review</th><th>Reasons</th><th>Risks</th><th>Actions</th></tr></thead><tbody>' + rows + '</tbody></table>' : '<div class="empty-state compact">No candidates match the review filter.</div>') +
     (item.aiResult ? '<section class="saved-ai-result"><h3>Saved AI explanation</h3><pre>' + screenerEscapeHtml(item.aiResult) + '</pre></section>' : '') +
@@ -614,11 +633,11 @@ function renderFilteredScreenerResults(result) {
   if (!box) return;
   const allCandidates = (result && Array.isArray(result.candidates)) ? result.candidates : [];
   if (!allCandidates.length) {
-    box.innerHTML = '<div class="empty-state">No screener candidates. Adjust the strategy or scope and run again.</div>';
+    box.innerHTML = renderCoverage(result && result.coverage) + '<div class="empty-state">No screener candidates. Adjust the strategy or scope and run again.</div>';
     return;
   }
   const candidates = filterResultCandidates(allCandidates);
-  const summary = '<div class="screener-result-summary">Showing ' + candidates.length + ' of ' + allCandidates.length + ' candidates after local filters.</div>' + renderParsedDemand(result.parsedDemand);
+  const summary = renderCoverage(result.coverage) + '<div class="screener-result-summary">Showing ' + candidates.length + ' of ' + allCandidates.length + ' candidates after local filters.</div>' + renderParsedDemand(result.parsedDemand);
   if (!candidates.length) {
     box.innerHTML = summary + '<div class="empty-state compact">No candidates match current result filters.</div>' +
       '<div class="disclaimer">' + screenerEscapeHtml(result.disclaimer || '') + '</div>';

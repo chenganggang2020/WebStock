@@ -15,7 +15,8 @@ function applyQuote(stock, quote) {
     amount: quote.amount,
     prevClose: quote.prevClose,
     tradeDate: quote.tradeDate,
-    tradeTime: quote.tradeTime
+    tradeTime: quote.tradeTime,
+    quoteStatus: quote.quoteStatus
   });
 }
 

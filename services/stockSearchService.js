@@ -3,6 +3,27 @@ const themeService = require('./themeService');
 
 let indexChecked = false;
 
+const upsertIndexStatement = db.prepare(`
+  INSERT INTO stock_search_index (
+    code, name, industry, boards_text, business_scope, business_summary,
+    main_business_json, tags_text, search_text, source, updated_at
+  ) VALUES (
+    @code, @name, @industry, @boardsText, @businessScope, @businessSummary,
+    @mainBusinessJson, @tagsText, @searchText, @source, CURRENT_TIMESTAMP
+  )
+  ON CONFLICT(code) DO UPDATE SET
+    name = excluded.name,
+    industry = excluded.industry,
+    boards_text = excluded.boards_text,
+    business_scope = excluded.business_scope,
+    business_summary = excluded.business_summary,
+    main_business_json = excluded.main_business_json,
+    tags_text = excluded.tags_text,
+    search_text = excluded.search_text,
+    source = excluded.source,
+    updated_at = CURRENT_TIMESTAMP
+`);
+
 function unique(items) {
   return (items || []).filter(Boolean).filter(function(item, index, arr) {
     return arr.indexOf(item) === index;
@@ -81,44 +102,39 @@ function toIndexPayload(profile) {
 function upsertProfile(profile) {
   const payload = toIndexPayload(profile);
   if (!payload.code || !payload.searchText) return null;
-  db.prepare(`
-    INSERT INTO stock_search_index (
-      code, name, industry, boards_text, business_scope, business_summary,
-      main_business_json, tags_text, search_text, source, updated_at
-    ) VALUES (
-      @code, @name, @industry, @boardsText, @businessScope, @businessSummary,
-      @mainBusinessJson, @tagsText, @searchText, @source, CURRENT_TIMESTAMP
-    )
-    ON CONFLICT(code) DO UPDATE SET
-      name = excluded.name,
-      industry = excluded.industry,
-      boards_text = excluded.boards_text,
-      business_scope = excluded.business_scope,
-      business_summary = excluded.business_summary,
-      main_business_json = excluded.main_business_json,
-      tags_text = excluded.tags_text,
-      search_text = excluded.search_text,
-      source = excluded.source,
-      updated_at = CURRENT_TIMESTAMP
-  `).run(payload);
+  upsertIndexStatement.run(payload);
   return payload;
+}
+
+function rebuildFromStocks(stocks) {
+  const items = (stocks || []).filter(function(stock) { return stock && stock.code; });
+  const writeAll = db.transaction(function() {
+    items.forEach(upsertProfile);
+  });
+  writeAll();
+  return items.length;
 }
 
 function rebuildFromProfiles() {
   const rows = db.prepare('SELECT payload_json FROM stock_profiles').all();
-  rows.forEach(function(row) {
-    const profile = parseJson(row.payload_json, null);
-    if (profile && profile.code) upsertProfile(profile);
+  const writeAll = db.transaction(function() {
+    rows.forEach(function(row) {
+      const profile = parseJson(row.payload_json, null);
+      if (profile && profile.code) upsertProfile(profile);
+    });
   });
+  writeAll();
   indexChecked = true;
   return rows.length;
 }
 
-function ensureIndex() {
+function ensureIndex(baseStocks) {
   if (indexChecked) return;
   const profileCount = db.prepare('SELECT COUNT(*) AS count FROM stock_profiles').get().count;
   const indexCount = db.prepare('SELECT COUNT(*) AS count FROM stock_search_index').get().count;
-  if (profileCount > indexCount) rebuildFromProfiles();
+  const baseItems = Array.isArray(baseStocks) ? baseStocks : [];
+  if (baseItems.length && indexCount < baseItems.length) rebuildFromStocks(baseItems);
+  if (profileCount > 0) rebuildFromProfiles();
   indexChecked = true;
 }
 
@@ -170,7 +186,7 @@ function localScore(query, row) {
 function search(query, options = {}) {
   const q = compact(query);
   if (!q) return { query: '', stocks: [], themes: [] };
-  ensureIndex();
+  ensureIndex(options.baseStocks);
   const rows = db.prepare(`
     SELECT *
     FROM stock_search_index
@@ -205,6 +221,8 @@ function search(query, options = {}) {
 
 module.exports = {
   rebuildFromProfiles,
+  rebuildFromStocks,
+  ensureIndex,
   search,
   fuzzyMatch,
   toIndexPayload,

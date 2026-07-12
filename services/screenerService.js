@@ -35,6 +35,22 @@ function compactText(value) {
   return String(value || '').replace(/\s+/g, '').toLowerCase();
 }
 
+function numberOrNull(value) {
+  if (value === null || value === undefined || value === '') return null;
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
+}
+
+function hasFiniteNumber(value) {
+  return numberOrNull(value) !== null;
+}
+
+function hasTechnicalData(technical) {
+  if (!technical || typeof technical !== 'object') return false;
+  return ['ma5', 'ma20', 'ma60', 'trend5', 'trend20', 'trend60', 'volatility', 'volumeRatio5']
+    .some(function(key) { return hasFiniteNumber(technical[key]); }) || !!technical.macd;
+}
+
 function textIncludesAny(text, tokens) {
   const compact = compactText(text);
   return (tokens || []).filter(Boolean).some(function(token) {
@@ -220,13 +236,17 @@ function getUniverse(scope, input = {}) {
     const leader = leaderMap.get(code);
     const snapshot = marketMap.get(code) || {};
     const technical = klineMap.get(code) || {};
+    const quoteAvailable = !['fallback', 'unavailable'].includes(String(snapshot.quoteStatus || '').toLowerCase()) &&
+      [snapshot.price, snapshot.amount, snapshot.volume].some(function(value) {
+        return hasFiniteNumber(value) && Number(value) > 0;
+      });
     return {
       code,
       name: decorated.name || item.name || code,
-      price: Number.isFinite(Number(snapshot.price)) ? Number(snapshot.price) : null,
-      change: Number.isFinite(Number(snapshot.change)) ? Number(snapshot.change) : null,
-      amount: Number.isFinite(Number(snapshot.amount)) ? Number(snapshot.amount) : null,
-      volume: Number.isFinite(Number(snapshot.volume)) ? Number(snapshot.volume) : null,
+      price: quoteAvailable ? numberOrNull(snapshot.price) : null,
+      change: quoteAvailable ? numberOrNull(snapshot.change) : null,
+      amount: quoteAvailable ? numberOrNull(snapshot.amount) : null,
+      volume: quoteAvailable ? numberOrNull(snapshot.volume) : null,
       technical,
       marketLabel: decorated.marketLabel || themeService.marketLabel(code),
       themes: decorated.themes || [],
@@ -243,7 +263,12 @@ function getUniverse(scope, input = {}) {
       sectorName: leader ? leader.sectorName : '',
       leaderRole: leader ? (leader.leaderRole || leader.role) : '',
       note: item.note || '',
-      demandMatch: matchCandidateDemand(Object.assign({}, decorated, profile, leader || {}, { code }), parsedDemand)
+      demandMatch: matchCandidateDemand(Object.assign({}, decorated, profile, leader || {}, { code }), parsedDemand),
+      dataCoverage: {
+        quote: quoteAvailable,
+        technical: hasTechnicalData(technical),
+        profile: Boolean(profile.industry || profile.businessSummary || profile.businessScope || (profile.mainBusinessItems || []).length)
+      }
     };
   }).filter(function(stock) {
     return !isStStock(stock);
@@ -323,7 +348,7 @@ function buildFactorBreakdown(stock, strategy, demand, parsedDemand) {
   if (demandMatch.businessKeywords && demandMatch.businessKeywords.length) {
     pushFactorBreakdown(items, '主营匹配', 14, demandMatch.businessKeywords.join(' / '));
   }
-  if (Number.isFinite(Number(stock.change))) {
+  if (hasFiniteNumber(stock.change)) {
     const change = Number(stock.change);
     if (strategy === 'short-strong' && change >= 3) pushFactorBreakdown(items, '涨跌幅', 18, `${change.toFixed(2)}% short strength`);
     else if (strategy === 'breakout' && change >= 1.5) pushFactorBreakdown(items, '涨跌幅', 12, `${change.toFixed(2)}% trend confirmation`);
@@ -333,44 +358,44 @@ function buildFactorBreakdown(stock, strategy, demand, parsedDemand) {
     if (parsedDemand && parsedDemand.avoidOverheated && change >= 7) pushFactorBreakdown(items, '过热扣分', -18, `${change.toFixed(2)}% overheated for demand`, 'risk');
     if (parsedDemand && parsedDemand.preferPullback && change <= 3 && change >= -5) pushFactorBreakdown(items, '回调偏好', 6, `${change.toFixed(2)}% controlled move`);
   }
-  if (Number.isFinite(Number(stock.amount)) && Number(stock.amount) > 0) {
+  if (hasFiniteNumber(stock.amount) && Number(stock.amount) > 0) {
     const amountYi = Number(stock.amount) / 100000000;
     if (amountYi >= 5) pushFactorBreakdown(items, '成交额', 6, `${amountYi.toFixed(2)} 亿 liquidity`);
   }
-  if (stock.technical && Number.isFinite(Number(stock.technical.ma5))) {
+  if (stock.technical && hasFiniteNumber(stock.technical.ma5)) {
     const tech = stock.technical;
-    if (Number.isFinite(Number(tech.ma20))) {
+    if (hasFiniteNumber(tech.ma20)) {
       if (tech.ma5 >= tech.ma20) pushFactorBreakdown(items, '均线结构', strategy === 'breakout' || strategy === 'short-strong' ? 10 : 5, 'MA5 >= MA20');
       else if (strategy === 'pullback') pushFactorBreakdown(items, '均线回调', 5, 'MA5 < MA20 pullback watch');
       else pushFactorBreakdown(items, '均线走弱', 0, 'MA5 < MA20', 'risk');
     }
-    if (Number.isFinite(Number(tech.trend20))) {
+    if (hasFiniteNumber(tech.trend20)) {
       const trend20 = Number(tech.trend20);
       if (strategy === 'stable' && Math.abs(trend20) <= 8) pushFactorBreakdown(items, '20日走势', 6, `${trend20.toFixed(2)}% stable range`);
       if (strategy === 'short-strong' && trend20 >= 8) pushFactorBreakdown(items, '20日强势', 8, `${trend20.toFixed(2)}%`);
     }
-    if (Number.isFinite(Number(tech.ma60))) {
+    if (hasFiniteNumber(tech.ma60)) {
       if (tech.ma5 >= tech.ma60) pushFactorBreakdown(items, 'MA60', strategy === 'breakout' || strategy === 'short-strong' ? 7 : 4, 'MA5 >= MA60 medium trend');
       else pushFactorBreakdown(items, 'MA60', 0, 'MA5 < MA60 medium trend weak', 'risk');
     }
-    if (Number.isFinite(Number(tech.trend5))) {
+    if (hasFiniteNumber(tech.trend5)) {
       const trend5 = Number(tech.trend5);
       if (strategy === 'short-strong' && trend5 >= 2) pushFactorBreakdown(items, '5d trend', 6, `${trend5.toFixed(2)}% short momentum`);
       if (strategy === 'pullback' && trend5 <= -2 && trend5 >= -8) pushFactorBreakdown(items, '5d trend', 5, `${trend5.toFixed(2)}% controlled pullback`);
       if (Math.abs(trend5) >= 10) pushFactorBreakdown(items, '5d trend', 0, `${trend5.toFixed(2)}% fast move requires review`, 'risk');
     }
-    if (Number.isFinite(Number(tech.trend60))) {
+    if (hasFiniteNumber(tech.trend60)) {
       const trend60 = Number(tech.trend60);
       if ((strategy === 'breakout' || strategy === 'short-strong') && trend60 >= 10) pushFactorBreakdown(items, '60d trend', 5, `${trend60.toFixed(2)}% medium trend`);
       if (strategy === 'stable' && Math.abs(trend60) <= 15) pushFactorBreakdown(items, '60d trend', 4, `${trend60.toFixed(2)}% stable medium range`);
       if (trend60 <= -12) pushFactorBreakdown(items, '60d trend', 0, `${trend60.toFixed(2)}% medium weakness`, 'risk');
     }
-    if (Number.isFinite(Number(tech.volumeRatio5))) {
+    if (hasFiniteNumber(tech.volumeRatio5)) {
       const ratio = Number(tech.volumeRatio5);
       if (ratio >= 1.2) pushFactorBreakdown(items, 'volume trend', 5, `${ratio.toFixed(2)}x recent volume`);
       if (ratio <= 0.7) pushFactorBreakdown(items, 'volume trend', 0, `${ratio.toFixed(2)}x shrinking volume`, 'risk');
     }
-    if (Number.isFinite(Number(tech.volatility))) {
+    if (hasFiniteNumber(tech.volatility)) {
       if (Number(tech.volatility) > 4) pushFactorBreakdown(items, '波动率', 0, `${Number(tech.volatility).toFixed(2)}% high volatility`, 'risk');
       else if (strategy === 'stable') pushFactorBreakdown(items, '低波动', 5, `${Number(tech.volatility).toFixed(2)}%`);
     }
@@ -425,7 +450,7 @@ function scoreCandidate(stock, strategy, demand, parsedDemand) {
     score -= 6;
     risks.push('主营业务匹配证据不足，需要补充公司业务资料');
   }
-  if (Number.isFinite(Number(stock.change))) {
+  if (hasFiniteNumber(stock.change)) {
     const change = Number(stock.change);
     if (strategy === 'short-strong' && change >= 3) {
       score += 18;
@@ -452,16 +477,16 @@ function scoreCandidate(stock, strategy, demand, parsedDemand) {
       reasons.push('涨跌幅处于可继续观察区间，符合回调/不追高偏好');
     }
   }
-  if (Number.isFinite(Number(stock.amount)) && Number(stock.amount) > 0) {
+  if (hasFiniteNumber(stock.amount) && Number(stock.amount) > 0) {
     const amountYi = Number(stock.amount) / 100000000;
     if (amountYi >= 5) {
       score += 6;
       reasons.push(`成交额约 ${amountYi.toFixed(2)} 亿，流动性观察价值较高`);
     }
   }
-  if (stock.technical && Number.isFinite(Number(stock.technical.ma5))) {
+  if (stock.technical && hasFiniteNumber(stock.technical.ma5)) {
     const tech = stock.technical;
-    if (Number.isFinite(Number(tech.ma20))) {
+    if (hasFiniteNumber(tech.ma20)) {
       if (tech.ma5 >= tech.ma20) {
         score += strategy === 'breakout' || strategy === 'short-strong' ? 10 : 5;
         reasons.push(`MA5 高于 MA20，均线结构偏强`);
@@ -472,12 +497,12 @@ function scoreCandidate(stock, strategy, demand, parsedDemand) {
         risks.push('MA5 低于 MA20，短期趋势需要复核');
       }
     }
-    if (Number.isFinite(Number(tech.trend20))) {
+    if (hasFiniteNumber(tech.trend20)) {
       reasons.push(`近 20 日涨跌约 ${Number(tech.trend20).toFixed(2)}%`);
       if (strategy === 'stable' && Math.abs(Number(tech.trend20)) <= 8) score += 6;
       if (strategy === 'short-strong' && Number(tech.trend20) >= 8) score += 8;
     }
-    if (Number.isFinite(Number(tech.ma60))) {
+    if (hasFiniteNumber(tech.ma60)) {
       if (tech.ma5 >= tech.ma60) {
         score += strategy === 'breakout' || strategy === 'short-strong' ? 7 : 4;
         reasons.push('MA5 高于 MA60，中期均线结构保持向上');
@@ -485,27 +510,27 @@ function scoreCandidate(stock, strategy, demand, parsedDemand) {
         risks.push('MA5 低于 MA60，中期趋势仍需确认');
       }
     }
-    if (Number.isFinite(Number(tech.trend5))) {
+    if (hasFiniteNumber(tech.trend5)) {
       const trend5 = Number(tech.trend5);
       reasons.push(`5d trend ${trend5.toFixed(2)}%`);
       if (strategy === 'short-strong' && trend5 >= 2) score += 6;
       if (strategy === 'pullback' && trend5 <= -2 && trend5 >= -8) score += 5;
       if (Math.abs(trend5) >= 10) risks.push(`5d trend ${trend5.toFixed(2)}%，短期波动过快，需人工复核`);
     }
-    if (Number.isFinite(Number(tech.trend60))) {
+    if (hasFiniteNumber(tech.trend60)) {
       const trend60 = Number(tech.trend60);
       reasons.push(`60d trend ${trend60.toFixed(2)}%`);
       if ((strategy === 'breakout' || strategy === 'short-strong') && trend60 >= 10) score += 5;
       if (strategy === 'stable' && Math.abs(trend60) <= 15) score += 4;
       if (trend60 <= -12) risks.push(`60d trend ${trend60.toFixed(2)}%，中期趋势偏弱`);
     }
-    if (Number.isFinite(Number(tech.volumeRatio5))) {
+    if (hasFiniteNumber(tech.volumeRatio5)) {
       const ratio = Number(tech.volumeRatio5);
       reasons.push(`volume trend ${ratio.toFixed(2)}x`);
       if (ratio >= 1.2) score += 5;
       if (ratio <= 0.7) risks.push(`volume trend ${ratio.toFixed(2)}x，近期量能收缩`);
     }
-    if (Number.isFinite(Number(tech.volatility))) {
+    if (hasFiniteNumber(tech.volatility)) {
       if (Number(tech.volatility) > 4) risks.push(`近阶段波动率约 ${Number(tech.volatility).toFixed(2)}%，波动偏高`);
       else if (strategy === 'stable') score += 5;
     }
@@ -558,6 +583,16 @@ function scoreCandidate(stock, strategy, demand, parsedDemand) {
     risks.push('估值因子当前为弱信号，需要补充财报和行业对比');
   }
 
+  const dataCoverage = stock.dataCoverage || { quote: false, technical: false, profile: false };
+  if (!dataCoverage.quote) {
+    risks.push('实时行情数据缺失，涨跌幅、成交额和当前价未参与评分');
+    if (['breakout', 'pullback', 'short-strong', 'portfolio-risk'].includes(strategy)) score -= 12;
+  }
+  if (!dataCoverage.technical) {
+    risks.push('技术数据缺失，均线、趋势、量能和 MACD 未参与评分');
+    if (['breakout', 'pullback', 'short-strong'].includes(strategy)) score -= 8;
+  }
+
   if (!reasons.length) reasons.push('基础本地因子通过，适合作为观察候选');
   if (!risks.length) risks.push('外部行情或财务数据可能缺失，需人工复核');
 
@@ -571,16 +606,18 @@ function scoreCandidate(stock, strategy, demand, parsedDemand) {
   if (stock.inWatchlist) factorTags.push('自选');
   if (stock.inPortfolio) factorTags.push('持仓');
   if (stock.inRecent) factorTags.push('最近查看');
-  if (Number.isFinite(Number(stock.change))) factorTags.push('涨跌幅');
-  if (Number.isFinite(Number(stock.amount)) && Number(stock.amount) > 0) factorTags.push('成交额');
+  if (hasFiniteNumber(stock.change)) factorTags.push('涨跌幅');
+  if (hasFiniteNumber(stock.amount) && Number(stock.amount) > 0) factorTags.push('成交额');
+  if (!dataCoverage.quote) factorTags.push('行情缺失');
+  if (!dataCoverage.technical) factorTags.push('技术数据缺失');
   if (stock.technical) {
-    if (Number.isFinite(Number(stock.technical.ma5)) || Number.isFinite(Number(stock.technical.ma20))) factorTags.push('均线');
-    if (Number.isFinite(Number(stock.technical.ma60))) factorTags.push('MA60');
-    if (Number.isFinite(Number(stock.technical.trend5))) factorTags.push('5d trend');
-    if (Number.isFinite(Number(stock.technical.trend20))) factorTags.push('20日走势');
-    if (Number.isFinite(Number(stock.technical.trend60))) factorTags.push('60d trend');
-    if (Number.isFinite(Number(stock.technical.volumeRatio5))) factorTags.push('volume trend');
-    if (Number.isFinite(Number(stock.technical.volatility))) factorTags.push('波动率');
+    if (hasFiniteNumber(stock.technical.ma5) || hasFiniteNumber(stock.technical.ma20)) factorTags.push('均线');
+    if (hasFiniteNumber(stock.technical.ma60)) factorTags.push('MA60');
+    if (hasFiniteNumber(stock.technical.trend5)) factorTags.push('5d trend');
+    if (hasFiniteNumber(stock.technical.trend20)) factorTags.push('20日走势');
+    if (hasFiniteNumber(stock.technical.trend60)) factorTags.push('60d trend');
+    if (hasFiniteNumber(stock.technical.volumeRatio5)) factorTags.push('volume trend');
+    if (hasFiniteNumber(stock.technical.volatility)) factorTags.push('波动率');
     if (stock.technical.macd) factorTags.push('MACD');
   }
 
@@ -592,7 +629,9 @@ function scoreCandidate(stock, strategy, demand, parsedDemand) {
     risks,
     factorTags: unique(factorTags),
     factorBreakdown: buildFactorBreakdown(stock, strategy, demand, parsedDemand),
-    observePrice: stock.price ? `当前价 ${Number(stock.price).toFixed(2)}；结合 20 日均线和前高/前低人工确认` : '结合最新价、20日均线和前高/前低人工确认',
+    observePrice: hasFiniteNumber(stock.price) && Number(stock.price) > 0
+      ? `当前价 ${Number(stock.price).toFixed(2)}；结合 20 日均线和前高/前低人工确认`
+      : '当前价缺失；补充真实行情后再确认均线和前高/前低',
     strategy,
     sectorName: stock.sectorName,
     leaderRole: stock.leaderRole,
@@ -603,8 +642,32 @@ function scoreCandidate(stock, strategy, demand, parsedDemand) {
     mainBusinessItems: stock.mainBusinessItems || [],
     businessSummary: stock.businessSummary || '',
     demandMatch,
+    dataCoverage,
     inWatchlist: stock.inWatchlist,
     inPortfolio: stock.inPortfolio
+  };
+}
+
+function summarizeCoverage(universe) {
+  const universeCount = universe.length;
+  const quoteCount = universe.filter(stock => stock.dataCoverage && stock.dataCoverage.quote).length;
+  const technicalCount = universe.filter(stock => stock.dataCoverage && stock.dataCoverage.technical).length;
+  const profileCount = universe.filter(stock => stock.dataCoverage && stock.dataCoverage.profile).length;
+  const rate = function(count) {
+    return universeCount ? Number((count / universeCount * 100).toFixed(2)) : 0;
+  };
+  return {
+    universeCount,
+    quoteCount,
+    quoteRate: rate(quoteCount),
+    technicalCount,
+    technicalRate: rate(technicalCount),
+    profileCount,
+    profileRate: rate(profileCount),
+    limitations: [
+      '全市场范围表示股票代码库覆盖，不等于每只股票都有实时行情。',
+      '缺失的行情、技术或主营资料不会按 0 值参与评分。'
+    ]
   };
 }
 
@@ -619,14 +682,16 @@ function runScreener(input = {}) {
     .map(stock => scoreCandidate(stock, strategy, demand, parsedDemand))
     .sort((a, b) => b.score - a.score)
     .slice(0, Math.min(Number(input.limit) || 20, 50));
+  const coverage = summarizeCoverage(universe);
 
-  const prompt = buildSmartPrompt({ strategy, demand, scope, promptStyle, candidates, parsedDemand });
+  const prompt = buildSmartPrompt({ strategy, demand, scope, promptStyle, candidates, parsedDemand, coverage });
   return {
     strategy,
     demand,
     scope,
     promptStyle,
     parsedDemand,
+    coverage,
     candidates,
     prompt,
     disclaimer: DISCLAIMER
@@ -658,6 +723,7 @@ function buildSmartPrompt(result) {
       mainBusinessItems: item.mainBusinessItems,
       businessSummary: item.businessSummary,
       demandMatch: item.demandMatch,
+      dataCoverage: item.dataCoverage,
       inWatchlist: item.inWatchlist,
       inPortfolio: item.inPortfolio
     };
@@ -740,6 +806,7 @@ ${styleGuide.map(item => '- ' + item).join('\n')}
 - 必须结合候选股的分数、因子、入选理由、风险点、板块/龙头标签、观察价位做分析。
 - 不要把所有候选都说成好；请主动剔除风险较高、逻辑不清、位置不合适或数据不充分的股票。
 - 如果数据不足，请明确写出缺口，例如财报、盘口、资金流、龙虎榜、公告、行业景气度、主营业务占比等。
+- 严禁把缺失行情理解成涨跌 0%；只能使用 dataCoverage 标记为 true 的对应因子。
 - 结论要具体，优先给出排序、理由、触发条件、失败条件和下一步需要盯的数据。
 - 输出不要模板化，不要空话套话。请像给交易员做盘前/盘后复盘一样写。
 
@@ -749,6 +816,9 @@ ${styleGuide.map(item => '- ' + item).join('\n')}
 提示词风格：${promptStyle}
 系统解析出的需求：
 ${JSON.stringify(result.parsedDemand || {}, null, 2)}
+
+本次数据覆盖情况：
+${JSON.stringify(result.coverage || {}, null, 2)}
 
 候选股数据 JSON：
 ${JSON.stringify(candidates, null, 2)}

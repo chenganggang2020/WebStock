@@ -89,3 +89,27 @@ test('smart screener all scope scans full stock list and excludes ST names', () 
   assert.ok(result.candidates.some(item => item.code === '001356'), 'expected non-ST stock beyond previous first-500 slice to be scanned');
   assert.ok(!result.candidates.some(item => item.code === '000004'), 'expected ST stock to be excluded from screener universe');
 });
+
+test('smart screener reports data coverage and never treats missing quotes as zero percent moves', () => {
+  const result = screener.runScreener({
+    strategy: 'sector-leader',
+    scope: 'all',
+    demand: '先进封装主营业务相关',
+    limit: 50,
+    marketSnapshot: [
+      { code: '688362', price: null, change: null, amount: null }
+    ],
+    klineSnapshot: []
+  });
+
+  const candidate = result.candidates.find(item => item.code === '688362');
+  assert.ok(candidate);
+  assert.equal(candidate.dataCoverage.quote, false);
+  assert.equal(candidate.dataCoverage.technical, false);
+  assert.equal(candidate.factorTags.includes('涨跌幅'), false);
+  assert.equal(candidate.reasons.some(reason => /0\.00%/.test(reason)), false);
+  assert.ok(candidate.risks.some(risk => /行情.*缺失|缺少.*行情/.test(risk)));
+  assert.ok(result.coverage.universeCount > 5000);
+  assert.equal(result.coverage.quoteCount, 0);
+  assert.equal(result.coverage.technicalCount, 0);
+});
