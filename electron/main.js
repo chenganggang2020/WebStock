@@ -2,11 +2,20 @@ const path = require('path');
 const fs = require('fs');
 const net = require('net');
 const { app, BrowserWindow, Menu, dialog, shell } = require('electron');
+const { resolveRuntimeConfig } = require('./runtimeConfig');
 
 let mainWindow = null;
 let server = null;
 
 app.setName('WebStock');
+
+const runtimeConfig = resolveRuntimeConfig({
+  portableExecutableDir: process.env.PORTABLE_EXECUTABLE_DIR,
+  defaultUserDataDir: app.getPath('userData'),
+  port: process.env.PORT
+});
+fs.mkdirSync(runtimeConfig.userDataDir, { recursive: true });
+if (runtimeConfig.portable) app.setPath('userData', runtimeConfig.userDataDir);
 
 function log(message, error) {
   const detail = error ? '\n' + (error.stack || error.message || String(error)) : '';
@@ -28,15 +37,9 @@ function canListen(port) {
   });
 }
 
-async function findPort(start) {
-  for (let port = start; port < start + 50; port++) {
-    if (await canListen(port)) return port;
-  }
-  throw new Error('No local port available from ' + start);
-}
-
 function configureEnvironment() {
-  process.env.WEBSTOCK_DB_PATH = process.env.WEBSTOCK_DB_PATH || path.join(app.getPath('userData'), 'webstock.db');
+  process.env.WEBSTOCK_DB_PATH = process.env.WEBSTOCK_DB_PATH || runtimeConfig.dbPath;
+  process.env.WEBSTOCK_LEVEL2_CONFIG_PATH = process.env.WEBSTOCK_LEVEL2_CONFIG_PATH || runtimeConfig.level2ConfigPath;
   process.env.WEBSTOCK_SKIP_FUND_REFRESH = process.env.WEBSTOCK_SKIP_FUND_REFRESH || '1';
 }
 
@@ -124,7 +127,10 @@ async function startServer() {
   configureEnvironment();
   log('Starting local WebStock server');
   const expressApp = require('../server');
-  const port = await findPort(Number(process.env.PORT) || 3000);
+  const port = runtimeConfig.port;
+  if (!await canListen(port)) {
+    throw new Error('WebStock fixed local port ' + port + ' is already in use. Close the other local service and start WebStock again.');
+  }
   return new Promise((resolve, reject) => {
     server = expressApp.listen(port, '127.0.0.1', function() {
       log('Local server listening on port ' + port);

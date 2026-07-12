@@ -1,25 +1,38 @@
 # Desktop Installer
 
-Build a Windows installer:
+Build the Windows installer:
 
 ```powershell
 npm run dist:win
 ```
 
-The installer is written to:
+The only installer artifact is:
 
 ```text
-release/
+dist/installer/WebStock-Setup-1.0.0.exe
 ```
 
-For a fast unpacked desktop build that is useful for testing:
+The installer defaults to:
+
+```text
+D:\Program Files\WebStock
+```
+
+The user can choose a different directory during setup. Installed application
+data remains in Electron's per-user `WebStock` data directory under `%APPDATA%`,
+so updating or reinstalling the application does not overwrite the portfolio
+database.
+
+For an unpacked developer build:
 
 ```powershell
 npm run dist:win:dir
 ```
 
-The build script rebuilds `better-sqlite3` for Electron before packaging and
-restores it for local Node.js after packaging. This keeps both the desktop app
-and `npm start` usable from the same checkout.
+That output is for debugging only and is written to `dist/unpacked`. The build
+script rebuilds `better-sqlite3` for Electron before packaging and restores it
+for local Node.js afterward, keeping both the desktop package and `npm start`
+usable from the same checkout.
 
-The desktop app starts the existing WebStock server inside Electron and opens the UI in an application window. User data is stored under Electron's `userData` directory, so the app can be installed under `Program Files` without needing write access to the installation folder.
+The application and installer use `icons/webstock.ico`. The package is not
+code-signed, so Windows SmartScreen may show a warning on another computer.

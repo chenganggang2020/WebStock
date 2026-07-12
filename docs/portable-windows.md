@@ -1,22 +1,34 @@
 # Windows Portable Package
 
-Run this on the development computer:
+Build the single-file portable package on Windows:
 
 ```powershell
-npm run package:portable
+npm run dist:win:portable
 ```
 
-The generated folder is:
+The only distributable file is:
 
 ```text
-dist/WebStock-Portable
+dist/portable/WebStock-Portable-1.0.0.exe
 ```
 
-Copy the whole `WebStock-Portable` folder to another Windows computer and double-click `WebStock.cmd`.
+Copy that EXE to another Windows computer and run it directly. On first run,
+WebStock creates a `WebStockData` directory beside the EXE. Keep the EXE and
+that directory together when moving an existing portfolio to another computer.
 
-Notes:
+Runtime details:
 
-- The package includes `node.exe`, `node_modules`, static assets, stock lists, and the local SQLite data folder.
-- Data is stored in `WebStock-Portable/data/webstock.db`.
-- The launcher uses `127.0.0.1` and automatically picks a free port starting at `3000`.
-- Real-time quotes, F10 business tags, and news still need network access.
+- The local application URL is fixed at `http://127.0.0.1:3000/`.
+- If port 3000 is occupied, WebStock reports the conflict instead of silently
+  moving to another URL.
+- The SQLite database is stored at `WebStockData/webstock.db`.
+- Level-2 connection settings are stored at `WebStockData/level2-config.json`.
+- Real-time quotes, business tags, news, and other market feeds still require
+  network access.
+- The package is not code-signed, so Windows SmartScreen may show a warning.
+
+Build both the installer and portable package with:
+
+```powershell
+npm run dist:win:all
+```

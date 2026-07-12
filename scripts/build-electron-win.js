@@ -27,6 +27,12 @@ function npmCommand() {
   return isWindows ? 'npm.cmd' : 'npm';
 }
 
+function prepareWindowsBuildEnvironment() {
+  if (!isWindows) return;
+  process.env.ELECTRON_MIRROR = process.env.ELECTRON_MIRROR || 'https://npmmirror.com/mirrors/electron/';
+  process.env.ELECTRON_BUILDER_BINARIES_MIRROR = process.env.ELECTRON_BUILDER_BINARIES_MIRROR || 'https://npmmirror.com/mirrors/electron-builder-binaries/';
+}
+
 const firstArg = process.argv[2];
 const target = firstArg && !firstArg.startsWith('-') ? firstArg : 'nsis';
 const extraArgs = firstArg && firstArg.startsWith('-') ? process.argv.slice(2) : process.argv.slice(3);
@@ -68,6 +74,7 @@ let buildError = null;
 try {
   const outputDir = outputDirFromArgs();
   prepareOutputDir(outputDir);
+  prepareWindowsBuildEnvironment();
 
   const electronRebuild = nodeScript(path.join(root, 'node_modules', '@electron', 'rebuild', 'lib', 'cli.js'));
   run('Rebuild native modules for Electron ' + electronVersion, electronRebuild[0], electronRebuild[1].concat([

@@ -1,6 +1,7 @@
 {
   "name": "stock-dashboard",
   "version": "1.0.0",
+  "author": "chenganggang2020",
   "description": "A股实时行情看板，支持K线、均线、MACD、KDJ及拼音搜索",
   "main": "electron/main.js",
   "scripts": {
@@ -31,12 +32,14 @@
   "devDependencies": {
     "@electron/rebuild": "^4.0.4",
     "@playwright/test": "^1.59.1",
-    "electron": "^37.10.3",
-    "electron-builder": "^26.8.1"
+    "electron": "39.8.10",
+    "electron-builder": "^26.8.1",
+    "rcedit": "5.0.2"
   },
   "build": {
     "appId": "com.webstock.desktop",
     "productName": "WebStock",
+    "afterPack": "scripts/after-pack.js",
     "asar": true,
     "asarUnpack": [
       "node_modules/better-sqlite3/**"
