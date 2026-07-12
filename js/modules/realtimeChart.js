@@ -1,3 +1,5 @@
+let realtimeRequestSequence = 0;
+
 function showRealtimeView() {
   const State = window.State;
   State.currentView = 'realtime';
@@ -60,6 +62,7 @@ function showKlineView() {
 
 async function loadRealtimeData(code) {
   const State = window.State;
+  const requestId = ++realtimeRequestSequence;
   try {
     console.log('📡 加载实时数据:', code);
 
@@ -68,21 +71,32 @@ async function loadRealtimeData(code) {
       window.ApiClient.fetchJsonData('/api/minute?code=' + code)
     ]);
 
+    if (requestId !== realtimeRequestSequence || !State.currentStock || State.currentStock.code !== code) return;
+
     console.log('📦 行情数据:', quotes.length, '条');
     console.log('📦 分时数据:', Array.isArray(minuteData) ? minuteData.length : '非数组', '条');
 
     if (quotes.length > 0) {
       const quote = quotes.find(q => q.code === code) || quotes[0];
       State.currentQuote = quote;
+      if (Array.isArray(minuteData) && minuteData.length) {
+        State.minuteSeriesByCode[code] = minuteData.slice();
+      }
       console.log('📊 当前股票:', State.currentQuote.name, '(' + State.currentQuote.code + ')');
       updateStockInfo(State.currentQuote, minuteData);
       updateOrderBook(State.currentQuote);
+      if (window.StockList && window.StockList.updateVisibleQuoteRows) {
+        const quoteMap = {};
+        quoteMap[code] = quote;
+        window.StockList.updateVisibleQuoteRows(quoteMap);
+      }
     }
 
     renderTimeChart(minuteData);
     renderVolumeChart(minuteData);
   } catch (e) {
     console.error('❌ 加载实时数据失败:', e);
+    if (requestId !== realtimeRequestSequence || !State.currentStock || State.currentStock.code !== code) return;
     renderTimeChart([]);
     renderVolumeChart([]);
   }

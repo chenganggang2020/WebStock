@@ -433,6 +433,9 @@ async function init() {
   if (window.Watchlist) await window.Watchlist.loadWatchlist({ skipQuotes: true });
   if (window.RecentStocks) await window.RecentStocks.load(20).catch(function() {});
   StockList.renderStockTable(State.filteredStocks);
+  setTimeout(function() {
+    StockList.refreshQuotes(State.filteredStocks).catch(function(error) { console.warn(error.message); });
+  }, 0);
   bindButtons();
   const requestedView = window.location.hash ? decodeURIComponent(window.location.hash.slice(1)) : '';
   if (requestedView && document.getElementById(requestedView + 'View')) {

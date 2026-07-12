@@ -1,3 +1,5 @@
+let klineRequestSequence = 0;
+
 function renderKlineChart(rawData, indicator) {
   const State = window.State;
   const Indicators = window.Indicators;
@@ -349,8 +351,10 @@ function applyMASettings() {
 async function loadKlineData(code, period) {
   const State = window.State;
   const Indicators = window.Indicators;
+  const requestId = ++klineRequestSequence;
   try {
     const data = await window.ApiClient.fetchJsonData('/api/kline?code=' + code + '&period=' + period);
+    if (requestId !== klineRequestSequence || !State.currentStock || State.currentStock.code !== code || State.currentPeriod !== period) return;
     if (Array.isArray(data) && data.length > 0) {
       State.currentRawData = data;
       State.klineSnapshots[code] = data.slice(-80);
@@ -358,6 +362,7 @@ async function loadKlineData(code, period) {
       renderKlineChart(State.currentRawData, State.currentIndicator);
     }
   } catch (e) {
+    if (requestId !== klineRequestSequence) return;
     console.error('加载K线数据失败:', e);
   }
 }

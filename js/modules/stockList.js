@@ -1,6 +1,52 @@
 const tagEnrichingCodes = new Set();
 let tagEnrichTimer = null;
 let suppressTagSchedule = false;
+let stockSelectionSequence = 0;
+
+function applyQuote(stock, quote) {
+  if (!stock || !quote) return;
+  Object.assign(stock, {
+    price: quote.price,
+    change: quote.change,
+    open: quote.open,
+    high: quote.high,
+    low: quote.low,
+    volume: quote.volume,
+    amount: quote.amount,
+    prevClose: quote.prevClose,
+    tradeDate: quote.tradeDate,
+    tradeTime: quote.tradeTime
+  });
+}
+
+function updateVisibleQuoteRows(quoteMap) {
+  const tbody = document.getElementById('stockTbody');
+  if (!tbody) return;
+  const style = getComputedStyle(document.body);
+  const up = style.getPropertyValue('--up').trim() || '#e74c3c';
+  const down = style.getPropertyValue('--down').trim() || '#2ecc71';
+  tbody.querySelectorAll('tr[data-code]').forEach(function(row) {
+    const code = row.getAttribute('data-code');
+    const quote = quoteMap[code];
+    if (!quote) return;
+    const stock = findStockByCode(window.State.filteredStocks, code) || quote;
+    const price = Number(quote.price) || 0;
+    const change = Number(quote.change) || 0;
+    const color = price > 0 ? (change >= 0 ? up : down) : '#999';
+    const priceCell = row.querySelector('[data-quote-field="price"]');
+    const changeCell = row.querySelector('[data-quote-field="change"]');
+    const chartCell = row.querySelector('[data-quote-field="chart"]');
+    if (priceCell) {
+      priceCell.textContent = price > 0 ? price.toFixed(2) : '--';
+      priceCell.style.color = color;
+    }
+    if (changeCell) {
+      changeCell.textContent = price > 0 ? (change >= 0 ? '+' : '') + change.toFixed(2) + '%' : '--';
+      changeCell.style.color = color;
+    }
+    if (chartCell) chartCell.innerHTML = stockMiniChart(stock, color);
+  });
+}
 
 async function loadMoreStocks() {
   const State = window.State;
@@ -39,33 +85,18 @@ async function refreshQuotes(stocks) {
     if (!Array.isArray(quotes)) throw new Error('行情接口返回格式异常');
     const map = {};
     quotes.forEach(q => map[q.code] = q);
+    stocks.forEach(s => {
+      if (map[s.code]) applyQuote(s, map[s.code]);
+    });
     State.allStocks.forEach(s => {
-      if (map[s.code]) Object.assign(s, {
-        price: map[s.code].price,
-        change: map[s.code].change,
-        open: map[s.code].open,
-        high: map[s.code].high,
-        low: map[s.code].low,
-        volume: map[s.code].volume,
-        amount: map[s.code].amount,
-        prevClose: map[s.code].prevClose
-      });
+      if (map[s.code]) applyQuote(s, map[s.code]);
     });
     if (State.searchResults.length > 0) {
       State.searchResults.forEach(s => {
-        if (map[s.code]) Object.assign(s, {
-          price: map[s.code].price,
-          change: map[s.code].change,
-          open: map[s.code].open,
-          high: map[s.code].high,
-          low: map[s.code].low,
-          volume: map[s.code].volume,
-          amount: map[s.code].amount,
-          prevClose: map[s.code].prevClose
-        });
+        if (map[s.code]) applyQuote(s, map[s.code]);
       });
     }
-    renderStockTable(State.filteredStocks);
+    updateVisibleQuoteRows(map);
     if (State.currentStock && map[State.currentStock.code]) {
       const q = map[State.currentStock.code];
       const price = Number(q.price) || 0;
@@ -129,7 +160,11 @@ function stockTags(stock) {
 }
 
 function stockMiniChart(stock, color) {
-  const realPrices = (Array.isArray(stock.minuteSeries) ? stock.minuteSeries : [])
+  const storedSeries = window.State && window.State.minuteSeriesByCode
+    ? window.State.minuteSeriesByCode[stock.code]
+    : null;
+  const sourceSeries = Array.isArray(stock.minuteSeries) ? stock.minuteSeries : storedSeries;
+  const realPrices = (Array.isArray(sourceSeries) ? sourceSeries : [])
     .map(function(item) { return Number(item && item.price); })
     .filter(function(value) { return Number.isFinite(value) && value > 0; });
   const open = Number(stock.open);
@@ -367,9 +402,9 @@ function renderStockTable(stocks) {
       '<td class="star-cell"><button class="star-btn ' + (watched ? 'active' : '') + '" data-code="' + s.code + '" title="切换自选">' + star + '</button></td>' +
       '<td>' + s.code + '</td>' +
       '<td>' + renderStockNameCell(s) + '</td>' +
-      '<td class="price" style="text-align:right;color:' + priceColor + '">' + priceDisplay + '</td>' +
-      '<td style="text-align:right;color:' + priceColor + '">' + changeDisplay + '</td>' +
-      '<td style="text-align:right">' + stockMiniChart(s, priceColor) + '</td>' +
+      '<td class="price" data-quote-field="price" style="text-align:right;color:' + priceColor + '">' + priceDisplay + '</td>' +
+      '<td data-quote-field="change" style="text-align:right;color:' + priceColor + '">' + changeDisplay + '</td>' +
+      '<td data-quote-field="chart" style="text-align:right">' + stockMiniChart(s, priceColor) + '</td>' +
       '</tr>';
   }).join('');
 
@@ -441,8 +476,11 @@ async function selectStock(stock) {
     return;
   }
   const State = window.State;
-  const Indicators = window.Indicators;
   const RealtimeChart = window.RealtimeChart;
+  const selectionId = ++stockSelectionSequence;
+  const isCurrentSelection = function() {
+    return selectionId === stockSelectionSequence && State.currentStock && State.currentStock.code === stock.code;
+  };
   State.currentStock = stock;
   if (window.RecentStocks) window.RecentStocks.record(stock).catch(function(error) { console.warn(error.message); });
   if (window.StockDetail) window.StockDetail.refresh(stock).catch(function(error) { console.warn(error.message); });
@@ -460,24 +498,18 @@ async function selectStock(stock) {
 
   renderStockTable(State.filteredStocks);
   await refreshQuotes([stock]);
+  if (!isCurrentSelection()) return;
   if (window.Dashboard) Promise.resolve(window.Dashboard.refreshCards()).catch(function(error) { console.warn(error.message); });
-
-  try {
-    const data = await window.ApiClient.fetchJsonData('/api/kline?code=' + stock.code + '&period=' + State.currentPeriod);
-    if (Array.isArray(data) && data.length > 0) {
-      State.currentRawData = data;
-      State.klineSnapshots[stock.code] = data.slice(-80);
-      Indicators.calcMAFromData(State.currentRawData, State.maPeriods);
-    }
-  } catch (e) {
-    console.error('加载K线数据失败', e);
-  }
 
   if (State.currentView === 'kline') {
     RealtimeChart.showKlineView();
   } else {
     RealtimeChart.showRealtimeView();
-    RealtimeChart.loadRealtimeData(stock.code);
+    setTimeout(function() {
+      if (isCurrentSelection() && window.KlineChart) {
+        window.KlineChart.loadKlineData(stock.code, State.currentPeriod);
+      }
+    }, 250);
   }
 }
 
@@ -491,5 +523,6 @@ window.StockList = {
   selectStock,
   runRowAction,
   miniChart: stockMiniChart,
+  updateVisibleQuoteRows,
   showContextMenu: showStockContextMenu
 };

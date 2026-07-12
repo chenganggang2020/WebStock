@@ -11,7 +11,7 @@ let timeChart = null;
 let volumeChart = null;
 let maPeriods = [5, 10, 15, 30];
 let currentPage = 0;
-const PAGE_SIZE = 200;
+const PAGE_SIZE = 80;
 let currentQuote = null;
 let currentMainView = 'dashboard';
 let watchlist = [];
@@ -21,6 +21,7 @@ let positions = [];
 let portfolioSummary = null;
 let portfolioAllocation = [];
 let klineSnapshots = {};
+let minuteSeriesByCode = {};
 let screenerReviewSummary = [];
 let marketSentiment = null;
 
@@ -70,6 +71,8 @@ const State = {
   set portfolioAllocation(val) { portfolioAllocation = val; },
   get klineSnapshots() { return klineSnapshots; },
   set klineSnapshots(val) { klineSnapshots = val || {}; },
+  get minuteSeriesByCode() { return minuteSeriesByCode; },
+  set minuteSeriesByCode(val) { minuteSeriesByCode = val || {}; },
   get screenerReviewSummary() { return screenerReviewSummary; },
   set screenerReviewSummary(val) { screenerReviewSummary = Array.isArray(val) ? val : []; },
   get marketSentiment() { return marketSentiment; },

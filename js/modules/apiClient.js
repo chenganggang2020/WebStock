@@ -6,8 +6,45 @@ function unwrapApiResponse(json) {
   return json;
 }
 
+const inFlightGetRequests = new Map();
+const DEFAULT_TIMEOUT_MS = 12000;
+
 function apiFetch(url, options) {
-  return fetch(url, options).then(function(response) {
+  const requestOptions = Object.assign({}, options || {});
+  const method = String(requestOptions.method || 'GET').toUpperCase();
+  const timeoutMs = Number.isFinite(Number(requestOptions.timeoutMs))
+    ? Math.max(0, Number(requestOptions.timeoutMs))
+    : DEFAULT_TIMEOUT_MS;
+  const shouldDedupe = method === 'GET' && requestOptions.dedupe !== false;
+  const requestKey = shouldDedupe ? method + ' ' + url : '';
+  if (requestKey && inFlightGetRequests.has(requestKey)) {
+    return inFlightGetRequests.get(requestKey);
+  }
+
+  delete requestOptions.timeoutMs;
+  delete requestOptions.dedupe;
+  const callerSignal = requestOptions.signal;
+  const controller = new AbortController();
+  let timedOut = false;
+  const abortFromCaller = function() { controller.abort(); };
+  if (callerSignal) {
+    if (callerSignal.aborted) controller.abort();
+    else callerSignal.addEventListener('abort', abortFromCaller, { once: true });
+  }
+  requestOptions.signal = controller.signal;
+  const timeoutId = timeoutMs > 0 ? setTimeout(function() {
+    timedOut = true;
+    controller.abort();
+  }, timeoutMs) : null;
+
+  let fetchPromise;
+  try {
+    fetchPromise = Promise.resolve(fetch(url, requestOptions));
+  } catch (error) {
+    fetchPromise = Promise.reject(error);
+  }
+
+  const request = fetchPromise.then(function(response) {
     return response.text().then(function(text) {
       let json;
       try {
@@ -35,7 +72,21 @@ function apiFetch(url, options) {
 
       return unwrapApiResponse(json);
     });
+  }).catch(function(error) {
+    if (error && error.name === 'AbortError') {
+      throw new Error(timedOut ? '请求超时：' + url : '请求已取消：' + url);
+    }
+    throw error;
+  }).finally(function() {
+    if (timeoutId) clearTimeout(timeoutId);
+    if (callerSignal) callerSignal.removeEventListener('abort', abortFromCaller);
+    if (requestKey && inFlightGetRequests.get(requestKey) === request) {
+      inFlightGetRequests.delete(requestKey);
+    }
   });
+
+  if (requestKey) inFlightGetRequests.set(requestKey, request);
+  return request;
 }
 
 const fetchJsonData = apiFetch;

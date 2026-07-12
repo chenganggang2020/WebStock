@@ -198,7 +198,14 @@ async function loadDashboardNews() {
 }
 
 async function loadStockNews(stock, containerId) {
-  const query = new URLSearchParams({ type: 'stock', code: stock.code, name: stock.name || stock.code }).toString();
+  const query = new URLSearchParams({
+    type: 'stock',
+    code: stock.code,
+    name: stock.name || stock.code,
+    days: '7',
+    pages: '2',
+    num: '20'
+  }).toString();
   const result = await newsApi(query);
   renderNews(result, containerId);
   return result.items;

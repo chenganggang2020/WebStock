@@ -7,11 +7,13 @@ async function refresh(stock) {
   if (window.News) {
     try {
       const items = await window.News.loadStockNews(stock, 'detailNewsList');
+      if (!window.State.currentStock || window.State.currentStock.code !== stock.code) return;
       const box = document.getElementById('detailNewsList');
       if (box && items.length) {
         box.innerHTML = items.slice(0, 2).map(item => '<div class="mini-news"><strong>' + detailEscapeHtml(item.title) + '</strong><p>' + detailEscapeHtml(item.summary) + '</p></div>').join('');
       }
     } catch (error) {
+      if (!window.State.currentStock || window.State.currentStock.code !== stock.code) return;
       const box = document.getElementById('detailNewsList');
       if (box) box.innerHTML = '<div class="empty-state compact">News failed: ' + detailEscapeHtml(error.message) + '</div>';
     }
