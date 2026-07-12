@@ -6,8 +6,10 @@ const iconv = require('iconv-lite');
 const { minuteCache, klineCache } = require('./cache');
 const { toSinaSymbol } = require('../utils/market');
 
-function ok(res, data) {
-  res.json({ success: true, data });
+function ok(res, data, meta) {
+  const payload = { success: true, data };
+  if (meta) payload.meta = meta;
+  res.json(payload);
 }
 
 function fail(res, error, status = 400) {
@@ -126,31 +128,7 @@ router.get('/minute', async function (req, res) {
 
   const cached = minuteCache.get(code);
   if (cached && Date.now() - cached.ts < cacheDuration) {
-    const cachedDate = cached.data.length > 0 && cached.data[0].time ? 
-      cached.data[0].time.split(' ')[0] : '';
-    if (!isTrading || cachedDate === today) {
-      return ok(res, cached.data);
-    }
-  }
-
-  let basePrice = null;
-
-  try {
-    const quoteUrl = 'https://hq.sinajs.cn/list=' + toSinaSymbol(code);
-    const quoteResp = await axios.get(quoteUrl, {
-      headers: { 'Referer': 'https://finance.sina.com.cn' },
-      responseType: 'arraybuffer',
-      timeout: 5000
-    });
-    const quoteData = iconv.decode(Buffer.from(quoteResp.data), 'gbk');
-    const match = quoteData.match(/hq_str_[^=]+="([^"]+)"/);
-    if (match) {
-      const f = match[1].split(',');
-      basePrice = parseFloat(f[3]) || parseFloat(f[1]) || null;
-      console.log(`[${code}] 获取基准价格: ${basePrice}`);
-    }
-  } catch (e) {
-    console.log(`[${code}] 获取基准价格失败:`, e.message);
+    return ok(res, cached.data, cached.meta);
   }
 
   try {
@@ -165,7 +143,6 @@ router.get('/minute', async function (req, res) {
     if (Array.isArray(data) && data.length > 0) {
       let targetDate = today;
       let hasTodayData = false;
-      let lastClosePrice = basePrice;
 
       for (let i = data.length - 1; i >= 0; i--) {
         const item = data[i];
@@ -175,19 +152,11 @@ router.get('/minute', async function (req, res) {
         }
       }
 
-      if (!hasTodayData && isTrading) {
-        console.log(`[${code}] 新浪API暂未返回今日(${today})分时数据，使用模拟数据`);
-        const mockData = generateMockMinuteData(code, basePrice);
-        minuteCache.set(code, { ts: Date.now(), data: mockData });
-        return ok(res, mockData);
-      }
-
-      if (!hasTodayData && !isTrading) {
+      if (!hasTodayData) {
         for (let i = data.length - 1; i >= 0; i--) {
           const item = data[i];
-          if (item.day && parseFloat(item.close) > 0) {
+          if (item.day && (parseFloat(item.close) > 0 || parseFloat(item.price) > 0)) {
             targetDate = item.day.split(' ')[0];
-            lastClosePrice = parseFloat(item.close);
             break;
           }
         }
@@ -202,23 +171,24 @@ router.get('/minute', async function (req, res) {
           if (closePrice > 0) {
             validPriceCount++;
           }
-          if (closePrice > 0 && !lastClosePrice) {
-            lastClosePrice = closePrice;
+          if (closePrice > 0) {
+            lastTradingData.push({
+              time: item.day || '',
+              price: closePrice,
+              volume: parseFloat(item.volume) || 0,
+              amount: parseFloat(item.amount) || 0
+            });
           }
-          lastTradingData.push({
-            time: item.day || '',
-            price: closePrice,
-            volume: parseFloat(item.volume) || 0,
-            amount: parseFloat(item.amount) || 0
-          });
         }
       }
 
-      if (lastTradingData.length === 0 || validPriceCount < 3) {
-        console.log(`[${code}] 有效数据不足(总数:${lastTradingData.length}, 有效价格:${validPriceCount})，使用模拟数据`);
-        const mockData = generateMockMinuteData(code, lastClosePrice || basePrice);
-        minuteCache.set(code, { ts: Date.now(), data: mockData });
-        return ok(res, mockData);
+      if (lastTradingData.length === 0 || validPriceCount === 0) {
+        return ok(res, [], {
+          dataSource: 'unavailable',
+          synthetic: false,
+          stale: false,
+          reason: 'provider-returned-no-valid-prices'
+        });
       }
 
       if (hasTodayData && isTrading) {
@@ -234,103 +204,40 @@ router.get('/minute', async function (req, res) {
         });
       }
 
-      minuteCache.set(code, { ts: Date.now(), data: lastTradingData });
-      ok(res, lastTradingData);
+      const meta = {
+        dataSource: 'sina-5m',
+        synthetic: false,
+        stale: targetDate !== today,
+        tradingDate: targetDate
+      };
+      minuteCache.set(code, { ts: Date.now(), data: lastTradingData, meta });
+      ok(res, lastTradingData, meta);
     } else {
-      const mockData = generateMockMinuteData(code, basePrice);
-      ok(res, mockData);
+      ok(res, [], {
+        dataSource: 'unavailable',
+        synthetic: false,
+        stale: false,
+        reason: 'provider-returned-empty-data'
+      });
     }
   } catch (e) {
     console.error(`[${code}] 获取分时数据失败:`, e.message);
-    const mockData = generateMockMinuteData(code, basePrice);
-    ok(res, mockData);
+    if (cached && Array.isArray(cached.data) && cached.data.length) {
+      return ok(res, cached.data, Object.assign({}, cached.meta, {
+        dataSource: 'cache',
+        synthetic: false,
+        stale: true,
+        reason: 'provider-request-failed'
+      }));
+    }
+    ok(res, [], {
+      dataSource: 'unavailable',
+      synthetic: false,
+      stale: false,
+      reason: 'provider-request-failed'
+    });
   }
 });
-
-function generateMockMinuteData(code, basePrice) {
-  const now = new Date();
-  const todayStr = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
-  
-  const isTrading = isTradingTime();
-  const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 9, 30);
-
-  if (!isTrading) {
-    const lastTradingDay = new Date(now);
-    let dayOfWeek = lastTradingDay.getDay();
-    while (dayOfWeek === 0 || dayOfWeek === 6) {
-      lastTradingDay.setDate(lastTradingDay.getDate() - 1);
-      dayOfWeek = lastTradingDay.getDay();
-    }
-    const lastTradingStr = lastTradingDay.getFullYear() + '-' + String(lastTradingDay.getMonth() + 1).padStart(2, '0') + '-' + String(lastTradingDay.getDate()).padStart(2, '0');
-    return generateFullDayMockData(lastTradingStr, basePrice);
-  }
-
-  const price = basePrice || (10 + Math.random() * 20);
-  const data = [];
-  let lastPrice = price;
-  let currentTime = new Date(startOfDay);
-
-  while (currentTime <= now && currentTime.getHours() < 15) {
-    if (currentTime.getHours() >= 11 && currentTime.getHours() < 13) {
-      currentTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 13, 0);
-      continue;
-    }
-
-    const timeStr = todayStr + ' ' + currentTime.getHours().toString().padStart(2, '0') + ':' + currentTime.getMinutes().toString().padStart(2, '0') + ':00';
-    const change = (Math.random() - 0.5) * price * 0.005;
-    let currentPrice = lastPrice + change;
-    currentPrice = +currentPrice.toFixed(2);
-
-    data.push({
-      time: timeStr,
-      price: currentPrice,
-      volume: Math.floor(Math.random() * 10000) + 5000,
-      amount: currentPrice * (Math.floor(Math.random() * 10000) + 5000)
-    });
-
-    lastPrice = currentPrice;
-    currentTime = new Date(currentTime.getTime() + 300000);
-  }
-
-  return data;
-}
-
-function generateFullDayMockData(dateStr, basePrice) {
-  const price = basePrice || (10 + Math.random() * 20);
-  const data = [];
-  let lastPrice = price;
-  
-  const times = [];
-  for (let h = 9; h <= 11; h++) {
-    const startMin = h === 9 ? 30 : 0;
-    const endMin = h === 11 ? 30 : 60;
-    for (let m = startMin; m < endMin; m += 5) {
-      times.push(dateStr + ' ' + String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0') + ':00');
-    }
-  }
-  for (let h = 13; h < 15; h++) {
-    for (let m = 0; m < 60; m += 5) {
-      times.push(dateStr + ' ' + String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0') + ':00');
-    }
-  }
-
-  times.forEach(function(timeStr) {
-    const change = (Math.random() - 0.5) * price * 0.005;
-    let currentPrice = lastPrice + change;
-    currentPrice = +currentPrice.toFixed(2);
-
-    data.push({
-      time: timeStr,
-      price: currentPrice,
-      volume: Math.floor(Math.random() * 10000) + 5000,
-      amount: currentPrice * (Math.floor(Math.random() * 10000) + 5000)
-    });
-
-    lastPrice = currentPrice;
-  });
-
-  return data;
-}
 
 router.get('/kline', async function (req, res) {
   const code = req.query.code;

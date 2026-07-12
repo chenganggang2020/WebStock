@@ -131,3 +131,27 @@ test('open position final pnl counts one fee per trade record', () => {
   assert.equal(positions[0].netPnl, -7);
   assert.equal(positions[0].symbolTotalPnl, -17);
 });
+
+test('deleting an earlier buy is rejected when it would leave an oversold history', () => {
+  const buy = portfolio.createTrade({
+    code: '600001',
+    name: 'Delete guard',
+    side: 'buy',
+    tradeDate: '2026-06-01',
+    price: 10,
+    quantity: 100,
+    fee: 5
+  });
+  portfolio.createTrade({
+    code: '600001',
+    name: 'Delete guard',
+    side: 'sell',
+    tradeDate: '2026-06-02',
+    price: 11,
+    quantity: 100,
+    fee: 5
+  });
+
+  assert.throws(() => portfolio.deleteTrade(buy.id), /卖出数量|超过当前持仓|trade history/i);
+  assert.equal(portfolio.listTrades({ code: '600001' }).length, 2);
+});

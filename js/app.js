@@ -72,9 +72,6 @@ function bindButtons() {
       refreshDashboardBtn.textContent = originalText;
     }
   }, true);
-  if (refreshDashboardBtn) refreshDashboardBtn.addEventListener('click', function() {
-    window.Dashboard.load().catch(function(error) { alert(error.message || '刷新工作台失败'); });
-  });
   const searchInput = document.getElementById('searchInput');
   let searchTimer = null;
   let quoteTimer = null;

@@ -107,6 +107,28 @@ test('Level-2 config save persists local gateway settings without returning secr
   try { fs.rmSync(configPath, { force: true }); } catch (error) {}
 });
 
+test('Level-2 config rejects insecure remote gateways and absolute provider endpoints', async () => {
+  const configPath = path.join(os.tmpdir(), 'webstock-level2-invalid-' + process.pid + '-' + Date.now() + '.json');
+  try { fs.rmSync(configPath, { force: true }); } catch (error) {}
+
+  await withEnv({ WEBSTOCK_LEVEL2_CONFIG_PATH: configPath }, async function () {
+    assert.throws(() => level2.saveLevel2Config({
+      provider: 'tonghuashun-http',
+      baseUrl: 'http://example.com',
+      apiKey: 'secret'
+    }), /HTTPS|loopback/i);
+
+    assert.throws(() => level2.saveLevel2Config({
+      provider: 'tonghuashun-http',
+      baseUrl: 'https://gateway.example.com',
+      tradesEndpoint: 'https://attacker.example/collect?code={code}',
+      apiKey: 'secret'
+    }), /relative|endpoint/i);
+  });
+
+  try { fs.rmSync(configPath, { force: true }); } catch (error) {}
+});
+
 test('Level-2 normalizers accept common depth and tick trade shapes', () => {
   const depth = level2.normalizeDepth({
     code: '000001',

@@ -129,6 +129,45 @@ function normalizeConfig(input) {
   return config;
 }
 
+function configError(message) {
+  const error = new Error(message);
+  error.statusCode = 400;
+  return error;
+}
+
+function isLoopbackHostname(hostname) {
+  const value = String(hostname || '').toLowerCase();
+  return value === 'localhost' || value === '127.0.0.1' || value === '::1';
+}
+
+function validateProviderConfig(config) {
+  if (!config.baseUrl) return;
+
+  let baseUrl;
+  try {
+    baseUrl = new URL(config.baseUrl);
+  } catch (error) {
+    throw configError('Level-2 base URL must be a valid HTTP(S) URL');
+  }
+  if (!['http:', 'https:'].includes(baseUrl.protocol) || baseUrl.username || baseUrl.password) {
+    throw configError('Level-2 base URL must be a valid HTTP(S) URL without embedded credentials');
+  }
+  if (baseUrl.protocol !== 'https:' && !isLoopbackHostname(baseUrl.hostname)) {
+    throw configError('Remote Level-2 gateways must use HTTPS; HTTP is allowed only for a loopback gateway');
+  }
+
+  ['depthEndpoint', 'tradesEndpoint', 'ordersEndpoint'].forEach(function (key) {
+    const endpoint = String(config[key] || '');
+    if (!endpoint || /^[a-z][a-z\d+.-]*:/i.test(endpoint) || endpoint.startsWith('//')) {
+      throw configError('Level-2 ' + key + ' must be a relative endpoint on the configured gateway');
+    }
+    const resolved = new URL(endpoint, baseUrl);
+    if (resolved.origin !== baseUrl.origin) {
+      throw configError('Level-2 ' + key + ' must stay on the configured gateway');
+    }
+  });
+}
+
 function getEditableConfig(env = process.env) {
   const config = getLevel2Config(env);
   const result = Object.assign({}, config);
@@ -151,6 +190,7 @@ function saveLevel2Config(input, env = process.env) {
   if (input.clearApiKey === true) merged.apiKey = '';
 
   const saved = normalizeConfig(merged);
+  validateProviderConfig(saved);
   writeSavedConfig(saved, env);
   return getEditableConfig(env);
 }
@@ -161,6 +201,7 @@ function ensureConfigured(config) {
     error.statusCode = 503;
     throw error;
   }
+  validateProviderConfig(config);
 }
 
 function buildAuthHeaders(config) {
@@ -186,7 +227,11 @@ function buildUrl(config, endpoint, params) {
     rendered = rendered.replace(new RegExp('\\{' + key + '\\}', 'g'), encodeURIComponent(String(params[key])));
   });
 
-  const url = new URL(rendered, config.baseUrl + '/');
+  const baseUrl = new URL(config.baseUrl + '/');
+  const url = new URL(rendered, baseUrl);
+  if (url.origin !== baseUrl.origin) {
+    throw configError('Level-2 endpoint must stay on the configured gateway');
+  }
   Object.keys(params).forEach(function (key) {
     if (!endpoint.includes('{' + key + '}') && params[key] !== undefined && params[key] !== null && params[key] !== '') {
       url.searchParams.set(key, String(params[key]));

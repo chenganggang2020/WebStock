@@ -129,85 +129,55 @@ function stockTags(stock) {
 }
 
 function stockMiniChart(stock, color) {
+  const realPrices = (Array.isArray(stock.minuteSeries) ? stock.minuteSeries : [])
+    .map(function(item) { return Number(item && item.price); })
+    .filter(function(value) { return Number.isFinite(value) && value > 0; });
   const open = Number(stock.open);
   const high = Number(stock.high);
   const low = Number(stock.low);
   const price = Number(stock.price);
   const previousClose = Number(stock.prevClose);
-  if (![open, high, low, price].every(Number.isFinite) || price <= 0 || high <= 0 || low <= 0 || high < low) {
-    return '<svg class="stock-mini-chart" viewBox="0 0 118 42" aria-hidden="true">' +
-      '<line x1="6" y1="21" x2="112" y2="21" stroke="#d8e0ea" stroke-width="1" stroke-dasharray="3 4"/>' +
-      '<g opacity="0.7" stroke="#cbd5e1" stroke-width="1.6">' +
-      '<line x1="14" y1="13" x2="14" y2="29"/><line x1="28" y1="18" x2="28" y2="31"/><line x1="42" y1="12" x2="42" y2="27"/><line x1="56" y1="16" x2="56" y2="30"/><line x1="70" y1="10" x2="70" y2="26"/><line x1="84" y1="15" x2="84" y2="32"/><line x1="98" y1="11" x2="98" y2="25"/>' +
-      '</g>' +
-      '<path d="M8 28 C22 19 34 24 48 16 S76 18 92 12 106 15 112 10" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round"/>' +
+
+  if (realPrices.length >= 2) {
+    const sampled = realPrices.filter(function(value, index) {
+      const step = Math.max(1, Math.ceil(realPrices.length / 28));
+      return index % step === 0 || index === realPrices.length - 1;
+    });
+    const base = Number.isFinite(previousClose) && previousClose > 0 ? previousClose : sampled[0];
+    const min = Math.min.apply(null, sampled.concat([base]));
+    const max = Math.max.apply(null, sampled.concat([base]));
+    const span = Math.max(max - min, 0.01);
+    const yFor = function(value) { return 36 - ((value - min) / span) * 30; };
+    const points = sampled.map(function(value, index) {
+      const x = 6 + index * (106 / Math.max(1, sampled.length - 1));
+      return x.toFixed(1) + ',' + yFor(value).toFixed(1);
+    }).join(' ');
+    const trendColor = stockEscape(color || (sampled[sampled.length - 1] >= base ? 'var(--up)' : 'var(--down)'));
+    return '<svg class="stock-mini-chart" viewBox="0 0 118 42" aria-label="真实分时走势">' +
+      '<line x1="6" y1="' + yFor(base).toFixed(1) + '" x2="112" y2="' + yFor(base).toFixed(1) + '" stroke="#d7dee8" stroke-width="1" stroke-dasharray="3 4"/>' +
+      '<polyline points="' + points + '" fill="none" stroke="' + trendColor + '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>' +
       '</svg>';
   }
+
+  if (![open, high, low, price].every(Number.isFinite) || price <= 0 || high <= 0 || low <= 0 || high < low) {
+    return '<svg class="stock-mini-chart" viewBox="0 0 118 42" aria-hidden="true">' +
+      '<line x1="8" y1="21" x2="110" y2="21" stroke="#d8e0ea" stroke-width="1" stroke-dasharray="3 4"/>' +
+      '<text x="59" y="25" text-anchor="middle" fill="#94a3b8" font-size="9">暂无真实分时</text>' +
+      '</svg>';
+  }
+
   const base = Number.isFinite(previousClose) && previousClose > 0 ? previousClose : open;
-  const span = Math.max(high - low, Math.abs(price - base), Math.abs(open - base), 0.01);
-  const paddedMin = Math.min(low, base, open, price) - span * 0.12;
-  const paddedMax = Math.max(high, base, open, price) + span * 0.12;
-  const yFor = function(value) {
-    return 36 - ((value - paddedMin) / (paddedMax - paddedMin || 1)) * 30;
-  };
-  const clamp = function(value) {
-    return Math.max(low, Math.min(high, value));
-  };
-  const codeSeed = String(stock.code || '').split('').reduce(function(sum, ch) {
-    return sum + ch.charCodeAt(0);
-  }, 0);
-  const direction = price >= base ? 1 : -1;
-  const range = Math.max(high - low, 0.01);
-  const closeValues = [
-    open,
-    clamp(open + (price - open) * 0.18 + direction * range * ((codeSeed % 3) - 1) * 0.035),
-    clamp(open + (price - open) * 0.34 - direction * range * 0.08),
-    direction >= 0 ? Math.min(high, Math.max(open, price) + range * 0.18) : Math.max(low, Math.min(open, price) - range * 0.18),
-    clamp(open + (price - open) * 0.58 + direction * range * 0.05),
-    direction >= 0 ? Math.max(low, Math.min(open, price) - range * 0.15) : Math.min(high, Math.max(open, price) + range * 0.15),
-    clamp(open + (price - open) * 0.82),
-    price
-  ];
-  const candleWidth = 5;
-  const candles = closeValues.map(function(closeValue, index) {
-    const x = 10 + index * 14;
-    const openValue = index === 0 ? base : closeValues[index - 1];
-    const wiggle = range * (0.08 + ((codeSeed + index) % 4) * 0.018);
-    const wickHigh = Math.min(high, Math.max(openValue, closeValue) + wiggle);
-    const wickLow = Math.max(low, Math.min(openValue, closeValue) - wiggle);
-    const isUp = closeValue >= openValue;
-    const stroke = isUp ? 'var(--up)' : 'var(--down)';
-    const bodyTop = Math.min(yFor(openValue), yFor(closeValue));
-    const bodyHeight = Math.max(2, Math.abs(yFor(openValue) - yFor(closeValue)));
-    return {
-      x,
-      closeValue,
-      color: stroke,
-      wickTop: yFor(wickHigh),
-      wickBottom: yFor(wickLow),
-      bodyTop,
-      bodyHeight
-    };
-  });
-  if (candles.length > 3) candles[3].wickTop = yFor(high);
-  if (candles.length > 5) candles[5].wickBottom = yFor(low);
-  const points = candles.map(function(item) {
-    return item.x.toFixed(1) + ',' + yFor(item.closeValue).toFixed(1);
-  }).join(' ');
-  const areaPoints = '10,36 ' + points + ' 108,36';
+  const rangeMin = Math.min(low, base, open, price);
+  const rangeMax = Math.max(high, base, open, price);
+  const range = Math.max(rangeMax - rangeMin, 0.01);
+  const yFor = function(value) { return 36 - ((value - rangeMin) / range) * 30; };
   const trendColor = stockEscape(color || (price >= base ? 'var(--up)' : 'var(--down)'));
-  const candleSvg = candles.map(function(item) {
-    return '<g stroke="' + item.color + '" fill="' + item.color + '">' +
-      '<line x1="' + item.x.toFixed(1) + '" y1="' + item.wickTop.toFixed(1) + '" x2="' + item.x.toFixed(1) + '" y2="' + item.wickBottom.toFixed(1) + '" stroke-width="1.2" stroke-linecap="round"/>' +
-      '<rect x="' + (item.x - candleWidth / 2).toFixed(1) + '" y="' + item.bodyTop.toFixed(1) + '" width="' + candleWidth + '" height="' + item.bodyHeight.toFixed(1) + '" rx="1"/>' +
-      '</g>';
-  }).join('');
-  return '<svg class="stock-mini-chart" viewBox="0 0 118 42" aria-hidden="true">' +
+  return '<svg class="stock-mini-chart" viewBox="0 0 118 42" aria-label="当日真实高开低收区间">' +
     '<line x1="6" y1="' + yFor(base).toFixed(1) + '" x2="112" y2="' + yFor(base).toFixed(1) + '" stroke="#d7dee8" stroke-width="1" stroke-dasharray="3 4"/>' +
-    '<polygon points="' + areaPoints + '" fill="' + trendColor + '" opacity="0.08"/>' +
-    candleSvg +
-    '<polyline points="' + points + '" fill="none" stroke="' + trendColor + '" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>' +
-    '<circle cx="108" cy="' + yFor(price).toFixed(1) + '" r="2.2" fill="' + trendColor + '"/>' +
+    '<line x1="59" y1="' + yFor(high).toFixed(1) + '" x2="59" y2="' + yFor(low).toFixed(1) + '" stroke="' + trendColor + '" stroke-width="2"/>' +
+    '<line x1="44" y1="' + yFor(open).toFixed(1) + '" x2="59" y2="' + yFor(open).toFixed(1) + '" stroke="' + trendColor + '" stroke-width="2"/>' +
+    '<line x1="59" y1="' + yFor(price).toFixed(1) + '" x2="78" y2="' + yFor(price).toFixed(1) + '" stroke="' + trendColor + '" stroke-width="2.5"/>' +
+    '<text x="86" y="39" fill="#94a3b8" font-size="8">OHLC</text>' +
     '</svg>';
 }
 

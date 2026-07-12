@@ -1,14 +1,53 @@
 const express = require('express');
-const cors = require('cors');
+const path = require('path');
 const routes = require('./routes');
 
 const { getAIEnabled, getAIConfig } = require('./routes/ai');
 
 const app = express();
-app.use(cors());
+
+function rejectCrossOriginMutation(req, res, next) {
+  if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) return next();
+
+  const origin = req.get('origin');
+  const host = req.get('host');
+  let sameOrigin = req.get('sec-fetch-site') !== 'cross-site';
+  if (origin) {
+    try {
+      sameOrigin = sameOrigin && new URL(origin).origin === req.protocol + '://' + host;
+    } catch (error) {
+      sameOrigin = false;
+    }
+  }
+  if (!sameOrigin) {
+    return res.status(403).json({
+      success: false,
+      error: 'Cross-origin mutation request rejected'
+    });
+  }
+  next();
+}
+
+app.use(rejectCrossOriginMutation);
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true }));
-app.use(express.static(__dirname));
+
+['css', 'icons', 'js', 'vendor'].forEach(function (directory) {
+  app.use('/' + directory, express.static(path.join(__dirname, directory), {
+    fallthrough: false,
+    index: false
+  }));
+});
+
+app.get(['/', '/index.html'], function (req, res) {
+  res.sendFile(path.join(__dirname, 'index.html'));
+});
+
+['manifest.webmanifest', 'sw.js', 'WebStock.png'].forEach(function (file) {
+  app.get('/' + file, function (req, res) {
+    res.sendFile(path.join(__dirname, file));
+  });
+});
 
 app.use(routes);
 

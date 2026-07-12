@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 const http = require('node:http');
 const os = require('node:os');
 const path = require('node:path');
+const axios = require('axios');
 
 process.env.OPENAI_API_KEY = 'sk-proj-serversecretabcdefghijklmnopqrstuvwxyz1234567890';
 process.env.OPENAI_MODEL = 'gpt-5-mini';
@@ -13,7 +14,7 @@ process.env.WEBSTOCK_LEVEL2_CONFIG_PATH = path.join(os.tmpdir(), 'webstock-serve
 
 const app = require('../server');
 
-function requestJson(server, pathOrOptions, body) {
+function requestRaw(server, pathOrOptions, body) {
   const address = server.address();
   const port = address.port;
   const options = typeof pathOrOptions === 'string'
@@ -22,15 +23,24 @@ function requestJson(server, pathOrOptions, body) {
 
   return new Promise((resolve, reject) => {
     const req = http.request(options, (res) => {
-      let body = '';
+      let responseBody = '';
       res.setEncoding('utf8');
-      res.on('data', chunk => { body += chunk; });
-      res.on('end', () => resolve({ statusCode: res.statusCode, body, json: JSON.parse(body) }));
+      res.on('data', chunk => { responseBody += chunk; });
+      res.on('end', () => resolve({
+        statusCode: res.statusCode,
+        headers: res.headers,
+        body: responseBody
+      }));
     });
     req.on('error', reject);
     if (body !== undefined) req.write(JSON.stringify(body));
     req.end();
   });
+}
+
+async function requestJson(server, pathOrOptions, body) {
+  const result = await requestRaw(server, pathOrOptions, body);
+  return Object.assign(result, { json: JSON.parse(result.body) });
 }
 
 test('/ai-status returns public OpenAI status without leaking the key', async (t) => {
@@ -111,4 +121,59 @@ test('/api/level2/manual-trades analyzes pasted retail Level-2 rows', async (t) 
   assert.equal(result.json.data.provider, 'manual-level2-paste');
   assert.equal(result.json.data.stats.largeTradeCount, 2);
   assert.equal(result.json.data.stats.largeNetAmount, 104500);
+});
+
+test('server only serves public application assets and does not enable cross-origin reads', async (t) => {
+  const server = app.listen(0);
+  t.after(() => server.close());
+
+  const home = await requestRaw(server, '/');
+  const source = await requestRaw(server, '/server.js');
+  const database = await requestRaw(server, '/data/webstock.db');
+  const crossOrigin = await requestRaw(server, {
+    path: '/api/level2/status',
+    headers: { Origin: 'https://attacker.example' }
+  });
+
+  assert.equal(home.statusCode, 200);
+  assert.equal(source.statusCode, 404);
+  assert.equal(database.statusCode, 404);
+  assert.equal(crossOrigin.headers['access-control-allow-origin'], undefined);
+});
+
+test('server rejects cross-origin mutation requests', async (t) => {
+  const server = app.listen(0);
+  t.after(() => server.close());
+
+  const result = await requestJson(server, {
+    path: '/api/level2/config',
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      Origin: 'https://attacker.example'
+    }
+  }, {
+    provider: 'disabled'
+  });
+
+  assert.equal(result.statusCode, 403);
+  assert.equal(result.json.success, false);
+});
+
+test('/api/minute returns an explicit unavailable result instead of generated prices', async (t) => {
+  const originalGet = axios.get;
+  axios.get = async function() {
+    return { data: [] };
+  };
+  t.after(function() { axios.get = originalGet; });
+
+  const server = app.listen(0);
+  t.after(() => server.close());
+
+  const result = await requestJson(server, '/api/minute?code=000001');
+
+  assert.equal(result.statusCode, 200);
+  assert.deepEqual(result.json.data, []);
+  assert.equal(result.json.meta.dataSource, 'unavailable');
+  assert.equal(result.json.meta.synthetic, false);
 });

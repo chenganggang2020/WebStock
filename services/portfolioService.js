@@ -398,6 +398,11 @@ function updateTrade(id, input) {
 }
 
 function deleteTrade(id) {
+  const existing = db.prepare('SELECT * FROM trades WHERE id = ?').get(id);
+  if (!existing) return false;
+
+  const candidateTrades = listTradesAscending().filter(trade => trade.id !== Number(id));
+  validateTradeSet(candidateTrades);
   const result = db.prepare('DELETE FROM trades WHERE id = ?').run(id);
   return result.changes > 0;
 }

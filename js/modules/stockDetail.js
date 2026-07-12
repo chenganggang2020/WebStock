@@ -4,9 +4,6 @@ async function refresh(stock) {
   renderWatchlistStatus(stock);
   renderPositionStatus(stock);
   resetLevel2Panel(stock);
-  if (window.StockList && stock.code && !stock.tagDetailFetched) {
-    window.StockList.enrichStockTags([stock.code], { limit: 1 }).catch(function(error) { console.warn(error.message || error); });
-  }
   if (window.News) {
     try {
       const items = await window.News.loadStockNews(stock, 'detailNewsList');
