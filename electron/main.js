@@ -2,6 +2,7 @@ const path = require('path');
 const fs = require('fs');
 const net = require('net');
 const { app, BrowserWindow, Menu, dialog, shell } = require('electron');
+const { migrateLegacyDatabase } = require('./dataMigration');
 const { resolveRuntimeConfig } = require('./runtimeConfig');
 
 let mainWindow = null;
@@ -124,6 +125,12 @@ function createWindow(url) {
 }
 
 async function startServer() {
+  const migration = await migrateLegacyDatabase({
+    portable: runtimeConfig.portable,
+    legacyDbPath: runtimeConfig.legacyDbPath,
+    targetDbPath: process.env.WEBSTOCK_DB_PATH || runtimeConfig.dbPath
+  });
+  if (migration.migrated) log('Migrated installed WebStock database to portable data directory');
   configureEnvironment();
   log('Starting local WebStock server');
   const expressApp = require('../server');

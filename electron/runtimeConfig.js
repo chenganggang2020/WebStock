@@ -20,6 +20,7 @@ function resolveRuntimeConfig(options = {}) {
     portable,
     userDataDir,
     dbPath: path.join(userDataDir, 'webstock.db'),
+    legacyDbPath: portable ? path.join(defaultUserDataDir, 'webstock.db') : null,
     level2ConfigPath: path.join(userDataDir, 'level2-config.json'),
     port: normalizePort(options.port)
   };

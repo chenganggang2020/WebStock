@@ -1,6 +1,6 @@
 const { spawnSync } = require('child_process');
-const fs = require('fs');
 const path = require('path');
+const { prepareOutputDir, keepOnlyRunnableExe } = require('./windowsBuildOutput');
 
 const root = path.resolve(__dirname, '..');
 const pkg = require(path.join(root, 'package.json'));
@@ -46,34 +46,11 @@ function outputDirFromArgs() {
   return path.resolve(root, configured);
 }
 
-function assertInsideRoot(targetPath) {
-  const relative = path.relative(root, targetPath);
-  if (!relative || relative.startsWith('..') || path.isAbsolute(relative)) {
-    throw new Error('Refusing to remove build output outside project: ' + targetPath);
-  }
-}
-
-function prepareOutputDir(outputDir) {
-  assertInsideRoot(outputDir);
-  if (fs.existsSync(outputDir)) fs.rmSync(outputDir, { recursive: true, force: true });
-  fs.mkdirSync(outputDir, { recursive: true });
-}
-
-function keepOnlyRunnableExe(outputDir) {
-  assertInsideRoot(outputDir);
-  if (!fs.existsSync(outputDir)) return;
-  for (const entry of fs.readdirSync(outputDir, { withFileTypes: true })) {
-    const fullPath = path.join(outputDir, entry.name);
-    const isRunnableExe = entry.isFile() && /\.exe$/i.test(entry.name) && !/\.__uninstaller\.exe$/i.test(entry.name);
-    if (!isRunnableExe) fs.rmSync(fullPath, { recursive: true, force: true });
-  }
-}
-
 let buildError = null;
 
 try {
   const outputDir = outputDirFromArgs();
-  prepareOutputDir(outputDir);
+  prepareOutputDir(root, outputDir);
   prepareWindowsBuildEnvironment();
 
   const electronRebuild = nodeScript(path.join(root, 'node_modules', '@electron', 'rebuild', 'lib', 'cli.js'));
@@ -87,7 +64,7 @@ try {
 
   const electronBuilder = nodeScript(path.join(root, 'node_modules', 'electron-builder', 'cli.js'));
   run('Build Windows ' + target + ' package', electronBuilder[0], electronBuilder[1].concat(['--win', target], extraArgs));
-  if (target === 'nsis' || target === 'portable') keepOnlyRunnableExe(outputDir);
+  if (target === 'nsis' || target === 'portable') keepOnlyRunnableExe(root, outputDir);
 } catch (error) {
   buildError = error;
 } finally {

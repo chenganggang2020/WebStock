@@ -13,6 +13,7 @@ test('portable runtime stores mutable data beside the portable executable', () =
   assert.equal(config.portable, true);
   assert.equal(config.userDataDir, path.join('D:\\Tools\\WebStock', 'WebStockData'));
   assert.equal(config.dbPath, path.join('D:\\Tools\\WebStock', 'WebStockData', 'webstock.db'));
+  assert.equal(config.legacyDbPath, path.join('C:\\Users\\test\\AppData\\Roaming\\WebStock', 'webstock.db'));
   assert.equal(config.level2ConfigPath, path.join('D:\\Tools\\WebStock', 'WebStockData', 'level2-config.json'));
 });
 
