@@ -98,11 +98,11 @@ npm run dist:win:all
 # Android 原生伴侣 APK；首次构建会安装独立工具链
 npm run dist:android
 
-# 启动供 Android 伴侣连接的局域网配对服务
+# 仅供源码调试：启动局域网配对服务
 npm run start:android
 ```
 
-正式产物分别位于 `dist/installer`、`dist/portable` 和 `dist/android`。Android 伴侣复用 Windows 上的同一份持仓和研究数据库，要求手机与电脑位于同一可信局域网；完整说明见 `docs/android-companion.md`。
+正式产物分别位于 `dist/installer`、`dist/portable` 和 `dist/android`。安装或打开 Windows 版后，在“设置 -> 手机连接（安卓）”中开启连接并复制完整配对地址，不需要 Node.js 或源码命令。Android 伴侣复用 Windows 上的同一份持仓和研究数据库，要求手机与电脑位于同一可信局域网；完整说明见 `docs/android-companion.md`。
 
 AI 研究平台的已实现能力、未部署外部框架和正式数据验收边界见 `docs/ai-research/AI_PLATFORM_DESIGN.md`。当前不连接券商，也不提交真实订单。
 

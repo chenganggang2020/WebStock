@@ -19,7 +19,7 @@ The AI research direction is defined in `docs/ai-research/AI_PLATFORM_DESIGN.md`
 - Installer: `npm run dist:win`
 - Portable package: `npm run dist:win:portable`
 - Android companion APK: `npm run dist:android`
-- Android host mode: `npm run start:android`
+- Android host mode: Windows `设置 -> 手机连接（安卓）`; `npm run start:android` is the source-development fallback
 
 ## Architecture Map
 
@@ -34,7 +34,7 @@ The AI research direction is defined in `docs/ai-research/AI_PLATFORM_DESIGN.md`
 | Quant sidecar | `quant/`, `services/quantService.js`, `services/quantRuntimeInstaller.js`, `routes/quant.js` | Hashed datasets, isolated runtime installation, LightGBM/MASTER jobs, factor gates, rolling evaluation and verified result import | Public Sina adapter is exploratory only |
 | Paper portfolio | `services/paperPortfolioService.js`, `services/quoteService.js`, `routes/researchDecision.js` | Constraint-capped weights, lot-rounded simulated entries, valuation/PnL snapshots and draft/active/archived states | No broker connection or real orders |
 | Frontend | `index.html`, `js/modules/`, `css/styles.css` | Vanilla JS desktop UI | Views are switched by `switchMainView` |
-| Android companion | `android/`, `scripts/start-android-lan.js`, `services/lanAccessService.js` | Native WebView client for the same Windows data source | Private-LAN host plus one-time URL-to-cookie pairing; no second database |
+| Android companion | `android/`, `electron/lanServerController.js`, `services/lanAccessService.js`, `services/lanHostService.js` | Native WebView client for the same Windows data source | Windows Settings opt-in, private-LAN URL-to-cookie pairing; no second database |
 | Tests | `test/` | Node unit/API and Playwright flows | Tests use isolated temporary SQLite files |
 
 ## Core Flows

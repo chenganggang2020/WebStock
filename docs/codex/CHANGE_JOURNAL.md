@@ -1,5 +1,27 @@
 # Change Journal
 
+## 2026-08-09 23:30 - Packaged Android Host And LAN Safety
+
+### Decision
+
+- Make phone access an explicit Windows Settings action rather than requiring `npm run start:android` from a source checkout.
+- Keep ordinary desktop/web startup loopback-only. A non-loopback listener is allowed only while a valid pairing token is active.
+
+### Implementation
+
+- Added persistent per-data-directory LAN preferences and pairing tokens, an Electron server controller, a sandboxed preload bridge and the `手机连接（安卓）` Settings card.
+- Enabling phone access rebinds the same Express application to `0.0.0.0`, lists only private/shared IPv4 pairing URLs and protects remote requests with the existing token-to-cookie middleware. Disabling immediately returns to `127.0.0.1`.
+- Source `npm start` now binds to loopback by default; `npm run start:android` remains a development fallback and reuses the same host/token helpers.
+
+### Evidence
+
+- Node regression: 98/98 passed; quant regression: 20/20 passed; browser regression: 5/5 passed; official npm registry audit: 0 vulnerabilities.
+- Electron integration test opened Settings, enabled LAN access, observed an unpaired 401, exchanged the complete URL for an HttpOnly/SameSite cookie, disabled LAN access and confirmed the remote address disconnected.
+
+### Remaining Boundary
+
+- Android remains a companion to a running Windows host on a trusted network. It is not a standalone data/model server, and no broker execution path was added.
+
 ## 2026-08-09 15:00 - AI Research Platform Takeover
 
 Status: phase A delivered; phase B pending traceable historical data and isolated Python runtime

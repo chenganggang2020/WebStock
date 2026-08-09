@@ -33,17 +33,26 @@ dist\android\WebStock-Android-Companion-1.0.0.apk
 
 ## Connect
 
-On Windows, run:
+Install or open the Windows WebStock application, then:
+
+1. Open `设置`.
+2. Find `手机连接（安卓）` and choose `开启手机连接`.
+3. Copy one complete pairing URL shown by the Windows app.
+4. Open the Android companion and enter the complete URL, including the `pair` parameter.
+
+The Android app exchanges the token for an HTTP-only pairing cookie. The visible server setting retains only the host and port; the token is held separately in private, non-backed-up app storage so an APK upgrade can reconnect without exposing it in the address field. A 401 response clears the saved token and asks for a new complete pairing URL. Choose `关闭手机连接` on Windows when phone access is not needed.
+
+For source-tree development only, the equivalent fallback is:
 
 ```powershell
 npm run start:android
 ```
 
-The terminal prints one or more complete `Android pairing URL` values. Open the Android app and enter the complete URL, including the `pair` parameter. The app exchanges it for an HTTP-only pairing cookie. The visible server setting retains only the host and port; the token is held separately in private, non-backed-up app storage so an APK upgrade can reconnect without exposing it in the address field. A 401 response clears the saved token and asks for a new complete pairing URL.
+The terminal prints the same type of complete `Android pairing URL` values. This command is not required for installed or portable Windows releases.
 
 Allow Node.js/WebStock through Windows Firewall only for private networks. ChatGPT, OpenAI, and Google authentication opens in the Android system browser because those providers do not support embedded WebView OAuth. Normal HTTPS news and research pages can remain inside the companion window.
 
-To rotate the pairing token, stop WebStock, delete `%APPDATA%\WebStock\lan-pairing-token`, and start Android LAN mode again.
+To rotate the pairing token, close WebStock and delete `lan-pairing-token` from `%APPDATA%\WebStock` (installed edition) or `WebStockData` beside the portable executable. Reopen WebStock and enable phone access again. Existing paired devices will then require the new complete URL.
 
 ## Verified Artifact
 

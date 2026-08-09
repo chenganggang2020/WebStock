@@ -38,6 +38,99 @@ async function settingsLoadAIStatus() {
   }
 }
 
+function settingsSetLanAccessResult(message, isError) {
+  const target = document.getElementById('settingsLanAccessResult');
+  if (!target) return;
+  target.classList.toggle('error-text', !!isError);
+  target.textContent = message || '';
+}
+
+function settingsRenderLanAccess(status) {
+  const card = document.getElementById('desktopLanAccessCard');
+  if (!card) return;
+  const supported = !!(status && status.supported);
+  card.style.display = supported ? '' : 'none';
+  if (!supported) return;
+
+  const enabled = !!status.enabled;
+  const urls = Array.isArray(status.pairingUrls) ? status.pairingUrls : [];
+  const target = document.getElementById('settingsLanAccessStatus');
+  const enableButton = document.getElementById('enableLanAccessBtn');
+  const disableButton = document.getElementById('disableLanAccessBtn');
+  const copyButton = document.getElementById('copyLanPairingUrlBtn');
+  const urlField = document.getElementById('lanPairingUrlField');
+  const select = document.getElementById('lanPairingUrlSelect');
+
+  if (target) {
+    target.innerHTML = [
+      '<div class="settings-status-row">',
+      '<span class="status-pill ' + (enabled ? 'good' : 'muted') + '">' + (enabled ? '已开启' : '已关闭') + '</span>',
+      '<span>' + (enabled ? '端口 ' + settingsEscapeHtml(status.port) : '仅本机可访问') + '</span>',
+      '</div>',
+      '<div class="settings-status-detail">',
+      enabled
+        ? (urls.length ? '请选择当前电脑与手机共同可访问的地址。' : '未检测到可用的私有 IPv4 地址，请确认两台设备处于同一网络。')
+        : '默认关闭；开启后仍需完整配对地址才能从其他设备访问。',
+      '</div>'
+    ].join('');
+  }
+  if (select) {
+    select.innerHTML = urls.map(function(url) {
+      return '<option value="' + settingsEscapeHtml(url) + '">' + settingsEscapeHtml(url) + '</option>';
+    }).join('');
+  }
+  if (enableButton) enableButton.style.display = enabled ? 'none' : '';
+  if (disableButton) disableButton.style.display = enabled ? '' : 'none';
+  if (urlField) urlField.style.display = enabled && urls.length ? '' : 'none';
+  if (copyButton) copyButton.style.display = enabled && urls.length ? '' : 'none';
+}
+
+async function settingsLoadLanAccess() {
+  if (!window.webstockDesktop || typeof window.webstockDesktop.getLanAccessStatus !== 'function') {
+    settingsRenderLanAccess({ supported: false });
+    return;
+  }
+  try {
+    settingsRenderLanAccess(await window.webstockDesktop.getLanAccessStatus());
+  } catch (error) {
+    settingsSetLanAccessResult('手机连接状态读取失败：' + error.message, true);
+  }
+}
+
+async function settingsSetLanAccess(enabled) {
+  if (!window.webstockDesktop) return;
+  settingsSetLanAccessResult(enabled ? '正在开启手机连接...' : '正在关闭手机连接...');
+  try {
+    const status = await window.webstockDesktop.setLanAccessEnabled(enabled === true);
+    settingsRenderLanAccess(status);
+    settingsSetLanAccessResult(enabled
+      ? (status.pairingUrls.length ? '手机连接已开启，请复制完整配对地址。' : '已开启，但暂未检测到可用局域网地址。')
+      : '手机连接已关闭，外部设备已无法访问。');
+  } catch (error) {
+    settingsSetLanAccessResult('切换失败：' + error.message, true);
+    await settingsLoadLanAccess();
+  }
+}
+
+async function settingsCopyLanPairingUrl() {
+  const select = document.getElementById('lanPairingUrlSelect');
+  const url = select ? select.value : '';
+  if (!url) return;
+  try {
+    await navigator.clipboard.writeText(url);
+  } catch (_) {
+    const input = document.createElement('textarea');
+    input.value = url;
+    input.style.position = 'fixed';
+    input.style.opacity = '0';
+    document.body.appendChild(input);
+    input.select();
+    document.execCommand('copy');
+    document.body.removeChild(input);
+  }
+  settingsSetLanAccessResult('配对地址已复制。');
+}
+
 function settingsSetLevel2Result(message, isError) {
   const target = document.getElementById('settingsLevel2TestResult');
   if (!target) return;
@@ -291,6 +384,7 @@ function settingsRenderSavedResults() {
 
 async function settingsLoad() {
   await settingsLoadAIStatus();
+  await settingsLoadLanAccess();
   await settingsLoadLevel2Config();
   settingsRenderSavedResults();
   settingsRenderRiskSettings();
@@ -426,6 +520,19 @@ function settingsBind() {
   const clear = document.getElementById('clearHandoffResultsBtn');
   if (clear) clear.addEventListener('click', settingsClearSavedResults);
 
+  const enableLanAccess = document.getElementById('enableLanAccessBtn');
+  if (enableLanAccess) enableLanAccess.addEventListener('click', function() {
+    settingsSetLanAccess(true);
+  });
+
+  const disableLanAccess = document.getElementById('disableLanAccessBtn');
+  if (disableLanAccess) disableLanAccess.addEventListener('click', function() {
+    settingsSetLanAccess(false);
+  });
+
+  const copyLanPairingUrl = document.getElementById('copyLanPairingUrlBtn');
+  if (copyLanPairingUrl) copyLanPairingUrl.addEventListener('click', settingsCopyLanPairingUrl);
+
   const saveRisk = document.getElementById('saveRiskSettingsBtn');
   if (saveRisk) saveRisk.addEventListener('click', settingsSaveRiskSettings);
 
@@ -503,6 +610,8 @@ window.Settings = {
   downloadCsvTemplate: settingsDownloadCsvTemplate,
   importUserDataFromFile: settingsImportUserDataFromFile,
   loadLevel2Config: settingsLoadLevel2Config,
+  loadLanAccess: settingsLoadLanAccess,
+  setLanAccess: settingsSetLanAccess,
   saveLevel2Config: settingsSaveLevel2Config,
   testLevel2CurrentStock: settingsTestLevel2CurrentStock,
   testFreeFlowCurrentStock: settingsTestFreeFlowCurrentStock,

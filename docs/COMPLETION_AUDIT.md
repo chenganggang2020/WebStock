@@ -14,7 +14,8 @@ Objective: audit the referenced multi-framework AI stock design, replace name-on
 | Intelligent selection | Full A-share catalog scope excluding ST, coverage-aware local ranking, model consensus, evidence gaps, four-role ChatGPT review and manual candidate review are connected. | Complete for research support |
 | Paper portfolio | Constraints, draft/active/archive, lot-rounded entries, per-entry fee, positions, cash/net value and daily/total P/L snapshots are persisted and backed up. | Complete for current simulated tracking |
 | Windows release | Latest installer and portable EXE were rebuilt; isolated portable launch passed; formal portable DB hash was unchanged. | Complete |
-| Android release | Signed native companion APK installed and loaded the paired Windows workbench on an ADB device, reusing the same data authority. | Complete |
+| Android release | Signed native companion APK installed and loaded the paired Windows workbench on an ADB device. Installed/portable Windows builds now expose an opt-in Settings flow, so normal users do not need Node.js or the source tree. | Complete |
+| Cross-device host safety | Ordinary web startup binds only to `127.0.0.1`; non-loopback binding requires a pairing token. Electron tests prove opt-in LAN enable/disable, unpaired 401, token-to-cookie exchange and immediate shutdown. | Complete |
 | Real trading safety | No broker login, credentials, order route or automated real execution was added. | Complete |
 | Formal strategy proof | Public current-universe data does not meet point-in-time/licensing acceptance and current model/factor metrics are not approved. | Intentionally open data gate |
 | External agent frameworks | AlphaAgent, RD-Agent(Q), TradingAgents and FinRL-X remain planned until isolated adapters and required licensed data/services exist. | Future optional work, not falsely deployed |

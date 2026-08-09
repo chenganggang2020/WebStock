@@ -14,6 +14,16 @@ function isLocalNetworkAddress(address) {
   return parts[0] === 100 && parts[1] >= 64 && parts[1] <= 127;
 }
 
+function resolveSafeListenHost(host, token) {
+  const value = String(host || '').trim().toLowerCase();
+  if (!value || value === 'localhost') return '127.0.0.1';
+  if (isLoopbackAddress(value)) return value;
+  if (String(token || '').length < 20) {
+    throw new Error('A LAN pairing token is required for non-loopback WebStock binding');
+  }
+  return value;
+}
+
 function cookieValue(header, name) {
   const prefix = String(name) + '=';
   return String(header || '').split(';').map(item => item.trim())
@@ -47,4 +57,11 @@ function requireLanPairing(req, res, next) {
   return res.status(401).type('text/plain').send('该设备尚未与 WebStock 配对，请使用 Windows 端显示的完整配对地址。');
 }
 
-module.exports = { isLoopbackAddress, isLocalNetworkAddress, cookieValue, tokenMatches, requireLanPairing };
+module.exports = {
+  isLoopbackAddress,
+  isLocalNetworkAddress,
+  resolveSafeListenHost,
+  cookieValue,
+  tokenMatches,
+  requireLanPairing
+};

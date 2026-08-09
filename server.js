@@ -1,7 +1,7 @@
 const express = require('express');
 const path = require('path');
 const routes = require('./routes');
-const { requireLanPairing } = require('./services/lanAccessService');
+const { requireLanPairing, resolveSafeListenHost } = require('./services/lanAccessService');
 
 const { getAIEnabled, getAIConfig } = require('./routes/ai');
 
@@ -87,8 +87,9 @@ app.use(function (err, req, res, next) {
 const PORT = process.env.PORT || 3000;
 
 if (require.main === module) {
-  app.listen(PORT, function () {
-    console.log('Server started: http://localhost:' + PORT);
+  const host = resolveSafeListenHost(process.env.WEBSTOCK_HOST, process.env.WEBSTOCK_LAN_TOKEN);
+  app.listen(PORT, host, function () {
+    console.log('Server started: http://' + host + ':' + PORT);
   });
 }
 

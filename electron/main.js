@@ -1,12 +1,14 @@
 const path = require('path');
 const fs = require('fs');
 const net = require('net');
-const { app, BrowserWindow, Menu, dialog, shell } = require('electron');
+const { app, BrowserWindow, Menu, dialog, shell, ipcMain } = require('electron');
 const { migrateLegacyDatabase } = require('./dataMigration');
 const { resolveRuntimeConfig } = require('./runtimeConfig');
+const { createLanServerController } = require('./lanServerController');
+const { readLanEnabled } = require('../services/lanHostService');
 
 let mainWindow = null;
-let server = null;
+let serverController = null;
 
 app.setName('WebStock');
 
@@ -111,7 +113,8 @@ function createWindow(url) {
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
-      sandbox: true
+      sandbox: true,
+      preload: path.join(__dirname, 'preload.js')
     }
   });
 
@@ -139,14 +142,26 @@ async function startServer() {
   if (!await canListen(port)) {
     throw new Error('WebStock fixed local port ' + port + ' is already in use. Close the other local service and start WebStock again.');
   }
-  return new Promise((resolve, reject) => {
-    server = expressApp.listen(port, '127.0.0.1', function() {
-      log('Local server listening on port ' + port);
-      resolve('http://127.0.0.1:' + port + '/');
-    });
-    server.on('error', reject);
+  serverController = createLanServerController({
+    expressApp,
+    port,
+    userDataDir: runtimeConfig.userDataDir,
+    log
   });
+  await serverController.start(readLanEnabled(runtimeConfig.userDataDir));
+  return 'http://127.0.0.1:' + port + '/';
 }
+
+ipcMain.handle('webstock:lan-access-status', function() {
+  return serverController
+    ? serverController.status()
+    : { supported: false, enabled: false, pairingUrls: [] };
+});
+
+ipcMain.handle('webstock:set-lan-access', async function(_event, enabled) {
+  if (!serverController) throw new Error('WebStock local server is not ready');
+  return serverController.setEnabled(enabled === true);
+});
 
 const gotLock = app.requestSingleInstanceLock();
 if (!gotLock) {
@@ -170,7 +185,9 @@ if (!gotLock) {
   });
 
   app.on('window-all-closed', function() {
-    if (server) server.close();
+    if (serverController) serverController.stop().catch(function(error) {
+      log('Failed to stop local WebStock server cleanly', error);
+    });
     app.quit();
   });
 }

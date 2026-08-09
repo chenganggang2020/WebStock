@@ -16,6 +16,7 @@
     "dist:win:dir": "node scripts/build-electron-win.js dir --config.directories.output=dist/unpacked",
     "test": "node --test test/*.test.js",
     "test:api-json": "node scripts/test-api-json.js",
+    "test:desktop-lan": "node scripts/test-desktop-lan.js",
     "test:frontend": "playwright test test/frontend-click.spec.js",
     "test:portfolio": "node scripts/test-portfolio-api.js",
     "test:quant": "set PYTHONPATH=quant&& set PYTHONUTF8=1&& quant\\.venv\\Scripts\\python.exe -m unittest discover -s quant\\tests -v",

@@ -674,6 +674,20 @@
           <h3>AI API 状态</h3>
           <div id="settingsAiStatus" class="settings-status">--</div>
         </section>
+        <section id="desktopLanAccessCard" class="settings-card" style="display:none;">
+          <h3>手机连接（安卓）</h3>
+          <p>仅在同一私有局域网内开启。安卓端首次使用完整配对地址，验证后会保存登录状态。</p>
+          <div id="settingsLanAccessStatus" class="settings-status">--</div>
+          <label id="lanPairingUrlField" class="settings-field stack" style="display:none;">配对地址
+            <select id="lanPairingUrlSelect"></select>
+          </label>
+          <div class="template-actions">
+            <button id="enableLanAccessBtn" class="small-btn primary">开启手机连接</button>
+            <button id="disableLanAccessBtn" class="small-btn danger" style="display:none;">关闭手机连接</button>
+            <button id="copyLanPairingUrlBtn" class="small-btn" style="display:none;">复制配对地址</button>
+          </div>
+          <div id="settingsLanAccessResult" class="settings-status-detail"></div>
+        </section>
         <section class="settings-card wide">
           <h3>Level-2 接入</h3>
           <p>用于连接已授权的同花顺 DataFeed / iFinD / 券商本地网关。请在官方窗口或本地网关中自行登录，WebStock 只保存接口地址和授权 Key。</p>

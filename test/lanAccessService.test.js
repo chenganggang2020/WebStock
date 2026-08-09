@@ -23,6 +23,13 @@ test('LAN address filter accepts private and shared ranges only', () => {
   assert.equal(lan.isLocalNetworkAddress('1.2.0.31'), false);
 });
 
+test('server listen host defaults to loopback and requires a token for LAN binding', () => {
+  assert.equal(lan.resolveSafeListenHost('', ''), '127.0.0.1');
+  assert.equal(lan.resolveSafeListenHost('localhost', ''), '127.0.0.1');
+  assert.throws(() => lan.resolveSafeListenHost('0.0.0.0', ''), /pairing token/i);
+  assert.equal(lan.resolveSafeListenHost('0.0.0.0', 'a'.repeat(64)), '0.0.0.0');
+});
+
 test('LAN pairing cookie parser returns only the requested cookie', () => {
   assert.equal(lan.cookieValue('theme=dark; webstock_lan_token=abc123; x=1', 'webstock_lan_token'), 'abc123');
   assert.equal(lan.cookieValue('', 'webstock_lan_token'), '');
