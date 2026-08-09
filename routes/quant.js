@@ -62,6 +62,10 @@ router.post('/quant/factor-labs', function(req, res) {
   try { ok(res, quant.startFactorLab(req.body || {})); } catch (error) { fail(res, error); }
 });
 
+router.post('/quant/expert-backtests', function(req, res) {
+  try { ok(res, quant.startExpertBacktest(req.body || {})); } catch (error) { fail(res, error); }
+});
+
 router.post('/quant/research-suite', function(req, res) {
   try { ok(res, quant.startResearchSuite(req.body || {})); } catch (error) { fail(res, error); }
 });

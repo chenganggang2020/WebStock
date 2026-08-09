@@ -2661,6 +2661,189 @@ body.dark .md-body blockquote { background: rgba(99,102,241,0.12); }
   background: var(--card-bg);
 }
 
+.expert-tracker-band {
+  padding: 14px 20px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--card-bg);
+}
+
+.expert-tracker-band h3 {
+  margin: 0;
+  font-size: 15px;
+}
+
+.expert-channel-toolbar,
+.expert-observation-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.expert-channel-toolbar select {
+  min-width: 240px;
+  max-width: 420px;
+  padding: 7px 9px;
+  border: 1px solid var(--btn-border);
+  border-radius: 6px;
+  background: var(--card-bg);
+  color: var(--text);
+}
+
+.expert-observation-editor {
+  margin-top: 10px;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.expert-observation-editor summary {
+  padding: 10px 0;
+  color: var(--text-primary);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.expert-observation-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(120px, 1fr));
+  gap: 10px 12px;
+  padding-bottom: 10px;
+}
+
+.expert-observation-grid label {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.expert-observation-grid .span-2 {
+  grid-column: span 2;
+}
+
+.expert-observation-grid input,
+.expert-observation-grid select,
+.expert-observation-grid textarea {
+  width: 100%;
+  min-width: 0;
+  padding: 8px 9px;
+  border: 1px solid var(--btn-border);
+  border-radius: 6px;
+  background: var(--card-bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  letter-spacing: 0;
+}
+
+.expert-observation-grid textarea {
+  min-height: 88px;
+  resize: vertical;
+  line-height: 1.5;
+}
+
+.expert-observation-actions {
+  justify-content: flex-end;
+  margin: 0 0 10px;
+}
+
+.expert-timeline {
+  display: grid;
+  gap: 8px;
+  max-height: 420px;
+  margin-top: 12px;
+  overflow: auto;
+}
+
+.expert-backtest-summary {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-height: 38px;
+  margin: 10px 0;
+  padding: 8px 10px;
+  border: 1px solid var(--border-color);
+  background: var(--panel-soft-bg, #f7f8fa);
+  font-size: 13px;
+}
+
+.expert-backtest-summary .muted {
+  line-height: 1.6;
+}
+
+.expert-exploratory-badge {
+  margin-left: auto;
+  color: #9a6700;
+  font-weight: 600;
+}
+
+.expert-timeline-row {
+  padding: 10px 12px;
+  border-left: 3px solid var(--focus);
+  border-bottom: 1px solid var(--border);
+}
+
+.expert-timeline-row.deleted_trace,
+.expert-timeline-row.unavailable {
+  border-left-color: #d97706;
+}
+
+.expert-timeline-row strong {
+  display: block;
+  margin-top: 6px;
+  overflow-wrap: anywhere;
+}
+
+.expert-timeline-row p {
+  max-height: 140px;
+  margin: 6px 0;
+  overflow: auto;
+  color: var(--text-secondary);
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+
+.expert-timeline-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.expert-evidence-badge {
+  padding: 2px 6px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-weight: 700;
+}
+
+.expert-evidence-badge.primary {
+  border-color: rgba(220, 38, 38, 0.45);
+  color: #dc2626;
+  background: rgba(220, 38, 38, 0.08);
+}
+
+.expert-evidence-badge.archive {
+  border-color: rgba(37, 99, 235, 0.4);
+  color: #2563eb;
+  background: rgba(37, 99, 235, 0.08);
+}
+
+.expert-evidence-badge.secondary_quote {
+  border-color: rgba(217, 119, 6, 0.45);
+  color: #b45309;
+  background: rgba(217, 119, 6, 0.08);
+}
+
+.expert-evidence-badge.commentary {
+  color: var(--text-secondary);
+  background: var(--bg);
+}
+
 .research-decision-band {
   padding: 14px 20px 16px;
   border-bottom: 1px solid var(--border);
@@ -3367,6 +3550,10 @@ body.dark .model-status.unavailable {
 }
 
 @media (max-width: 1180px) {
+  .expert-observation-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .quant-control-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
@@ -3395,6 +3582,20 @@ body.dark .model-status.unavailable {
 }
 
 @media (max-width: 720px) {
+  .expert-observation-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .expert-observation-grid .span-2 {
+    grid-column: auto;
+  }
+
+  .expert-channel-toolbar select {
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+  }
+
   .quant-research-band > .panel-title-row {
     align-items: flex-start;
     flex-direction: column;

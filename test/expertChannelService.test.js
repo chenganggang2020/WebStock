@@ -1,0 +1,123 @@
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const os = require('node:os');
+const path = require('node:path');
+
+const testDbPath = path.join(os.tmpdir(), 'webstock-expert-channel-' + process.pid + '.db');
+for (const suffix of ['', '-wal', '-shm']) {
+  try { fs.rmSync(testDbPath + suffix, { force: true }); } catch (error) {}
+}
+process.env.WEBSTOCK_DB_PATH = testDbPath;
+
+const db = require('../db');
+const experts = require('../services/expertChannelService');
+
+test('expert channel keeps primary content and deleted traces at distinct evidence levels', () => {
+  const channel = experts.createChannel({
+    channelKey: 'douyin-model-mr',
+    displayName: '模型先生',
+    platform: 'douyin',
+    aliases: ['模型先生', '抖音模型先生'],
+    discoveryQueries: ['模型先生 股票', '模型先生 抖音']
+  });
+  assert.ok(channel.id > 0);
+
+  const primary = experts.recordObservation(channel.id, {
+    externalContentId: '7533142185677114684',
+    sourceUrl: 'https://www.douyin.com/video/7533142185677114684',
+    title: '科创芯片与港股创新药',
+    publishedAt: '2025-07-31T15:19:00+08:00',
+    evidenceLevel: 'primary',
+    contentRole: 'transcript',
+    content: '科创芯片需要持续关注新的公司出现；港股创新药长期投入后进入收获期。',
+    stockCodes: ['688041'],
+    sectors: ['科创芯片', '创新药'],
+    topics: ['产业趋势'],
+    stance: 'conditional',
+    confidence: 0.95
+  });
+  assert.equal(primary.evidenceLevel, 'primary');
+  assert.equal(primary.publishedTimePrecision, 'second');
+  assert.equal(primary.evidenceLabel, '本人公开');
+  assert.ok(primary.knowledgeSourceId > 0);
+
+  const trace = experts.recordObservation(channel.id, {
+    externalKey: 'third-party-hidden-video-note-1',
+    sourceUrl: 'https://example.com/model-mr-note',
+    title: '第三方整理提到一条已隐藏视频',
+    publishedAt: '2026-03-06',
+    evidenceLevel: 'secondary_quote',
+    availabilityStatus: 'deleted_trace',
+    contentRole: 'secondary_quote',
+    summary: '第三方整理者声称该内容来自一条当前不可访问的视频，原始发布时间尚不能核实。',
+    topics: ['删除痕迹'],
+    confidence: 0.3
+  });
+  assert.equal(trace.availabilityStatus, 'deleted_trace');
+  assert.equal(trace.publishedTimePrecision, 'date');
+  assert.equal(trace.evidenceLabel, '第三方转述');
+
+  const timeline = experts.listObservations(channel.id);
+  assert.equal(timeline.length, 2);
+  assert.equal(experts.getChannel(channel.id).deletedTraceCount, 1);
+  assert.equal(experts.getChannel(channel.id).primaryCount, 1);
+});
+
+test('expert backtest summaries are idempotent and remain attached to the channel', () => {
+  const channel = experts.listChannels({ query: '模型先生' })[0];
+  const saved = experts.recordBacktest(channel.id, {
+    runId: 'expert-run-1',
+    datasetId: 'dataset-demo',
+    status: 'exploratory',
+    resultPath: 'expert-runs/expert-run-1/result.json',
+    resultSha256: 'a'.repeat(64),
+    methodology: { horizons: [1, 5, 20, 60], entryRule: 'next_trading_session_open' },
+    result: { coverage: { strictEligibleObservations: 1 } }
+  });
+  assert.equal(saved.datasetId, 'dataset-demo');
+  experts.recordBacktest(channel.id, {
+    runId: 'expert-run-1',
+    datasetId: 'dataset-demo',
+    result: { coverage: { strictEligibleObservations: 2 } }
+  });
+  const listed = experts.listBacktests(channel.id);
+  assert.equal(listed.length, 1);
+  assert.equal(listed[0].result.coverage.strictEligibleObservations, 2);
+});
+
+test('re-observing the same public item updates it instead of duplicating it', () => {
+  const channel = experts.listChannels({ query: '模型先生' })[0];
+  const before = experts.listObservations(channel.id).length;
+  const updated = experts.recordObservation(channel.id, {
+    externalContentId: '7533142185677114684',
+    sourceUrl: 'https://www.douyin.com/video/7533142185677114684',
+    title: '科创芯片与港股创新药（再次核验）',
+    availabilityStatus: 'available',
+    lastSeenAt: '2026-08-10T00:00:00+08:00'
+  });
+  assert.equal(experts.listObservations(channel.id).length, before);
+  assert.match(updated.title, /再次核验/);
+  assert.equal(updated.contentRole, 'transcript');
+});
+
+test('intent handoff explicitly separates quotes, third-party evidence and inference', () => {
+  const channel = experts.listChannels({ query: '模型先生' })[0];
+  const context = experts.buildIntentContext(channel.id, {
+    question: '模型先生近期对科创芯片表达了什么，可能意图是什么？',
+    searchQuery: '模型先生 科创芯片'
+  });
+  assert.ok(context.evidence.length >= 1);
+  assert.match(context.prompt, /primary/);
+  assert.match(context.prompt, /secondary_quote/);
+  assert.match(context.prompt, /deleted_trace/);
+  assert.match(context.prompt, /意图\/暗示.*模型推断/);
+  assert.match(context.prompt, /WEBSTOCK_RESULT_START/);
+});
+
+test.after(() => {
+  db.close();
+  for (const suffix of ['', '-wal', '-shm']) {
+    try { fs.rmSync(testDbPath + suffix, { force: true }); } catch (error) {}
+  }
+});

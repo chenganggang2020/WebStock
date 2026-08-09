@@ -9,6 +9,7 @@ function bindButtons() {
   const Trades = window.Trades;
   const Portfolio = window.Portfolio;
   if (window.AIAssistant) window.AIAssistant.bind();
+  if (window.ExpertTracker) window.ExpertTracker.bind();
   if (window.AIHistory) window.AIHistory.bind();
   if (window.StockDetail) window.StockDetail.bind();
   if (window.Settings) window.Settings.bind();

@@ -19,6 +19,8 @@ SINA_KLINE_URL = (
     "https://money.finance.sina.com.cn/quotes_service/api/json_v2.php/"
     "CN_MarketData.getKLineData"
 )
+EASTMONEY_KLINE_URL = "https://push2his.eastmoney.com/api/qt/stock/kline/get"
+TENCENT_KLINE_URL = "https://web.ifzq.gtimg.cn/appstock/app/kline/kline"
 DATA_COLUMNS = ["date", "code", "name", "open", "high", "low", "close", "volume"]
 
 
@@ -77,7 +79,7 @@ def _data_length(start_date, end_date):
     return min(max(math.ceil(calendar_days * 250 / 365) + 80, 120), 10000)
 
 
-def fetch_sina_history(session, stock, start_date, end_date, retries=2):
+def fetch_sina_history(session, stock, start_date, end_date, retries=4):
     params = {
         "symbol": _sina_symbol(stock["code"]),
         "scale": "240",
@@ -122,7 +124,95 @@ def fetch_sina_history(session, stock, start_date, end_date, retries=2):
         except Exception as error:
             last_error = error
             if attempt < retries:
-                time.sleep(0.5 * (attempt + 1))
+                status = getattr(getattr(error, "response", None), "status_code", None)
+                if status in (429, 456):
+                    retry_after = getattr(error.response, "headers", {}).get("Retry-After")
+                    try:
+                        delay = max(float(retry_after), 1.0)
+                    except (TypeError, ValueError):
+                        delay = min(3 * (3 ** attempt), 60)
+                    time.sleep(delay)
+                else:
+                    time.sleep(0.5 * (attempt + 1))
+    raise RuntimeError(str(last_error))
+
+
+def fetch_eastmoney_history(session, stock, start_date, end_date, retries=3):
+    market = "1" if re.match(r"^[56]", stock["code"]) else "0"
+    params = {
+        "secid": f"{market}.{stock['code']}",
+        "fields1": "f1,f2,f3",
+        "fields2": "f51,f52,f53,f54,f55,f56",
+        "klt": "101",
+        "fqt": "0",
+        "beg": pd.Timestamp(start_date).strftime("%Y%m%d"),
+        "end": pd.Timestamp(end_date).strftime("%Y%m%d"),
+    }
+    last_error = None
+    for attempt in range(retries + 1):
+        try:
+            response = session.get(EASTMONEY_KLINE_URL, params=params, timeout=20)
+            response.raise_for_status()
+            payload = response.json()
+            klines = ((payload or {}).get("data") or {}).get("klines") or []
+            rows = [str(item).split(",")[:6] for item in klines]
+            frame = pd.DataFrame(rows, columns=["date", "open", "close", "high", "low", "volume"])
+            if frame.empty:
+                raise ValueError("fallback provider returned no rows")
+            frame["date"] = pd.to_datetime(frame["date"], errors="coerce")
+            for column in ["open", "high", "low", "close", "volume"]:
+                frame[column] = pd.to_numeric(frame[column], errors="coerce")
+            frame = frame.dropna(subset=["date", "open", "high", "low", "close", "volume"])
+            frame = frame[(frame["close"] > 0) & (frame["volume"] >= 0)].copy()
+            if frame.empty:
+                raise ValueError("fallback provider returned no valid rows")
+            frame["date"] = frame["date"].dt.strftime("%Y-%m-%d")
+            frame["code"] = stock["code"]
+            frame["name"] = stock["name"]
+            return frame[DATA_COLUMNS].sort_values("date").drop_duplicates("date", keep="last")
+        except Exception as error:
+            last_error = error
+            if attempt < retries:
+                time.sleep(0.8 * (attempt + 1))
+    raise RuntimeError(str(last_error))
+
+
+def fetch_tencent_history(session, stock, start_date, end_date, retries=3):
+    symbol = _sina_symbol(stock["code"])
+    params = {
+        "param": ",".join([
+            symbol, "day", pd.Timestamp(start_date).strftime("%Y-%m-%d"),
+            pd.Timestamp(end_date).strftime("%Y-%m-%d"), str(_data_length(start_date, end_date)),
+        ])
+    }
+    last_error = None
+    for attempt in range(retries + 1):
+        try:
+            response = session.get(TENCENT_KLINE_URL, params=params, timeout=20)
+            response.raise_for_status()
+            payload = response.json()
+            rows = (((payload or {}).get("data") or {}).get(symbol) or {}).get("day") or []
+            frame = pd.DataFrame(
+                [list(item)[:6] for item in rows],
+                columns=["date", "open", "close", "high", "low", "volume"],
+            )
+            if frame.empty:
+                raise ValueError("second fallback provider returned no rows")
+            frame["date"] = pd.to_datetime(frame["date"], errors="coerce")
+            for column in ["open", "high", "low", "close", "volume"]:
+                frame[column] = pd.to_numeric(frame[column], errors="coerce")
+            frame = frame.dropna(subset=["date", "open", "high", "low", "close", "volume"])
+            frame = frame[(frame["close"] > 0) & (frame["volume"] >= 0)].copy()
+            if frame.empty:
+                raise ValueError("second fallback provider returned no valid rows")
+            frame["date"] = frame["date"].dt.strftime("%Y-%m-%d")
+            frame["code"] = stock["code"]
+            frame["name"] = stock["name"]
+            return frame[DATA_COLUMNS].sort_values("date").drop_duplicates("date", keep="last")
+        except Exception as error:
+            last_error = error
+            if attempt < retries:
+                time.sleep(min(3 * (2 ** attempt), 30))
     raise RuntimeError(str(last_error))
 
 
@@ -175,7 +265,7 @@ def _normalize_frame(frame, stock, start_day, end_day, strict=False):
     return prepared[DATA_COLUMNS], {"invalidRows": invalid_rows, "duplicateRows": duplicate_rows}
 
 
-def _artifact_for(target, root, stock, frame, quality):
+def _artifact_for(target, root, stock, frame, quality, source_id="unknown-resumed"):
     return {
         "path": target.relative_to(root).as_posix(),
         "sha256": file_sha256(target),
@@ -186,14 +276,15 @@ def _artifact_for(target, root, stock, frame, quality):
         "end": str(frame["date"].iloc[-1]),
         "invalidRows": int(quality.get("invalidRows", 0)),
         "duplicateRows": int(quality.get("duplicateRows", 0)),
+        "sourceId": source_id,
     }
 
 
-def _read_cached_artifact(target, root, stock, start_day, end_day):
+def _read_cached_artifact(target, root, stock, start_day, end_day, source_id="unknown-resumed"):
     frame, quality = _normalize_frame(
         pd.read_parquet(target), stock, start_day, end_day, strict=True
     )
-    return _artifact_for(target, root, stock, frame, quality)
+    return _artifact_for(target, root, stock, frame, quality, source_id=source_id)
 
 
 def _write_parquet_atomic(target, frame):
@@ -287,16 +378,17 @@ def collect_dataset(
     failures_by_code = {
         str(item.get("code")): item for item in state.get("failures", []) if item.get("code")
     }
+    sources_by_code = dict(state.get("sourcesByCode") or {})
     files_by_code = {}
     resumed_files = 0
     invalid_cached_files = 0
     pending = []
     last_checkpoint = 0
+    state_revision = 0
 
     def persist_state(status, force=False):
         nonlocal last_checkpoint
-        completed_count = len(files_by_code)
-        if not force and completed_count - last_checkpoint < 10:
+        if not force and state_revision - last_checkpoint < 10:
             return
         write_json_atomic(state_path, {
             "schema": "webstock.quant.collection-state.v1",
@@ -308,15 +400,17 @@ def collect_dataset(
             "selectedCount": len(selected),
             "completedCodes": sorted(files_by_code),
             "failures": [failures_by_code[code] for code in sorted(failures_by_code)],
+            "sourcesByCode": {code: sources_by_code[code] for code in sorted(sources_by_code)},
         })
-        last_checkpoint = completed_count
+        last_checkpoint = state_revision
 
     for stock in selected:
         target = raw_dir / f"{stock['code']}.parquet"
         if target.exists():
             try:
                 files_by_code[stock["code"]] = _read_cached_artifact(
-                    target, root, stock, start_day, end_day
+                    target, root, stock, start_day, end_day,
+                    source_id=sources_by_code.get(stock["code"], "unknown-resumed"),
                 )
                 failures_by_code.pop(stock["code"], None)
                 resumed_files += 1
@@ -328,21 +422,85 @@ def collect_dataset(
 
     persist_state("running", force=True)
     thread_state = threading.local()
+    request_gate = threading.Lock()
+    next_request_at = [0.0]
+    provider_lock = threading.Lock()
+    sina_disabled_until = [0.0]
+    eastmoney_disabled_until = [0.0]
+
+    def pace_request():
+        interval = max(int(sleep_ms or 0), 0) / 1000.0
+        if interval <= 0:
+            return
+        with request_gate:
+            delay = next_request_at[0] - time.monotonic()
+            if delay > 0:
+                time.sleep(delay)
+            next_request_at[0] = time.monotonic() + interval
 
     def collect_one(stock):
         if not hasattr(thread_state, "session"):
             thread_state.session = requests.Session()
-        frame = fetch_sina_history(thread_state.session, stock, start_day, end_day)
+        with provider_lock:
+            use_sina = time.monotonic() >= sina_disabled_until[0]
+        source_id = "sina-public-kline"
+        if use_sina:
+            try:
+                pace_request()
+                frame = fetch_sina_history(thread_state.session, stock, start_day, end_day, retries=0)
+            except Exception as error:
+                if "456" in str(error) or "429" in str(error):
+                    with provider_lock:
+                        sina_disabled_until[0] = time.monotonic() + 300
+                with provider_lock:
+                    use_eastmoney = time.monotonic() >= eastmoney_disabled_until[0]
+                if use_eastmoney:
+                    try:
+                        pace_request()
+                        frame = fetch_eastmoney_history(
+                            thread_state.session, stock, start_day, end_day, retries=0
+                        )
+                        source_id = "eastmoney-public-kline"
+                    except Exception:
+                        with provider_lock:
+                            eastmoney_disabled_until[0] = time.monotonic() + 300
+                        pace_request()
+                        frame = fetch_tencent_history(thread_state.session, stock, start_day, end_day)
+                        source_id = "tencent-public-kline"
+                else:
+                    pace_request()
+                    frame = fetch_tencent_history(thread_state.session, stock, start_day, end_day)
+                    source_id = "tencent-public-kline"
+        else:
+            with provider_lock:
+                use_eastmoney = time.monotonic() >= eastmoney_disabled_until[0]
+            if use_eastmoney:
+                try:
+                    pace_request()
+                    frame = fetch_eastmoney_history(
+                        thread_state.session, stock, start_day, end_day, retries=0
+                    )
+                    source_id = "eastmoney-public-kline"
+                except Exception:
+                    with provider_lock:
+                        eastmoney_disabled_until[0] = time.monotonic() + 300
+                    pace_request()
+                    frame = fetch_tencent_history(thread_state.session, stock, start_day, end_day)
+                    source_id = "tencent-public-kline"
+            else:
+                pace_request()
+                frame = fetch_tencent_history(thread_state.session, stock, start_day, end_day)
+                source_id = "tencent-public-kline"
         frame, quality = _normalize_frame(frame, stock, start_day, end_day)
         target = raw_dir / f"{stock['code']}.parquet"
         _write_parquet_atomic(target, frame)
-        if sleep_ms:
-            time.sleep(max(int(sleep_ms), 0) / 1000.0)
-        return _artifact_for(target, root, stock, frame, quality)
+        return _artifact_for(target, root, stock, frame, quality, source_id=source_id)
 
     def record_result(stock, artifact=None, error=None):
+        nonlocal state_revision
         if artifact is not None:
             files_by_code[stock["code"]] = artifact
+            sources_by_code[stock["code"]] = artifact.get("sourceId", "unknown")
             failures_by_code.pop(stock["code"], None)
         else:
             failures_by_code[stock["code"]] = {
@@ -351,6 +509,7 @@ def collect_dataset(
                 "reason": str(error)[:500],
             }
         completed = len(files_by_code) + len(failures_by_code)
+        state_revision += 1
         if emit:
             emit({
                 "stage": "collect",
@@ -414,13 +573,19 @@ def collect_dataset(
     })
 
     warnings = [
-        "数据来自 WebStock 已使用的公开日线接口，仅用于研究试跑，条款与完整性未独立验证。",
+        "数据来自新浪、东方财富及腾讯公开日线接口，仅用于研究试跑，条款与完整性未独立验证。",
         "股票池由当前 stocks.json 生成，不包含已退市股的完整点时点名单，存在幸存者偏差。",
         "ST 只按当前名称排除，未重建历史每日 ST 状态。",
         "日线价格未复权，除权除息可能污染动量与收益标签。",
     ]
     if failures:
         warnings.append(f"{len(failures)} 只证券采集失败，已从本次数据集排除。")
+    provider_counts = {}
+    for artifact in files[:-1]:
+        source_id = artifact.get("sourceId", "unknown")
+        provider_counts[source_id] = provider_counts.get(source_id, 0) + 1
+    if len(provider_counts) > 1:
+        warnings.append("数据集混合多个公开来源；成交量单位和历史修订差异可能影响横截面比较。")
 
     manifest = {
         "schema": "webstock.quant.dataset.v1",
@@ -429,11 +594,13 @@ def collect_dataset(
         "requestSha256": request_sha256,
         "asOf": actual_end,
         "source": {
-            "id": "sina-public-kline",
-            "name": "Sina public daily K-line endpoint",
+            "id": "mixed-public-kline",
+            "name": "Sina, Eastmoney and Tencent public daily K-line endpoints",
             "accessMode": "public-http",
             "endpoint": SINA_KLINE_URL,
             "termsVerified": False,
+            "providers": [SINA_KLINE_URL, EASTMONEY_KLINE_URL, TENCENT_KLINE_URL],
+            "providerCounts": provider_counts,
         },
         "universe": {
             "policy": "current-a-share-ex-st",

@@ -3,10 +3,11 @@ import sys
 import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import numpy as np
 import pandas as pd
+import requests
 
 from webstock_quant.pipeline import (
     FEATURE_COLUMNS,
@@ -14,8 +15,16 @@ from webstock_quant.pipeline import (
     build_rolling_folds,
     evaluate_predictions,
 )
-from webstock_quant.collector import _sina_symbol, collect_dataset, select_universe
+from webstock_quant.collector import (
+    _sina_symbol,
+    collect_dataset,
+    fetch_sina_history,
+    fetch_eastmoney_history,
+    fetch_tencent_history,
+    select_universe,
+)
 from webstock_quant.cli import build_parser
+from webstock_quant.expert_backtest import run_expert_backtest
 from webstock_quant.manifest import manifest_sha256
 from webstock_quant.model import QlibPanelDataset
 
@@ -40,6 +49,99 @@ def sample_panel(days=90, instruments=('000001', '600000', '300750')):
 
 
 class FeatureTests(unittest.TestCase):
+    def test_expert_backtest_uses_next_session_and_excludes_secondary_material(self):
+        with TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            workspace = root / 'workspace'
+            dataset_dir = workspace / 'datasets' / 'expert-demo'
+            raw_dir = dataset_dir / 'raw'
+            raw_dir.mkdir(parents=True)
+            dates = pd.bdate_range('2025-01-02', periods=70)
+            for code, slope in [('000001', 0.10), ('600000', 0.02), ('300750', -0.01)]:
+                frame = pd.DataFrame({
+                    'date': dates,
+                    'code': code,
+                    'name': code,
+                    'open': [10 + slope * index for index in range(len(dates))],
+                    'high': [10.2 + slope * index for index in range(len(dates))],
+                    'low': [9.8 + slope * index for index in range(len(dates))],
+                    'close': [10.1 + slope * index for index in range(len(dates))],
+                    'volume': 1_000_000,
+                })
+                frame.to_parquet(raw_dir / (code + '.parquet'), index=False)
+            from webstock_quant.manifest import file_sha256
+            files = [{
+                'path': 'raw/' + target.name,
+                'sha256': file_sha256(target),
+                'bytes': target.stat().st_size,
+            } for target in sorted(raw_dir.glob('*.parquet'))]
+            manifest = {
+                'schema': 'webstock.quant.dataset.v1',
+                'datasetId': 'expert-demo',
+                'asOf': dates[-1].strftime('%Y-%m-%d'),
+                'eligibility': 'exploratory_only',
+                'files': files,
+                'warnings': ['synthetic test dataset'],
+            }
+            manifest['manifestSha256'] = manifest_sha256(manifest)
+            (dataset_dir / 'manifest.json').write_text(
+                __import__('json').dumps(manifest), encoding='utf-8'
+            )
+            signals_path = root / 'signals.json'
+            signals_path.write_text(__import__('json').dumps({
+                'channelId': 7,
+                'observations': [
+                    {
+                        'id': 11,
+                        'publishedAt': '2025-01-03T14:30:00+08:00',
+                        'publishedTimePrecision': 'minute',
+                        'evidenceLevel': 'primary',
+                        'contentRole': 'direct_quote',
+                        'stance': 'bullish',
+                        'stockCodes': ['000001'],
+                    },
+                    {
+                        'id': 12,
+                        'publishedAt': '2025-01-03T14:30:00+08:00',
+                        'publishedTimePrecision': 'minute',
+                        'evidenceLevel': 'secondary_quote',
+                        'contentRole': 'secondary_quote',
+                        'stance': 'bullish',
+                        'stockCodes': ['600000'],
+                    },
+                    {
+                        'id': 13,
+                        'publishedAt': '2025-01-07T08:30:00+08:00',
+                        'publishedTimePrecision': 'minute',
+                        'evidenceLevel': 'archive',
+                        'contentRole': 'transcript',
+                        'stance': 'bearish',
+                        'stockCodes': ['300750'],
+                    },
+                ],
+            }), encoding='utf-8')
+
+            result_path, result = run_expert_backtest(
+                dataset_dir=dataset_dir,
+                workspace=workspace,
+                run_id='expert-test-run',
+                signals_path=signals_path,
+                horizons=[1, 5, 20, 60],
+                cost_bps=10,
+            )
+
+            self.assertTrue(result_path.exists())
+            self.assertEqual(result['coverage']['strictEligibleObservations'], 2)
+            self.assertEqual(result['coverage']['excludedByReason']['secondary_evidence'], 1)
+            event = result['events'][0]
+            self.assertEqual(event['entryDate'], '2025-01-06')
+            self.assertEqual(result['events'][1]['entryDate'], '2025-01-07')
+            gross = event['horizons']['1']['grossReturn']
+            net = event['horizons']['1']['netReturn']
+            self.assertAlmostEqual(gross - net, 0.002, places=9)
+            self.assertEqual(result['validationStatus'], 'exploratory')
+            self.assertTrue(any('retrospective' in warning.lower() for warning in result['warnings']))
+
     def test_future_prices_do_not_change_past_features(self):
         panel = sample_panel()
         baseline = build_features(panel, label_horizon=5)
@@ -133,6 +235,72 @@ class FeatureTests(unittest.TestCase):
         self.assertEqual(_sina_symbol('600000'), 'sh600000')
         self.assertEqual(_sina_symbol('920992'), 'bj920992')
 
+    def test_sina_rate_limit_uses_longer_backoff_before_retry(self):
+        limited = Mock()
+        limited.status_code = 456
+        limited.headers = {}
+        error = requests.HTTPError('rate limited')
+        error.response = limited
+        limited.raise_for_status.side_effect = error
+
+        success = Mock()
+        success.raise_for_status.return_value = None
+        success.json.return_value = [{
+            'day': '2025-01-02',
+            'open': '10.0',
+            'high': '10.2',
+            'low': '9.9',
+            'close': '10.1',
+            'volume': '10000',
+        }]
+        session = Mock()
+        session.get.side_effect = [limited, success]
+
+        with patch('webstock_quant.collector.time.sleep') as sleep:
+            frame = fetch_sina_history(
+                session,
+                {'code': '000001', 'name': '平安银行'},
+                '2025-01-01',
+                '2025-01-31',
+                retries=1,
+            )
+
+        self.assertEqual(len(frame), 1)
+        sleep.assert_called_once_with(3)
+
+    def test_eastmoney_fallback_parses_public_daily_rows(self):
+        response = Mock()
+        response.raise_for_status.return_value = None
+        response.json.return_value = {"data": {"klines": [
+            "2025-01-02,10.00,10.10,10.20,9.90,10000",
+            "2025-01-03,10.10,10.30,10.40,10.00,12000",
+        ]}}
+        session = Mock()
+        session.get.return_value = response
+        frame = fetch_eastmoney_history(
+            session, {"code": "002398", "name": "垒知集团"},
+            "2025-01-01", "2025-01-31", retries=0,
+        )
+        self.assertEqual(list(frame.columns), ["date", "code", "name", "open", "high", "low", "close", "volume"])
+        self.assertEqual(frame.iloc[0]["close"], 10.1)
+        self.assertIn("0.002398", session.get.call_args.kwargs["params"]["secid"])
+
+    def test_tencent_second_fallback_parses_public_daily_rows(self):
+        response = Mock()
+        response.raise_for_status.return_value = None
+        response.json.return_value = {"data": {"sz002521": {"day": [
+            ["2025-01-02", "10.00", "10.10", "10.20", "9.90", "10000"],
+            ["2025-01-03", "10.10", "10.30", "10.40", "10.00", "12000"],
+        ]}}}
+        session = Mock()
+        session.get.return_value = response
+        frame = fetch_tencent_history(
+            session, {"code": "002521", "name": "齐峰新材"},
+            "2025-01-01", "2025-01-31", retries=0,
+        )
+        self.assertEqual(frame.iloc[1]["close"], 10.3)
+        self.assertIn("sz002521,day", session.get.call_args.kwargs["params"]["param"])
+
     def test_collection_resumes_valid_files_after_interruption(self):
         dates = pd.bdate_range('2025-01-02', periods=8)
 
@@ -218,6 +386,7 @@ class FeatureTests(unittest.TestCase):
             '--workers', '4',
         ])
         self.assertEqual(args.workers, 4)
+        self.assertEqual(args.sleep_ms, 600)
 
     def test_manifest_hash_does_not_hash_its_own_digest(self):
         manifest = {'schema': 'webstock.quant.dataset.v1', 'datasetId': 'demo'}

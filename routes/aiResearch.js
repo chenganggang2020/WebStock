@@ -3,6 +3,7 @@ const router = express.Router();
 const knowledge = require('../services/knowledgeService');
 const researchRuns = require('../services/researchRunService');
 const modelRegistry = require('../services/modelRegistryService');
+const expertChannels = require('../services/expertChannelService');
 const { isValidApiKey, getAIConfig, callAIModel } = require('./ai');
 
 function ok(res, data) {
@@ -54,6 +55,83 @@ router.delete('/knowledge/sources/:id', function(req, res) {
     ok(res, { deleted: knowledge.deleteSource(Number(req.params.id)) });
   } catch (error) {
     fail(res, error);
+  }
+});
+
+router.get('/expert/channels', function(req, res) {
+  try {
+    ok(res, expertChannels.listChannels(req.query || {}));
+  } catch (error) {
+    fail(res, error);
+  }
+});
+
+router.post('/expert/channels', function(req, res) {
+  try {
+    ok(res, expertChannels.createChannel(req.body || {}));
+  } catch (error) {
+    fail(res, error);
+  }
+});
+
+router.get('/expert/channels/:id', function(req, res) {
+  try {
+    ok(res, expertChannels.getChannel(Number(req.params.id)));
+  } catch (error) {
+    fail(res, error, /不存在/.test(error.message) ? 404 : 400);
+  }
+});
+
+router.get('/expert/channels/:id/observations', function(req, res) {
+  try {
+    ok(res, expertChannels.listObservations(Number(req.params.id), req.query || {}));
+  } catch (error) {
+    fail(res, error, /不存在/.test(error.message) ? 404 : 400);
+  }
+});
+
+router.post('/expert/channels/:id/observations', function(req, res) {
+  try {
+    ok(res, expertChannels.recordObservation(Number(req.params.id), req.body || {}));
+  } catch (error) {
+    fail(res, error, /不存在/.test(error.message) ? 404 : 400);
+  }
+});
+
+router.post('/expert/channels/:id/intent-analysis', async function(req, res) {
+  try {
+    const context = expertChannels.buildIntentContext(Number(req.params.id), req.body || {});
+    const aiConfig = getAIConfig();
+    if (!isValidApiKey(aiConfig && aiConfig.apiKey)) {
+      ok(res, Object.assign({}, context, {
+        handoffMode: true,
+        summary: '已生成区分原话、转述和模型推断的 ChatGPT 交接提示词。'
+      }));
+      return;
+    }
+    const report = await callAIModel(context.prompt);
+    const run = researchRuns.createRun({
+      runType: 'expert-intent-analysis',
+      modelId: 'openai-direct',
+      status: 'completed',
+      title: context.channel.displayName + '观点与意图分析',
+      question: context.question,
+      prompt: context.prompt,
+      result: report,
+      evidence: context.evidence,
+      request: { channelId: context.channel.id, observationCount: context.observationCount }
+    });
+    ok(res, Object.assign({}, context, { handoffMode: false, report, run }));
+  } catch (error) {
+    fail(res, error);
+  }
+});
+
+router.get('/expert/channels/:id/backtests', function(req, res) {
+  try {
+    ok(res, expertChannels.listBacktests(Number(req.params.id), req.query || {}));
+  } catch (error) {
+    fail(res, error, /不存在/.test(error.message) ? 404 : 400);
   }
 });
 

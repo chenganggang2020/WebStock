@@ -9,6 +9,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from .collector import collect_dataset
+from .expert_backtest import run_expert_backtest
 from .factor_lab import run_factor_lab
 from .master_model import run_master_baseline
 from .model import run_lightgbm_baseline
@@ -196,6 +197,30 @@ def command_factor_lab(args):
     return 0
 
 
+def command_expert_backtest(args):
+    workspace = Path(args.workspace).resolve()
+    dataset_id = _safe_id(args.dataset_id, "dataset id")
+    run_id = _safe_id(args.run_id or "expert-backtest-" + datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ"), "run id")
+    result_path, result = run_expert_backtest(
+        dataset_dir=workspace / "datasets" / dataset_id,
+        workspace=workspace,
+        run_id=run_id,
+        signals_path=Path(args.signals_file).resolve(),
+        horizons=[int(value) for value in args.horizons.split(",") if value.strip()],
+        cost_bps=args.cost_bps,
+        emit=emit_event,
+    )
+    emit_result({
+        "kind": "expert-backtest",
+        "manifestPath": str((workspace / result["dataManifest"]["path"]).resolve()),
+        "resultPath": str(result_path.resolve()),
+        "signalsPath": str(Path(args.signals_file).resolve()),
+        "datasetId": result["dataManifest"]["datasetId"],
+        "runId": result["runId"],
+    })
+    return 0
+
+
 def command_pilot(args):
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     dataset_id = _safe_id(args.dataset_id or "sina-pilot-" + timestamp, "dataset id")
@@ -226,7 +251,7 @@ def add_common_collection_arguments(parser):
     parser.add_argument("--end-date", default=datetime.now().strftime("%Y-%m-%d"))
     parser.add_argument("--limit", type=int, default=30)
     parser.add_argument("--codes", default="")
-    parser.add_argument("--sleep-ms", type=int, default=120)
+    parser.add_argument("--sleep-ms", type=int, default=600)
     parser.add_argument("--workers", type=int, choices=range(1, 9), default=3)
 
 
@@ -293,6 +318,15 @@ def build_parser():
     factor_lab.add_argument("--cost-bps", type=float, default=8.0)
     factor_lab.add_argument("--seed", type=int, default=20260809)
     factor_lab.set_defaults(handler=command_factor_lab)
+
+    expert_backtest = commands.add_parser("expert-backtest")
+    expert_backtest.add_argument("--workspace", required=True)
+    expert_backtest.add_argument("--dataset-id", required=True)
+    expert_backtest.add_argument("--run-id", default="")
+    expert_backtest.add_argument("--signals-file", required=True)
+    expert_backtest.add_argument("--horizons", default="1,5,20,60")
+    expert_backtest.add_argument("--cost-bps", type=float, default=8.0)
+    expert_backtest.set_defaults(handler=command_expert_backtest)
 
     pilot = commands.add_parser("pilot")
     add_common_collection_arguments(pilot)

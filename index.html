@@ -562,6 +562,88 @@
         </div>
         <div id="aiModelRegistry" class="ai-model-registry"></div>
       </section>
+      <section class="expert-tracker-band">
+        <div class="panel-title-row">
+          <h3>公开创作者研究库</h3>
+          <span id="expertTrackerStatus" class="muted">尚未建立频道</span>
+        </div>
+        <div class="expert-channel-toolbar">
+          <select id="expertChannelSelect"><option value="">选择创作者频道</option></select>
+          <button id="seedModelMrBtn" class="small-btn primary">建立“模型先生”频道</button>
+          <button id="refreshExpertTimelineBtn" class="small-btn">刷新时间线</button>
+          <button id="analyzeExpertIntentBtn" class="small-btn">分析观点与意图</button>
+          <button id="discoverExpertUpdatesBtn" class="small-btn">查找新增公开线索</button>
+          <button id="backtestExpertSignalsBtn" class="small-btn">回测已映射语录</button>
+        </div>
+        <details class="expert-observation-editor">
+          <summary>录入公开内容、存档或第三方转述</summary>
+          <div class="expert-observation-grid">
+            <label>证据等级
+              <select id="expertEvidenceLevelSelect">
+                <option value="primary">本人公开</option>
+                <option value="archive">合法公开存档</option>
+                <option value="secondary_quote">第三方转述</option>
+                <option value="commentary">第三方评论</option>
+              </select>
+            </label>
+            <label>可用状态
+              <select id="expertAvailabilitySelect">
+                <option value="available">当前可访问</option>
+                <option value="unavailable">当前不可访问</option>
+                <option value="deleted_trace">删除 / 隐藏痕迹</option>
+                <option value="unknown">尚未核实</option>
+              </select>
+            </label>
+            <label>文本角色
+              <select id="expertContentRoleSelect">
+                <option value="direct_quote">可核对原话</option>
+                <option value="transcript">视频 / 直播转录</option>
+                <option value="secondary_quote">第三方转述</option>
+                <option value="fact_summary">事实摘要</option>
+                <option value="model_inference">模型推断</option>
+              </select>
+            </label>
+            <label>发布时间
+              <input id="expertPublishedAtInput" type="datetime-local">
+            </label>
+            <label class="span-2">标题
+              <input id="expertObservationTitleInput" maxlength="300" placeholder="视频或语录标题">
+            </label>
+            <label class="span-2">公开来源链接
+              <input id="expertObservationUrlInput" type="url" placeholder="https://">
+            </label>
+            <label>关联股票
+              <input id="expertObservationStocksInput" placeholder="688041, 300308">
+            </label>
+            <label>板块 / 主题
+              <input id="expertObservationTopicsInput" placeholder="科创芯片, 创新药">
+            </label>
+            <label>观点方向
+              <select id="expertStanceSelect">
+                <option value="unknown">未知</option>
+                <option value="conditional">有条件判断</option>
+                <option value="bullish">偏积极</option>
+                <option value="bearish">偏谨慎</option>
+                <option value="neutral">中性</option>
+              </select>
+            </label>
+            <label>置信度
+              <input id="expertConfidenceInput" type="number" min="0" max="1" step="0.05" value="0.8">
+            </label>
+            <label class="span-2">正文 / 转录 / 转述
+              <textarea id="expertObservationContentInput" placeholder="只录入可合法使用的公开文本；第三方转述必须选择相应证据等级。"></textarea>
+            </label>
+            <label class="span-2">证据说明
+              <textarea id="expertObservationSummaryInput" placeholder="说明首次发现位置、无法核实之处、删除痕迹或转述关系。"></textarea>
+            </label>
+          </div>
+          <div class="expert-observation-actions">
+            <button id="saveExpertObservationBtn" class="small-btn primary">保存到数据库</button>
+          </div>
+        </details>
+        <div id="expertBacktestSummary" class="expert-backtest-summary"></div>
+        <div id="expertTimeline" class="expert-timeline"></div>
+      </section>
       <div class="ai-research-workspace">
         <section class="ai-research-pane">
           <div class="panel-title-row">
@@ -1039,6 +1121,7 @@
       <label>提示词模式</label>
       <select id="handoffPromptStyle">
         <option value="default">沿用当前任务</option>
+        <option value="deep-research">Deep Research 证据核验</option>
         <option value="technical">技术走势专家</option>
         <option value="sector-chain">板块产业链选股</option>
         <option value="short-term">短线强弱排序</option>
@@ -1101,6 +1184,7 @@
   <script src="js/modules/stockScreener.js"></script>
   <script src="js/modules/aiResearch.js"></script>
   <script src="js/modules/aiAssistant.js"></script>
+  <script src="js/modules/expertTracker.js"></script>
   <script src="js/modules/aiHistory.js"></script>
   <script src="js/modules/settings.js"></script>
   <script src="js/modules/watchlist.js"></script>

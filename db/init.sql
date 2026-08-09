@@ -202,6 +202,76 @@ CREATE TABLE IF NOT EXISTS ai_research_runs (
   updated_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS expert_channels (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  channel_key TEXT NOT NULL UNIQUE,
+  display_name TEXT NOT NULL,
+  platform TEXT NOT NULL,
+  profile_url TEXT DEFAULT '',
+  aliases_json TEXT DEFAULT '[]',
+  discovery_queries_json TEXT DEFAULT '[]',
+  enabled INTEGER NOT NULL DEFAULT 1,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS expert_observations (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  channel_id INTEGER NOT NULL,
+  external_key TEXT NOT NULL,
+  external_content_id TEXT DEFAULT '',
+  source_url TEXT DEFAULT '',
+  title TEXT NOT NULL,
+  author TEXT DEFAULT '',
+  published_at TEXT DEFAULT '',
+  published_time_precision TEXT NOT NULL DEFAULT 'unknown',
+  first_seen_at TEXT NOT NULL,
+  last_seen_at TEXT NOT NULL,
+  evidence_level TEXT NOT NULL,
+  availability_status TEXT NOT NULL,
+  content_role TEXT NOT NULL,
+  content_text TEXT DEFAULT '',
+  summary_text TEXT DEFAULT '',
+  content_hash TEXT NOT NULL,
+  stock_codes_json TEXT DEFAULT '[]',
+  sectors_json TEXT DEFAULT '[]',
+  topics_json TEXT DEFAULT '[]',
+  stance TEXT DEFAULT 'unknown',
+  horizon TEXT DEFAULT 'unspecified',
+  confidence REAL NOT NULL DEFAULT 0.5,
+  knowledge_source_id INTEGER,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(channel_id, external_key),
+  FOREIGN KEY (channel_id) REFERENCES expert_channels(id) ON DELETE CASCADE,
+  FOREIGN KEY (knowledge_source_id) REFERENCES knowledge_sources(id) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_expert_observations_channel_time
+  ON expert_observations(channel_id, published_at, first_seen_at);
+
+CREATE TABLE IF NOT EXISTS expert_backtests (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  channel_id INTEGER NOT NULL,
+  observation_id INTEGER,
+  status TEXT NOT NULL DEFAULT 'exploratory',
+  signal_at TEXT NOT NULL,
+  eligible_at TEXT DEFAULT '',
+  instrument_code TEXT NOT NULL,
+  benchmark_code TEXT DEFAULT '',
+  horizons_json TEXT DEFAULT '[1,5,20,60]',
+  methodology_json TEXT DEFAULT '{}',
+  result_json TEXT DEFAULT '{}',
+  run_id TEXT DEFAULT '',
+  dataset_id TEXT DEFAULT '',
+  result_path TEXT DEFAULT '',
+  result_sha256 TEXT DEFAULT '',
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (channel_id) REFERENCES expert_channels(id) ON DELETE CASCADE,
+  FOREIGN KEY (observation_id) REFERENCES expert_observations(id) ON DELETE SET NULL
+);
+
 CREATE TABLE IF NOT EXISTS paper_portfolios (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   name TEXT NOT NULL,

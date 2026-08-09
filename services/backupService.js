@@ -2,8 +2,9 @@ const db = require('../db');
 const knowledgeService = require('./knowledgeService');
 const paperPortfolioService = require('./paperPortfolioService');
 const researchRunService = require('./researchRunService');
+const expertChannelService = require('./expertChannelService');
 
-const BACKUP_VERSION = 3;
+const BACKUP_VERSION = 4;
 const MAX_ITEMS_PER_TABLE = 5000;
 
 function text(value, fallback = '', maxLength = 2000) {
@@ -112,6 +113,7 @@ function exportUserData() {
   const knowledgeSources = knowledgeService.exportSources();
   const researchRuns = researchRunService.exportRuns();
   const paperPortfolios = paperPortfolioService.exportPortfolios();
+  const expertChannels = expertChannelService.exportChannels();
 
   return {
     version: BACKUP_VERSION,
@@ -127,7 +129,8 @@ function exportUserData() {
       screenerCandidateNotes,
       knowledgeSources,
       researchRuns,
-      paperPortfolios
+      paperPortfolios,
+      expertChannels
     }
   };
 }
@@ -328,6 +331,57 @@ function normalizePaperPortfolio(item) {
   };
 }
 
+function normalizeExpertChannel(item) {
+  const observations = Array.isArray(item.observations) ? item.observations : [];
+  const backtests = Array.isArray(item.backtests) ? item.backtests : [];
+  if (observations.length > 1000 || backtests.length > 500) throw new Error('expert channel exceeds import limit');
+  return {
+    channelKey: text(item.channelKey, '', 120),
+    displayName: text(item.displayName, '', 160),
+    platform: text(item.platform, '', 60),
+    profileUrl: text(item.profileUrl, '', 1200),
+    aliases: normalizeStringArray(item.aliases, 100),
+    discoveryQueries: normalizeStringArray(item.discoveryQueries, 30),
+    enabled: item.enabled !== false,
+    observations: observations.map(observation => ({
+      externalKey: text(observation.externalKey, '', 200),
+      externalContentId: text(observation.externalContentId, '', 160),
+      sourceUrl: text(observation.sourceUrl, '', 1200),
+      title: text(observation.title, '', 300),
+      author: text(observation.author, '', 160),
+      publishedAt: text(observation.publishedAt, '', 50),
+      publishedTimePrecision: text(observation.publishedTimePrecision, 'unknown', 20),
+      firstSeenAt: text(observation.firstSeenAt, '', 50),
+      lastSeenAt: text(observation.lastSeenAt, '', 50),
+      evidenceLevel: text(observation.evidenceLevel, 'primary', 40),
+      availabilityStatus: text(observation.availabilityStatus, 'available', 40),
+      contentRole: text(observation.contentRole, 'direct_quote', 40),
+      content: text(observation.content, '', 800000),
+      summary: text(observation.summary, '', 10000),
+      stockCodes: normalizeStringArray(observation.stockCodes).filter(code => /^\d{6}$/.test(code)),
+      sectors: normalizeStringArray(observation.sectors),
+      topics: normalizeStringArray(observation.topics),
+      stance: text(observation.stance, 'unknown', 40),
+      horizon: text(observation.horizon, 'unspecified', 80),
+      confidence: Math.min(Math.max(numberOrZero(observation.confidence), 0), 1)
+    })),
+    backtests: backtests.map(backtest => ({
+      runId: text(backtest.runId, '', 160),
+      datasetId: text(backtest.datasetId, '', 160),
+      status: text(backtest.status, 'exploratory', 40),
+      signalAt: text(backtest.signalAt, '', 50),
+      eligibleAt: text(backtest.eligibleAt, '', 50),
+      instrumentCode: text(backtest.instrumentCode, 'MULTI', 20),
+      benchmarkCode: text(backtest.benchmarkCode, '', 20),
+      horizons: Array.isArray(backtest.horizons) ? backtest.horizons.slice(0, 20) : [],
+      methodology: backtest.methodology && typeof backtest.methodology === 'object' ? backtest.methodology : {},
+      result: backtest.result && typeof backtest.result === 'object' ? backtest.result : {},
+      resultPath: text(backtest.resultPath, '', 2000),
+      resultSha256: text(backtest.resultSha256, '', 80)
+    })).filter(backtest => backtest.runId)
+  };
+}
+
 function prepareImport(backup) {
   if (!backup || typeof backup !== 'object') throw new Error('Backup JSON is required');
   const recentStocks = arrayFromBackup(backup, 'recentStocks').map(normalizeRecent);
@@ -341,6 +395,8 @@ function prepareImport(backup) {
   const knowledgeSources = arrayFromBackup(backup, 'knowledgeSources').map(normalizeKnowledgeSource);
   const researchRuns = arrayFromBackup(backup, 'researchRuns').map(normalizeResearchRun);
   const paperPortfolios = arrayFromBackup(backup, 'paperPortfolios').map(normalizePaperPortfolio);
+  const expertChannels = arrayFromBackup(backup, 'expertChannels').map(normalizeExpertChannel)
+    .filter(item => item.channelKey && item.displayName && item.platform);
   return {
     recentStocks,
     watchlist,
@@ -352,7 +408,8 @@ function prepareImport(backup) {
     screenerCandidateNotes,
     knowledgeSources,
     researchRuns,
-    paperPortfolios
+    paperPortfolios,
+    expertChannels
   };
 }
 
@@ -368,7 +425,8 @@ function countsForPrepared(prepared) {
     screenerCandidateNotes: prepared.screenerCandidateNotes.length,
     knowledgeSources: prepared.knowledgeSources.length,
     researchRuns: prepared.researchRuns.length,
-    paperPortfolios: prepared.paperPortfolios.length
+    paperPortfolios: prepared.paperPortfolios.length,
+    expertChannels: prepared.expertChannels.length
   };
 }
 
@@ -384,7 +442,8 @@ function currentCounts() {
     screenerCandidateNotes: db.prepare('SELECT COUNT(*) AS count FROM screener_candidate_notes').get().count,
     knowledgeSources: db.prepare('SELECT COUNT(*) AS count FROM knowledge_sources').get().count,
     researchRuns: db.prepare('SELECT COUNT(*) AS count FROM ai_research_runs').get().count,
-    paperPortfolios: db.prepare('SELECT COUNT(*) AS count FROM paper_portfolios').get().count
+    paperPortfolios: db.prepare('SELECT COUNT(*) AS count FROM paper_portfolios').get().count,
+    expertChannels: db.prepare('SELECT COUNT(*) AS count FROM expert_channels').get().count
   };
 }
 
@@ -411,7 +470,8 @@ function importUserData(backup, options = {}) {
     screenerCandidateNotes,
     knowledgeSources,
     researchRuns,
-    paperPortfolios
+    paperPortfolios,
+    expertChannels
   } = prepared;
 
   const summary = {
@@ -431,6 +491,7 @@ function importUserData(backup, options = {}) {
       db.prepare('DELETE FROM screener_candidate_notes').run();
       db.prepare('DELETE FROM ai_screener_results').run();
       db.prepare('DELETE FROM ai_research_runs').run();
+      db.prepare('DELETE FROM expert_channels').run();
       db.prepare('DELETE FROM knowledge_sources').run();
       db.prepare('DELETE FROM paper_portfolios').run();
     }
@@ -581,6 +642,7 @@ function importUserData(backup, options = {}) {
     sectorLeaderSnapshots.forEach(item => insertLeaderSnapshot.run(item));
     knowledgeSources.forEach(item => knowledgeService.createSource(item));
     researchRuns.forEach(item => researchRunService.createRun(item));
+    expertChannelService.restoreChannels(expertChannels);
     paperPortfolios.forEach(item => {
       const info = insertPaperPortfolio.run({
         name: item.name,

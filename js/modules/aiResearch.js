@@ -1086,6 +1086,7 @@ function aiResearchBind() {
 window.AIResearch = {
   bind: aiResearchBind,
   ensureLoaded: aiResearchEnsureLoaded,
+  reload: function() { return aiResearchEnsureLoaded(true); },
   reviewScreener: aiResearchReviewScreener,
   getSourceCount: function() { return aiResearchSources.length; }
 };

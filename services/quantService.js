@@ -4,6 +4,7 @@ const os = require('node:os');
 const path = require('node:path');
 const crypto = require('node:crypto');
 const researchRuns = require('./researchRunService');
+const expertChannels = require('./expertChannelService');
 const {
   createRuntimeInstaller,
   loadRuntimeManifest,
@@ -56,6 +57,8 @@ function ensureWorkspace() {
   fs.mkdirSync(path.join(workspace, 'datasets'), { recursive: true });
   fs.mkdirSync(path.join(workspace, 'runs'), { recursive: true });
   fs.mkdirSync(path.join(workspace, 'factor-runs'), { recursive: true });
+  fs.mkdirSync(path.join(workspace, 'expert-inputs'), { recursive: true });
+  fs.mkdirSync(path.join(workspace, 'expert-runs'), { recursive: true });
   return workspace;
 }
 
@@ -295,6 +298,43 @@ function verifyFactorResult(output) {
   return verified;
 }
 
+function verifyExpertResult(output) {
+  if (!output || !output.manifestPath || !output.resultPath || !output.signalsPath) {
+    throw new Error('创作者回测没有返回完整的输出路径。');
+  }
+  const workspace = ensureWorkspace();
+  const resultPath = path.resolve(output.resultPath);
+  const runsRoot = path.join(workspace, 'expert-runs');
+  const inputsRoot = path.join(workspace, 'expert-inputs');
+  const datasetsRoot = path.join(workspace, 'datasets');
+  if (!isInside(runsRoot, resultPath)) throw new Error('创作者回测结果超出量化工作区。');
+  const result = readJson(resultPath);
+  if (result.schema !== 'webstock.expert-backtest.v1') throw new Error('创作者回测结果格式无效。');
+  const manifestPath = path.resolve(output.manifestPath);
+  if (!isInside(datasetsRoot, manifestPath)) throw new Error('创作者回测数据清单超出量化工作区。');
+  const manifest = verifyManifest(manifestPath, { verifyHashes: false });
+  if (!result.dataManifest || result.dataManifest.datasetId !== manifest.datasetId ||
+      result.dataManifest.sha256 !== manifest.manifestSha256) {
+    throw new Error('创作者回测引用的数据清单不一致。');
+  }
+  const signalsPath = path.resolve(output.signalsPath);
+  if (!isInside(inputsRoot, signalsPath) || !fs.existsSync(signalsPath)) {
+    throw new Error('创作者回测输入超出量化工作区或已经缺失。');
+  }
+  if (sha256File(signalsPath) !== String(result.inputSha256 || '').toLowerCase()) {
+    throw new Error('创作者回测输入哈希不一致。');
+  }
+  const runRoot = path.dirname(resultPath);
+  (result.artifacts || []).forEach(artifact => {
+    const target = path.resolve(runRoot, artifact.path);
+    if (!isInside(runRoot, target) || !fs.existsSync(target)) throw new Error('创作者回测产物缺失。');
+    if (sha256File(target) !== String(artifact.sha256 || '').toLowerCase()) {
+      throw new Error('创作者回测产物哈希不一致。');
+    }
+  });
+  return { manifest, result, manifestPath, resultPath, signalsPath };
+}
+
 function jobFile(id) {
   return path.join(ensureWorkspace(), 'jobs', id + '.json');
 }
@@ -519,6 +559,43 @@ function startJob(kind, args, request) {
       persistJob(job);
       return;
     }
+    if (output.kind === 'expert-backtest') {
+      const verified = verifyExpertResult(output);
+      job.status = 'completed';
+      job.progress = { stage: 'completed', message: '创作者语录事件回测完成。' };
+      job.output = {
+        manifestPath: verified.manifestPath,
+        resultPath: verified.resultPath,
+        datasetId: verified.manifest.datasetId,
+        runId: verified.result.runId,
+        modelId: 'expert-event-study-v1',
+        validationStatus: verified.result.validationStatus,
+        asOf: verified.result.asOf,
+        metrics: verified.result.metrics
+      };
+      job.updatedAt = new Date().toISOString();
+      expertChannels.recordBacktest(verified.result.channelId, {
+        runId: verified.result.runId,
+        datasetId: verified.manifest.datasetId,
+        status: verified.result.validationStatus,
+        signalAt: verified.result.createdAt,
+        resultPath: path.relative(ensureWorkspace(), verified.resultPath),
+        resultSha256: sha256File(verified.resultPath),
+        methodology: verified.result.parameters,
+        result: verified.result
+      });
+      researchRuns.createRun({
+        runType: 'expert-event-backtest',
+        modelId: 'expert-event-study-v1',
+        status: 'completed',
+        title: '创作者语录事件回测 ' + verified.manifest.datasetId,
+        result: JSON.stringify(verified.result, null, 2),
+        request: { jobId: job.id, channelId: verified.result.channelId, datasetId: verified.manifest.datasetId },
+        metrics: verified.result.metrics
+      });
+      persistJob(job);
+      return;
+    }
     const verified = verifyResult(output);
     job.status = 'completed';
     job.progress = { stage: 'completed', message: '量化研究运行完成。' };
@@ -653,7 +730,7 @@ function startCollection(input = {}) {
   const args = [
     'collect', '--workspace', workspace, '--universe-file', universePath(), '--dataset-id', datasetId,
     '--limit', String(limit), '--start-date', startDate, '--end-date', endDate,
-    '--sleep-ms', String(Math.round(numeric(input.sleepMs, 160, 50, 2000))),
+    '--sleep-ms', String(Math.round(numeric(input.sleepMs, 600, 100, 5000))),
     '--workers', String(workers)
   ];
   return startJob('collect', args, Object.assign({}, input, { datasetId, limit, startDate, endDate, workers }));
@@ -680,6 +757,52 @@ function startFactorLab(input = {}) {
     'factor-lab', '--workspace', workspace, '--dataset-id', datasetId, '--run-id', runId
   ].concat(commonEvaluationArgs(input));
   return startJob('factor-lab', args, Object.assign({}, input, { datasetId, runId }));
+}
+
+function startExpertBacktest(input = {}) {
+  const datasetId = String(input.datasetId || '').trim();
+  if (!/^[A-Za-z0-9._-]{3,100}$/.test(datasetId)) throw new Error('请选择有效的数据集。');
+  const channelId = Number(input.channelId);
+  const channel = expertChannels.getChannel(channelId);
+  const observations = expertChannels.listObservations(channel.id, { limit: 1000 });
+  if (!observations.length) throw new Error('该创作者频道还没有可回测的观察记录。');
+  const runtime = getRuntimeStatus();
+  if (!['configured', 'available'].includes(runtime.status)) {
+    const error = new Error(runtime.reason);
+    error.status = 409;
+    throw error;
+  }
+  const workspace = ensureWorkspace();
+  const manifestPath = path.join(workspace, 'datasets', datasetId, 'manifest.json');
+  if (!fs.existsSync(manifestPath)) {
+    const error = new Error('所选数据集不存在，请先完成历史数据同步。');
+    error.status = 404;
+    throw error;
+  }
+  verifyManifest(manifestPath, { verifyHashes: false });
+  const runId = 'expert-backtest-' + compactUtcTimestamp();
+  const signalsPath = path.join(workspace, 'expert-inputs', runId + '.json');
+  const temporary = signalsPath + '.tmp-' + process.pid;
+  fs.writeFileSync(temporary, JSON.stringify({
+    schema: 'webstock.expert-signals.v1',
+    channelId: channel.id,
+    channelKey: channel.channelKey,
+    createdAt: new Date().toISOString(),
+    observations
+  }, null, 2), 'utf8');
+  fs.renameSync(temporary, signalsPath);
+  const horizons = Array.isArray(input.horizons) ? input.horizons : [1, 5, 20, 60];
+  const args = [
+    'expert-backtest', '--workspace', workspace, '--dataset-id', datasetId,
+    '--run-id', runId, '--signals-file', signalsPath,
+    '--horizons', horizons.join(','), '--cost-bps', String(numeric(input.costBps, 8, 0, 100))
+  ];
+  return startJob('expert-backtest', args, {
+    channelId: channel.id,
+    datasetId,
+    horizons,
+    signalsPath: path.relative(workspace, signalsPath)
+  });
 }
 
 function researchSuiteSteps(input = {}) {
@@ -930,6 +1053,7 @@ module.exports = {
   startCollection,
   startRun,
   startFactorLab,
+  startExpertBacktest,
   startResearchSuite,
   collectionDatasetId,
   defaultMasterMaxInstruments,
