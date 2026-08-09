@@ -30,7 +30,7 @@ The AI research direction is defined in `docs/ai-research/AI_PLATFORM_DESIGN.md`
 | Domain services | `services/` | Portfolio, screener, news, themes, backup | Keep model/data logic outside route handlers |
 | AI research | `services/knowledgeService.js`, `services/decisionPacketService.js`, `routes/aiResearch.js`, `routes/researchDecision.js` | Expert sources, evidence retrieval, comparable-source decision packets, honest model registry and research runs | External agent frameworks remain planned until deployed and verified |
 | Quant sidecar | `quant/`, `services/quantService.js`, `services/quantRuntimeInstaller.js`, `routes/quant.js` | Hashed datasets, isolated runtime installation, LightGBM/MASTER jobs, factor gates, rolling evaluation and verified result import | Public Sina adapter is exploratory only |
-| Paper portfolio | `services/paperPortfolioService.js`, `routes/researchDecision.js` | Constraint-capped research weights and draft/active/archived states | No broker connection or real orders |
+| Paper portfolio | `services/paperPortfolioService.js`, `services/quoteService.js`, `routes/researchDecision.js` | Constraint-capped weights, lot-rounded simulated entries, valuation/PnL snapshots and draft/active/archived states | No broker connection or real orders |
 | Frontend | `index.html`, `js/modules/`, `css/styles.css` | Vanilla JS desktop UI | Views are switched by `switchMainView` |
 | Tests | `test/` | Node unit/API and Playwright flows | Tests use isolated temporary SQLite files |
 

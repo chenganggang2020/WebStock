@@ -234,6 +234,41 @@ CREATE TABLE IF NOT EXISTS paper_portfolio_items (
   FOREIGN KEY (portfolio_id) REFERENCES paper_portfolios(id) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS paper_portfolio_positions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  portfolio_id INTEGER NOT NULL,
+  code TEXT NOT NULL,
+  name TEXT NOT NULL,
+  quantity INTEGER NOT NULL,
+  entry_price REAL NOT NULL,
+  entry_value REAL NOT NULL,
+  entry_fee REAL NOT NULL DEFAULT 0,
+  last_price REAL NOT NULL,
+  last_market_value REAL NOT NULL,
+  opened_at TEXT NOT NULL,
+  updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (portfolio_id) REFERENCES paper_portfolios(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS paper_portfolio_snapshots (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  portfolio_id INTEGER NOT NULL,
+  snapshot_at TEXT NOT NULL,
+  market_date TEXT DEFAULT '',
+  market_time TEXT DEFAULT '',
+  cash_value REAL NOT NULL,
+  market_value REAL NOT NULL,
+  total_value REAL NOT NULL,
+  daily_pnl REAL NOT NULL,
+  total_pnl REAL NOT NULL,
+  total_return REAL NOT NULL,
+  source TEXT DEFAULT '',
+  source_metadata_json TEXT NOT NULL DEFAULT '{}',
+  warnings_json TEXT NOT NULL DEFAULT '[]',
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (portfolio_id) REFERENCES paper_portfolios(id) ON DELETE CASCADE
+);
+
 CREATE INDEX IF NOT EXISTS idx_watchlist_group ON watchlist(group_name);
 CREATE INDEX IF NOT EXISTS idx_trades_code ON trades(code);
 CREATE INDEX IF NOT EXISTS idx_trades_date ON trades(trade_date);
@@ -256,6 +291,9 @@ CREATE INDEX IF NOT EXISTS idx_ai_research_runs_type ON ai_research_runs(run_typ
 CREATE INDEX IF NOT EXISTS idx_ai_research_runs_model ON ai_research_runs(model_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_paper_portfolios_status ON paper_portfolios(status, updated_at);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_paper_portfolio_item_unique ON paper_portfolio_items(portfolio_id, code);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_paper_portfolio_position_unique ON paper_portfolio_positions(portfolio_id, code);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_paper_portfolio_snapshot_unique ON paper_portfolio_snapshots(portfolio_id, snapshot_at);
+CREATE INDEX IF NOT EXISTS idx_paper_portfolio_snapshots_time ON paper_portfolio_snapshots(portfolio_id, snapshot_at DESC);
 
 CREATE TRIGGER IF NOT EXISTS trg_knowledge_chunk_insert
 AFTER INSERT ON knowledge_chunks

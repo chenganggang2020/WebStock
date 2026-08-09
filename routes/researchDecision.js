@@ -1,6 +1,7 @@
 const express = require('express');
 const decisionPackets = require('../services/decisionPacketService');
 const paperPortfolios = require('../services/paperPortfolioService');
+const quotes = require('../services/quoteService');
 
 const router = express.Router();
 
@@ -30,6 +31,17 @@ router.get('/paper-portfolios/:id', function(req, res) {
 
 router.put('/paper-portfolios/:id/status', function(req, res) {
   try { ok(res, paperPortfolios.updateStatus(req.params.id, req.body && req.body.status)); } catch (error) { fail(res, error); }
+});
+
+router.post('/paper-portfolios/:id/refresh', async function(req, res) {
+  try {
+    const paper = paperPortfolios.getPortfolio(req.params.id);
+    if (paper.status !== 'active') throw new Error('只有“观察中”的纸面组合才能刷新净值');
+    const quoteResult = await quotes.fetchSinaQuotes(paper.items.map(item => item.code));
+    ok(res, paperPortfolios.refreshPortfolio(paper.id, quoteResult.quotes, quoteResult));
+  } catch (error) {
+    fail(res, error, /timeout|network|ENOTFOUND|ECONN/i.test(error.message || '') ? 503 : 400);
+  }
 });
 
 router.delete('/paper-portfolios/:id', function(req, res) {

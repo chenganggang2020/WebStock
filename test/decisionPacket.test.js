@@ -99,6 +99,35 @@ test('evidence packet and paper portfolio preserve provenance, caps and draft-on
   assert.ok(paper.items.every(item => item.targetWeight <= 0.2));
   assert.ok(invested + paper.cashWeight <= 1.000001);
   assert.equal(papers.updateStatus(paper.id, 'active').status, 'active');
+  const firstMark = papers.refreshPortfolio(paper.id, {
+    '000001': { price: 10, tradeDate: '2026-08-08', tradeTime: '15:00:00' },
+    '300750': { price: 20, tradeDate: '2026-08-08', tradeTime: '15:00:00' },
+    '600000': { price: 8, tradeDate: '2026-08-08', tradeTime: '15:00:00' }
+  }, { source: 'test-quotes', capturedAt: '2026-08-08T07:00:00.000Z' });
+  assert.equal(firstMark.positions.length, paper.items.length);
+  assert.ok(firstMark.positions.every(position => position.quantity % 100 === 0));
+  assert.equal(firstMark.latestSnapshot.totalPnl, -5 * firstMark.positions.length);
+  const secondMark = papers.refreshPortfolio(paper.id, {
+    '000001': { price: 10.5, tradeDate: '2026-08-09', tradeTime: '15:00:00' },
+    '300750': { price: 19, tradeDate: '2026-08-09', tradeTime: '15:00:00' },
+    '600000': { price: 8.2, tradeDate: '2026-08-09', tradeTime: '15:00:00' }
+  }, { source: 'test-quotes', capturedAt: '2026-08-09T07:00:00.000Z' });
+  assert.equal(secondMark.snapshots.length, 2);
+  assert.equal(secondMark.latestSnapshot.dailyPnl,
+    Number((secondMark.latestSnapshot.totalValue - firstMark.latestSnapshot.totalValue).toFixed(2)));
+  const thirdMark = papers.refreshPortfolio(paper.id, {
+    '000001': { price: 10.7, tradeDate: '2026-08-09', tradeTime: '15:01:00' },
+    '300750': { price: 19.2, tradeDate: '2026-08-09', tradeTime: '15:01:00' },
+    '600000': { price: 8.1, tradeDate: '2026-08-09', tradeTime: '15:01:00' }
+  }, { source: 'test-quotes', capturedAt: '2026-08-09T07:01:00.000Z' });
+  assert.equal(thirdMark.latestSnapshot.dailyPnl,
+    Number((thirdMark.latestSnapshot.totalValue - firstMark.latestSnapshot.totalValue).toFixed(2)));
+  assert.equal(papers.listPortfolios()[0].snapshots.length, 1);
+  assert.throws(() => papers.refreshPortfolio(paper.id, {
+    '000001': { price: 10.6, tradeDate: '2026-08-08', tradeTime: '15:02:00' },
+    '300750': { price: 19.1, tradeDate: '2026-08-08', tradeTime: '15:02:00' },
+    '600000': { price: 8.2, tradeDate: '2026-08-08', tradeTime: '15:02:00' }
+  }, { source: 'test-quotes', capturedAt: '2026-08-09T07:02:00.000Z' }), /早于|倒序/);
 
   const exported = backup.exportUserData();
   assert.equal(exported.version, 3);

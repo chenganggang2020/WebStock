@@ -139,6 +139,14 @@ test('expert knowledge API supports source, search, handoff and saved research r
   assert.equal(paper.json.data.status, 'draft');
   assert.ok(paper.json.data.items.length >= 1);
 
+  const draftRefresh = await requestJson(server, {
+    path: '/api/paper-portfolios/' + paper.json.data.id + '/refresh',
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' }
+  }, {});
+  assert.equal(draftRefresh.statusCode, 400);
+  assert.match(draftRefresh.json.error, /观察中/);
+
   const paperList = await requestJson(server, '/api/paper-portfolios');
   assert.ok(paperList.json.data.some(item => item.id === paper.json.data.id));
 });

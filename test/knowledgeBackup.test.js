@@ -54,6 +54,10 @@ test('backup roundtrip restores knowledge, research runs and paper portfolios', 
       }]
     }
   });
+  paperPortfolios.updateStatus(paperPortfolio.id, 'active');
+  paperPortfolios.refreshPortfolio(paperPortfolio.id, {
+    '600879': { price: 12.5, tradeDate: '2026-08-08', tradeTime: '15:00:00' }
+  }, { source: 'test-quotes', capturedAt: '2026-08-08T07:00:00.000Z' });
 
   const backup = backupService.exportUserData();
   assert.equal(backup.version, 3);
@@ -61,6 +65,8 @@ test('backup roundtrip restores knowledge, research runs and paper portfolios', 
   assert.equal(backup.tables.researchRuns.length, 1);
   assert.equal(backup.tables.paperPortfolios.length, 1);
   assert.equal(backup.tables.paperPortfolios[0].items[0].code, '600879');
+  assert.equal(backup.tables.paperPortfolios[0].positions.length, 1);
+  assert.equal(backup.tables.paperPortfolios[0].snapshots.length, 1);
   assert.equal(backup.tables.knowledgeSources[0].sourceKey, source.sourceKey);
 
   paperPortfolios.deletePortfolio(paperPortfolio.id);
@@ -84,5 +90,7 @@ test('backup roundtrip restores knowledge, research runs and paper portfolios', 
   const restoredPaper = paperPortfolios.listPortfolios()[0];
   assert.equal(restoredPaper.name, '商业航天纸面组合');
   assert.equal(restoredPaper.items[0].code, '600879');
+  assert.equal(restoredPaper.positions[0].code, '600879');
+  assert.equal(restoredPaper.snapshots.length, 1);
   assert.equal(restoredPaper.sourceRunId, null);
 });

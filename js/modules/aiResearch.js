@@ -416,11 +416,20 @@ function aiResearchRenderPaperPortfolios() {
   target.innerHTML = '<div class="panel-title-row paper-heading"><h3>纸面组合</h3><span class="muted">仅记录研究权重，不连接券商</span></div>' +
     paperPortfolios.map(function(paper) {
       const invested = (paper.items || []).reduce(function(sum, item) { return sum + Number(item.targetWeight || 0); }, 0);
+      const latest = paper.latestSnapshot;
+      const tracking = latest
+        ? '<div class="paper-performance"><span>净值 <strong>' + aiResearchEscape(Number(latest.totalValue).toLocaleString('zh-CN', { maximumFractionDigits: 2 })) + '</strong></span>' +
+          '<span class="' + quantMetricClass(latest.dailyPnl) + '">当日 ' + aiResearchEscape(quantNumber(latest.dailyPnl, 2)) + '</span>' +
+          '<span class="' + quantMetricClass(latest.totalPnl) + '">累计 ' + aiResearchEscape(quantNumber(latest.totalPnl, 2)) + ' / ' + aiResearchEscape(quantPercent(latest.totalReturn, 2)) + '</span>' +
+          '<span class="muted">' + aiResearchEscape((latest.marketDate || aiResearchDate(latest.snapshotAt)) + (latest.marketTime ? ' ' + latest.marketTime : '')) + '</span>' +
+          ((latest.warnings || []).length ? '<span class="paper-warning" title="' + aiResearchEscape(latest.warnings.join('；')) + '">部分价格沿用上次记录</span>' : '') + '</div>'
+        : '<div class="paper-performance"><span class="muted">' + (paper.status === 'active' ? '点击刷新建立首次模拟持仓' : '转为观察中后可建立模拟持仓') + '</span></div>';
       return '<section class="paper-row" data-paper-id="' + paper.id + '"><div class="paper-row-head"><div><strong>' + aiResearchEscape(paper.name) + '</strong>' +
           '<span class="muted">' + aiResearchEscape(decisionRiskLabel(paper.riskProfile)) + ' · 资金 ' + aiResearchEscape(Number(paper.capital).toLocaleString('zh-CN')) +
           ' · 股票 ' + aiResearchEscape(quantPercent(invested, 0)) + ' · 现金 ' + aiResearchEscape(quantPercent(paper.cashWeight, 0)) + '</span></div>' +
+          '<div class="paper-row-actions"><button type="button" class="small-btn" data-paper-refresh title="用当前行情刷新纸面组合净值"' + (paper.status === 'active' ? '' : ' disabled') + '>刷新净值</button>' +
           '<select class="paper-status-select" data-paper-status aria-label="纸面组合状态"><option value="draft"' + (paper.status === 'draft' ? ' selected' : '') + '>草稿</option>' +
-          '<option value="active"' + (paper.status === 'active' ? ' selected' : '') + '>观察中</option><option value="archived"' + (paper.status === 'archived' ? ' selected' : '') + '>已归档</option></select></div>' +
+          '<option value="active"' + (paper.status === 'active' ? ' selected' : '') + '>观察中</option><option value="archived"' + (paper.status === 'archived' ? ' selected' : '') + '>已归档</option></select></div></div>' + tracking +
         '<div class="paper-item-grid">' + (paper.items || []).map(function(item) {
           return '<button type="button" class="paper-item" data-quant-code="' + aiResearchEscape(item.code) + '" data-quant-name="' + aiResearchEscape(item.name) + '">' +
             '<span><strong>' + aiResearchEscape(item.name) + '</strong><small>' + aiResearchEscape(item.code) + '</small></span><b>' + aiResearchEscape(quantPercent(item.targetWeight, 1)) + '</b></button>';
@@ -912,6 +921,20 @@ function aiResearchBind() {
     aiResearchApi('/api/paper-portfolios/' + row.getAttribute('data-paper-id') + '/status', {
       method: 'PUT', body: { status: select.value }
     }).then(aiResearchLoadPaperPortfolios).catch(function(error) { alert(error.message); });
+  });
+  document.getElementById('paperPortfolioPanel').addEventListener('click', function(event) {
+    const button = event.target.closest('[data-paper-refresh]');
+    const row = event.target.closest('[data-paper-id]');
+    if (!button || !row) return;
+    button.disabled = true;
+    aiResearchApi('/api/paper-portfolios/' + row.getAttribute('data-paper-id') + '/refresh', {
+      method: 'POST', timeoutMs: 20000
+    }).then(function() {
+      return aiResearchLoadPaperPortfolios();
+    }).catch(function(error) {
+      alert(error.message);
+      button.disabled = false;
+    });
   });
   document.getElementById('paperPortfolioPanel').addEventListener('dblclick', function(event) {
     const item = event.target.closest('[data-quant-code]');

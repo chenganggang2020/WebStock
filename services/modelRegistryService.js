@@ -31,6 +31,7 @@ function listModels() {
     ? '已验证'
     : '探索性';
   const paperPortfolioCount = db.prepare('SELECT COUNT(*) AS count FROM paper_portfolios').get().count;
+  const paperSnapshotCount = db.prepare('SELECT COUNT(*) AS count FROM paper_portfolio_snapshots').get().count;
 
   return [
     {
@@ -77,9 +78,9 @@ function listModels() {
       status: 'available',
       runtime: 'Node.js / SQLite',
       costMode: 'local-free',
-      capabilities: ['目标权重', '单股上限', '现金保留', '草稿/观察/归档'],
+      capabilities: ['目标权重', '单股上限', '现金保留', '100股取整', '净值与盈亏快照'],
       requirements: ['先生成证据决策包', '用户确认风险档位和约束'],
-      note: '当前保存了 ' + paperPortfolioCount + ' 个纸面组合；不连接券商，也不生成真实订单。'
+      note: '当前保存了 ' + paperPortfolioCount + ' 个纸面组合和 ' + paperSnapshotCount + ' 个净值快照；不连接券商，也不生成真实订单。'
     },
     {
       id: 'knowledge-fts-v1',

@@ -2783,6 +2783,24 @@ body.dark .md-body blockquote { background: rgba(99,102,241,0.12); }
   width: 92px;
 }
 
+.paper-row-actions,
+.paper-performance {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+}
+
+.paper-performance {
+  min-height: 28px;
+  margin-top: 6px;
+  font-size: 12px;
+}
+
+.paper-warning {
+  color: var(--warning, #9a6700);
+}
+
 .paper-item-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
@@ -3406,6 +3424,11 @@ body.dark .model-status.unavailable {
   .paper-row-head {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .paper-row-actions {
+    width: 100%;
+    justify-content: space-between;
   }
 
   .quant-actions {

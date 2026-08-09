@@ -279,6 +279,8 @@ function normalizePaperPortfolio(item) {
   const status = text(item.status, 'draft', 20).toLowerCase();
   const riskProfile = text(item.riskProfile, 'balanced', 20).toLowerCase();
   const paperItems = Array.isArray(item.items) ? item.items : [];
+  const paperPositions = Array.isArray(item.positions) ? item.positions : [];
+  const paperSnapshots = Array.isArray(item.snapshots) ? item.snapshots : [];
   return {
     name: text(item.name, 'Paper portfolio', 160),
     status: ['draft', 'active', 'archived'].includes(status) ? status : 'draft',
@@ -297,7 +299,32 @@ function normalizePaperPortfolio(item) {
       rationale: text(position.rationale, '', 2000),
       risks: normalizeStringArray(position.risks, 30),
       evidence: normalizeStringArray(position.evidence, 50)
-    })).filter(position => position.targetWeight > 0)
+    })).filter(position => position.targetWeight > 0),
+    positions: paperPositions.slice(0, 100).map(position => ({
+      code: code(position.code),
+      name: text(position.name || position.code, position.code, 100),
+      quantity: Math.max(integerOrZero(position.quantity), 0),
+      entryPrice: Math.max(numberOrZero(position.entryPrice), 0),
+      entryValue: Math.max(numberOrZero(position.entryValue), 0),
+      entryFee: Math.max(numberOrZero(position.entryFee), 0),
+      lastPrice: Math.max(numberOrZero(position.lastPrice), 0),
+      lastMarketValue: Math.max(numberOrZero(position.lastMarketValue), 0),
+      openedAt: text(position.openedAt, new Date().toISOString(), 40)
+    })).filter(position => position.code && position.quantity > 0 && position.entryPrice > 0),
+    snapshots: paperSnapshots.slice(0, MAX_ITEMS_PER_TABLE).map(snapshot => ({
+      snapshotAt: text(snapshot.snapshotAt, '', 40),
+      marketDate: text(snapshot.marketDate, '', 20),
+      marketTime: text(snapshot.marketTime, '', 20),
+      cashValue: Math.max(numberOrZero(snapshot.cashValue), 0),
+      marketValue: Math.max(numberOrZero(snapshot.marketValue), 0),
+      totalValue: Math.max(numberOrZero(snapshot.totalValue), 0),
+      dailyPnl: numberOrZero(snapshot.dailyPnl),
+      totalPnl: numberOrZero(snapshot.totalPnl),
+      totalReturn: numberOrZero(snapshot.totalReturn),
+      source: text(snapshot.source, '', 100),
+      sourceMetadata: snapshot.sourceMetadata && typeof snapshot.sourceMetadata === 'object' ? snapshot.sourceMetadata : {},
+      warnings: normalizeStringArray(snapshot.warnings, 100)
+    })).filter(snapshot => snapshot.snapshotAt)
   };
 }
 
@@ -489,6 +516,20 @@ function importUserData(backup, options = {}) {
         portfolio_id, code, name, target_weight, consensus_score, signal_count, rationale, risks_json, evidence_json
       ) VALUES (@portfolioId, @code, @name, @targetWeight, @consensusScore, @signalCount, @rationale, @risksJson, @evidenceJson)
     `);
+    const insertPaperPortfolioPosition = db.prepare(`
+      INSERT INTO paper_portfolio_positions (
+        portfolio_id, code, name, quantity, entry_price, entry_value, entry_fee,
+        last_price, last_market_value, opened_at
+      ) VALUES (@portfolioId, @code, @name, @quantity, @entryPrice, @entryValue, @entryFee,
+        @lastPrice, @lastMarketValue, @openedAt)
+    `);
+    const insertPaperPortfolioSnapshot = db.prepare(`
+      INSERT INTO paper_portfolio_snapshots (
+        portfolio_id, snapshot_at, market_date, market_time, cash_value, market_value,
+        total_value, daily_pnl, total_pnl, total_return, source, source_metadata_json, warnings_json
+      ) VALUES (@portfolioId, @snapshotAt, @marketDate, @marketTime, @cashValue, @marketValue,
+        @totalValue, @dailyPnl, @totalPnl, @totalReturn, @source, @sourceMetadataJson, @warningsJson)
+    `);
 
     recentStocks.forEach(item => insertRecent.run(item));
     watchlist.forEach(item => insertWatchlist.run(item));
@@ -561,6 +602,24 @@ function importUserData(backup, options = {}) {
         rationale: position.rationale,
         risksJson: JSON.stringify(position.risks),
         evidenceJson: JSON.stringify(position.evidence)
+      }));
+      item.positions.forEach(position => insertPaperPortfolioPosition.run(Object.assign({
+        portfolioId: info.lastInsertRowid
+      }, position)));
+      item.snapshots.forEach(snapshot => insertPaperPortfolioSnapshot.run({
+        portfolioId: info.lastInsertRowid,
+        snapshotAt: snapshot.snapshotAt,
+        marketDate: snapshot.marketDate,
+        marketTime: snapshot.marketTime,
+        cashValue: snapshot.cashValue,
+        marketValue: snapshot.marketValue,
+        totalValue: snapshot.totalValue,
+        dailyPnl: snapshot.dailyPnl,
+        totalPnl: snapshot.totalPnl,
+        totalReturn: snapshot.totalReturn,
+        source: snapshot.source,
+        sourceMetadataJson: JSON.stringify(snapshot.sourceMetadata),
+        warningsJson: JSON.stringify(snapshot.warnings)
       }));
     });
   })();

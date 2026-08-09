@@ -27,6 +27,7 @@ test.afterAll(async () => {
 });
 
 test.beforeEach(async ({ page }) => {
+  let mockPaperPortfolios = [];
   page.on('pageerror', error => {
     throw error;
   });
@@ -151,14 +152,31 @@ test.beforeEach(async ({ page }) => {
         prompt: '测试决策提示词\nWEBSTOCK_RESULT_START\n# 测试\nWEBSTOCK_RESULT_END'
       } }) });
     }
+    if (/\/api\/paper-portfolios\/\d+\/status/.test(url) && route.request().method() === 'PUT') {
+      const body = route.request().postDataJSON();
+      mockPaperPortfolios = mockPaperPortfolios.map(function(item) { return Object.assign({}, item, { status: body.status }); });
+      return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ success: true, data: mockPaperPortfolios[0] }) });
+    }
+    if (/\/api\/paper-portfolios\/\d+\/refresh/.test(url) && route.request().method() === 'POST') {
+      mockPaperPortfolios = mockPaperPortfolios.map(function(item) {
+        return Object.assign({}, item, {
+          latestSnapshot: { totalValue: 100120, dailyPnl: 120, totalPnl: 120, totalReturn: 0.0012, marketDate: '2026-08-09', marketTime: '15:00:00', warnings: [] },
+          snapshots: [{ totalValue: 100120, dailyPnl: 120, totalPnl: 120, totalReturn: 0.0012, marketDate: '2026-08-09', marketTime: '15:00:00', warnings: [] }]
+        });
+      });
+      return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ success: true, data: mockPaperPortfolios[0] }) });
+    }
     if (url.includes('/api/paper-portfolios') && route.request().method() === 'POST') {
-      return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ success: true, data: {
+      const paper = {
         id: 9, name: '测试纸面组合', status: 'draft', asOf: '2026-08-09T13:30:00.000Z', capital: 100000,
-        cashWeight: 0.8, riskProfile: 'balanced', constraints: {}, items: [{ code: '000001', name: '平安银行', targetWeight: 0.2, consensusScore: 92, signalCount: 2 }]
-      } }) });
+        cashWeight: 0.8, riskProfile: 'balanced', constraints: {}, items: [{ code: '000001', name: '平安银行', targetWeight: 0.2, consensusScore: 92, signalCount: 2 }],
+        positions: [], snapshots: [], latestSnapshot: null
+      };
+      mockPaperPortfolios = [paper];
+      return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ success: true, data: paper }) });
     }
     if (url.includes('/api/paper-portfolios') && route.request().method() === 'GET') {
-      return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ success: true, data: [] }) });
+      return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ success: true, data: mockPaperPortfolios }) });
     }
     if (url.includes('/api/level2/manual-trades')) {
       return route.fulfill({
@@ -268,6 +286,11 @@ test('AI research view creates grounded expert knowledge and saves a handoff res
   await expect(page.locator('#analyzeDecisionPacketBtn')).toBeEnabled();
   await page.click('#createPaperPortfolioBtn');
   await expect(page.locator('#decisionPacketStatus')).toContainText('测试纸面组合');
+  await expect(page.locator('#paperPortfolioPanel')).toContainText('测试纸面组合');
+  await page.selectOption('#paperPortfolioPanel [data-paper-status]', 'active');
+  await expect(page.locator('#paperPortfolioPanel [data-paper-refresh]')).toBeEnabled();
+  await page.click('#paperPortfolioPanel [data-paper-refresh]');
+  await expect(page.locator('#paperPortfolioPanel')).toContainText('累计 120.00 / 0.12%');
   await page.selectOption('#quantModelSelect', 'master');
   await expect(page.locator('#quantResultPanel')).toContainText('MASTER 市场引导时序模型');
   await expect(page.locator('#quantResultPanel')).toContainText('宁德时代');
