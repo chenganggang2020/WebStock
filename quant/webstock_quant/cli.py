@@ -90,6 +90,7 @@ def _collect(args, dataset_id=None):
         limit=args.limit,
         codes=_codes(args.codes),
         sleep_ms=args.sleep_ms,
+        workers=args.workers,
         emit=emit_event,
     )
     return dataset_dir, manifest_path, manifest
@@ -225,6 +226,7 @@ def add_common_collection_arguments(parser):
     parser.add_argument("--limit", type=int, default=30)
     parser.add_argument("--codes", default="")
     parser.add_argument("--sleep-ms", type=int, default=120)
+    parser.add_argument("--workers", type=int, choices=range(1, 9), default=3)
 
 
 def add_common_model_arguments(parser):

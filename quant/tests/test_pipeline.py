@@ -3,6 +3,7 @@ import sys
 import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from unittest.mock import patch
 
 import numpy as np
 import pandas as pd
@@ -13,7 +14,8 @@ from webstock_quant.pipeline import (
     build_rolling_folds,
     evaluate_predictions,
 )
-from webstock_quant.collector import select_universe
+from webstock_quant.collector import _sina_symbol, collect_dataset, select_universe
+from webstock_quant.cli import build_parser
 from webstock_quant.manifest import manifest_sha256
 from webstock_quant.model import QlibPanelDataset
 
@@ -125,6 +127,97 @@ class FeatureTests(unittest.TestCase):
         self.assertEqual(first, second)
         self.assertNotIn('000002', [item['code'] for item in first])
         self.assertEqual(excluded['currentSt'], 1)
+
+    def test_sina_symbol_maps_beijing_exchange_codes(self):
+        self.assertEqual(_sina_symbol('000001'), 'sz000001')
+        self.assertEqual(_sina_symbol('600000'), 'sh600000')
+        self.assertEqual(_sina_symbol('920992'), 'bj920992')
+
+    def test_collection_resumes_valid_files_after_interruption(self):
+        dates = pd.bdate_range('2025-01-02', periods=8)
+
+        def frame_for(stock):
+            rows = []
+            for index, day in enumerate(dates):
+                close = 10 + index * 0.1
+                rows.append({
+                    'date': day.strftime('%Y-%m-%d'),
+                    'code': stock['code'],
+                    'name': stock['name'],
+                    'open': close - 0.05,
+                    'high': close + 0.1,
+                    'low': close - 0.1,
+                    'close': close,
+                    'volume': 1_000_000 + index,
+                })
+            return pd.DataFrame(rows)
+
+        stocks = [
+            {'code': '000001', 'name': '平安银行'},
+            {'code': '300750', 'name': '宁德时代'},
+            {'code': '600000', 'name': '浦发银行'},
+        ]
+        with TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            universe_file = root / 'stocks.json'
+            universe_file.write_text(__import__('json').dumps(stocks, ensure_ascii=False), encoding='utf-8')
+            dataset_dir = root / 'datasets' / 'resume-demo'
+            first_calls = []
+
+            def interrupted_fetch(session, stock, start_date, end_date, retries=2):
+                first_calls.append(stock['code'])
+                if stock['code'] == '300750':
+                    raise KeyboardInterrupt('simulated interruption')
+                return frame_for(stock)
+
+            with patch('webstock_quant.collector.fetch_sina_history', side_effect=interrupted_fetch):
+                with self.assertRaises(KeyboardInterrupt):
+                    collect_dataset(
+                        universe_file=universe_file,
+                        dataset_dir=dataset_dir,
+                        dataset_id='resume-demo',
+                        start_date='2025-01-01',
+                        end_date='2025-02-01',
+                        limit=3,
+                        sleep_ms=0,
+                        workers=1,
+                    )
+
+            self.assertTrue((dataset_dir / 'raw' / '000001.parquet').exists())
+            resumed_calls = []
+
+            def resumed_fetch(session, stock, start_date, end_date, retries=2):
+                resumed_calls.append(stock['code'])
+                return frame_for(stock)
+
+            with patch('webstock_quant.collector.fetch_sina_history', side_effect=resumed_fetch):
+                _, manifest = collect_dataset(
+                    universe_file=universe_file,
+                    dataset_dir=dataset_dir,
+                    dataset_id='resume-demo',
+                    start_date='2025-01-01',
+                    end_date='2025-02-01',
+                    limit=3,
+                    sleep_ms=0,
+                    workers=1,
+                )
+
+            self.assertNotIn('000001', resumed_calls)
+            self.assertEqual(manifest['coverage']['succeeded'], 3)
+            self.assertEqual(manifest['coverage']['failed'], 0)
+            self.assertEqual(manifest['quality']['coverageRate'], 1.0)
+            self.assertEqual(manifest['quality']['invalidCachedFiles'], 0)
+            self.assertEqual(len(list((dataset_dir / 'raw').glob('*.parquet'))), 3)
+
+    def test_collect_cli_exposes_bounded_worker_count(self):
+        args = build_parser().parse_args([
+            'collect',
+            '--workspace', 'workspace',
+            '--universe-file', 'stocks.json',
+            '--dataset-id', 'dataset-demo',
+            '--workers', '4',
+        ])
+        self.assertEqual(args.workers, 4)
 
     def test_manifest_hash_does_not_hash_its_own_digest(self):
         manifest = {'schema': 'webstock.quant.dataset.v1', 'datasetId': 'demo'}

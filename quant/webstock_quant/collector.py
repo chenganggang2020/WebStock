@@ -1,14 +1,18 @@
+from concurrent.futures import ThreadPoolExecutor, as_completed
+import hashlib
 import json
 import math
+import os
 import re
+import threading
 import time
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 import pandas as pd
 import requests
 
-from .manifest import file_sha256, manifest_sha256, write_json_atomic
+from .manifest import file_sha256, manifest_sha256, read_json, write_json_atomic
 
 
 SINA_KLINE_URL = (
@@ -61,7 +65,9 @@ def select_universe(stocks, limit=None, codes=None):
 
 
 def _sina_symbol(code):
-    return ("sh" if re.match(r"^[569]", code) else "sz") + code
+    if str(code).startswith("9"):
+        return "bj" + code
+    return ("sh" if re.match(r"^[56]", code) else "sz") + code
 
 
 def _data_length(start_date, end_date):
@@ -120,6 +126,114 @@ def fetch_sina_history(session, stock, start_date, end_date, retries=2):
     raise RuntimeError(str(last_error))
 
 
+def _request_sha256(dataset_id, start_day, end_day, selected):
+    payload = {
+        "datasetId": dataset_id,
+        "start": start_day,
+        "end": end_day,
+        "codes": [item["code"] for item in selected],
+    }
+    encoded = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
+
+
+def _normalize_frame(frame, stock, start_day, end_day, strict=False):
+    required = set(DATA_COLUMNS)
+    if not required.issubset(frame.columns):
+        raise ValueError("cached K-line file is missing required columns")
+    prepared = frame[DATA_COLUMNS].copy()
+    prepared["date"] = pd.to_datetime(prepared["date"], errors="coerce")
+    codes = prepared["code"].map(_normal_code)
+    if strict and (codes != stock["code"]).any():
+        raise ValueError("cached K-line file contains another security")
+    for column in ["open", "high", "low", "close", "volume"]:
+        prepared[column] = pd.to_numeric(prepared[column], errors="coerce")
+    prepared = prepared[
+        (prepared["date"] >= pd.Timestamp(start_day))
+        & (prepared["date"] <= pd.Timestamp(end_day))
+    ]
+    prepared = prepared.dropna(subset=["date", "open", "high", "low", "close", "volume"])
+    duplicate_rows = int(prepared.duplicated("date", keep=False).sum())
+    price_high = prepared[["open", "close", "low"]].max(axis=1)
+    price_low = prepared[["open", "close", "high"]].min(axis=1)
+    invalid_mask = (
+        (prepared["close"] <= 0)
+        | (prepared["open"] <= 0)
+        | (prepared["high"] < price_high)
+        | (prepared["low"] > price_low)
+        | (prepared["volume"] < 0)
+    )
+    invalid_rows = int(invalid_mask.sum())
+    if strict and (duplicate_rows or invalid_rows):
+        raise ValueError("cached K-line file failed OHLC or duplicate checks")
+    prepared = prepared.loc[~invalid_mask].sort_values("date").drop_duplicates("date", keep="last")
+    if prepared.empty:
+        raise ValueError("K-line file has no valid rows in the requested range")
+    prepared["date"] = prepared["date"].dt.strftime("%Y-%m-%d")
+    prepared["code"] = stock["code"]
+    prepared["name"] = stock["name"]
+    return prepared[DATA_COLUMNS], {"invalidRows": invalid_rows, "duplicateRows": duplicate_rows}
+
+
+def _artifact_for(target, root, stock, frame, quality):
+    return {
+        "path": target.relative_to(root).as_posix(),
+        "sha256": file_sha256(target),
+        "rows": int(len(frame)),
+        "code": stock["code"],
+        "name": stock["name"],
+        "start": str(frame["date"].iloc[0]),
+        "end": str(frame["date"].iloc[-1]),
+        "invalidRows": int(quality.get("invalidRows", 0)),
+        "duplicateRows": int(quality.get("duplicateRows", 0)),
+    }
+
+
+def _read_cached_artifact(target, root, stock, start_day, end_day):
+    frame, quality = _normalize_frame(
+        pd.read_parquet(target), stock, start_day, end_day, strict=True
+    )
+    return _artifact_for(target, root, stock, frame, quality)
+
+
+def _write_parquet_atomic(target, frame):
+    temporary = target.with_name(
+        target.name + f".tmp-{os.getpid()}-{threading.get_ident()}"
+    )
+    try:
+        frame.to_parquet(temporary, index=False, compression="zstd")
+        os.replace(temporary, target)
+    finally:
+        if temporary.exists():
+            temporary.unlink()
+
+
+def _quality_summary(artifacts, selected_count, failure_count, resumed_files, invalid_cached_files):
+    rows = sorted(int(item["rows"]) for item in artifacts)
+    latest = max((str(item["end"]) for item in artifacts), default="")
+    stale_cutoff = (pd.Timestamp(latest).date() - timedelta(days=10)) if latest else None
+    stale = sum(
+        1 for item in artifacts
+        if stale_cutoff is not None and pd.Timestamp(item["end"]).date() < stale_cutoff
+    )
+    p10_index = max(math.ceil(len(rows) * 0.1) - 1, 0) if rows else 0
+    median = rows[len(rows) // 2] if rows else 0
+    return {
+        "coverageRate": round(len(artifacts) / selected_count, 6) if selected_count else 0.0,
+        "successfulSecurities": len(artifacts),
+        "failedSecurities": int(failure_count),
+        "resumedFiles": int(resumed_files),
+        "invalidCachedFiles": int(invalid_cached_files),
+        "minimumRowsPerSecurity": rows[0] if rows else 0,
+        "p10RowsPerSecurity": rows[p10_index] if rows else 0,
+        "medianRowsPerSecurity": median,
+        "maximumRowsPerSecurity": rows[-1] if rows else 0,
+        "staleSecurityCount": int(stale),
+        "invalidRows": sum(int(item.get("invalidRows", 0)) for item in artifacts),
+        "duplicateRows": sum(int(item.get("duplicateRows", 0)) for item in artifacts),
+    }
+
+
 def collect_dataset(
     universe_file,
     dataset_dir,
@@ -129,6 +243,7 @@ def collect_dataset(
     limit=None,
     codes=None,
     sleep_ms=120,
+    workers=3,
     emit=None,
 ):
     end_date = end_date or date.today().isoformat()
@@ -145,47 +260,145 @@ def collect_dataset(
     root = Path(dataset_dir)
     raw_dir = root / "raw"
     raw_dir.mkdir(parents=True, exist_ok=True)
-    failures = []
-    files = []
-    total_rows = 0
-    actual_start = None
-    actual_end = None
-    session = requests.Session()
+    request_sha256 = _request_sha256(dataset_id, start_day, end_day, selected)
+    manifest_path = root / "manifest.json"
+    if manifest_path.exists():
+        try:
+            existing_manifest = read_json(manifest_path)
+            same_request = (
+                existing_manifest.get("requestSha256") == request_sha256
+                and existing_manifest.get("manifestSha256") == manifest_sha256(existing_manifest)
+                and existing_manifest.get("coverage", {}).get("failed") == 0
+            )
+            if same_request:
+                for artifact in existing_manifest.get("files", []):
+                    if str(artifact.get("path", "")).startswith("raw/"):
+                        target = root / artifact["path"]
+                        if not target.exists() or file_sha256(target) != artifact.get("sha256"):
+                            raise ValueError("completed dataset artifact changed")
+                return manifest_path, existing_manifest
+        except Exception:
+            pass
 
-    for index, stock in enumerate(selected, start=1):
+    state_path = root / "collection-state.json"
+    state = read_json(state_path) if state_path.exists() else {}
+    if state and state.get("requestSha256") not in (None, request_sha256):
+        raise ValueError("dataset directory contains a different collection request")
+    failures_by_code = {
+        str(item.get("code")): item for item in state.get("failures", []) if item.get("code")
+    }
+    files_by_code = {}
+    resumed_files = 0
+    invalid_cached_files = 0
+    pending = []
+    last_checkpoint = 0
+
+    def persist_state(status, force=False):
+        nonlocal last_checkpoint
+        completed_count = len(files_by_code)
+        if not force and completed_count - last_checkpoint < 10:
+            return
+        write_json_atomic(state_path, {
+            "schema": "webstock.quant.collection-state.v1",
+            "datasetId": dataset_id,
+            "requestSha256": request_sha256,
+            "status": status,
+            "updatedAt": datetime.now(timezone.utc).isoformat(),
+            "requestedDateRange": {"start": start_day, "end": end_day},
+            "selectedCount": len(selected),
+            "completedCodes": sorted(files_by_code),
+            "failures": [failures_by_code[code] for code in sorted(failures_by_code)],
+        })
+        last_checkpoint = completed_count
+
+    for stock in selected:
+        target = raw_dir / f"{stock['code']}.parquet"
+        if target.exists():
+            try:
+                files_by_code[stock["code"]] = _read_cached_artifact(
+                    target, root, stock, start_day, end_day
+                )
+                failures_by_code.pop(stock["code"], None)
+                resumed_files += 1
+                continue
+            except Exception:
+                invalid_cached_files += 1
+                target.unlink(missing_ok=True)
+        pending.append(stock)
+
+    persist_state("running", force=True)
+    thread_state = threading.local()
+
+    def collect_one(stock):
+        if not hasattr(thread_state, "session"):
+            thread_state.session = requests.Session()
+        frame = fetch_sina_history(thread_state.session, stock, start_day, end_day)
+        frame, quality = _normalize_frame(frame, stock, start_day, end_day)
+        target = raw_dir / f"{stock['code']}.parquet"
+        _write_parquet_atomic(target, frame)
+        if sleep_ms:
+            time.sleep(max(int(sleep_ms), 0) / 1000.0)
+        return _artifact_for(target, root, stock, frame, quality)
+
+    def record_result(stock, artifact=None, error=None):
+        if artifact is not None:
+            files_by_code[stock["code"]] = artifact
+            failures_by_code.pop(stock["code"], None)
+        else:
+            failures_by_code[stock["code"]] = {
+                "code": stock["code"],
+                "name": stock["name"],
+                "reason": str(error)[:500],
+            }
+        completed = len(files_by_code) + len(failures_by_code)
         if emit:
             emit({
                 "stage": "collect",
-                "current": index,
+                "current": completed,
                 "total": len(selected),
                 "code": stock["code"],
-                "message": f"正在采集 {stock['code']} {stock['name']}",
+                "succeeded": len(files_by_code),
+                "failed": len(failures_by_code),
+                "resumed": resumed_files,
+                "message": f"全市场采集 {completed}/{len(selected)}：{stock['code']} {stock['name']}",
             })
-        try:
-            frame = fetch_sina_history(session, stock, start_day, end_day)
-            target = raw_dir / f"{stock['code']}.parquet"
-            frame.to_parquet(target, index=False, compression="zstd")
-            row_start = frame["date"].iloc[0]
-            row_end = frame["date"].iloc[-1]
-            actual_start = row_start if actual_start is None else min(actual_start, row_start)
-            actual_end = row_end if actual_end is None else max(actual_end, row_end)
-            total_rows += len(frame)
-            files.append({
-                "path": target.relative_to(root).as_posix(),
-                "sha256": file_sha256(target),
-                "rows": int(len(frame)),
-                "code": stock["code"],
-                "name": stock["name"],
-                "start": row_start,
-                "end": row_end,
-            })
-        except Exception as error:
-            failures.append({"code": stock["code"], "name": stock["name"], "reason": str(error)[:500]})
-        if sleep_ms:
-            time.sleep(max(int(sleep_ms), 0) / 1000.0)
+        persist_state("running")
+
+    worker_count = min(max(int(workers or 1), 1), 8)
+    try:
+        if worker_count == 1:
+            for stock in pending:
+                try:
+                    record_result(stock, artifact=collect_one(stock))
+                except Exception as error:
+                    record_result(stock, error=error)
+        else:
+            executor = ThreadPoolExecutor(max_workers=worker_count, thread_name_prefix="webstock-collect")
+            futures = {executor.submit(collect_one, stock): stock for stock in pending}
+            try:
+                for future in as_completed(futures):
+                    stock = futures[future]
+                    try:
+                        record_result(stock, artifact=future.result())
+                    except Exception as error:
+                        record_result(stock, error=error)
+            except BaseException:
+                executor.shutdown(wait=False, cancel_futures=True)
+                raise
+            else:
+                executor.shutdown(wait=True)
+    finally:
+        persist_state("interrupted", force=True)
+
+    files = [files_by_code[code] for code in sorted(files_by_code)]
+    failures = [failures_by_code[code] for code in sorted(failures_by_code)]
 
     if not files:
         raise RuntimeError("the provider did not return any usable daily data")
+
+    total_rows = sum(int(item["rows"]) for item in files)
+    actual_start = min(str(item["start"]) for item in files)
+    actual_end = max(str(item["end"]) for item in files)
 
     universe_path = root / "universe.json"
     write_json_atomic(universe_path, {
@@ -213,6 +426,7 @@ def collect_dataset(
         "schema": "webstock.quant.dataset.v1",
         "datasetId": dataset_id,
         "createdAt": datetime.now(timezone.utc).isoformat(),
+        "requestSha256": request_sha256,
         "asOf": actual_end,
         "source": {
             "id": "sina-public-kline",
@@ -239,13 +453,21 @@ def collect_dataset(
             "failed": len(failures),
             "rows": total_rows,
         },
+        "quality": _quality_summary(
+            files[:-1], len(selected), len(failures), resumed_files, invalid_cached_files
+        ),
+        "collection": {
+            "workers": worker_count,
+            "sleepMsPerWorker": max(int(sleep_ms), 0),
+            "resumable": True,
+        },
         "files": files,
         "eligibility": "exploratory_only",
         "warnings": warnings,
     }
     manifest["manifestSha256"] = manifest_sha256(manifest)
-    manifest_path = root / "manifest.json"
     write_json_atomic(manifest_path, manifest)
+    persist_state("completed", force=True)
     if emit:
         emit({
             "stage": "collect-complete",

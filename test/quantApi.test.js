@@ -125,6 +125,13 @@ test('factor lab service arguments exclude model-specific training flags', () =>
   assert.equal(args.includes('--master-epochs'), false);
 });
 
+test('full-market collection IDs are deterministic for resumable date ranges', () => {
+  assert.equal(
+    quant.collectionDatasetId('2020-01-01', '2026-08-10'),
+    'sina-a-share-20200101-20260810'
+  );
+});
+
 test.after(() => {
   require('../db').close();
   fs.rmSync(root, { recursive: true, force: true });

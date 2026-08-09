@@ -610,9 +610,14 @@ function startPilot(input = {}) {
   const args = [
     'pilot', '--workspace', workspace, '--universe-file', universePath(),
     '--limit', String(limit), '--start-date', startDate, '--end-date', endDate,
-    '--sleep-ms', String(Math.round(numeric(input.sleepMs, 120, 0, 1000))), '--model', model
+    '--sleep-ms', String(Math.round(numeric(input.sleepMs, 120, 0, 1000))),
+    '--workers', String(Math.round(numeric(input.workers, 2, 1, 4))), '--model', model
   ].concat(commonModelArgs(input));
   return startJob('pilot', args, Object.assign({}, input, { model, limit, startDate, endDate }));
+}
+
+function collectionDatasetId(startDate, endDate) {
+  return 'sina-a-share-' + String(startDate).replace(/\D/g, '') + '-' + String(endDate).replace(/\D/g, '');
 }
 
 function startCollection(input = {}) {
@@ -621,13 +626,15 @@ function startCollection(input = {}) {
   const endDate = dateValue(input.endDate, new Date().toISOString().slice(0, 10));
   if (startDate > endDate) throw new Error('开始日期不能晚于结束日期。');
   const limit = Math.round(numeric(input.limit, 5510, 8, 6000));
-  const datasetId = 'sina-a-share-' + compactUtcTimestamp();
+  const datasetId = collectionDatasetId(startDate, endDate);
+  const workers = Math.round(numeric(input.workers, 3, 1, 6));
   const args = [
     'collect', '--workspace', workspace, '--universe-file', universePath(), '--dataset-id', datasetId,
     '--limit', String(limit), '--start-date', startDate, '--end-date', endDate,
-    '--sleep-ms', String(Math.round(numeric(input.sleepMs, 160, 50, 2000)))
+    '--sleep-ms', String(Math.round(numeric(input.sleepMs, 160, 50, 2000))),
+    '--workers', String(workers)
   ];
-  return startJob('collect', args, Object.assign({}, input, { datasetId, limit, startDate, endDate }));
+  return startJob('collect', args, Object.assign({}, input, { datasetId, limit, startDate, endDate, workers }));
 }
 
 function startRun(input = {}) {
@@ -765,6 +772,7 @@ module.exports = {
   startCollection,
   startRun,
   startFactorLab,
+  collectionDatasetId,
   listJobs,
   getJob,
   cancelJob,
