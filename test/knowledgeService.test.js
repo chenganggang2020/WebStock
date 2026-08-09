@@ -136,6 +136,9 @@ test('model registry reports real availability instead of deployment names', () 
   assert.notEqual(byId.get('qlib-lightgbm').status, 'planned');
   assert.ok(['available', 'configured', 'not_configured', 'unavailable'].includes(byId.get('master').status));
   assert.notEqual(byId.get('master').status, 'planned');
+  assert.notEqual(byId.get('local-factor-lab-v1').status, 'planned');
+  assert.equal(byId.get('evidence-orchestrator-v1').status, 'available');
+  assert.equal(byId.get('local-paper-portfolio-v1').status, 'available');
   assert.equal(byId.get('rd-agent-q').status, 'planned');
   assert.ok(byId.get('master').requirements.length >= 1);
 });

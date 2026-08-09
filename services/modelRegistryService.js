@@ -25,9 +25,12 @@ function listModels() {
   const latestQuantResult = latestQuantEntry ? latestQuantEntry.result : null;
   const latestMasterEntry = quantResults.find(item => String(item.result.modelId || '').includes('master'));
   const latestMasterResult = latestMasterEntry ? latestMasterEntry.result : null;
+  const latestFactorEntry = quant.listFactorResults(20).find(item => item.valid && item.result);
+  const latestFactorResult = latestFactorEntry ? latestFactorEntry.result : null;
   const latestQuantStatus = latestQuantResult && latestQuantResult.validationStatus === 'validated'
     ? '已验证'
     : '探索性';
+  const paperPortfolioCount = db.prepare('SELECT COUNT(*) AS count FROM paper_portfolios').get().count;
 
   return [
     {
@@ -40,6 +43,43 @@ function listModels() {
       capabilities: ['全市场去 ST', '技术与主题因子', '因子贡献', '保存与复核'],
       requirements: ['行情或 K 线覆盖越完整，技术因子越充分'],
       note: '当前已运行的规则模型，不等同于训练后的机器学习模型。'
+    },
+    {
+      id: 'local-factor-lab-v1',
+      name: '本地因子研究门禁',
+      kind: 'research-agent',
+      status: ['available', 'configured'].includes(quantRuntime.status) ? quantRuntime.status : 'not_configured',
+      runtime: quantRuntime.versions
+        ? 'Python ' + quantRuntime.versions.python + ' / pandas ' + quantRuntime.versions.pandas
+        : 'Python 3.12 sidecar',
+      costMode: 'local-compute',
+      capabilities: ['验证期定向', '样本外因子 IC', '重复度门禁', '复合因子对照'],
+      requirements: ['带哈希的数据清单', '不少于一个完整滚动窗口', '交易成本参数'],
+      note: latestFactorResult
+        ? '已有' + (latestFactorResult.validationStatus === 'validated' ? '已验证' : '探索性') + '运行：' + latestFactorResult.runId + '；没有通过门槛的因子不会升级为候选。'
+        : '尚无通过契约校验的因子实验。'
+    },
+    {
+      id: 'evidence-orchestrator-v1',
+      name: '证据决策编排器',
+      kind: 'research-agent',
+      status: 'available',
+      runtime: 'Node.js / SQLite / ChatGPT handoff',
+      costMode: 'existing-subscription',
+      capabilities: ['多模型来源内排名', '专家与资讯证据', '反证与数据缺口', '一键 ChatGPT 复核'],
+      requirements: ['至少一个模型、筛选、持仓或自选候选来源'],
+      note: '本地先生成可审计决策包；跨模型不比较原始分数，外部事实必须保留证据编号。'
+    },
+    {
+      id: 'local-paper-portfolio-v1',
+      name: '纸面组合约束器',
+      kind: 'portfolio-model',
+      status: 'available',
+      runtime: 'Node.js / SQLite',
+      costMode: 'local-free',
+      capabilities: ['目标权重', '单股上限', '现金保留', '草稿/观察/归档'],
+      requirements: ['先生成证据决策包', '用户确认风险档位和约束'],
+      note: '当前保存了 ' + paperPortfolioCount + ' 个纸面组合；不连接券商，也不生成真实订单。'
     },
     {
       id: 'knowledge-fts-v1',

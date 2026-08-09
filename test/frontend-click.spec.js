@@ -116,7 +116,48 @@ test.beforeEach(async ({ page }) => {
         } }]
       }) });
     }
+    if (url.includes('/api/quant/factor-labs')) {
+      return route.fulfill({ contentType: 'application/json', body: JSON.stringify({
+        success: true,
+        data: [{ valid: true, result: {
+          runId: 'test-factor-run', validationStatus: 'exploratory', asOf: '2026-08-07',
+          dataManifest: { datasetId: 'test-quant-dataset', sha256: 'same-data' }, folds: [{}, {}],
+          factors: [{
+            factorId: 'feature_momentum_20', displayName: '20日动量', dominantOrientation: 1,
+            orientationAgreement: 1, validationRankIc: 0.031, testRankIc: 0.018,
+            positiveFoldRate: 0.5, maxAbsCorrelation: 0.42, closestFactor: 'feature_momentum_60',
+            admission: 'watch', reasons: ['样本外窗口少于3个'],
+            metrics: { annualizedReturn: 0.02, maxDrawdown: -0.08 }
+          }],
+          composite: {
+            metrics: { rankIc: 0.019, annualizedReturn: 0.03, maxDrawdown: -0.07 },
+            candidates: [{ code: '688981', name: '中芯国际', score: 0.15 }]
+          },
+          warnings: ['Admission labels are exploratory gates, not evidence of future profitability.']
+        } }]
+      }) });
+    }
     if (url.includes('/api/quant/jobs')) {
+      return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ success: true, data: [] }) });
+    }
+    if (url.includes('/api/decision-packets') && route.request().method() === 'POST') {
+      return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ success: true, data: {
+        schema: 'webstock.research.decision-packet.v1', generatedAt: '2026-08-09T13:30:00.000Z', researchRunId: 88,
+        question: '测试决策问题', riskProfile: 'balanced', datasetId: 'test-quant-dataset',
+        dataSources: [{ sourceId: 'test-quant-run', sourceLabel: 'Qlib + LightGBM', sourceType: 'quant-model', validationStatus: 'exploratory', asOf: '2026-08-07' }],
+        candidates: [{ code: '000001', name: '平安银行', consensusScore: 92, signalCount: 2, modelDisagreement: 10, industry: '银行', themes: ['金融'], inPortfolio: true, inWatchlist: false, signals: [{ sourceLabel: 'Qlib + LightGBM', rank: 1 }] }],
+        evidence: [{ evidenceId: 'KS-TEST-0001', title: '测试证据', content: '平安银行资产质量证据。' }],
+        dataGaps: ['缺少完整财报点时点数据'], portfolioContext: { positions: [], watchlist: [] },
+        prompt: '测试决策提示词\nWEBSTOCK_RESULT_START\n# 测试\nWEBSTOCK_RESULT_END'
+      } }) });
+    }
+    if (url.includes('/api/paper-portfolios') && route.request().method() === 'POST') {
+      return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ success: true, data: {
+        id: 9, name: '测试纸面组合', status: 'draft', asOf: '2026-08-09T13:30:00.000Z', capital: 100000,
+        cashWeight: 0.8, riskProfile: 'balanced', constraints: {}, items: [{ code: '000001', name: '平安银行', targetWeight: 0.2, consensusScore: 92, signalCount: 2 }]
+      } }) });
+    }
+    if (url.includes('/api/paper-portfolios') && route.request().method() === 'GET') {
       return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ success: true, data: [] }) });
     }
     if (url.includes('/api/level2/manual-trades')) {
@@ -216,6 +257,17 @@ test('AI research view creates grounded expert knowledge and saves a handoff res
   await expect(page.locator('#quantResultPanel')).toContainText('当前名单存在幸存者偏差');
   await expect(page.locator('#quantResultPanel')).toContainText('平安银行');
   await expect(page.locator('#quantResultPanel')).toContainText('同数据模型');
+  await expect(page.locator('#factorLabPanel')).toContainText('因子样本外体检');
+  await expect(page.locator('#factorLabPanel')).toContainText('20日动量');
+  await expect(page.locator('#factorLabPanel')).toContainText('样本外窗口少于3个');
+  await expect(page.locator('#factorLabPanel')).toContainText('中芯国际');
+  await page.fill('#decisionQuestionInput', '测试决策问题');
+  await page.click('#buildDecisionPacketBtn');
+  await expect(page.locator('#decisionPacketPanel')).toContainText('平安银行');
+  await expect(page.locator('#decisionPacketPanel')).toContainText('缺少完整财报点时点数据');
+  await expect(page.locator('#analyzeDecisionPacketBtn')).toBeEnabled();
+  await page.click('#createPaperPortfolioBtn');
+  await expect(page.locator('#decisionPacketStatus')).toContainText('测试纸面组合');
   await page.selectOption('#quantModelSelect', 'master');
   await expect(page.locator('#quantResultPanel')).toContainText('MASTER 市场引导时序模型');
   await expect(page.locator('#quantResultPanel')).toContainText('宁德时代');

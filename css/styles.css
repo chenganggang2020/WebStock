@@ -2661,6 +2661,164 @@ body.dark .md-body blockquote { background: rgba(99,102,241,0.12); }
   background: var(--card-bg);
 }
 
+.research-decision-band {
+  padding: 14px 20px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--card-bg);
+}
+
+.research-decision-band h3 {
+  margin: 0;
+  font-size: 15px;
+}
+
+.decision-control-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(120px, 1fr));
+  gap: 10px 12px;
+  align-items: end;
+  margin-top: 10px;
+}
+
+.decision-control-grid label {
+  display: grid;
+  gap: 5px;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.decision-control-grid input,
+.decision-control-grid select,
+.decision-control-grid textarea,
+.paper-status-select {
+  width: 100%;
+  min-width: 0;
+  padding: 7px 9px;
+  border: 1px solid var(--btn-border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text-primary);
+  font: inherit;
+  letter-spacing: 0;
+}
+
+.decision-control-grid textarea {
+  min-height: 62px;
+  resize: vertical;
+}
+
+.decision-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.decision-packet-panel,
+.paper-portfolio-panel {
+  margin-top: 12px;
+}
+
+.decision-source-line,
+.decision-source-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  align-items: center;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.decision-source-list {
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.decision-candidate-table {
+  min-width: 1120px;
+  margin-top: 8px;
+}
+
+.decision-signal-cell {
+  min-width: 180px;
+  line-height: 1.5;
+}
+
+.decision-gap-block {
+  margin-top: 10px;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.decision-gap-block summary {
+  color: #92400e;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.paper-heading {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.paper-row {
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.paper-row-head,
+.paper-row-head > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+}
+
+.paper-row-head > div {
+  flex-wrap: wrap;
+  justify-content: flex-start;
+}
+
+.paper-status-select {
+  width: 92px;
+}
+
+.paper-item-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 1px;
+  margin-top: 8px;
+  background: var(--border);
+  border: 1px solid var(--border);
+}
+
+.paper-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 54px;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 0;
+  background: var(--card-bg);
+  color: var(--text-primary);
+  text-align: left;
+}
+
+.paper-item span {
+  display: grid;
+  gap: 2px;
+}
+
+.paper-item small {
+  color: var(--text-secondary);
+}
+
+.paper-item b {
+  color: var(--focus);
+}
+
 .quant-research-band {
   padding: 14px 20px 16px;
   border-bottom: 1px solid var(--border);
@@ -2762,6 +2920,47 @@ body.dark .md-body blockquote { background: rgba(99,102,241,0.12); }
   margin-top: 12px;
   padding-top: 12px;
   border-top: 1px solid var(--border);
+}
+
+.factor-lab-panel {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.factor-lab-summary,
+.factor-candidate-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 20px;
+  margin-top: 8px;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.factor-lab-summary strong {
+  color: var(--text-primary);
+}
+
+.factor-lab-table {
+  min-width: 1320px;
+  margin-top: 8px;
+}
+
+.factor-lab-table td {
+  vertical-align: top;
+}
+
+.factor-lab-reasons {
+  min-width: 240px;
+  max-width: 360px;
+  white-space: normal;
+  line-height: 1.45;
+}
+
+.factor-candidate-line .stock-link-btn {
+  padding: 2px 0;
 }
 
 .quant-result-head,
@@ -3194,6 +3393,19 @@ body.dark .model-status.unavailable {
 
   .quant-control-grid {
     grid-template-columns: 1fr;
+  }
+
+  .decision-control-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .decision-control-grid .span-2 {
+    grid-column: auto;
+  }
+
+  .paper-row-head {
+    align-items: flex-start;
+    flex-direction: column;
   }
 
   .quant-actions {

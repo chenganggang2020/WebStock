@@ -3,7 +3,8 @@ const assert = require('node:assert/strict');
 
 const {
   validateDatasetManifest,
-  validateQuantResult
+  validateQuantResult,
+  validateFactorLabResult
 } = require('../services/quantContractService');
 
 function validManifest(overrides = {}) {
@@ -74,6 +75,39 @@ function validResult(overrides = {}) {
   }, overrides);
 }
 
+function validFactorLabResult(overrides = {}) {
+  const metrics = validResult().metrics;
+  return Object.assign({
+    schema: 'webstock.quant.factor-lab.v1',
+    runId: 'factor-lab-20260809-001',
+    createdAt: '2026-08-09T10:00:00.000Z',
+    status: 'completed',
+    validationStatus: 'exploratory',
+    asOf: '2026-08-07',
+    dataManifest: { datasetId: 'sina-pilot-20260809', sha256: 'b'.repeat(64) },
+    runtime: { python: '3.12.13', qlib: '0.9.7', lightgbm: '4.7.0' },
+    parameters: { labelHorizon: 5, topK: 10, costBps: 8 },
+    folds: validResult().folds,
+    factors: [{
+      factorId: 'feature_momentum_20',
+      displayName: '20日动量',
+      validationRankIc: 0.03,
+      testRankIc: 0.02,
+      positiveFoldRate: 1,
+      maxAbsCorrelation: 0.4,
+      admission: 'watch',
+      metrics,
+      folds: [{ fold: 1, orientation: 1, validationRankIc: 0.03, testRankIc: 0.02 }]
+    }],
+    composite: {
+      metrics,
+      candidates: [{ code: '000001', name: '平安银行', score: 0.12 }]
+    },
+    artifacts: [{ path: 'factor_scores.parquet', sha256: 'c'.repeat(64), rows: 120 }],
+    warnings: ['Exploratory factor gate only.']
+  }, overrides);
+}
+
 test('dataset manifests preserve source, coverage, hashes and provenance limits', () => {
   const manifest = validateDatasetManifest(validManifest());
   assert.equal(manifest.datasetId, 'sina-pilot-20260809');
@@ -138,4 +172,24 @@ test('a traceable exploratory rolling result passes the contract', () => {
   assert.equal(result.modelId, 'qlib-lightgbm-v1');
   assert.equal(result.folds.length, 1);
   assert.equal(result.validationStatus, 'exploratory');
+});
+
+test('factor lab results preserve sample-out folds, gates and artifacts', () => {
+  const result = validateFactorLabResult(validFactorLabResult(), validManifest());
+  assert.equal(result.factors[0].admission, 'watch');
+  assert.equal(result.folds.length, 1);
+});
+
+test('factor lab rejects future-leaking folds and invalid admission labels', () => {
+  assert.throws(() => validateFactorLabResult(validFactorLabResult({
+    factors: [Object.assign({}, validFactorLabResult().factors[0], { admission: 'approved' })]
+  }), validManifest()), /admission/i);
+  assert.throws(() => validateFactorLabResult(validFactorLabResult({
+    folds: [{
+      train: { start: '2019-01-02', end: '2024-01-05' },
+      validation: { start: '2024-01-02', end: '2024-06-21' },
+      test: { start: '2024-07-01', end: '2024-09-27' },
+      purgeDays: 5
+    }]
+  }), validManifest()), /fold|overlap/i);
 });

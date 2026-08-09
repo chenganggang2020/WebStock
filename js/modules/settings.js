@@ -368,8 +368,8 @@ function settingsImportUserDataFromFile(file) {
       const current = preview.current || {};
       const message = [
         'Import will replace local WebStock workstation data.',
-        'Incoming: watchlist ' + (incoming.watchlist || 0) + ', trades ' + (incoming.trades || 0) + ', sectors ' + (incoming.sectors || 0) + ', leaders ' + (incoming.sectorLeaders || 0) + ', screener tasks ' + (incoming.screenerResults || 0) + ', knowledge sources ' + (incoming.knowledgeSources || 0) + ', research runs ' + (incoming.researchRuns || 0) + '.',
-        'Current: watchlist ' + (current.watchlist || 0) + ', trades ' + (current.trades || 0) + ', sectors ' + (current.sectors || 0) + ', leaders ' + (current.sectorLeaders || 0) + ', screener tasks ' + (current.screenerResults || 0) + ', knowledge sources ' + (current.knowledgeSources || 0) + ', research runs ' + (current.researchRuns || 0) + '.',
+        'Incoming: watchlist ' + (incoming.watchlist || 0) + ', trades ' + (incoming.trades || 0) + ', sectors ' + (incoming.sectors || 0) + ', leaders ' + (incoming.sectorLeaders || 0) + ', screener tasks ' + (incoming.screenerResults || 0) + ', knowledge sources ' + (incoming.knowledgeSources || 0) + ', research runs ' + (incoming.researchRuns || 0) + ', paper portfolios ' + (incoming.paperPortfolios || 0) + '.',
+        'Current: watchlist ' + (current.watchlist || 0) + ', trades ' + (current.trades || 0) + ', sectors ' + (current.sectors || 0) + ', leaders ' + (current.sectorLeaders || 0) + ', screener tasks ' + (current.screenerResults || 0) + ', knowledge sources ' + (current.knowledgeSources || 0) + ', research runs ' + (current.researchRuns || 0) + ', paper portfolios ' + (current.paperPortfolios || 0) + '.',
         'Continue?'
       ].join('\n');
       if (!confirm(message)) return;
@@ -385,7 +385,8 @@ function settingsImportUserDataFromFile(file) {
         ', leaders ' + result.sectorLeaders +
         ', screener tasks ' + (result.screenerResults || 0) +
         ', knowledge sources ' + (result.knowledgeSources || 0) +
-        ', research runs ' + (result.researchRuns || 0) + '.'
+        ', research runs ' + (result.researchRuns || 0) +
+        ', paper portfolios ' + (result.paperPortfolios || 0) + '.'
       );
       if (window.Watchlist) window.Watchlist.loadWatchlist().catch(function() {});
       if (window.RecentStocks) window.RecentStocks.load(20).catch(function() {});

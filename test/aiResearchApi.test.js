@@ -102,6 +102,45 @@ test('expert knowledge API supports source, search, handoff and saved research r
   assert.equal(models.json.success, true);
   assert.ok(models.json.data.some(item => item.id === 'knowledge-fts-v1' && item.status === 'available'));
   assert.ok(models.json.data.some(item => item.id === 'master' && item.status !== 'planned'));
+  assert.ok(models.json.data.some(item => item.id === 'local-factor-lab-v1' && item.status !== 'planned'));
+  assert.ok(models.json.data.some(item => item.id === 'evidence-orchestrator-v1' && item.status === 'available'));
+
+  const screenerResult = await requestJson(server, {
+    path: '/api/screener/results',
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' }
+  }, {
+    taskName: '先进封装候选',
+    result: {
+      strategy: 'sector-leader',
+      candidates: [
+        { code: '688981', name: '中芯国际', score: 90 },
+        { code: '300750', name: '宁德时代', score: 80 }
+      ]
+    }
+  });
+  assert.equal(screenerResult.json.success, true);
+
+  const packet = await requestJson(server, {
+    path: '/api/decision-packets',
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' }
+  }, { question: '先进封装候选如何复核？', riskProfile: 'balanced' });
+  assert.equal(packet.json.success, true);
+  assert.ok(packet.json.data.candidates.some(item => item.code === '688981'));
+  assert.ok(packet.json.data.evidence.some(item => item.evidenceId));
+
+  const paper = await requestJson(server, {
+    path: '/api/paper-portfolios',
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' }
+  }, { packet: packet.json.data, name: 'API 纸面组合', capital: 100000 });
+  assert.equal(paper.json.success, true);
+  assert.equal(paper.json.data.status, 'draft');
+  assert.ok(paper.json.data.items.length >= 1);
+
+  const paperList = await requestJson(server, '/api/paper-portfolios');
+  assert.ok(paperList.json.data.some(item => item.id === paper.json.data.id));
 });
 
 test('knowledge analysis refuses to invent an answer without matching evidence', async t => {

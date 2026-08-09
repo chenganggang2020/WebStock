@@ -9,6 +9,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from .collector import collect_dataset
+from .factor_lab import run_factor_lab
 from .master_model import run_master_baseline
 from .model import run_lightgbm_baseline
 
@@ -160,6 +161,36 @@ def command_run(args):
         "resultPath": str(result_path),
         "result": result,
     })
+
+
+def command_factor_lab(args):
+    workspace = Path(args.workspace).resolve()
+    dataset_id = _safe_id(args.dataset_id, "dataset id")
+    run_id = _safe_id(args.run_id or "factor-lab-" + datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ"), "run id")
+    os.chdir(workspace)
+    result_path, result = run_factor_lab(
+        dataset_dir=workspace / "datasets" / dataset_id,
+        workspace=workspace,
+        run_id=run_id,
+        train_days=args.train_days,
+        validation_days=args.validation_days,
+        test_days=args.test_days,
+        step_days=args.step_days,
+        label_horizon=args.label_horizon,
+        max_folds=args.max_folds,
+        top_k=args.top_k,
+        cost_bps=args.cost_bps,
+        seed=args.seed,
+        emit=emit_event,
+    )
+    manifest_path = resolve_manifest_output_path(result_path, result["dataManifest"]["path"])
+    emit_result({
+        "kind": "factor-lab",
+        "manifestPath": str(manifest_path),
+        "resultPath": str(result_path.resolve()),
+        "datasetId": result["dataManifest"]["datasetId"],
+        "runId": result["runId"],
+    })
     return 0
 
 
@@ -243,6 +274,21 @@ def build_parser():
     run = commands.add_parser("run")
     add_common_model_arguments(run)
     run.set_defaults(handler=command_run)
+
+    factor_lab = commands.add_parser("factor-lab")
+    factor_lab.add_argument("--workspace", required=True)
+    factor_lab.add_argument("--dataset-id", required=True)
+    factor_lab.add_argument("--run-id", default="")
+    factor_lab.add_argument("--train-days", type=int, default=504)
+    factor_lab.add_argument("--validation-days", type=int, default=126)
+    factor_lab.add_argument("--test-days", type=int, default=63)
+    factor_lab.add_argument("--step-days", type=int, default=63)
+    factor_lab.add_argument("--label-horizon", type=int, default=5)
+    factor_lab.add_argument("--max-folds", type=int, default=4)
+    factor_lab.add_argument("--top-k", type=int, default=20)
+    factor_lab.add_argument("--cost-bps", type=float, default=8.0)
+    factor_lab.add_argument("--seed", type=int, default=20260809)
+    factor_lab.set_defaults(handler=command_factor_lab)
 
     pilot = commands.add_parser("pilot")
     add_common_collection_arguments(pilot)

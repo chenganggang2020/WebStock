@@ -505,11 +505,54 @@
             <button id="runQuantPilotBtn" class="small-btn primary">公开数据试跑</button>
             <button id="collectQuantMarketBtn" class="small-btn">同步全市场</button>
             <button id="runQuantDatasetBtn" class="small-btn">运行已有数据</button>
+            <button id="runFactorLabBtn" class="small-btn">因子体检</button>
             <button id="cancelQuantJobBtn" class="small-btn danger" style="display:none;">停止</button>
           </div>
         </div>
         <div id="quantJobStatus" class="quant-job-status" aria-live="polite"></div>
         <div id="quantResultPanel" class="quant-result-panel"></div>
+        <div id="factorLabPanel" class="factor-lab-panel"></div>
+      </section>
+      <section class="research-decision-band">
+        <div class="panel-title-row">
+          <h3>证据决策与纸面组合</h3>
+          <span id="decisionPacketStatus" class="muted">尚未生成决策包</span>
+        </div>
+        <div class="decision-control-grid">
+          <label class="span-2">研究问题
+            <textarea id="decisionQuestionInput" placeholder="例如：综合量化、主营业务、专家资料和资讯，哪些半导体候选值得继续研究？"></textarea>
+          </label>
+          <label>风险档位
+            <select id="decisionRiskProfileSelect">
+              <option value="conservative">保守</option>
+              <option value="balanced" selected>均衡</option>
+              <option value="aggressive">积极</option>
+            </select>
+          </label>
+          <label>候选上限
+            <input id="decisionCandidateLimitInput" type="number" min="3" max="20" step="1" value="12">
+          </label>
+          <label>纸面资金
+            <input id="paperCapitalInput" type="number" min="1000" max="1000000000" step="10000" value="100000">
+          </label>
+          <label>持仓数上限
+            <input id="paperMaxPositionsInput" type="number" min="1" max="20" step="1" value="8">
+          </label>
+          <label>单股上限
+            <input id="paperMaxWeightInput" type="number" min="3" max="50" step="1" value="15">
+          </label>
+          <label>现金保留
+            <input id="paperCashReserveInput" type="number" min="0" max="90" step="1" value="20">
+          </label>
+          <div class="decision-actions span-2">
+            <button id="buildDecisionPacketBtn" class="small-btn primary">生成证据决策包</button>
+            <button id="analyzeDecisionPacketBtn" class="small-btn" disabled>交给 ChatGPT 复核</button>
+            <button id="createPaperPortfolioBtn" class="small-btn" disabled>建立纸面组合草稿</button>
+          </div>
+        </div>
+        <div id="decisionPacketPanel" class="decision-packet-panel"></div>
+        <div id="decisionPacketAnalysis" class="knowledge-direct-result" style="display:none;"></div>
+        <div id="paperPortfolioPanel" class="paper-portfolio-panel"></div>
       </section>
       <section class="ai-model-band">
         <div class="panel-title-row">

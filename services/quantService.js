@@ -11,6 +11,7 @@ const {
 const {
   validateDatasetManifest,
   validateQuantResult,
+  validateFactorLabResult,
   sha256File,
   manifestSha256
 } = require('./quantContractService');
@@ -53,6 +54,7 @@ function ensureWorkspace() {
   fs.mkdirSync(path.join(workspace, 'jobs'), { recursive: true });
   fs.mkdirSync(path.join(workspace, 'datasets'), { recursive: true });
   fs.mkdirSync(path.join(workspace, 'runs'), { recursive: true });
+  fs.mkdirSync(path.join(workspace, 'factor-runs'), { recursive: true });
   return workspace;
 }
 
@@ -239,6 +241,33 @@ function verifyStoredResult(resultPath, options = {}) {
   return { manifest, result, manifestPath, resultPath: resolvedResultPath };
 }
 
+function verifyStoredFactorResult(resultPath, options = {}) {
+  const verifyHashes = options.verifyHashes !== false;
+  const workspace = ensureWorkspace();
+  const runsRoot = path.join(workspace, 'factor-runs');
+  const datasetsRoot = path.join(workspace, 'datasets');
+  const resolvedResultPath = path.resolve(resultPath);
+  if (!isInside(runsRoot, resolvedResultPath)) throw new Error('因子结果文件超出因子实验目录。');
+
+  const result = readJson(resolvedResultPath);
+  const datasetId = String(result.dataManifest && result.dataManifest.datasetId || '');
+  const manifestPath = path.resolve(datasetsRoot, datasetId, 'manifest.json');
+  if (!isInside(datasetsRoot, manifestPath)) throw new Error('因子结果引用的数据集路径无效。');
+  const manifest = verifyManifest(manifestPath, { verifyHashes });
+  validateFactorLabResult(result, manifest);
+
+  const runRoot = path.dirname(resolvedResultPath);
+  result.artifacts.forEach(artifact => {
+    const target = path.resolve(runRoot, artifact.path);
+    if (!isInside(runRoot, target)) throw new Error('因子产物路径超出当前实验目录。');
+    if (!fs.existsSync(target)) throw new Error('因子产物缺失：' + artifact.path);
+    if (verifyHashes && sha256File(target) !== artifact.sha256.toLowerCase()) {
+      throw new Error('因子产物哈希不一致：' + artifact.path);
+    }
+  });
+  return { manifest, result, manifestPath, resultPath: resolvedResultPath };
+}
+
 function verifyResult(output) {
   if (!output || !output.manifestPath || !output.resultPath) throw new Error('量化任务没有返回完整的输出路径。');
   const manifestPath = path.resolve(output.manifestPath);
@@ -249,6 +278,19 @@ function verifyResult(output) {
   }
   const verified = verifyStoredResult(resultPath);
   if (verified.manifestPath !== manifestPath) throw new Error('任务返回的数据清单与结果引用不一致。');
+  return verified;
+}
+
+function verifyFactorResult(output) {
+  if (!output || !output.manifestPath || !output.resultPath) throw new Error('因子任务没有返回完整的输出路径。');
+  const manifestPath = path.resolve(output.manifestPath);
+  const resultPath = path.resolve(output.resultPath);
+  const workspace = ensureWorkspace();
+  if (!isInside(workspace, manifestPath) || !isInside(workspace, resultPath)) {
+    throw new Error('因子输出超出已配置的工作区。');
+  }
+  const verified = verifyStoredFactorResult(resultPath);
+  if (verified.manifestPath !== manifestPath) throw new Error('因子任务返回的数据清单与结果引用不一致。');
   return verified;
 }
 
@@ -268,6 +310,7 @@ function publicJob(job) {
     return copy;
   }
   if (copy.output) {
+    const factorCount = copy.output.factorCount;
     const manifest = copy.output.manifest || {};
     const result = copy.output.result || {};
     copy.output = {
@@ -281,6 +324,7 @@ function publicJob(job) {
       coverage: copy.output.coverage || manifest.coverage || null,
       metrics: copy.output.metrics || result.metrics || null
     };
+    if (factorCount != null) copy.output.factorCount = Number(factorCount);
   }
   return copy;
 }
@@ -314,7 +358,7 @@ function dateValue(value, fallback) {
   return text;
 }
 
-function commonModelArgs(input) {
+function commonEvaluationArgs(input) {
   const testDays = Math.round(numeric(input.testDays, 63, 21, 252));
   const stepDays = Math.round(numeric(input.stepDays, 63, 21, 252));
   if (stepDays < testDays) throw new Error('滚动步长不能小于测试窗口，否则样本外区间会重叠。');
@@ -326,7 +370,12 @@ function commonModelArgs(input) {
     '--label-horizon', String(Math.round(numeric(input.labelHorizon, 5, 1, 20))),
     '--max-folds', String(Math.round(numeric(input.maxFolds, 4, 1, 12))),
     '--top-k', String(Math.round(numeric(input.topK, 20, 3, 100))),
-    '--cost-bps', String(numeric(input.costBps, 8, 0, 100)),
+    '--cost-bps', String(numeric(input.costBps, 8, 0, 100))
+  ];
+}
+
+function commonModelArgs(input) {
+  return commonEvaluationArgs(input).concat([
     '--num-boost-round', String(Math.round(numeric(input.numBoostRound, 300, 20, 2000))),
     '--early-stopping-rounds', String(Math.round(numeric(input.earlyStoppingRounds, 30, 5, 200))),
     '--master-lookback', String(Math.round(numeric(input.masterLookback, 8, 4, 60))),
@@ -339,7 +388,7 @@ function commonModelArgs(input) {
     '--master-dropout', String(numeric(input.masterDropout, 0.1, 0, 0.8)),
     '--master-gate-temperature', String(numeric(input.masterGateTemperature, 1, 0.05, 20)),
     '--master-batch-days', String(Math.round(numeric(input.masterBatchDays, 16, 1, 64)))
-  ];
+  ]);
 }
 
 function modelValue(value) {
@@ -405,6 +454,46 @@ function startJob(kind, args, request) {
         coverage: manifest.coverage
       };
       job.updatedAt = new Date().toISOString();
+      persistJob(job);
+      return;
+    }
+    if (output.kind === 'factor-lab') {
+      const verified = verifyFactorResult(output);
+      job.status = 'completed';
+      job.progress = { stage: 'completed', message: '因子样本外体检完成。' };
+      job.output = {
+        manifestPath: verified.manifestPath,
+        resultPath: verified.resultPath,
+        datasetId: verified.manifest.datasetId,
+        runId: verified.result.runId,
+        modelId: 'local-factor-lab-v1',
+        validationStatus: verified.result.validationStatus,
+        asOf: verified.result.asOf,
+        coverage: verified.manifest.coverage,
+        metrics: verified.result.composite.metrics,
+        factorCount: verified.result.factors.length
+      };
+      job.updatedAt = new Date().toISOString();
+      researchRuns.createRun({
+        runType: 'factor-lab',
+        modelId: 'local-factor-lab-v1',
+        status: 'completed',
+        title: '因子样本外体检 ' + verified.manifest.datasetId,
+        result: JSON.stringify({
+          validationStatus: verified.result.validationStatus,
+          factors: verified.result.factors.map(factor => ({
+            factorId: factor.factorId,
+            admission: factor.admission,
+            testRankIc: factor.testRankIc,
+            positiveFoldRate: factor.positiveFoldRate,
+            reasons: factor.reasons
+          })),
+          candidates: verified.result.composite.candidates,
+          warnings: verified.result.warnings
+        }, null, 2),
+        request: { jobId: job.id, manifestPath: verified.manifestPath, resultPath: verified.resultPath },
+        metrics: verified.result.composite.metrics
+      });
       persistJob(job);
       return;
     }
@@ -553,6 +642,17 @@ function startRun(input = {}) {
   return startJob('run', args, Object.assign({}, input, { model, datasetId, runId }));
 }
 
+function startFactorLab(input = {}) {
+  const datasetId = String(input.datasetId || '').trim();
+  if (!/^[A-Za-z0-9._-]{3,100}$/.test(datasetId)) throw new Error('请选择有效的数据集。');
+  const workspace = ensureWorkspace();
+  const runId = 'factor-lab-' + compactUtcTimestamp();
+  const args = [
+    'factor-lab', '--workspace', workspace, '--dataset-id', datasetId, '--run-id', runId
+  ].concat(commonEvaluationArgs(input));
+  return startJob('factor-lab', args, Object.assign({}, input, { datasetId, runId }));
+}
+
 function loadPersistedJobs() {
   const dir = path.join(ensureWorkspace(), 'jobs');
   fs.readdirSync(dir, { withFileTypes: true }).filter(entry => entry.isFile() && entry.name.endsWith('.json')).forEach(entry => {
@@ -639,6 +739,22 @@ function listResults(limit = 30) {
   }).sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || ''))).slice(0, Math.min(Math.max(Number(limit) || 30, 1), 100));
 }
 
+function listFactorResults(limit = 30) {
+  const dir = path.join(ensureWorkspace(), 'factor-runs');
+  return fs.readdirSync(dir, { withFileTypes: true }).filter(entry => entry.isDirectory()).map(entry => {
+    const resultPath = path.join(dir, entry.name, 'result.json');
+    try {
+      const verified = verifyStoredFactorResult(resultPath, { verifyHashes: false });
+      const createdAt = verified.result.createdAt || fs.statSync(resultPath).mtime.toISOString();
+      return { resultPath, result: verified.result, createdAt, valid: true, error: '' };
+    } catch (error) {
+      const timestampTarget = fs.existsSync(resultPath) ? resultPath : path.dirname(resultPath);
+      return { resultPath, result: null, createdAt: fs.statSync(timestampTarget).mtime.toISOString(), valid: false, error: error.message };
+    }
+  }).sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')))
+    .slice(0, Math.min(Math.max(Number(limit) || 30, 1), 100));
+}
+
 loadPersistedJobs();
 
 module.exports = {
@@ -648,10 +764,13 @@ module.exports = {
   startPilot,
   startCollection,
   startRun,
+  startFactorLab,
   listJobs,
   getJob,
   cancelJob,
   listDatasets,
   listResults,
+  listFactorResults,
+  commonEvaluationArgs,
   workspacePath
 };

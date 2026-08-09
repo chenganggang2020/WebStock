@@ -30,6 +30,10 @@ router.get('/quant/results', function(req, res) {
   try { ok(res, quant.listResults(req.query.limit)); } catch (error) { fail(res, error); }
 });
 
+router.get('/quant/factor-labs', function(req, res) {
+  try { ok(res, quant.listFactorResults(req.query.limit)); } catch (error) { fail(res, error); }
+});
+
 router.get('/quant/jobs', function(req, res) {
   try { ok(res, quant.listJobs(req.query.limit)); } catch (error) { fail(res, error); }
 });
@@ -52,6 +56,10 @@ router.post('/quant/datasets/collect', function(req, res) {
 
 router.post('/quant/runs', function(req, res) {
   try { ok(res, quant.startRun(req.body || {})); } catch (error) { fail(res, error); }
+});
+
+router.post('/quant/factor-labs', function(req, res) {
+  try { ok(res, quant.startFactorLab(req.body || {})); } catch (error) { fail(res, error); }
 });
 
 module.exports = router;

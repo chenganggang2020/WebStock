@@ -1,8 +1,9 @@
 const db = require('../db');
 const knowledgeService = require('./knowledgeService');
+const paperPortfolioService = require('./paperPortfolioService');
 const researchRunService = require('./researchRunService');
 
-const BACKUP_VERSION = 2;
+const BACKUP_VERSION = 3;
 const MAX_ITEMS_PER_TABLE = 5000;
 
 function text(value, fallback = '', maxLength = 2000) {
@@ -110,6 +111,7 @@ function exportUserData() {
 
   const knowledgeSources = knowledgeService.exportSources();
   const researchRuns = researchRunService.exportRuns();
+  const paperPortfolios = paperPortfolioService.exportPortfolios();
 
   return {
     version: BACKUP_VERSION,
@@ -124,7 +126,8 @@ function exportUserData() {
       screenerResults,
       screenerCandidateNotes,
       knowledgeSources,
-      researchRuns
+      researchRuns,
+      paperPortfolios
     }
   };
 }
@@ -272,6 +275,32 @@ function normalizeResearchRun(item) {
   };
 }
 
+function normalizePaperPortfolio(item) {
+  const status = text(item.status, 'draft', 20).toLowerCase();
+  const riskProfile = text(item.riskProfile, 'balanced', 20).toLowerCase();
+  const paperItems = Array.isArray(item.items) ? item.items : [];
+  return {
+    name: text(item.name, 'Paper portfolio', 160),
+    status: ['draft', 'active', 'archived'].includes(status) ? status : 'draft',
+    asOf: text(item.asOf, new Date().toISOString(), 40),
+    capital: Math.max(numberOrZero(item.capital) || 100000, 1000),
+    cashWeight: Math.min(Math.max(numberOrZero(item.cashWeight), 0), 1),
+    riskProfile: ['conservative', 'balanced', 'aggressive'].includes(riskProfile) ? riskProfile : 'balanced',
+    constraints: item.constraints && typeof item.constraints === 'object' ? item.constraints : {},
+    rationale: text(item.rationale, '', 4000),
+    items: paperItems.slice(0, 100).map(position => ({
+      code: code(position.code),
+      name: text(position.name || position.code, position.code, 100),
+      targetWeight: Math.min(Math.max(numberOrZero(position.targetWeight), 0), 1),
+      consensusScore: Math.min(Math.max(numberOrZero(position.consensusScore), 0), 100),
+      signalCount: Math.max(integerOrZero(position.signalCount), 0),
+      rationale: text(position.rationale, '', 2000),
+      risks: normalizeStringArray(position.risks, 30),
+      evidence: normalizeStringArray(position.evidence, 50)
+    })).filter(position => position.targetWeight > 0)
+  };
+}
+
 function prepareImport(backup) {
   if (!backup || typeof backup !== 'object') throw new Error('Backup JSON is required');
   const recentStocks = arrayFromBackup(backup, 'recentStocks').map(normalizeRecent);
@@ -284,6 +313,7 @@ function prepareImport(backup) {
   const screenerCandidateNotes = arrayFromBackup(backup, 'screenerCandidateNotes').map(normalizeScreenerCandidateNote);
   const knowledgeSources = arrayFromBackup(backup, 'knowledgeSources').map(normalizeKnowledgeSource);
   const researchRuns = arrayFromBackup(backup, 'researchRuns').map(normalizeResearchRun);
+  const paperPortfolios = arrayFromBackup(backup, 'paperPortfolios').map(normalizePaperPortfolio);
   return {
     recentStocks,
     watchlist,
@@ -294,7 +324,8 @@ function prepareImport(backup) {
     screenerResults,
     screenerCandidateNotes,
     knowledgeSources,
-    researchRuns
+    researchRuns,
+    paperPortfolios
   };
 }
 
@@ -309,7 +340,8 @@ function countsForPrepared(prepared) {
     screenerResults: prepared.screenerResults.length,
     screenerCandidateNotes: prepared.screenerCandidateNotes.length,
     knowledgeSources: prepared.knowledgeSources.length,
-    researchRuns: prepared.researchRuns.length
+    researchRuns: prepared.researchRuns.length,
+    paperPortfolios: prepared.paperPortfolios.length
   };
 }
 
@@ -324,7 +356,8 @@ function currentCounts() {
     screenerResults: db.prepare('SELECT COUNT(*) AS count FROM ai_screener_results').get().count,
     screenerCandidateNotes: db.prepare('SELECT COUNT(*) AS count FROM screener_candidate_notes').get().count,
     knowledgeSources: db.prepare('SELECT COUNT(*) AS count FROM knowledge_sources').get().count,
-    researchRuns: db.prepare('SELECT COUNT(*) AS count FROM ai_research_runs').get().count
+    researchRuns: db.prepare('SELECT COUNT(*) AS count FROM ai_research_runs').get().count,
+    paperPortfolios: db.prepare('SELECT COUNT(*) AS count FROM paper_portfolios').get().count
   };
 }
 
@@ -350,7 +383,8 @@ function importUserData(backup, options = {}) {
     screenerResults,
     screenerCandidateNotes,
     knowledgeSources,
-    researchRuns
+    researchRuns,
+    paperPortfolios
   } = prepared;
 
   const summary = {
@@ -371,6 +405,7 @@ function importUserData(backup, options = {}) {
       db.prepare('DELETE FROM ai_screener_results').run();
       db.prepare('DELETE FROM ai_research_runs').run();
       db.prepare('DELETE FROM knowledge_sources').run();
+      db.prepare('DELETE FROM paper_portfolios').run();
     }
 
     const insertRecent = db.prepare(`
@@ -444,6 +479,17 @@ function importUserData(backup, options = {}) {
         updated_at = CURRENT_TIMESTAMP
     `);
 
+    const insertPaperPortfolio = db.prepare(`
+      INSERT INTO paper_portfolios (
+        name, status, as_of, capital, cash_weight, risk_profile, constraints_json, rationale, source_run_id
+      ) VALUES (@name, @status, @asOf, @capital, @cashWeight, @riskProfile, @constraintsJson, @rationale, NULL)
+    `);
+    const insertPaperPortfolioItem = db.prepare(`
+      INSERT INTO paper_portfolio_items (
+        portfolio_id, code, name, target_weight, consensus_score, signal_count, rationale, risks_json, evidence_json
+      ) VALUES (@portfolioId, @code, @name, @targetWeight, @consensusScore, @signalCount, @rationale, @risksJson, @evidenceJson)
+    `);
+
     recentStocks.forEach(item => insertRecent.run(item));
     watchlist.forEach(item => insertWatchlist.run(item));
     trades.forEach(item => insertTrade.run(item));
@@ -494,6 +540,29 @@ function importUserData(backup, options = {}) {
     sectorLeaderSnapshots.forEach(item => insertLeaderSnapshot.run(item));
     knowledgeSources.forEach(item => knowledgeService.createSource(item));
     researchRuns.forEach(item => researchRunService.createRun(item));
+    paperPortfolios.forEach(item => {
+      const info = insertPaperPortfolio.run({
+        name: item.name,
+        status: item.status,
+        asOf: item.asOf,
+        capital: item.capital,
+        cashWeight: item.cashWeight,
+        riskProfile: item.riskProfile,
+        constraintsJson: JSON.stringify(item.constraints),
+        rationale: item.rationale
+      });
+      item.items.forEach(position => insertPaperPortfolioItem.run({
+        portfolioId: info.lastInsertRowid,
+        code: position.code,
+        name: position.name,
+        targetWeight: position.targetWeight,
+        consensusScore: position.consensusScore,
+        signalCount: position.signalCount,
+        rationale: position.rationale,
+        risksJson: JSON.stringify(position.risks),
+        evidenceJson: JSON.stringify(position.evidence)
+      }));
+    });
   })();
 
   return summary;

@@ -202,6 +202,38 @@ CREATE TABLE IF NOT EXISTS ai_research_runs (
   updated_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS paper_portfolios (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'draft' CHECK(status IN ('draft', 'active', 'archived')),
+  as_of TEXT NOT NULL,
+  capital REAL NOT NULL DEFAULT 100000,
+  cash_weight REAL NOT NULL DEFAULT 1,
+  risk_profile TEXT NOT NULL DEFAULT 'balanced',
+  constraints_json TEXT NOT NULL DEFAULT '{}',
+  rationale TEXT DEFAULT '',
+  source_run_id INTEGER,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (source_run_id) REFERENCES ai_research_runs(id) ON DELETE SET NULL
+);
+
+CREATE TABLE IF NOT EXISTS paper_portfolio_items (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  portfolio_id INTEGER NOT NULL,
+  code TEXT NOT NULL,
+  name TEXT NOT NULL,
+  target_weight REAL NOT NULL,
+  consensus_score REAL NOT NULL DEFAULT 0,
+  signal_count INTEGER NOT NULL DEFAULT 0,
+  rationale TEXT DEFAULT '',
+  risks_json TEXT NOT NULL DEFAULT '[]',
+  evidence_json TEXT NOT NULL DEFAULT '[]',
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (portfolio_id) REFERENCES paper_portfolios(id) ON DELETE CASCADE
+);
+
 CREATE INDEX IF NOT EXISTS idx_watchlist_group ON watchlist(group_name);
 CREATE INDEX IF NOT EXISTS idx_trades_code ON trades(code);
 CREATE INDEX IF NOT EXISTS idx_trades_date ON trades(trade_date);
@@ -222,6 +254,8 @@ CREATE INDEX IF NOT EXISTS idx_knowledge_sources_author ON knowledge_sources(aut
 CREATE UNIQUE INDEX IF NOT EXISTS idx_knowledge_chunks_source_order ON knowledge_chunks(source_id, chunk_index);
 CREATE INDEX IF NOT EXISTS idx_ai_research_runs_type ON ai_research_runs(run_type, created_at);
 CREATE INDEX IF NOT EXISTS idx_ai_research_runs_model ON ai_research_runs(model_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_paper_portfolios_status ON paper_portfolios(status, updated_at);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_paper_portfolio_item_unique ON paper_portfolio_items(portfolio_id, code);
 
 CREATE TRIGGER IF NOT EXISTS trg_knowledge_chunk_insert
 AFTER INSERT ON knowledge_chunks

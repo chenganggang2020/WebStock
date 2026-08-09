@@ -3,6 +3,7 @@ const fs = require('node:fs');
 
 const DATASET_SCHEMA = 'webstock.quant.dataset.v1';
 const RESULT_SCHEMA = 'webstock.quant.result.v1';
+const FACTOR_LAB_SCHEMA = 'webstock.quant.factor-lab.v1';
 const SHA256_PATTERN = /^[a-f0-9]{64}$/i;
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const REQUIRED_METRICS = [
@@ -220,6 +221,85 @@ function validateQuantResult(input, datasetInput) {
   return result;
 }
 
+function validateFactorLabResult(input, datasetInput) {
+  const result = object(input, 'factor lab result');
+  const manifest = validateDatasetManifest(datasetInput);
+  if (result.schema !== FACTOR_LAB_SCHEMA) throw contractError('unsupported factor lab schema');
+  nonEmptyString(result.runId, 'runId');
+  if (result.createdAt != null) timestampString(result.createdAt, 'createdAt');
+  if (result.status !== 'completed') throw contractError('only completed factor lab results can be validated');
+  if (!['exploratory', 'validated'].includes(result.validationStatus)) {
+    throw contractError('validationStatus must be exploratory or validated');
+  }
+  if (result.validationStatus === 'validated' && manifest.eligibility !== 'validation_eligible') {
+    throw contractError('exploratory dataset cannot produce a validated factor lab result');
+  }
+  const asOf = dateString(result.asOf, 'asOf');
+  if (asOf > manifest.asOf) throw contractError('factor result asOf exceeds dataset asOf');
+
+  const dataManifest = object(result.dataManifest, 'dataManifest');
+  if (dataManifest.datasetId !== manifest.datasetId) throw contractError('factor result datasetId does not match manifest');
+  if (sha256(dataManifest.sha256, 'dataManifest.sha256') !== manifest.manifestSha256.toLowerCase()) {
+    throw contractError('factor result manifest SHA256 does not match the dataset manifest hash');
+  }
+  nonEmptyString(object(result.runtime, 'runtime').python, 'runtime.python');
+  const parameters = object(result.parameters, 'parameters');
+  const labelHorizon = nonNegativeInteger(parameters.labelHorizon, 'parameters.labelHorizon');
+  if (labelHorizon < 1) throw contractError('parameters.labelHorizon must be positive');
+
+  if (!Array.isArray(result.folds) || !result.folds.length) throw contractError('folds must not be empty');
+  let previousTestEnd = '';
+  result.folds.forEach((fold, index) => {
+    const value = object(fold, 'folds[' + index + ']');
+    const train = validateSegment(value.train, 'folds[' + index + '].train');
+    const validation = validateSegment(value.validation, 'folds[' + index + '].validation');
+    const testSegment = validateSegment(value.test, 'folds[' + index + '].test');
+    const purgeDays = nonNegativeInteger(value.purgeDays, 'folds[' + index + '].purgeDays');
+    if (!(train.start <= train.end && train.end < validation.start && validation.start <= validation.end && validation.end < testSegment.start && testSegment.start <= testSegment.end)) {
+      throw contractError('factor fold time ranges overlap or are out of order');
+    }
+    if (purgeDays < labelHorizon) throw contractError('factor fold purgeDays is smaller than label horizon');
+    if (previousTestEnd && testSegment.start <= previousTestEnd) throw contractError('factor fold test ranges overlap');
+    previousTestEnd = testSegment.end;
+  });
+
+  if (!Array.isArray(result.factors) || !result.factors.length) throw contractError('factors must not be empty');
+  result.factors.forEach((factor, index) => {
+    object(factor, 'factors[' + index + ']');
+    nonEmptyString(factor.factorId, 'factors[' + index + '].factorId');
+    if (!['candidate', 'watch', 'rejected'].includes(factor.admission)) {
+      throw contractError('factor admission must be candidate, watch or rejected');
+    }
+    ['validationRankIc', 'testRankIc', 'positiveFoldRate', 'maxAbsCorrelation'].forEach(name => {
+      finiteNumber(factor[name], 'factors[' + index + '].' + name);
+    });
+    const metrics = object(factor.metrics, 'factors[' + index + '].metrics');
+    REQUIRED_METRICS.forEach(name => finiteNumber(metrics[name], 'factors[' + index + '].metrics.' + name));
+    if (!Array.isArray(factor.folds) || factor.folds.length !== result.folds.length) {
+      throw contractError('factor fold evidence must match the result folds');
+    }
+  });
+  const composite = object(result.composite, 'composite');
+  const compositeMetrics = object(composite.metrics, 'composite.metrics');
+  REQUIRED_METRICS.forEach(name => finiteNumber(compositeMetrics[name], 'composite.metrics.' + name));
+  if (!Array.isArray(composite.candidates)) throw contractError('composite.candidates must be an array');
+  composite.candidates.forEach((candidate, index) => {
+    if (!/^\d{6}$/.test(nonEmptyString(object(candidate, 'composite.candidates[' + index + ']').code, 'candidate.code'))) {
+      throw contractError('factor candidate code must contain six digits');
+    }
+    finiteNumber(candidate.score, 'factor candidate score');
+  });
+  if (!Array.isArray(result.artifacts) || !result.artifacts.length) throw contractError('factor artifacts must not be empty');
+  result.artifacts.forEach((artifact, index) => {
+    object(artifact, 'artifacts[' + index + ']');
+    nonEmptyString(artifact.path, 'artifacts[' + index + '].path');
+    sha256(artifact.sha256, 'artifacts[' + index + '].sha256');
+    nonNegativeInteger(artifact.rows, 'artifacts[' + index + '].rows');
+  });
+  stringArray(result.warnings, 'warnings', true);
+  return result;
+}
+
 function sha256File(filePath) {
   const hash = crypto.createHash('sha256');
   hash.update(fs.readFileSync(filePath));
@@ -243,8 +323,10 @@ function manifestSha256(manifest) {
 module.exports = {
   DATASET_SCHEMA,
   RESULT_SCHEMA,
+  FACTOR_LAB_SCHEMA,
   validateDatasetManifest,
   validateQuantResult,
+  validateFactorLabResult,
   sha256File,
   manifestSha256
 };

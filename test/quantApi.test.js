@@ -15,6 +15,7 @@ process.env.WEBSTOCK_SENTIMENT_OFFLINE = '1';
 process.env.WEBSTOCK_STOCK_PROFILE_OFFLINE = '1';
 
 const app = require('../server');
+const quant = require('../services/quantService');
 
 function requestJson(server, options, body) {
   const address = server.address();
@@ -90,6 +91,38 @@ test('quant API accepts only registered comparison models', async t => {
   assert.equal(response.statusCode, 400);
   assert.equal(response.json.success, false);
   assert.match(response.json.error, /模型/);
+});
+
+test('factor lab API lists results and validates windows before runtime startup', async t => {
+  const server = app.listen(0);
+  t.after(() => server.close());
+
+  const listed = await requestJson(server, '/api/quant/factor-labs');
+  assert.equal(listed.statusCode, 200);
+  assert.deepEqual(listed.json.data, []);
+
+  const invalid = await requestJson(server, {
+    path: '/api/quant/factor-labs',
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' }
+  }, { datasetId: 'test-dataset', testDays: 63, stepDays: 21 });
+  assert.equal(invalid.statusCode, 400);
+  assert.match(invalid.json.error, /重叠|步长/);
+
+  const missingRuntime = await requestJson(server, {
+    path: '/api/quant/factor-labs',
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' }
+  }, { datasetId: 'test-dataset' });
+  assert.equal(missingRuntime.statusCode, 409);
+});
+
+test('factor lab service arguments exclude model-specific training flags', () => {
+  const args = quant.commonEvaluationArgs({ testDays: 63, stepDays: 63, topK: 12, costBps: 8 });
+  assert.ok(args.includes('--test-days'));
+  assert.ok(args.includes('--cost-bps'));
+  assert.equal(args.includes('--num-boost-round'), false);
+  assert.equal(args.includes('--master-epochs'), false);
 });
 
 test.after(() => {
