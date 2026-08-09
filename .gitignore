@@ -4,6 +4,7 @@
 node_modules/
 npm-debug.log
 server_*.log
+server.*.log
 logs/
 analysis.md
 test-results/
