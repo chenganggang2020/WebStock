@@ -101,7 +101,7 @@ test('expert knowledge API supports source, search, handoff and saved research r
   const models = await requestJson(server, '/api/ai-models');
   assert.equal(models.json.success, true);
   assert.ok(models.json.data.some(item => item.id === 'knowledge-fts-v1' && item.status === 'available'));
-  assert.ok(models.json.data.some(item => item.id === 'master' && item.status === 'planned'));
+  assert.ok(models.json.data.some(item => item.id === 'master' && item.status !== 'planned'));
 });
 
 test('knowledge analysis refuses to invent an answer without matching evidence', async t => {

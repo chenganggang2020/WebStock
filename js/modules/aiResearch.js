@@ -143,8 +143,39 @@ function aiResearchRenderQuantRuntime() {
   if (installButton) installButton.style.display = !hasRuntime && installer.available ? '' : 'none';
   if (repairButton) repairButton.style.display = hasRuntime && installer.available ? '' : 'none';
   target.innerHTML = '<span class="model-status ' + aiResearchEscape(quantRuntime.status) + '">' + aiResearchEscape(label) + '</span>' +
-    (versions.qlib ? ' <span>Python ' + aiResearchEscape(versions.python) + ' / Qlib ' + aiResearchEscape(versions.qlib) + ' / LightGBM ' + aiResearchEscape(versions.lightgbm) + '</span>' : '') +
+    (versions.qlib ? ' <span>Python ' + aiResearchEscape(versions.python) + ' / Qlib ' + aiResearchEscape(versions.qlib) + ' / LightGBM ' + aiResearchEscape(versions.lightgbm) +
+      (versions.torch ? ' / PyTorch ' + aiResearchEscape(versions.torch) : '') + '</span>' : '') +
     '<span class="quant-runtime-reason">' + aiResearchEscape(quantRuntime.reason || '') + '</span>';
+}
+
+function quantModelChoice(modelId) {
+  return String(modelId || '').indexOf('master') >= 0 ? 'master' : 'lightgbm';
+}
+
+function quantModelLabel(modelId) {
+  return quantModelChoice(modelId) === 'master' ? 'MASTER 市场引导时序模型' : 'Qlib + LightGBM';
+}
+
+function quantComparisonKey(result) {
+  const parameters = result && result.parameters || {};
+  const comparedParameters = [
+    'trainDays', 'validationDays', 'testDays', 'stepDays', 'labelHorizon',
+    'maxFolds', 'topK', 'costBps', 'costModel', 'seed'
+  ].map(function(name) { return parameters[name] == null ? '' : parameters[name]; });
+  return JSON.stringify([
+    result && result.dataManifest && result.dataManifest.sha256 || '',
+    comparedParameters,
+    result && result.folds || []
+  ]);
+}
+
+function quantWarningText(value) {
+  const translations = {
+    'Exploratory MASTER comparison on the same public, unadjusted daily dataset and rolling folds as LightGBM.': 'MASTER 与 LightGBM 使用同一公开未复权日线、标签和滚动窗口，本结果仅为探索性对照。',
+    'Validation inference keeps all feature-valid stocks; missing labels are filtered only when metrics are computed.': '验证和预测保留全部特征有效股票，仅在计算损失或指标时过滤空标签。',
+    'This implementation follows the official MASTER architecture concepts under its MIT license; it is not an official pretrained checkpoint.': '本实现依据官方 MASTER 架构与 MIT 许可证重新实现，不是官方预训练检查点。'
+  };
+  return translations[String(value || '')] || String(value || '');
 }
 
 function aiResearchRenderQuantDatasets() {
@@ -194,7 +225,17 @@ function aiResearchRenderQuantJob() {
 function aiResearchRenderQuantResult() {
   const target = document.getElementById('quantResultPanel');
   if (!target) return;
-  const entry = quantResults.find(function(item) { return item.valid && item.result; });
+  const modelSelect = document.getElementById('quantModelSelect');
+  const selectedModel = modelSelect ? modelSelect.value : 'lightgbm';
+  const selectedEntries = quantResults.filter(function(item) {
+    return item.valid && item.result && quantModelChoice(item.result.modelId) === selectedModel;
+  });
+  const entry = selectedEntries.find(function(item) {
+    const key = quantComparisonKey(item.result);
+    return quantResults.some(function(other) {
+      return other.valid && other.result && quantModelChoice(other.result.modelId) !== selectedModel && quantComparisonKey(other.result) === key;
+    });
+  }) || selectedEntries[0] || quantResults.find(function(item) { return item.valid && item.result; });
   if (!entry) {
     target.innerHTML = '<div class="empty-state compact">尚无通过契约校验的量化结果。</div>';
     return;
@@ -208,6 +249,13 @@ function aiResearchRenderQuantResult() {
   const manifest = dataset && dataset.manifest;
   const coverage = manifest && manifest.coverage || {};
   const warnings = result.warnings || [];
+  const comparable = [];
+  quantResults.forEach(function(item) {
+    if (!item.valid || !item.result || !item.result.dataManifest) return;
+    if (quantComparisonKey(item.result) !== quantComparisonKey(result)) return;
+    const choice = quantModelChoice(item.result.modelId);
+    if (!comparable.some(function(existing) { return quantModelChoice(existing.modelId) === choice; })) comparable.push(item.result);
+  });
   const metricItems = [
     ['Rank IC', quantNumber(metrics.rankIc, 3), metrics.rankIc],
     ['ICIR', quantNumber(metrics.icir, 2), metrics.icir],
@@ -220,7 +268,7 @@ function aiResearchRenderQuantResult() {
     ['交易笔数', String(metrics.tradeCount == null ? '--' : metrics.tradeCount), 0],
     ['调仓次数', String(metrics.rebalanceCount == null ? '--' : metrics.rebalanceCount), 0]
   ];
-  target.innerHTML = '<div class="quant-result-head"><div><strong>Qlib + LightGBM</strong>' +
+  target.innerHTML = '<div class="quant-result-head"><div><strong>' + aiResearchEscape(quantModelLabel(result.modelId)) + '</strong>' +
       '<span class="model-status ' + (result.validationStatus === 'validated' ? 'available' : 'planned') + '">' +
       aiResearchEscape(result.validationStatus === 'validated' ? '已验证' : '探索性') + '</span></div>' +
       '<div class="muted">截止 ' + aiResearchEscape(result.asOf) + ' · ' + result.folds.length + ' 个滚动窗口 · ' +
@@ -229,11 +277,18 @@ function aiResearchRenderQuantResult() {
       '<span>失败 <strong>' + aiResearchEscape(coverage.failed == null ? '--' : coverage.failed) + '</strong> 只</span>' +
       '<span>样本 <strong>' + aiResearchEscape(coverage.rows == null ? '--' : coverage.rows) + '</strong> 行</span>' +
       '<span>成本 <strong>' + aiResearchEscape(result.parameters.costBps) + ' bp</strong></span></div>' +
+    (comparable.length > 1 ? '<div class="table-scroll compact-scroll"><table class="data-table quant-comparison-table"><thead><tr><th>同数据模型</th><th>Rank IC</th><th>年化</th><th>最大回撤</th><th>Sharpe</th></tr></thead><tbody>' +
+      comparable.map(function(other) { return '<tr><td>' + aiResearchEscape(quantModelLabel(other.modelId)) + '</td>' +
+        '<td class="' + quantMetricClass(other.metrics.rankIc) + '">' + aiResearchEscape(quantNumber(other.metrics.rankIc, 3)) + '</td>' +
+        '<td class="' + quantMetricClass(other.metrics.annualizedReturn) + '">' + aiResearchEscape(quantPercent(other.metrics.annualizedReturn)) + '</td>' +
+        '<td class="' + quantMetricClass(other.metrics.maxDrawdown) + '">' + aiResearchEscape(quantPercent(other.metrics.maxDrawdown)) + '</td>' +
+        '<td class="' + quantMetricClass(other.metrics.sharpe) + '">' + aiResearchEscape(quantNumber(other.metrics.sharpe, 2)) + '</td></tr>'; }).join('') +
+      '</tbody></table></div>' : '') +
     '<div class="quant-metric-grid">' + metricItems.map(function(item) {
       return '<div><span>' + item[0] + '</span><strong class="' + quantMetricClass(item[2]) + '">' + aiResearchEscape(item[1]) + '</strong></div>';
     }).join('') + '</div>' +
     '<details class="quant-warning-block"' + (result.validationStatus !== 'validated' ? ' open' : '') + '><summary>数据与结论限制（' + warnings.length + '）</summary><ul>' +
-      warnings.map(function(warning) { return '<li>' + aiResearchEscape(warning) + '</li>'; }).join('') + '</ul></details>' +
+      warnings.map(function(warning) { return '<li>' + aiResearchEscape(quantWarningText(warning)) + '</li>'; }).join('') + '</ul></details>' +
     '<div class="panel-title-row quant-candidate-title"><h3>最新候选</h3><span class="muted">模型分数只用于排序</span></div>' +
     '<div class="table-scroll compact-scroll"><table class="data-table quant-candidate-table"><thead><tr><th>代码</th><th>名称</th><th>分数</th><th>行情截止</th><th>模型训练截止</th></tr></thead><tbody>' +
       candidates.map(function(candidate) { return '<tr data-quant-code="' + aiResearchEscape(candidate.code) + '" data-quant-name="' + aiResearchEscape(candidate.name) + '">' +
@@ -640,7 +695,8 @@ function aiResearchBind() {
   document.getElementById('runQuantPilotBtn').addEventListener('click', function() {
     aiResearchStartQuant('/api/quant/pilot', {
       startDate: document.getElementById('quantStartDateInput').value,
-      limit: Number(document.getElementById('quantPilotLimitInput').value || 30)
+      limit: Number(document.getElementById('quantPilotLimitInput').value || 30),
+      model: document.getElementById('quantModelSelect').value
     }).catch(function(error) { alert(error.message); });
   });
   document.getElementById('collectQuantMarketBtn').addEventListener('click', function() {
@@ -653,8 +709,12 @@ function aiResearchBind() {
   document.getElementById('runQuantDatasetBtn').addEventListener('click', function() {
     const datasetId = document.getElementById('quantDatasetSelect').value;
     if (!datasetId) return alert('请先选择一个数据集。');
-    aiResearchStartQuant('/api/quant/runs', { datasetId: datasetId }).catch(function(error) { alert(error.message); });
+    aiResearchStartQuant('/api/quant/runs', {
+      datasetId: datasetId,
+      model: document.getElementById('quantModelSelect').value
+    }).catch(function(error) { alert(error.message); });
   });
+  document.getElementById('quantModelSelect').addEventListener('change', aiResearchRenderQuantResult);
   document.getElementById('cancelQuantJobBtn').addEventListener('click', async function() {
     const active = aiResearchActiveQuantJob();
     if (!active || !confirm('停止当前量化任务？已写入的数据文件会保留用于排查。')) return;

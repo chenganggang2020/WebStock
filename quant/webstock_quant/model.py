@@ -57,13 +57,18 @@ def _load_panel(dataset_dir, manifest):
 
 
 def _runtime_versions():
-    return {
+    versions = {
         "python": os.sys.version.split()[0],
         "qlib": importlib.metadata.version("pyqlib"),
         "lightgbm": importlib.metadata.version("lightgbm"),
         "pandas": importlib.metadata.version("pandas"),
         "pyarrow": importlib.metadata.version("pyarrow"),
     }
+    try:
+        versions["torch"] = importlib.metadata.version("torch")
+    except importlib.metadata.PackageNotFoundError:
+        pass
+    return versions
 
 
 def _initialize_qlib(workspace):

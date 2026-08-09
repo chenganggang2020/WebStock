@@ -134,7 +134,8 @@ test('model registry reports real availability instead of deployment names', () 
   assert.equal(byId.get('openai-direct').status, 'not_configured');
   assert.ok(['available', 'configured', 'not_configured', 'unavailable'].includes(byId.get('qlib-lightgbm').status));
   assert.notEqual(byId.get('qlib-lightgbm').status, 'planned');
-  assert.equal(byId.get('master').status, 'planned');
+  assert.ok(['available', 'configured', 'not_configured', 'unavailable'].includes(byId.get('master').status));
+  assert.notEqual(byId.get('master').status, 'planned');
   assert.equal(byId.get('rd-agent-q').status, 'planned');
   assert.ok(byId.get('master').requirements.length >= 1);
 });

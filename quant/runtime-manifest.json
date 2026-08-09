@@ -12,7 +12,7 @@
   },
   "requirements": {
     "file": "requirements.lock",
-    "sha256": "77016e2a5057cca6dca87eebf2d64f78b8f849e20118fc74691f4b892649431b"
+    "sha256": "5628eb3ac41b9af54e67259461aa6edc5e65167aef7a09b3e001797ad0ff095a"
   },
-  "estimatedBytes": 2147483648
+  "estimatedBytes": 3221225472
 }

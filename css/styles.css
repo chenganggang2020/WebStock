@@ -3178,6 +3178,20 @@ body.dark .model-status.unavailable {
 }
 
 @media (max-width: 720px) {
+  .quant-research-band > .panel-title-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  #quantRuntimeStatus {
+    justify-content: flex-start;
+    width: 100%;
+  }
+
+  .quant-runtime-reason {
+    max-width: none;
+  }
+
   .quant-control-grid {
     grid-template-columns: 1fr;
   }

@@ -9,6 +9,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from .collector import collect_dataset
+from .master_model import run_master_baseline
 from .model import run_lightgbm_baseline
 
 
@@ -31,6 +32,14 @@ def _safe_id(value, label):
     return text
 
 
+def resolve_manifest_output_path(result_path, manifest_path):
+    target = Path(manifest_path)
+    if target.is_absolute():
+        return target.resolve()
+    workspace = Path(result_path).resolve().parents[2]
+    return (workspace / target).resolve()
+
+
 def _versions(verify=False):
     packages = {
         "qlib": "pyqlib",
@@ -38,6 +47,7 @@ def _versions(verify=False):
         "pandas": "pandas",
         "pyarrow": "pyarrow",
         "baostock": "baostock",
+        "torch": "torch",
     }
     versions = {name: importlib.metadata.version(package) for name, package in packages.items()}
     if verify:
@@ -45,6 +55,7 @@ def _versions(verify=False):
         import pandas  # noqa: F401
         import pyarrow  # noqa: F401
         import qlib  # noqa: F401
+        import torch  # noqa: F401
     return versions
 
 
@@ -102,31 +113,47 @@ def _run(args, dataset_dir=None, run_id=None):
         dataset_id = _safe_id(args.dataset_id, "dataset id")
         dataset_dir = workspace / "datasets" / dataset_id
     os.chdir(workspace)
-    result_path, result = run_lightgbm_baseline(
-        dataset_dir=dataset_dir,
-        workspace=workspace,
-        run_id=run_id,
-        train_days=args.train_days,
-        validation_days=args.validation_days,
-        test_days=args.test_days,
-        step_days=args.step_days,
-        label_horizon=args.label_horizon,
-        max_folds=args.max_folds,
-        top_k=args.top_k,
-        cost_bps=args.cost_bps,
-        seed=args.seed,
-        num_boost_round=args.num_boost_round,
-        early_stopping_rounds=args.early_stopping_rounds,
-        emit=emit_event,
-    )
+    common = {
+        "dataset_dir": dataset_dir,
+        "workspace": workspace,
+        "run_id": run_id,
+        "train_days": args.train_days,
+        "validation_days": args.validation_days,
+        "test_days": args.test_days,
+        "step_days": args.step_days,
+        "label_horizon": args.label_horizon,
+        "max_folds": args.max_folds,
+        "top_k": args.top_k,
+        "cost_bps": args.cost_bps,
+        "seed": args.seed,
+        "emit": emit_event,
+    }
+    if args.model == "master":
+        result_path, result = run_master_baseline(
+            **common,
+            lookback=args.master_lookback,
+            epochs=args.master_epochs,
+            patience=args.master_patience,
+            learning_rate=args.master_learning_rate,
+            d_model=args.master_d_model,
+            temporal_heads=args.master_temporal_heads,
+            cross_stock_heads=args.master_cross_stock_heads,
+            dropout=args.master_dropout,
+            gate_temperature=args.master_gate_temperature,
+            batch_days=args.master_batch_days,
+        )
+    else:
+        result_path, result = run_lightgbm_baseline(
+            **common,
+            num_boost_round=args.num_boost_round,
+            early_stopping_rounds=args.early_stopping_rounds,
+        )
     return result_path, result
 
 
 def command_run(args):
     result_path, result = _run(args)
-    manifest_path = Path(result["dataManifest"]["path"])
-    if not manifest_path.is_absolute():
-        manifest_path = Path(args.workspace).resolve() / manifest_path
+    manifest_path = resolve_manifest_output_path(result_path, result["dataManifest"]["path"])
     emit_result({
         "kind": "quant-run",
         "manifestPath": str(manifest_path.resolve()),
@@ -139,7 +166,8 @@ def command_run(args):
 def command_pilot(args):
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     dataset_id = _safe_id(args.dataset_id or "sina-pilot-" + timestamp, "dataset id")
-    run_id = _safe_id(args.run_id or "qlib-lightgbm-" + timestamp, "run id")
+    prefix = "master-" if args.model == "master" else "qlib-lightgbm-"
+    run_id = _safe_id(args.run_id or prefix + timestamp, "run id")
     dataset_dir, manifest_path, manifest = _collect(args, dataset_id=dataset_id)
     emit_event({
         "stage": "dataset-ready",
@@ -172,6 +200,7 @@ def add_common_model_arguments(parser):
     parser.add_argument("--workspace", required=True)
     parser.add_argument("--dataset-id", default="")
     parser.add_argument("--run-id", default="")
+    parser.add_argument("--model", choices=["lightgbm", "master"], default="lightgbm")
     parser.add_argument("--train-days", type=int, default=504)
     parser.add_argument("--validation-days", type=int, default=126)
     parser.add_argument("--test-days", type=int, default=63)
@@ -183,6 +212,20 @@ def add_common_model_arguments(parser):
     parser.add_argument("--seed", type=int, default=20260809)
     parser.add_argument("--num-boost-round", type=int, default=300)
     parser.add_argument("--early-stopping-rounds", type=int, default=30)
+    add_master_arguments(parser)
+
+
+def add_master_arguments(parser):
+    parser.add_argument("--master-lookback", type=int, default=8)
+    parser.add_argument("--master-epochs", type=int, default=20)
+    parser.add_argument("--master-patience", type=int, default=4)
+    parser.add_argument("--master-learning-rate", type=float, default=0.001)
+    parser.add_argument("--master-d-model", type=int, default=32)
+    parser.add_argument("--master-temporal-heads", type=int, default=2)
+    parser.add_argument("--master-cross-stock-heads", type=int, default=2)
+    parser.add_argument("--master-dropout", type=float, default=0.1)
+    parser.add_argument("--master-gate-temperature", type=float, default=1.0)
+    parser.add_argument("--master-batch-days", type=int, default=16)
 
 
 def build_parser():
@@ -204,6 +247,7 @@ def build_parser():
     pilot = commands.add_parser("pilot")
     add_common_collection_arguments(pilot)
     pilot.add_argument("--run-id", default="")
+    pilot.add_argument("--model", choices=["lightgbm", "master"], default="lightgbm")
     pilot.add_argument("--train-days", type=int, default=504)
     pilot.add_argument("--validation-days", type=int, default=126)
     pilot.add_argument("--test-days", type=int, default=63)
@@ -215,6 +259,7 @@ def build_parser():
     pilot.add_argument("--seed", type=int, default=20260809)
     pilot.add_argument("--num-boost-round", type=int, default=300)
     pilot.add_argument("--early-stopping-rounds", type=int, default=30)
+    add_master_arguments(pilot)
     pilot.set_defaults(handler=command_pilot)
     return parser
 

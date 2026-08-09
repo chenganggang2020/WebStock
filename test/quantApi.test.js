@@ -78,6 +78,20 @@ test('quant API rejects overlapping sample-out windows before starting a job', a
   assert.match(response.json.error, /重叠|步长/);
 });
 
+test('quant API accepts only registered comparison models', async t => {
+  const server = app.listen(0);
+  t.after(() => server.close());
+
+  const response = await requestJson(server, {
+    path: '/api/quant/runs',
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' }
+  }, { datasetId: 'test-dataset', model: 'invented-model' });
+  assert.equal(response.statusCode, 400);
+  assert.equal(response.json.success, false);
+  assert.match(response.json.error, /模型/);
+});
+
 test.after(() => {
   require('../db').close();
   fs.rmSync(root, { recursive: true, force: true });

@@ -84,8 +84,8 @@ test.beforeEach(async ({ page }) => {
           status: 'configured',
           verified: false,
           reason: '测试运行时已配置',
-          versions: { python: '3.12.13', qlib: '0.9.7', lightgbm: '4.7.0' },
-          installer: { available: true, python: '3.12.13', estimatedBytes: 2147483648 }
+          versions: { python: '3.12.13', qlib: '0.9.7', lightgbm: '4.7.0', torch: '2.13.0' },
+          installer: { available: true, python: '3.12.13', estimatedBytes: 3221225472 }
         }
       }) });
     }
@@ -103,10 +103,16 @@ test.beforeEach(async ({ page }) => {
         success: true,
         data: [{ valid: true, result: {
           runId: 'test-quant-run', modelId: 'qlib-lightgbm-v1', validationStatus: 'exploratory', asOf: '2026-08-07',
-          dataManifest: { datasetId: 'test-quant-dataset' }, folds: [{}, {}], parameters: { costBps: 8 },
+          dataManifest: { datasetId: 'test-quant-dataset', sha256: 'same-data' }, folds: [{}, {}], parameters: { costBps: 8 },
             metrics: { rankIc: -0.063, icir: -1.18, annualizedReturn: -0.39, benchmarkAnnualizedReturn: -0.25, maxDrawdown: -0.12, sharpe: -1.1, turnover: 0.76, totalCost: 0.016, tradeCount: 104, rebalanceCount: 26 },
           candidates: [{ code: '000001', name: '平安银行', score: 0.012, asOf: '2026-08-07', modelTrainedThrough: '2026-04-16' }],
           warnings: ['当前名单存在幸存者偏差。']
+        } }, { valid: true, result: {
+          runId: 'test-master-run', modelId: 'master-market-guided-v1', validationStatus: 'exploratory', asOf: '2026-08-07',
+          dataManifest: { datasetId: 'test-quant-dataset', sha256: 'same-data' }, folds: [{}, {}], parameters: { costBps: 8 },
+          metrics: { rankIc: 0.021, icir: 0.31, annualizedReturn: 0.04, benchmarkAnnualizedReturn: -0.25, maxDrawdown: -0.09, sharpe: 0.22, turnover: 0.68, totalCost: 0.014, tradeCount: 98, rebalanceCount: 26 },
+          candidates: [{ code: '300750', name: '宁德时代', score: 0.031, asOf: '2026-08-07', modelTrainedThrough: '2026-04-16' }],
+          warnings: ['MASTER 测试结果。']
         } }]
       }) });
     }
@@ -202,12 +208,17 @@ test('AI research view creates grounded expert knowledge and saves a handoff res
   await expect(page.locator('#aiModelRegistry')).toContainText('本地可解释因子选股');
   await expect(page.locator('#aiModelRegistry')).toContainText('规划中');
   await expect(page.locator('#quantRuntimeStatus')).toContainText('已配置');
+  await expect(page.locator('#quantRuntimeStatus')).toContainText('PyTorch 2.13.0');
   await expect(page.locator('#repairQuantRuntimeBtn')).toBeVisible();
   await expect(page.locator('#quantIndexModeSelect')).toHaveValue('official');
   await expect(page.locator('#quantResultPanel')).toContainText('Rank IC');
   await expect(page.locator('#quantResultPanel')).toContainText('累计成本');
   await expect(page.locator('#quantResultPanel')).toContainText('当前名单存在幸存者偏差');
   await expect(page.locator('#quantResultPanel')).toContainText('平安银行');
+  await expect(page.locator('#quantResultPanel')).toContainText('同数据模型');
+  await page.selectOption('#quantModelSelect', 'master');
+  await expect(page.locator('#quantResultPanel')).toContainText('MASTER 市场引导时序模型');
+  await expect(page.locator('#quantResultPanel')).toContainText('宁德时代');
 
   await page.selectOption('#knowledgeSourceType', 'blog');
   await page.fill('#knowledgeSourceTitle', 'Playwright CPO 博主笔记');

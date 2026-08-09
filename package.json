@@ -73,7 +73,8 @@
       "prompt_adv.md",
       "server.js",
       "stocks.json",
-      "sw.js"
+      "sw.js",
+      "THIRD_PARTY_NOTICES.md"
     ],
     "win": {
       "icon": "icons/webstock.ico",

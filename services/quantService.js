@@ -180,7 +180,7 @@ async function verifyRuntime() {
     runtimeCache = {
       status: result.status === 'available' ? 'available' : 'configured',
       verified: !!result.verified,
-      reason: result.verified ? 'Qlib 与 LightGBM 导入检测通过。' : '已读取运行环境信息。',
+      reason: result.verified ? 'Qlib、LightGBM 与 PyTorch 导入检测通过。' : '已读取运行环境信息。',
       versions: Object.assign({ python: result.python }, result.packages || {}),
       checkedAt: result.checkedAt
     };
@@ -328,8 +328,28 @@ function commonModelArgs(input) {
     '--top-k', String(Math.round(numeric(input.topK, 20, 3, 100))),
     '--cost-bps', String(numeric(input.costBps, 8, 0, 100)),
     '--num-boost-round', String(Math.round(numeric(input.numBoostRound, 300, 20, 2000))),
-    '--early-stopping-rounds', String(Math.round(numeric(input.earlyStoppingRounds, 30, 5, 200)))
+    '--early-stopping-rounds', String(Math.round(numeric(input.earlyStoppingRounds, 30, 5, 200))),
+    '--master-lookback', String(Math.round(numeric(input.masterLookback, 8, 4, 60))),
+    '--master-epochs', String(Math.round(numeric(input.masterEpochs, 20, 1, 200))),
+    '--master-patience', String(Math.round(numeric(input.masterPatience, 4, 1, 40))),
+    '--master-learning-rate', String(numeric(input.masterLearningRate, 0.001, 0.00001, 0.1)),
+    '--master-d-model', String(Math.round(numeric(input.masterDModel, 32, 8, 256))),
+    '--master-temporal-heads', String(Math.round(numeric(input.masterTemporalHeads, 2, 1, 8))),
+    '--master-cross-stock-heads', String(Math.round(numeric(input.masterCrossStockHeads, 2, 1, 8))),
+    '--master-dropout', String(numeric(input.masterDropout, 0.1, 0, 0.8)),
+    '--master-gate-temperature', String(numeric(input.masterGateTemperature, 1, 0.05, 20)),
+    '--master-batch-days', String(Math.round(numeric(input.masterBatchDays, 16, 1, 64)))
   ];
+}
+
+function modelValue(value) {
+  const model = String(value || 'lightgbm').trim().toLowerCase();
+  if (!['lightgbm', 'master'].includes(model)) {
+    const error = new Error('请选择已注册的量化模型。');
+    error.status = 400;
+    throw error;
+  }
+  return model;
 }
 
 function startJob(kind, args, request) {
@@ -407,7 +427,7 @@ function startJob(kind, args, request) {
       runType: 'quant-backtest',
       modelId: verified.result.modelId,
       status: 'completed',
-      title: 'Qlib + LightGBM ' + verified.manifest.datasetId,
+      title: (String(verified.result.modelId).includes('master') ? 'MASTER ' : 'Qlib + LightGBM ') + verified.manifest.datasetId,
       result: JSON.stringify({
         validationStatus: verified.result.validationStatus,
         asOf: verified.result.asOf,
@@ -497,12 +517,13 @@ function startPilot(input = {}) {
   const endDate = dateValue(input.endDate, new Date().toISOString().slice(0, 10));
   if (startDate > endDate) throw new Error('开始日期不能晚于结束日期。');
   const limit = Math.round(numeric(input.limit, 30, 8, 120));
+  const model = modelValue(input.model);
   const args = [
     'pilot', '--workspace', workspace, '--universe-file', universePath(),
     '--limit', String(limit), '--start-date', startDate, '--end-date', endDate,
-    '--sleep-ms', String(Math.round(numeric(input.sleepMs, 120, 0, 1000)))
+    '--sleep-ms', String(Math.round(numeric(input.sleepMs, 120, 0, 1000))), '--model', model
   ].concat(commonModelArgs(input));
-  return startJob('pilot', args, Object.assign({}, input, { limit, startDate, endDate }));
+  return startJob('pilot', args, Object.assign({}, input, { model, limit, startDate, endDate }));
 }
 
 function startCollection(input = {}) {
@@ -523,12 +544,13 @@ function startCollection(input = {}) {
 function startRun(input = {}) {
   const datasetId = String(input.datasetId || '').trim();
   if (!/^[A-Za-z0-9._-]{3,100}$/.test(datasetId)) throw new Error('请选择有效的数据集。');
+  const model = modelValue(input.model);
   const workspace = ensureWorkspace();
-  const runId = 'qlib-lightgbm-' + compactUtcTimestamp();
+  const runId = (model === 'master' ? 'master-' : 'qlib-lightgbm-') + compactUtcTimestamp();
   const args = [
-    'run', '--workspace', workspace, '--dataset-id', datasetId, '--run-id', runId
+    'run', '--workspace', workspace, '--dataset-id', datasetId, '--run-id', runId, '--model', model
   ].concat(commonModelArgs(input));
-  return startJob('run', args, Object.assign({}, input, { datasetId, runId }));
+  return startJob('run', args, Object.assign({}, input, { model, datasetId, runId }));
 }
 
 function loadPersistedJobs() {

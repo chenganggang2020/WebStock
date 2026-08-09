@@ -20,8 +20,11 @@ function listModels() {
       : '未配置独立 API Key，可继续使用 ChatGPT 交接模式。';
   const ftsAvailable = localFtsAvailable();
   const quantRuntime = quant.getRuntimeStatus();
-  const latestQuantEntry = quant.listResults(1).find(item => item.valid && item.result);
+  const quantResults = quant.listResults(50).filter(item => item.valid && item.result);
+  const latestQuantEntry = quantResults.find(item => !String(item.result.modelId || '').includes('master'));
   const latestQuantResult = latestQuantEntry ? latestQuantEntry.result : null;
+  const latestMasterEntry = quantResults.find(item => String(item.result.modelId || '').includes('master'));
+  const latestMasterResult = latestMasterEntry ? latestMasterEntry.result : null;
   const latestQuantStatus = latestQuantResult && latestQuantResult.validationStatus === 'validated'
     ? '已验证'
     : '探索性';
@@ -90,12 +93,18 @@ function listModels() {
       id: 'master',
       name: 'MASTER 股票 Transformer',
       kind: 'quant-model',
-      status: 'planned',
-      runtime: 'Isolated Python/GPU experiment',
+      status: quantRuntime.status === 'configured'
+        ? 'configured'
+        : quantRuntime.versions && quantRuntime.versions.torch ? quantRuntime.status : 'not_configured',
+      runtime: quantRuntime.versions && quantRuntime.versions.torch
+        ? 'Python ' + quantRuntime.versions.python + ' / PyTorch ' + quantRuntime.versions.torch + ' / CPU'
+        : 'Python 3.12 / locked PyTorch sidecar',
       costMode: 'local-compute',
-      capabilities: ['市场状态门控', '跨股票与跨时间关系建模'],
-      requirements: ['与基线一致的数据和标签', '兼容的 PyTorch/Qlib 环境', '样本外对照'],
-      note: '官方仓库披露旧依赖和验证数据处理问题，只能先作为对照实验。'
+      capabilities: ['市场状态门控', '跨股票与跨时间关系建模', '同数据滚动对比'],
+      requirements: ['与基线一致的数据和标签', 'PyTorch 运行环境', '样本外对照'],
+      note: '验证阶段保留全部特征有效股票，只在计算指标时过滤空标签。' + (latestMasterResult
+        ? ' 已有' + (latestMasterResult.validationStatus === 'validated' ? '已验证' : '探索性') + '运行：' + latestMasterResult.runId + '。'
+        : ' 尚无通过契约校验的 MASTER 运行结果。')
     },
     {
       id: 'alphaagent',
