@@ -1,0 +1,18 @@
+{
+  "schema": "webstock.quant-runtime/v1",
+  "platform": "win32",
+  "arch": "x64",
+  "python": "3.12.13",
+  "uv": {
+    "version": "0.10.12",
+    "url": "https://github.com/astral-sh/uv/releases/download/0.10.12/uv-x86_64-pc-windows-msvc.zip",
+    "sha256": "4c1d55501869b3330d4aabf45ad6024ce2367e0f3af83344395702d272c22e88",
+    "bundledFile": "runtime-assets/uv-x86_64-pc-windows-msvc.zip",
+    "executable": "uv.exe"
+  },
+  "requirements": {
+    "file": "requirements.lock",
+    "sha256": "77016e2a5057cca6dca87eebf2d64f78b8f849e20118fc74691f4b892649431b"
+  },
+  "estimatedBytes": 2147483648
+}

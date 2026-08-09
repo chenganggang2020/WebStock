@@ -30,6 +30,7 @@ const AI_RESEARCH_SOURCE_LABELS = {
 };
 
 const QUANT_JOB_KIND_LABELS = {
+  'runtime-install': '量化环境安装',
   pilot: '小样本试跑',
   collect: '市场数据采集',
   run: '数据集训练'
@@ -135,6 +136,12 @@ function aiResearchRenderQuantRuntime() {
   }
   const label = AI_RESEARCH_STATUS_LABELS[quantRuntime.status] || quantRuntime.status;
   const versions = quantRuntime.versions || {};
+  const installer = quantRuntime.installer || {};
+  const installButton = document.getElementById('installQuantRuntimeBtn');
+  const repairButton = document.getElementById('repairQuantRuntimeBtn');
+  const hasRuntime = quantRuntime.status === 'available' || quantRuntime.status === 'configured';
+  if (installButton) installButton.style.display = !hasRuntime && installer.available ? '' : 'none';
+  if (repairButton) repairButton.style.display = hasRuntime && installer.available ? '' : 'none';
   target.innerHTML = '<span class="model-status ' + aiResearchEscape(quantRuntime.status) + '">' + aiResearchEscape(label) + '</span>' +
     (versions.qlib ? ' <span>Python ' + aiResearchEscape(versions.python) + ' / Qlib ' + aiResearchEscape(versions.qlib) + ' / LightGBM ' + aiResearchEscape(versions.lightgbm) + '</span>' : '') +
     '<span class="quant-runtime-reason">' + aiResearchEscape(quantRuntime.reason || '') + '</span>';
@@ -162,6 +169,10 @@ function aiResearchRenderQuantJob() {
   const cancel = document.getElementById('cancelQuantJobBtn');
   const active = aiResearchActiveQuantJob();
   if (cancel) cancel.style.display = active ? '' : 'none';
+  ['installQuantRuntimeBtn', 'repairQuantRuntimeBtn'].forEach(function(id) {
+    const button = document.getElementById(id);
+    if (button) button.disabled = !!active;
+  });
   if (!target) return;
   const job = active || quantJobs[0];
   if (!job) {
@@ -609,6 +620,22 @@ function aiResearchBind() {
     } finally {
       this.disabled = false;
     }
+  });
+  document.getElementById('installQuantRuntimeBtn').addEventListener('click', function() {
+    const bytes = quantRuntime && quantRuntime.installer && Number(quantRuntime.installer.estimatedBytes || 0);
+    const size = bytes > 0 ? (bytes / 1024 / 1024 / 1024).toFixed(1) + ' GB' : '较大';
+    if (!confirm('将下载并安装约 ' + size + ' 的独立量化环境。安装目录位于 WebStock 数据目录，不修改系统 Python。继续？')) return;
+    aiResearchStartQuant('/api/quant/runtime/install', {
+      indexMode: document.getElementById('quantIndexModeSelect').value,
+      force: false
+    }).catch(function(error) { alert(error.message); });
+  });
+  document.getElementById('repairQuantRuntimeBtn').addEventListener('click', function() {
+    if (!confirm('修复会先完整验证新环境，再替换现有量化环境。当前数据集和模型结果不会删除。继续？')) return;
+    aiResearchStartQuant('/api/quant/runtime/install', {
+      indexMode: document.getElementById('quantIndexModeSelect').value,
+      force: true
+    }).catch(function(error) { alert(error.message); });
   });
   document.getElementById('runQuantPilotBtn').addEventListener('click', function() {
     aiResearchStartQuant('/api/quant/pilot', {

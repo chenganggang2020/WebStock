@@ -29,7 +29,7 @@ The AI research direction is defined in `docs/ai-research/AI_PLATFORM_DESIGN.md`
 | API routes | `routes/` | HTTP boundary | Most new routes use `{ success, data/error }` envelopes |
 | Domain services | `services/` | Portfolio, screener, news, themes, backup | Keep model/data logic outside route handlers |
 | AI research | `services/knowledgeService.js`, `routes/aiResearch.js` | Expert sources, evidence retrieval, honest model registry and research runs | External model names remain planned until verified |
-| Quant sidecar | `quant/`, `services/quantService.js`, `routes/quant.js` | Hashed datasets, isolated Qlib/LightGBM jobs, rolling evaluation and verified result import | Public Sina adapter is exploratory only |
+| Quant sidecar | `quant/`, `services/quantService.js`, `services/quantRuntimeInstaller.js`, `routes/quant.js` | Hashed datasets, isolated runtime installation, Qlib/LightGBM jobs, rolling evaluation and verified result import | Public Sina adapter is exploratory only |
 | Frontend | `index.html`, `js/modules/`, `css/styles.css` | Vanilla JS desktop UI | Views are switched by `switchMainView` |
 | Tests | `test/` | Node unit/API and Playwright flows | Tests use isolated temporary SQLite files |
 
@@ -63,7 +63,7 @@ The AI research direction is defined in `docs/ai-research/AI_PLATFORM_DESIGN.md`
 
 - External public data may be incomplete, rate-limited or delayed.
 - A ChatGPT Pro subscription is not an API entitlement; handoff remains the no-extra-API-cost path.
-- Qlib + LightGBM is connected as an isolated exploratory runtime. MASTER and agent frameworks remain planned; valid model claims still require licensed or terms-verified point-in-time data.
+- Qlib + LightGBM is connected as an isolated exploratory runtime. Windows x64 can install or repair the pinned runtime from the AI Research view; MASTER and agent frameworks remain planned, and valid model claims still require licensed or terms-verified point-in-time data.
 - Real brokerage execution remains out of scope.
 
 ## Verification Notes

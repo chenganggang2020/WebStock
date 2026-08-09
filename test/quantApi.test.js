@@ -46,6 +46,8 @@ test('quant API reports a missing isolated runtime without claiming availability
   assert.equal(response.json.success, true);
   assert.equal(response.json.data.status, 'not_configured');
   assert.match(response.json.data.reason, /Python|runtime/i);
+  assert.equal(response.json.data.installer.available, true);
+  assert.equal(response.json.data.installer.python, '3.12.13');
 });
 
 test('quant API refuses to start a model job when the runtime is missing', async t => {

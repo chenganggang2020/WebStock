@@ -18,6 +18,10 @@ router.get('/quant/runtime', async function(req, res) {
   }
 });
 
+router.post('/quant/runtime/install', function(req, res) {
+  try { ok(res, quant.startRuntimeInstall(req.body || {})); } catch (error) { fail(res, error); }
+});
+
 router.get('/quant/datasets', function(req, res) {
   try { ok(res, quant.listDatasets(req.query.limit)); } catch (error) { fail(res, error); }
 });

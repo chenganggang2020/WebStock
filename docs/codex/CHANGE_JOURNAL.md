@@ -71,3 +71,29 @@ Follow-ups:
 - Add in-app installation of the isolated Python runtime for clean desktop machines; source packaging alone must not be described as an offline-ready model runtime.
 - Acquire or prepare terms-verified point-in-time adjusted A-share data before formal validation.
 - Run MASTER on the same immutable dataset and rolling folds only after the baseline data gate is satisfied.
+
+## 2026-08-09 19:30 - Verified Windows Quant Runtime Installer
+
+Status: clean-machine runtime installation delivered for Windows x64
+
+Problem:
+- The packaged application contained quant source but could not run Qlib on a clean computer without a manually prepared Python environment.
+- Direct GitHub asset access can be unreliable on the target network, and an in-place repair could destroy a working runtime if a download or import failed.
+
+Change direction:
+- Bundle the SHA-256 verified official uv 0.10.12 Windows x64 archive while keeping Python and packages in the user-owned quant workspace.
+- Pin Python 3.12.13 and a 194-package Windows dependency lock with required artifact hashes; offer official PyPI and a domestic mirror without weakening hash verification.
+- Build repairs in a staging directory, verify imports, activate, rewrite the relocated `pyvenv.cfg`, verify again, then remove the old runtime and installation caches.
+- Expose install, repair, progress and cancellation through the existing quant job API and AI Research workbench.
+
+Verification:
+- Runtime-installer unit coverage proves manifest/path/hash checks, corrupted bundle rejection, disk-space rejection before download, failed-repair rollback, successful activation and cancellation cleanup.
+- A real install into an empty directory completed in about 105 seconds and passed post-move imports with Python 3.12.13, Qlib 0.9.7 and LightGBM 4.7.0.
+- The official uv archive is 22,407,450 bytes with SHA-256 `4C1D55501869B3330D4AABF45AD6024CE2367E0F3AF83344395702D272C22E88`.
+- Final regression: Node 74/74, Python quant 9/9, Playwright 5/5; `npm audit` reported 0 known vulnerabilities. Desktop and 390 px layouts have no document-level horizontal overflow.
+- Final installer: 121,101,706 bytes, SHA-256 `E7E75A8EB110D2EB3A53EECEC2CCC435F8BB18E7E9638F46DF7889A662B21F8E`.
+- Final portable EXE: 111,783,636 bytes, SHA-256 `D8D04F57960D8FC81BB188C57B08F7259924828556A49F1F6571AD676231B55A`.
+- Portable-package inspection found the uv asset, lock and manifest, and found no `.venv`, runtime workspace, tests or database. An isolated packaged launch returned `not_configured` plus `installer.available=true` for Python 3.12.13.
+
+Follow-ups:
+- Add MASTER only as a same-data exploratory comparison; do not reuse the official repository's flawed validation dump.

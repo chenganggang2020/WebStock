@@ -80,7 +80,13 @@ test.beforeEach(async ({ page }) => {
     if (url.includes('/api/quant/runtime')) {
       return route.fulfill({ contentType: 'application/json', body: JSON.stringify({
         success: true,
-        data: { status: 'configured', verified: false, reason: '测试运行时已配置', versions: { python: '3.12.13', qlib: '0.9.7', lightgbm: '4.7.0' } }
+        data: {
+          status: 'configured',
+          verified: false,
+          reason: '测试运行时已配置',
+          versions: { python: '3.12.13', qlib: '0.9.7', lightgbm: '4.7.0' },
+          installer: { available: true, python: '3.12.13', estimatedBytes: 2147483648 }
+        }
       }) });
     }
     if (url.includes('/api/quant/datasets')) {
@@ -196,6 +202,8 @@ test('AI research view creates grounded expert knowledge and saves a handoff res
   await expect(page.locator('#aiModelRegistry')).toContainText('本地可解释因子选股');
   await expect(page.locator('#aiModelRegistry')).toContainText('规划中');
   await expect(page.locator('#quantRuntimeStatus')).toContainText('已配置');
+  await expect(page.locator('#repairQuantRuntimeBtn')).toBeVisible();
+  await expect(page.locator('#quantIndexModeSelect')).toHaveValue('official');
   await expect(page.locator('#quantResultPanel')).toContainText('Rank IC');
   await expect(page.locator('#quantResultPanel')).toContainText('累计成本');
   await expect(page.locator('#quantResultPanel')).toContainText('当前名单存在幸存者偏差');

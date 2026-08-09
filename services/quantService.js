@@ -4,6 +4,11 @@ const path = require('node:path');
 const crypto = require('node:crypto');
 const researchRuns = require('./researchRunService');
 const {
+  createRuntimeInstaller,
+  loadRuntimeManifest,
+  runtimePythonPath
+} = require('./quantRuntimeInstaller');
+const {
   validateDatasetManifest,
   validateQuantResult,
   sha256File,
@@ -13,6 +18,7 @@ const {
 const jobs = new Map();
 const children = new Map();
 let runtimeCache = null;
+let runtimeInstallInfoCache = null;
 
 function asUnpacked(filePath) {
   return filePath.includes('app.asar') ? filePath.replace('app.asar', 'app.asar.unpacked') : filePath;
@@ -37,7 +43,9 @@ function workspacePath() {
 function pythonPath() {
   if (process.env.WEBSTOCK_QUANT_PYTHON) return path.resolve(process.env.WEBSTOCK_QUANT_PYTHON);
   const local = path.join(quantRoot(), '.venv', 'Scripts', 'python.exe');
-  return fs.existsSync(local) ? local : null;
+  if (fs.existsSync(local)) return local;
+  const managed = runtimePythonPath(workspacePath());
+  return fs.existsSync(managed) ? managed : null;
 }
 
 function ensureWorkspace() {
@@ -46,6 +54,26 @@ function ensureWorkspace() {
   fs.mkdirSync(path.join(workspace, 'datasets'), { recursive: true });
   fs.mkdirSync(path.join(workspace, 'runs'), { recursive: true });
   return workspace;
+}
+
+function getRuntimeInstallInfo() {
+  if (runtimeInstallInfoCache) return runtimeInstallInfoCache;
+  try {
+    const manifest = loadRuntimeManifest(quantRoot());
+    runtimeInstallInfoCache = {
+      available: true,
+      platform: manifest.platform,
+      arch: manifest.arch,
+      python: manifest.python,
+      uvVersion: manifest.uv.version,
+      estimatedBytes: manifest.estimatedBytes,
+      indexModes: ['official', 'china'],
+      reason: '可安装到 WebStock 独立数据目录，不修改系统 PATH。'
+    };
+  } catch (error) {
+    runtimeInstallInfoCache = { available: false, reason: error.message };
+  }
+  return runtimeInstallInfoCache;
 }
 
 function isInside(root, target) {
@@ -60,25 +88,28 @@ function compactUtcTimestamp() {
 function getRuntimeStatus() {
   const python = pythonPath();
   const runner = runnerPath();
+  const installer = getRuntimeInstallInfo();
   if (!python || !fs.existsSync(python)) {
     return {
       status: 'not_configured',
       verified: false,
       reason: '尚未安装独立的 Python 3.12 量化运行环境。',
       python: python || '',
-      runner
+      runner,
+      installer
     };
   }
   if (!fs.existsSync(runner)) {
-    return { status: 'unavailable', verified: false, reason: '量化运行脚本缺失。', python, runner };
+    return { status: 'unavailable', verified: false, reason: '量化运行脚本缺失。', python, runner, installer };
   }
-  if (runtimeCache) return Object.assign({ python, runner }, runtimeCache);
+  if (runtimeCache) return Object.assign({ python, runner, installer }, runtimeCache);
   return {
     status: 'configured',
     verified: false,
     reason: '已找到独立运行环境，请执行环境检测后再开始训练。',
     python,
-    runner
+    runner,
+    installer
   };
 }
 
@@ -228,6 +259,14 @@ function jobFile(id) {
 function publicJob(job) {
   const copy = Object.assign({}, job);
   delete copy.stderr;
+  if (copy.kind === 'runtime-install' && copy.output) {
+    copy.output = {
+      verified: !!copy.output.verified,
+      installedAt: copy.output.installedAt || '',
+      versions: copy.output.versions || {}
+    };
+    return copy;
+  }
   if (copy.output) {
     const manifest = copy.output.manifest || {};
     const result = copy.output.result || {};
@@ -389,6 +428,69 @@ function startJob(kind, args, request) {
   return publicJob(job);
 }
 
+function startRuntimeInstall(input = {}) {
+  loadRuntimeManifest(quantRoot());
+  const existing = activeJob();
+  if (existing) {
+    const error = new Error('已有量化任务正在运行：' + existing.id);
+    error.status = 409;
+    throw error;
+  }
+  const indexMode = input.indexMode === 'china' ? 'china' : 'official';
+  const force = !!input.force;
+  const job = {
+    id: newJobId('runtime-install'),
+    kind: 'runtime-install',
+    status: 'queued',
+    request: { indexMode, force },
+    progress: { stage: 'queued', message: '等待安装量化运行环境。' },
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    output: null,
+    error: ''
+  };
+  const controller = new AbortController();
+  jobs.set(job.id, job);
+  children.set(job.id, { kill() { controller.abort(); } });
+  persistJob(job);
+  job.status = 'running';
+  job.updatedAt = new Date().toISOString();
+  persistJob(job);
+  const installer = createRuntimeInstaller({ workspace: ensureWorkspace(), quantRoot: quantRoot() });
+  installer.install({
+    force,
+    indexMode,
+    signal: controller.signal,
+    onProgress(progress) {
+      job.progress = progress;
+      job.updatedAt = new Date().toISOString();
+      persistJob(job);
+    }
+  }).then(async output => {
+    runtimeCache = null;
+    const verified = await verifyRuntime();
+    if (!verified.verified || verified.status !== 'available') throw new Error(verified.reason || '量化环境安装后验证失败。');
+    job.status = 'completed';
+    job.progress = { stage: 'completed', message: '量化运行环境安装并验证完成。' };
+    job.output = {
+      verified: true,
+      installedAt: output.installedAt,
+      versions: verified.versions || output.versions || {}
+    };
+    job.updatedAt = new Date().toISOString();
+    persistJob(job);
+  }).catch(error => {
+    if (job.status !== 'cancelled') {
+      job.status = 'failed';
+      job.error = error.message;
+      job.progress = { stage: 'failed', message: error.message };
+      job.updatedAt = new Date().toISOString();
+      persistJob(job);
+    }
+  }).finally(() => children.delete(job.id));
+  return publicJob(job);
+}
+
 function startPilot(input = {}) {
   const workspace = ensureWorkspace();
   const startDate = dateValue(input.startDate, '2019-01-01');
@@ -520,6 +622,7 @@ loadPersistedJobs();
 module.exports = {
   getRuntimeStatus,
   verifyRuntime,
+  startRuntimeInstall,
   startPilot,
   startCollection,
   startRun,
