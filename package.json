@@ -8,6 +8,7 @@
     "start": "node server.js",
     "dev": "node server.js",
     "start:android": "node scripts/start-android-lan.js",
+    "dist:android": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-android.ps1",
     "desktop": "electron .",
     "dist:win": "node scripts/build-electron-win.js nsis",
     "dist:win:portable": "node scripts/build-electron-win.js portable --config.directories.output=dist/portable",

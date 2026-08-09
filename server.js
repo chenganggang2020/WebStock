@@ -1,6 +1,7 @@
 const express = require('express');
 const path = require('path');
 const routes = require('./routes');
+const { requireLanPairing } = require('./services/lanAccessService');
 
 const { getAIEnabled, getAIConfig } = require('./routes/ai');
 
@@ -28,6 +29,7 @@ function rejectCrossOriginMutation(req, res, next) {
   next();
 }
 
+app.use(requireLanPairing);
 app.use(rejectCrossOriginMutation);
 app.use(express.json({ limit: '25mb' }));
 app.use(express.urlencoded({ extended: true }));

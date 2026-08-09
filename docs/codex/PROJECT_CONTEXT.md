@@ -1,6 +1,6 @@
 # Project Context
 
-Last reviewed: 2026-08-09 21:25 Asia/Shanghai
+Last reviewed: 2026-08-09 22:35 Asia/Shanghai
 
 ## Purpose
 
@@ -18,6 +18,8 @@ The AI research direction is defined in `docs/ai-research/AI_PLATFORM_DESIGN.md`
 - Quant tests: `npm run test:quant`
 - Installer: `npm run dist:win`
 - Portable package: `npm run dist:win:portable`
+- Android companion APK: `npm run dist:android`
+- Android host mode: `npm run start:android`
 
 ## Architecture Map
 
@@ -32,6 +34,7 @@ The AI research direction is defined in `docs/ai-research/AI_PLATFORM_DESIGN.md`
 | Quant sidecar | `quant/`, `services/quantService.js`, `services/quantRuntimeInstaller.js`, `routes/quant.js` | Hashed datasets, isolated runtime installation, LightGBM/MASTER jobs, factor gates, rolling evaluation and verified result import | Public Sina adapter is exploratory only |
 | Paper portfolio | `services/paperPortfolioService.js`, `services/quoteService.js`, `routes/researchDecision.js` | Constraint-capped weights, lot-rounded simulated entries, valuation/PnL snapshots and draft/active/archived states | No broker connection or real orders |
 | Frontend | `index.html`, `js/modules/`, `css/styles.css` | Vanilla JS desktop UI | Views are switched by `switchMainView` |
+| Android companion | `android/`, `scripts/start-android-lan.js`, `services/lanAccessService.js` | Native WebView client for the same Windows data source | Private-LAN host plus one-time URL-to-cookie pairing; no second database |
 | Tests | `test/` | Node unit/API and Playwright flows | Tests use isolated temporary SQLite files |
 
 ## Core Flows
@@ -69,6 +72,7 @@ The AI research direction is defined in `docs/ai-research/AI_PLATFORM_DESIGN.md`
 - A ChatGPT Pro subscription is not an API entitlement; handoff remains the no-extra-API-cost path.
 - Qlib + LightGBM, a same-contract MASTER reimplementation and the local factor gate are connected as exploratory research runtimes. Windows x64 can install or repair the pinned runtime from the AI Research view. AlphaAgent, RD-Agent(Q), TradingAgents and FinRL-X remain planned; valid model claims still require licensed or terms-verified point-in-time data.
 - Real brokerage execution remains out of scope.
+- Android is a companion to a running Windows host, not a standalone phone-side data server. Embedded OAuth remains unsupported; authentication links open in the system browser.
 
 ## Verification Notes
 
@@ -76,3 +80,4 @@ The AI research direction is defined in `docs/ai-research/AI_PLATFORM_DESIGN.md`
 - UI regression: `npm run test:frontend`
 - Desktop data path safety: included in `npm test`
 - Packaging checks must inspect both installer and portable outputs and must not delete `WebStockData`.
+- Android release checks include Java unit tests, release lint, APK signature/manifest inspection and, when an ADB device is available, install plus live paired-host loading.

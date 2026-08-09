@@ -1,5 +1,18 @@
 # Test Report
 
+## AI Platform And Cross-Device Release - 2026-08-09
+
+- Node unit/API/integration regression: 93/93 passed. LAN pairing includes a non-loopback end-to-end exchange from unauthorized 401 through protected cookie to authorized 200.
+- Python quant regression: 20/20 passed for factor orientation, MASTER sequences/training contracts, rolling purge windows, transaction costs, artifacts and universe filtering.
+- Playwright regression: 5/5 passed for grounded AI research, main workspace actions, mobile dark mode, keyboard access and non-JSON API handling.
+- Dependency audit against the official npm registry: 0 known vulnerabilities.
+- Android release: Java tests, release lint, v2 signature verification, package/permission inspection, ADB installation, first-screen UI inspection, live Windows-host pairing and same-package upgrade reconnection passed. The visible saved address contained no pairing token. No Android runtime crash was present in the checked log window.
+- Portable Windows smoke: app returned HTTP 200; quant runtime and paper portfolio APIs responded; isolated data directory was created.
+- Formal portable database before/after build and smoke: SHA-256 `295B4E0F6C33BE936DED9CD4D4BE17A4B0DDA5F8914B51E0A3E4678C2E1B244C`.
+- Release hashes: installer `C7CB9B67481E3D5449E5AB96337CBC6DC3E8EB060A8C1ADD1DD1C2DC9F72CFB8`; portable `21CA7E9C1535AE6514A63DA09BA1E1855FEA621AF860C4369730F6006212950C`; Android APK `C7BFFE881C5ECD7CD4458CC1174B583F02366245CF9C974C6D28C56D5BDCB088`.
+
+Acceptance boundary: these checks prove software execution, persistence, traceability and packaging. They do not prove investment return or promote exploratory public-data model results to validated strategies.
+
 ## Latest Iteration Addendum
 
 - Final verification addendum: after the 8-hour gate was reached, final checks passed: 47 JS syntax checks, `npm test` 14 tests, `npm run test:portfolio`, `npm run test:frontend`, duplicate-function audit, startup smoke, OpenAI smoke skip, official npm audit 0 vulnerabilities, `test-results` cleanup, and `git diff --check` with only LF-to-CRLF warnings.

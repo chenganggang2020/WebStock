@@ -1,8 +1,8 @@
 # 📈 WebStock - A 股实时行情看板
 
-一个功能完整的 A 股行情分析工具，支持实时行情、K 线图表、技术指标分析和 AI 智能分析。
+一套 Windows 优先的 A 股个人投研工作台，支持行情、持仓与交易核算、全市场筛选、专家知识库、可追溯量化研究、ChatGPT 交接、纸面组合跟踪和 Android 伴侣。
 
-[![GitHub Repo](https://img.shields.io/badge/GitHub-WebStock-blue?logo=github)](https://github.com/xujh1969/WebStock)
+[![GitHub Repo](https://img.shields.io/badge/GitHub-WebStock-blue?logo=github)](https://github.com/chenganggang2020/WebStock)
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Node.js](https://img.shields.io/badge/node.js-v18+-green.svg)
 ![Version](https://img.shields.io/badge/version-1.0.0-orange.svg)
@@ -61,7 +61,7 @@
 
 1. **克隆项目**
    ```bash
-   git clone https://github.com/xujh1969/WebStock.git
+   git clone https://github.com/chenganggang2020/WebStock.git
    cd WebStock
    ```
 
@@ -88,6 +88,23 @@
 5. **访问应用**
    
    打开浏览器访问：`http://localhost:3000`
+
+### 桌面与安卓发行
+
+```powershell
+# Windows 安装版和便携版
+npm run dist:win:all
+
+# Android 原生伴侣 APK；首次构建会安装独立工具链
+npm run dist:android
+
+# 启动供 Android 伴侣连接的局域网配对服务
+npm run start:android
+```
+
+正式产物分别位于 `dist/installer`、`dist/portable` 和 `dist/android`。Android 伴侣复用 Windows 上的同一份持仓和研究数据库，要求手机与电脑位于同一可信局域网；完整说明见 `docs/android-companion.md`。
+
+AI 研究平台的已实现能力、未部署外部框架和正式数据验收边界见 `docs/ai-research/AI_PLATFORM_DESIGN.md`。当前不连接券商，也不提交真实订单。
 
 ---
 

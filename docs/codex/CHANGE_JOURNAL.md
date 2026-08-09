@@ -128,3 +128,29 @@ Follow-ups:
 - Replace exploratory public current-universe daily data with licensed or terms-verified point-in-time adjusted data before approving any model or factor.
 - Add paper-account price snapshots, simulated fills, daily attribution and model-versus-portfolio drift review before calling phase D complete.
 - Keep AlphaAgent, RD-Agent(Q), TradingAgents and FinRL-X marked planned until their isolated adapters and acceptance evidence exist.
+
+## 2026-08-09 22:35 - Paper Valuation And Android Companion Release
+
+Status: paper-account valuation and cross-device companion release delivered; formal strategy validation remains data-gated
+
+Change direction:
+- Persist paper positions and daily valuation snapshots with lot-rounded simulated entry, cash, market value, daily P/L, total P/L, source time and missing-price warnings.
+- Keep one user-data authority on Windows. The Android APK is a native companion that connects to the Windows host instead of creating a second SQLite database.
+- Protect non-loopback access with a persistent random pairing token exchanged for an HTTP-only strict cookie. Filter displayed addresses to private and shared-LAN ranges.
+- Pin and hash-check the Android toolchain, reuse a persistent local release key, and ship the original black/teal WebStock icon.
+
+Verification:
+- Node unit/API tests: 93/93 passed, including a real non-loopback `401 -> pairing redirect/cookie -> 200` integration test.
+- Python quant tests: 20/20 passed. Playwright desktop/mobile tests: 5/5 passed. Official npm audit: 0 known vulnerabilities.
+- Android: Java unit tests, release lint and v2 signature verification passed. Package `com.webstock.companion` targets SDK 36 and requests only the Internet permission; companion-state cloud backup is disabled.
+- The APK installed and launched on an ADB-connected Android device. The pairing URL loaded the in-app workbench and exposed the same Windows holdings/dashboard data with no Android crash log. A same-package upgrade retained private pairing state, showed only the sanitized host address and reconnected automatically.
+- Android APK: 670,082 bytes, SHA-256 `C7BFFE881C5ECD7CD4458CC1174B583F02366245CF9C974C6D28C56D5BDCB088`.
+- Windows installer: 121,130,080 bytes, SHA-256 `C7CB9B67481E3D5449E5AB96337CBC6DC3E8EB060A8C1ADD1DD1C2DC9F72CFB8`.
+- Windows portable EXE: 111,809,825 bytes, SHA-256 `21CA7E9C1535AE6514A63DA09BA1E1855FEA621AF860C4369730F6006212950C`.
+- Isolated portable launch returned HTTP 200 and exposed quant-runtime and paper-portfolio APIs. The formal portable database remained byte-identical at SHA-256 `295B4E0F6C33BE936DED9CD4D4BE17A4B0DDA5F8914B51E0A3E4678C2E1B244C`.
+- Extracted installer and portable icons had identical SHA-256 and displayed the requested black/teal atom artwork.
+
+Remaining boundaries:
+- Public current-universe data still supports workflow evidence only; no model or factor is approved as profitable without licensed or terms-verified point-in-time data.
+- Android requires the Windows host on the same trusted network. OAuth authentication remains in the system browser by provider design.
+- No broker connection or automatic real order submission is present.

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">WebStock</string>
+    <string name="connection_title">连接 WebStock</string>
+    <string name="connection_hint">Windows 主机地址，例如 192.168.1.20</string>
+    <string name="connection_help">先在 Windows 上启动“Android 局域网模式”，手机和电脑需连接同一局域网。</string>
+    <string name="connect">连接</string>
+    <string name="retry">重试</string>
+    <string name="settings">更改地址</string>
+    <string name="reload">刷新</string>
+</resources>

@@ -1,5 +1,26 @@
 # Completion Audit
 
+## AI Research Takeover Audit - 2026-08-09
+
+Objective: audit the referenced multi-framework AI stock design, replace name-only deployment claims with executable and traceable capabilities, and deliver a feasible Windows/Android research application without paid API or real-broker requirements.
+
+| Requirement | Evidence | Status |
+| --- | --- | --- |
+| Design audit | `docs/ai-research/AI_PLATFORM_DESIGN.md` distinguishes Qlib, MASTER, AlphaAgent, RD-Agent(Q), TradingAgents and FinRL-X by role, runtime and acceptance boundary. | Complete |
+| Free local path | Local screener, expert FTS knowledge, evidence packets and ChatGPT Pro handoff work without an API key. | Complete |
+| Executable models | Isolated Windows Qlib/LightGBM and PyTorch MASTER pipelines run on one hashed dataset and identical rolling folds/costs. | Complete as exploratory research |
+| Honest comparison | MASTER's negative same-data result and the factor lab's zero admitted candidates remain visible; raw scores are not compared across models. | Complete |
+| Expert/book/blogger knowledge | Source ingestion, stable evidence IDs, Chinese fuzzy retrieval, grounded prompts, saved runs and backup recovery are implemented. | Complete |
+| Intelligent selection | Full A-share catalog scope excluding ST, coverage-aware local ranking, model consensus, evidence gaps, four-role ChatGPT review and manual candidate review are connected. | Complete for research support |
+| Paper portfolio | Constraints, draft/active/archive, lot-rounded entries, per-entry fee, positions, cash/net value and daily/total P/L snapshots are persisted and backed up. | Complete for current simulated tracking |
+| Windows release | Latest installer and portable EXE were rebuilt; isolated portable launch passed; formal portable DB hash was unchanged. | Complete |
+| Android release | Signed native companion APK installed and loaded the paired Windows workbench on an ADB device, reusing the same data authority. | Complete |
+| Real trading safety | No broker login, credentials, order route or automated real execution was added. | Complete |
+| Formal strategy proof | Public current-universe data does not meet point-in-time/licensing acceptance and current model/factor metrics are not approved. | Intentionally open data gate |
+| External agent frameworks | AlphaAgent, RD-Agent(Q), TradingAgents and FinRL-X remain planned until isolated adapters and required licensed data/services exist. | Future optional work, not falsely deployed |
+
+Judgment: the repository now delivers a complete feasible AI-assisted research, evidence, simulation and cross-device application. It is not, and is not represented as, a validated profitable strategy or an automatic live-trading system. Formal model approval remains blocked by data provenance and sample-out evidence rather than missing application code.
+
 ## Follow-up Completion Audit - 2026-05-13
 
 Objective restated:

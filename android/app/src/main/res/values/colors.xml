@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="webstock_background">#F4F6F9</color>
+    <color name="webstock_surface">#FFFFFF</color>
+    <color name="webstock_text">#152238</color>
+    <color name="webstock_muted">#607086</color>
+    <color name="webstock_focus">#1769E0</color>
+    <color name="webstock_toolbar">#111923</color>
+</resources>
