@@ -368,8 +368,8 @@ function settingsImportUserDataFromFile(file) {
       const current = preview.current || {};
       const message = [
         'Import will replace local WebStock workstation data.',
-        'Incoming: watchlist ' + (incoming.watchlist || 0) + ', trades ' + (incoming.trades || 0) + ', sectors ' + (incoming.sectors || 0) + ', leaders ' + (incoming.sectorLeaders || 0) + ', screener tasks ' + (incoming.screenerResults || 0) + '.',
-        'Current: watchlist ' + (current.watchlist || 0) + ', trades ' + (current.trades || 0) + ', sectors ' + (current.sectors || 0) + ', leaders ' + (current.sectorLeaders || 0) + ', screener tasks ' + (current.screenerResults || 0) + '.',
+        'Incoming: watchlist ' + (incoming.watchlist || 0) + ', trades ' + (incoming.trades || 0) + ', sectors ' + (incoming.sectors || 0) + ', leaders ' + (incoming.sectorLeaders || 0) + ', screener tasks ' + (incoming.screenerResults || 0) + ', knowledge sources ' + (incoming.knowledgeSources || 0) + ', research runs ' + (incoming.researchRuns || 0) + '.',
+        'Current: watchlist ' + (current.watchlist || 0) + ', trades ' + (current.trades || 0) + ', sectors ' + (current.sectors || 0) + ', leaders ' + (current.sectorLeaders || 0) + ', screener tasks ' + (current.screenerResults || 0) + ', knowledge sources ' + (current.knowledgeSources || 0) + ', research runs ' + (current.researchRuns || 0) + '.',
         'Continue?'
       ].join('\n');
       if (!confirm(message)) return;
@@ -383,13 +383,18 @@ function settingsImportUserDataFromFile(file) {
         ', trades ' + result.trades +
         ', sectors ' + result.sectors +
         ', leaders ' + result.sectorLeaders +
-        ', screener tasks ' + (result.screenerResults || 0) + '.'
+        ', screener tasks ' + (result.screenerResults || 0) +
+        ', knowledge sources ' + (result.knowledgeSources || 0) +
+        ', research runs ' + (result.researchRuns || 0) + '.'
       );
       if (window.Watchlist) window.Watchlist.loadWatchlist().catch(function() {});
       if (window.RecentStocks) window.RecentStocks.load(20).catch(function() {});
       if (window.Portfolio) window.Portfolio.loadPortfolio().catch(function() {});
       if (window.Dashboard) window.Dashboard.load().catch(function() {});
       if (window.StockScreener) window.StockScreener.loadHistory().catch(function() {});
+      if (window.AIResearch) window.AIResearch.ensureLoaded(true).then(function() {
+        if (window.updateSidebarWorkspace) window.updateSidebarWorkspace();
+      }).catch(function() {});
     } catch (error) {
       settingsSetBackupStatus('Import failed: ' + error.message, true);
     }

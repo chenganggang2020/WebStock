@@ -146,6 +146,62 @@ CREATE TABLE IF NOT EXISTS stock_search_index (
   updated_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS knowledge_sources (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  source_key TEXT NOT NULL UNIQUE,
+  source_type TEXT NOT NULL,
+  title TEXT NOT NULL,
+  author TEXT DEFAULT '',
+  source_url TEXT DEFAULT '',
+  published_at TEXT DEFAULT '',
+  tags_json TEXT DEFAULT '[]',
+  stock_codes_json TEXT DEFAULT '[]',
+  sectors_json TEXT DEFAULT '[]',
+  content_hash TEXT NOT NULL UNIQUE,
+  original_content TEXT NOT NULL,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS knowledge_chunks (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  source_id INTEGER NOT NULL,
+  evidence_id TEXT NOT NULL UNIQUE,
+  chunk_index INTEGER NOT NULL,
+  char_start INTEGER NOT NULL DEFAULT 0,
+  char_end INTEGER NOT NULL DEFAULT 0,
+  content TEXT NOT NULL,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (source_id) REFERENCES knowledge_sources(id) ON DELETE CASCADE
+);
+
+CREATE VIRTUAL TABLE IF NOT EXISTS knowledge_chunks_fts USING fts5(
+  evidence_id UNINDEXED,
+  chunk_id UNINDEXED,
+  source_id UNINDEXED,
+  title,
+  author,
+  content,
+  tags,
+  tokenize='trigram'
+);
+
+CREATE TABLE IF NOT EXISTS ai_research_runs (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  run_type TEXT NOT NULL,
+  model_id TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'completed',
+  title TEXT DEFAULT '',
+  question TEXT DEFAULT '',
+  prompt TEXT DEFAULT '',
+  result_text TEXT DEFAULT '',
+  evidence_json TEXT DEFAULT '[]',
+  request_json TEXT DEFAULT '{}',
+  metrics_json TEXT DEFAULT '{}',
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE INDEX IF NOT EXISTS idx_watchlist_group ON watchlist(group_name);
 CREATE INDEX IF NOT EXISTS idx_trades_code ON trades(code);
 CREATE INDEX IF NOT EXISTS idx_trades_date ON trades(trade_date);
@@ -161,3 +217,55 @@ CREATE INDEX IF NOT EXISTS idx_hot_market_ai_results_snapshot ON hot_market_ai_r
 CREATE INDEX IF NOT EXISTS idx_stock_profiles_fetched ON stock_profiles(fetched_at);
 CREATE INDEX IF NOT EXISTS idx_stock_search_index_name ON stock_search_index(name);
 CREATE INDEX IF NOT EXISTS idx_stock_search_index_industry ON stock_search_index(industry);
+CREATE INDEX IF NOT EXISTS idx_knowledge_sources_type ON knowledge_sources(source_type, updated_at);
+CREATE INDEX IF NOT EXISTS idx_knowledge_sources_author ON knowledge_sources(author, updated_at);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_knowledge_chunks_source_order ON knowledge_chunks(source_id, chunk_index);
+CREATE INDEX IF NOT EXISTS idx_ai_research_runs_type ON ai_research_runs(run_type, created_at);
+CREATE INDEX IF NOT EXISTS idx_ai_research_runs_model ON ai_research_runs(model_id, created_at);
+
+CREATE TRIGGER IF NOT EXISTS trg_knowledge_chunk_insert
+AFTER INSERT ON knowledge_chunks
+BEGIN
+  INSERT INTO knowledge_chunks_fts (evidence_id, chunk_id, source_id, title, author, content, tags)
+  SELECT NEW.evidence_id, NEW.id, NEW.source_id, source.title, source.author, NEW.content,
+    source.tags_json || ' ' || source.stock_codes_json || ' ' || source.sectors_json
+  FROM knowledge_sources AS source
+  WHERE source.id = NEW.source_id;
+END;
+
+CREATE TRIGGER IF NOT EXISTS trg_knowledge_chunk_update
+AFTER UPDATE ON knowledge_chunks
+BEGIN
+  DELETE FROM knowledge_chunks_fts WHERE chunk_id = OLD.id;
+  INSERT INTO knowledge_chunks_fts (evidence_id, chunk_id, source_id, title, author, content, tags)
+  SELECT NEW.evidence_id, NEW.id, NEW.source_id, source.title, source.author, NEW.content,
+    source.tags_json || ' ' || source.stock_codes_json || ' ' || source.sectors_json
+  FROM knowledge_sources AS source
+  WHERE source.id = NEW.source_id;
+END;
+
+CREATE TRIGGER IF NOT EXISTS trg_knowledge_chunk_delete
+AFTER DELETE ON knowledge_chunks
+BEGIN
+  DELETE FROM knowledge_chunks_fts WHERE chunk_id = OLD.id;
+END;
+
+CREATE TRIGGER IF NOT EXISTS trg_knowledge_source_metadata_update
+AFTER UPDATE OF title, author, tags_json, stock_codes_json, sectors_json ON knowledge_sources
+BEGIN
+  DELETE FROM knowledge_chunks_fts WHERE source_id = NEW.id;
+  INSERT INTO knowledge_chunks_fts (evidence_id, chunk_id, source_id, title, author, content, tags)
+  SELECT chunk.evidence_id, chunk.id, NEW.id, NEW.title, NEW.author, chunk.content,
+    NEW.tags_json || ' ' || NEW.stock_codes_json || ' ' || NEW.sectors_json
+  FROM knowledge_chunks AS chunk
+  WHERE chunk.source_id = NEW.id;
+END;
+
+INSERT INTO knowledge_chunks_fts (evidence_id, chunk_id, source_id, title, author, content, tags)
+SELECT chunk.evidence_id, chunk.id, chunk.source_id, source.title, source.author, chunk.content,
+  source.tags_json || ' ' || source.stock_codes_json || ' ' || source.sectors_json
+FROM knowledge_chunks AS chunk
+JOIN knowledge_sources AS source ON source.id = chunk.source_id
+WHERE NOT EXISTS (
+  SELECT 1 FROM knowledge_chunks_fts AS indexed WHERE indexed.chunk_id = chunk.id
+);

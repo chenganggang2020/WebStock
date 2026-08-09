@@ -157,6 +157,47 @@ test.beforeEach(async ({ page }) => {
   });
 });
 
+test('AI research view creates grounded expert knowledge and saves a handoff result', async ({ page }) => {
+  page.on('dialog', dialog => dialog.accept());
+  await page.goto(baseURL + '/', { waitUntil: 'domcontentloaded' });
+  await page.click('[data-main-view="aiResearch"]');
+
+  await expect(page.locator('#aiResearchView')).toBeVisible();
+  await expect(page.locator('#aiModelRegistry')).toContainText('本地可解释因子选股');
+  await expect(page.locator('#aiModelRegistry')).toContainText('规划中');
+
+  await page.selectOption('#knowledgeSourceType', 'blog');
+  await page.fill('#knowledgeSourceTitle', 'Playwright CPO 博主笔记');
+  await page.fill('#knowledgeSourceAuthor', '测试博主');
+  await page.fill('#knowledgeSourceTags', 'CPO, 光模块');
+  await page.fill('#knowledgeSourceStocks', '300308');
+  await page.fill('#knowledgeSourceContent', '光模块选股需要核对主营收入占比、客户资本开支、产品速率升级和估值。订单不及预期是重要反证。');
+  await page.click('#saveKnowledgeSourceBtn');
+  await expect(page.locator('#knowledgeSourceList')).toContainText('Playwright CPO 博主笔记');
+
+  await page.fill('#knowledgeQuestionInput', '光模块选股需要核对什么？');
+  await page.click('#searchKnowledgeBtn');
+  await expect(page.locator('#knowledgeEvidenceResults')).toContainText('Playwright CPO 博主笔记');
+  await expect(page.locator('#knowledgeEvidenceResults')).toContainText(/K[a-f0-9]+-1/i);
+
+  await page.click('#analyzeKnowledgeBtn');
+  await expect(page.locator('#handoffModalOverlay')).toBeVisible();
+  await expect(page.locator('#handoffPromptText')).toHaveValue(/来源证据/);
+  await page.fill('#handoffResultText', 'WEBSTOCK_RESULT_START\n# 专家知识库分析\n核对主营收入、客户资本开支与订单兑现。\nWEBSTOCK_RESULT_END');
+  await page.click('#handoffSaveBtn');
+  await expect(page.locator('#knowledgeResearchRuns')).toContainText('核对主营收入');
+
+  await page.click('[data-main-view="screener"]');
+  await page.fill('#screenerDemand', 'CPO 300308 专家框架复核');
+  await page.click('#runScreenerBtn');
+  await expect(page.locator('#screenerResults table')).toBeVisible();
+  await page.click('#screenerKnowledgeBtn');
+  await expect(page.locator('#aiResearchView')).toBeVisible();
+  await expect(page.locator('#handoffModalOverlay')).toBeVisible();
+  await expect(page.locator('#handoffPromptText')).toHaveValue(/待复核候选/);
+  await expect(page.locator('#handoffPromptText')).toHaveValue(/CPO|300308/i);
+});
+
 test('main stock actions and workspace navigation do not throw', async ({ page }) => {
   const dialogResponses = [];
   const dialogMessages = [];

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'webstock-static-v4';
+const CACHE_NAME = 'webstock-static-v5';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -15,6 +15,7 @@ const STATIC_ASSETS = [
   '/js/modules/hotMarket.js',
   '/js/modules/dashboard.js',
   '/js/modules/news.js',
+  '/js/modules/aiResearch.js',
   '/js/modules/portfolio.js',
   '/js/app.js'
 ];

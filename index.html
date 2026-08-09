@@ -35,6 +35,9 @@
       <button id="sidebarScreenerBtn" class="sidebar-workspace-btn" data-main-view="screener">
         <span>智能选股</span><strong>AI</strong>
       </button>
+      <button id="sidebarAiResearchBtn" class="sidebar-workspace-btn" data-main-view="aiResearch">
+        <span>AI研究</span><strong id="sidebarKnowledgeCount">0</strong>
+      </button>
       <button id="sidebarSectorsBtn" class="sidebar-workspace-btn" data-main-view="sectors">
         <span>板块热股</span><strong id="sidebarSectorCount">0</strong>
       </button>
@@ -70,6 +73,7 @@
       <button class="main-tab" data-main-view="news">资讯</button>
       <button class="main-tab" data-main-view="sectors">板块龙头</button>
       <button class="main-tab" data-main-view="screener">智能选股</button>
+      <button class="main-tab" data-main-view="aiResearch">AI研究</button>
       <button class="main-tab" data-main-view="aiHistory">AI记录</button>
       <button class="main-tab" data-main-view="trades">交易记录</button>
       <button class="main-tab" data-main-view="stats">统计</button>
@@ -408,6 +412,7 @@
           <button id="runScreenerBtn">运行筛选</button>
           <button id="saveScreenerResultBtn">保存结果</button>
           <button id="exportScreenerCsvBtn">导出 CSV</button>
+          <button id="screenerKnowledgeBtn">专家库复核</button>
           <button id="screenerAiBtn">用 ChatGPT / AI 分析</button>
         </div>
       </div>
@@ -457,6 +462,117 @@
       </div>
       <div id="screenerHistory" class="screener-history"></div>
       <div id="screenerResults" class="screener-results"></div>
+    </div>
+
+    <div id="aiResearchView" class="main-view" style="display:none;">
+      <div class="section-header">
+        <h2>AI研究中心</h2>
+        <div class="section-actions">
+          <button id="refreshAiResearchBtn">刷新</button>
+        </div>
+      </div>
+      <section class="ai-model-band">
+        <div class="panel-title-row">
+          <h3>模型与能力状态</h3>
+          <span id="aiModelRegistryStatus" class="muted">--</span>
+        </div>
+        <div id="aiModelRegistry" class="ai-model-registry"></div>
+      </section>
+      <div class="ai-research-workspace">
+        <section class="ai-research-pane">
+          <div class="panel-title-row">
+            <h3>专家资料库</h3>
+            <span id="knowledgeSourceCount" class="muted">0 个来源</span>
+          </div>
+          <div class="knowledge-editor">
+            <div class="knowledge-form-grid">
+              <label>来源类型
+                <select id="knowledgeSourceType">
+                  <option value="blog">博主 / 博客</option>
+                  <option value="book">书籍</option>
+                  <option value="article">文章</option>
+                  <option value="video">视频</option>
+                  <option value="transcript">访谈 / 直播转录</option>
+                  <option value="research">研报</option>
+                  <option value="note">个人笔记</option>
+                </select>
+              </label>
+              <label>标题
+                <input id="knowledgeSourceTitle" maxlength="200" placeholder="资料标题">
+              </label>
+              <label>作者 / 博主
+                <input id="knowledgeSourceAuthor" maxlength="160" placeholder="作者或账号名称">
+              </label>
+              <label>发布时间
+                <input id="knowledgeSourcePublishedAt" type="date">
+              </label>
+              <label class="span-2">原始链接
+                <input id="knowledgeSourceUrl" type="url" placeholder="https://">
+              </label>
+              <label>标签
+                <input id="knowledgeSourceTags" placeholder="CPO, 半导体">
+              </label>
+              <label>关联股票
+                <input id="knowledgeSourceStocks" placeholder="300308, 688981">
+              </label>
+              <label class="span-2">关联板块
+                <input id="knowledgeSourceSectors" placeholder="光模块, 先进封装">
+              </label>
+            </div>
+            <label class="knowledge-content-field">正文
+              <textarea id="knowledgeSourceContent" placeholder="粘贴书籍摘录、文章、视频转录或研究笔记"></textarea>
+            </label>
+            <input id="knowledgeTextFileInput" type="file" accept=".txt,.md,text/plain,text/markdown" style="display:none;">
+            <div class="knowledge-editor-actions">
+              <button id="importKnowledgeTextBtn" class="small-btn">导入文本</button>
+              <button id="clearKnowledgeSourceBtn" class="small-btn">清空</button>
+              <button id="saveKnowledgeSourceBtn" class="small-btn primary">保存来源</button>
+            </div>
+            <div id="knowledgeSourceStatus" class="settings-status-detail" aria-live="polite"></div>
+          </div>
+          <div class="knowledge-source-toolbar">
+            <input id="knowledgeSourceSearchInput" placeholder="筛选标题、作者、标签或正文">
+          </div>
+          <div id="knowledgeSourceList" class="knowledge-source-list"></div>
+        </section>
+
+        <section class="ai-research-pane knowledge-analysis-pane">
+          <div class="panel-title-row">
+            <h3>证据分析</h3>
+            <span id="knowledgeSearchStatus" class="muted">--</span>
+          </div>
+          <div class="knowledge-query-controls">
+            <label>分析模式
+              <select id="knowledgeAnalysisMode">
+                <option value="viewpoint">作者观点</option>
+                <option value="timeline">观点演变</option>
+                <option value="stock-fit">选股规则匹配</option>
+                <option value="contradiction">反证与冲突</option>
+                <option value="selection">专家候选比较</option>
+              </select>
+            </label>
+            <label>限定来源
+              <select id="knowledgeSourceFilter">
+                <option value="">全部来源</option>
+              </select>
+            </label>
+            <label class="span-2">研究问题
+              <textarea id="knowledgeQuestionInput" placeholder="例如：根据张三的研究框架，光模块公司需要重点验证哪些条件？"></textarea>
+            </label>
+            <div class="knowledge-query-actions span-2">
+              <button id="searchKnowledgeBtn" class="small-btn">检索证据</button>
+              <button id="analyzeKnowledgeBtn" class="small-btn primary">用 ChatGPT / AI 分析</button>
+            </div>
+          </div>
+          <div id="knowledgeEvidenceResults" class="knowledge-evidence-results"></div>
+          <section id="knowledgeDirectResult" class="knowledge-direct-result" style="display:none;"></section>
+          <div class="panel-title-row knowledge-runs-heading">
+            <h3>研究记录</h3>
+            <span id="knowledgeRunCount" class="muted">0 条</span>
+          </div>
+          <div id="knowledgeResearchRuns" class="knowledge-research-runs"></div>
+        </section>
+      </div>
     </div>
 
     <div id="settingsView" class="main-view" style="display:none;">
@@ -533,8 +649,8 @@
           <div id="settingsLevel2TestResult" class="settings-status-detail"></div>
         </section>
         <section class="settings-card">
-          <h3>Data Backup</h3>
-          <p>Export or restore recent stocks, watchlist, trades, sectors, sector leaders, leader snapshots, saved screener tasks, and candidate review notes. Import replaces local workstation data after confirmation.</p>
+          <h3>数据备份</h3>
+          <p>导出或恢复最近查看、自选、交易、板块、筛选任务、专家知识来源和 AI 研究记录。确认后导入会替换当前工作站数据。</p>
           <div class="template-actions">
             <button id="downloadWatchlistTemplateBtn" class="small-btn">Watchlist CSV template</button>
             <button id="downloadTradesTemplateBtn" class="small-btn">Trades CSV template</button>
@@ -885,6 +1001,7 @@
   <script src="js/modules/sectorLeaders.js"></script>
   <script src="js/modules/hotMarket.js"></script>
   <script src="js/modules/stockScreener.js"></script>
+  <script src="js/modules/aiResearch.js"></script>
   <script src="js/modules/aiAssistant.js"></script>
   <script src="js/modules/aiHistory.js"></script>
   <script src="js/modules/settings.js"></script>

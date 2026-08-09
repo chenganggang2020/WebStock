@@ -13,6 +13,7 @@ function bindButtons() {
   if (window.StockDetail) window.StockDetail.bind();
   if (window.Settings) window.Settings.bind();
   if (window.HotMarket) window.HotMarket.bind();
+  if (window.AIResearch) window.AIResearch.bind();
 
   const indSelect = document.getElementById('indicatorSelect');
   if (indSelect) {
@@ -299,6 +300,8 @@ function bindButtons() {
   if (exportScreenerCsvBtn) exportScreenerCsvBtn.addEventListener('click', function() { window.StockScreener.exportCurrentCsv().catch(function(error) { alert(error.message); }); });
   const screenerAiBtn = document.getElementById('screenerAiBtn');
   if (screenerAiBtn) screenerAiBtn.addEventListener('click', function() { window.StockScreener.runAI().catch(function(error) { alert(error.message); }); });
+  const screenerKnowledgeBtn = document.getElementById('screenerKnowledgeBtn');
+  if (screenerKnowledgeBtn) screenerKnowledgeBtn.addEventListener('click', function() { window.StockScreener.runKnowledgeReview().catch(function(error) { alert(error.message); }); });
 
   window.apiFetch('/ai-status').then(function(data) {
     const badge = document.getElementById('aiStatusBadge');
@@ -327,6 +330,7 @@ function updateSidebarWorkspace() {
     historyCount = 0;
   }
   setText('sidebarAiHistoryCount', historyCount);
+  setText('sidebarKnowledgeCount', window.AIResearch && window.AIResearch.getSourceCount ? window.AIResearch.getSourceCount() : 0);
 
   document.querySelectorAll('.sidebar-workspace-btn').forEach(function(btn) {
     btn.classList.toggle('active', btn.getAttribute('data-main-view') === State.currentMainView);
@@ -372,6 +376,7 @@ function switchMainView(view, options) {
     window.SectorLeaders.load().catch(function(error) { alert(error.message); });
   }
   if (view === 'screener') window.StockScreener.ensureLoaded().catch(function(error) { alert(error.message); });
+  if (view === 'aiResearch' && window.AIResearch) window.AIResearch.ensureLoaded().catch(function(error) { alert(error.message); });
   if (view === 'market' && window.StockList && State.currentStock && !State.currentRawData.length) {
     window.StockList.selectStock(State.currentStock).catch(function(error) { console.warn(error.message); });
   }

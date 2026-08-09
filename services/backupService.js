@@ -1,6 +1,8 @@
 const db = require('../db');
+const knowledgeService = require('./knowledgeService');
+const researchRunService = require('./researchRunService');
 
-const BACKUP_VERSION = 1;
+const BACKUP_VERSION = 2;
 const MAX_ITEMS_PER_TABLE = 5000;
 
 function text(value, fallback = '', maxLength = 2000) {
@@ -106,10 +108,24 @@ function exportUserData() {
     ORDER BY result_id ASC, code ASC
   `).all();
 
+  const knowledgeSources = knowledgeService.exportSources();
+  const researchRuns = researchRunService.exportRuns();
+
   return {
     version: BACKUP_VERSION,
     exportedAt: new Date().toISOString(),
-    tables: { recentStocks, watchlist, trades, sectors, sectorLeaders, sectorLeaderSnapshots, screenerResults, screenerCandidateNotes }
+    tables: {
+      recentStocks,
+      watchlist,
+      trades,
+      sectors,
+      sectorLeaders,
+      sectorLeaderSnapshots,
+      screenerResults,
+      screenerCandidateNotes,
+      knowledgeSources,
+      researchRuns
+    }
   };
 }
 
@@ -219,6 +235,43 @@ function normalizeScreenerCandidateNote(item) {
   };
 }
 
+function normalizeStringArray(value, maxItems = 80) {
+  const items = Array.isArray(value) ? value : [];
+  return items.map(item => text(item, '', 160)).filter(Boolean).slice(0, maxItems);
+}
+
+function normalizeKnowledgeSource(item) {
+  return {
+    sourceKey: text(item.sourceKey, '', 80),
+    sourceType: text(item.sourceType, 'note', 30),
+    title: text(item.title, '', 200),
+    author: text(item.author, '', 160),
+    sourceUrl: text(item.sourceUrl, '', 1000),
+    publishedAt: text(item.publishedAt, '', 40),
+    tags: normalizeStringArray(item.tags),
+    stockCodes: normalizeStringArray(item.stockCodes).filter(item => /^\d{6}$/.test(item)),
+    sectors: normalizeStringArray(item.sectors),
+    content: text(item.content, '', 800000),
+    createdAt: text(item.createdAt, '', 40)
+  };
+}
+
+function normalizeResearchRun(item) {
+  return {
+    runType: text(item.runType, '', 80),
+    modelId: text(item.modelId, '', 120),
+    status: text(item.status, 'completed', 30),
+    title: text(item.title, '', 200),
+    question: text(item.question, '', 2000),
+    prompt: text(item.prompt, '', 250000),
+    result: text(item.result, '', 250000),
+    evidence: Array.isArray(item.evidence) ? item.evidence.slice(0, 100) : [],
+    request: item.request && typeof item.request === 'object' ? item.request : {},
+    metrics: item.metrics && typeof item.metrics === 'object' ? item.metrics : {},
+    createdAt: text(item.createdAt, '', 40)
+  };
+}
+
 function prepareImport(backup) {
   if (!backup || typeof backup !== 'object') throw new Error('Backup JSON is required');
   const recentStocks = arrayFromBackup(backup, 'recentStocks').map(normalizeRecent);
@@ -229,7 +282,20 @@ function prepareImport(backup) {
   const sectorLeaderSnapshots = arrayFromBackup(backup, 'sectorLeaderSnapshots').map(normalizeLeaderSnapshot);
   const screenerResults = arrayFromBackup(backup, 'screenerResults').map(normalizeScreenerResult);
   const screenerCandidateNotes = arrayFromBackup(backup, 'screenerCandidateNotes').map(normalizeScreenerCandidateNote);
-  return { recentStocks, watchlist, trades, sectors, sectorLeaders, sectorLeaderSnapshots, screenerResults, screenerCandidateNotes };
+  const knowledgeSources = arrayFromBackup(backup, 'knowledgeSources').map(normalizeKnowledgeSource);
+  const researchRuns = arrayFromBackup(backup, 'researchRuns').map(normalizeResearchRun);
+  return {
+    recentStocks,
+    watchlist,
+    trades,
+    sectors,
+    sectorLeaders,
+    sectorLeaderSnapshots,
+    screenerResults,
+    screenerCandidateNotes,
+    knowledgeSources,
+    researchRuns
+  };
 }
 
 function countsForPrepared(prepared) {
@@ -241,7 +307,9 @@ function countsForPrepared(prepared) {
     sectorLeaders: prepared.sectorLeaders.length,
     sectorLeaderSnapshots: prepared.sectorLeaderSnapshots.length,
     screenerResults: prepared.screenerResults.length,
-    screenerCandidateNotes: prepared.screenerCandidateNotes.length
+    screenerCandidateNotes: prepared.screenerCandidateNotes.length,
+    knowledgeSources: prepared.knowledgeSources.length,
+    researchRuns: prepared.researchRuns.length
   };
 }
 
@@ -254,7 +322,9 @@ function currentCounts() {
     sectorLeaders: db.prepare('SELECT COUNT(*) AS count FROM sector_leaders').get().count,
     sectorLeaderSnapshots: db.prepare('SELECT COUNT(*) AS count FROM sector_leader_snapshots').get().count,
     screenerResults: db.prepare('SELECT COUNT(*) AS count FROM ai_screener_results').get().count,
-    screenerCandidateNotes: db.prepare('SELECT COUNT(*) AS count FROM screener_candidate_notes').get().count
+    screenerCandidateNotes: db.prepare('SELECT COUNT(*) AS count FROM screener_candidate_notes').get().count,
+    knowledgeSources: db.prepare('SELECT COUNT(*) AS count FROM knowledge_sources').get().count,
+    researchRuns: db.prepare('SELECT COUNT(*) AS count FROM ai_research_runs').get().count
   };
 }
 
@@ -270,7 +340,18 @@ function previewUserDataImport(backup) {
 function importUserData(backup, options = {}) {
   const mode = options.mode === 'merge' ? 'merge' : 'replace';
   const prepared = prepareImport(backup);
-  const { recentStocks, watchlist, trades, sectors, sectorLeaders, sectorLeaderSnapshots, screenerResults, screenerCandidateNotes } = prepared;
+  const {
+    recentStocks,
+    watchlist,
+    trades,
+    sectors,
+    sectorLeaders,
+    sectorLeaderSnapshots,
+    screenerResults,
+    screenerCandidateNotes,
+    knowledgeSources,
+    researchRuns
+  } = prepared;
 
   const summary = {
     mode,
@@ -288,6 +369,8 @@ function importUserData(backup, options = {}) {
       db.prepare('DELETE FROM portfolio_snapshots').run();
       db.prepare('DELETE FROM screener_candidate_notes').run();
       db.prepare('DELETE FROM ai_screener_results').run();
+      db.prepare('DELETE FROM ai_research_runs').run();
+      db.prepare('DELETE FROM knowledge_sources').run();
     }
 
     const insertRecent = db.prepare(`
@@ -409,6 +492,8 @@ function importUserData(backup, options = {}) {
     });
 
     sectorLeaderSnapshots.forEach(item => insertLeaderSnapshot.run(item));
+    knowledgeSources.forEach(item => knowledgeService.createSource(item));
+    researchRuns.forEach(item => researchRunService.createRun(item));
   })();
 
   return summary;

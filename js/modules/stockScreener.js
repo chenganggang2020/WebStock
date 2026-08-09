@@ -770,9 +770,23 @@ async function runAI() {
   }
 }
 
+async function runKnowledgeReview() {
+  if (!lastResult) await run();
+  const candidates = filterResultCandidates(lastResult.candidates || []).slice(0, 20);
+  if (!candidates.length) {
+    renderScreenerMessage('当前过滤条件下没有可供专家知识库复核的候选。');
+    return null;
+  }
+  if (!window.AIResearch || !window.AIResearch.reviewScreener) {
+    throw new Error('AI 研究模块尚未加载。');
+  }
+  return window.AIResearch.reviewScreener(lastResult, candidates);
+}
+
 window.StockScreener = {
   run,
   runAI,
+  runKnowledgeReview,
   ensureLoaded,
   renderStrategyHint,
   refreshResultFilters,
