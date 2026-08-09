@@ -97,3 +97,34 @@ Verification:
 
 Follow-ups:
 - Add MASTER only as a same-data exploratory comparison; do not reuse the official repository's flawed validation dump.
+
+## 2026-08-09 21:35 - MASTER, Factor Gates And Evidence-Gated Paper Research
+
+Status: phases C and the first phase-D research slice delivered; formal point-in-time data validation and simulated daily attribution remain pending
+
+Problem:
+- A complex model name alone did not make the selection workflow intelligent: LightGBM and MASTER needed a same-data comparison, generated factors needed an admission gate, and model candidates needed evidence and portfolio-risk review before becoming a saved research draft.
+- The first decision-packet implementation could mix different quant datasets when the caller omitted a dataset, and the factor-lab API passed unsupported model-training flags to the Python factor command.
+- A composite factor ranking could enter consensus even when no individual factor passed the admission gate.
+
+Change direction:
+- Add a PyTorch MASTER reimplementation that uses the same immutable manifest, folds, labels, Top-K and transaction-cost contract as LightGBM.
+- Add an eight-factor lab that chooses direction and composite weights from validation windows only, reports untouched sample-out IC/stability/duplication/performance, and records candidate/watch/rejected reasons.
+- Add a local evidence orchestrator that combines comparable within-source ranks, local screening, holdings/watchlist context, cached business profiles, stable expert evidence and sourced news into a ChatGPT Pro four-role review packet.
+- Add a broker-free paper portfolio with maximum position count, single-stock caps, cash reserve, minimum signal count, ST exclusion and draft/active/archived states.
+- Upgrade user backup format to version 3 and round-trip paper portfolios without reusing stale research-run IDs.
+
+Verification:
+- Same-data exploratory MASTER run `master-20260809T121500Z` completed but did not beat the LightGBM baseline on annualized return, drawdown, Sharpe, turnover or cost; the UI and design document preserve that negative conclusion.
+- Factor run `factor-lab-20260809T131500Z` completed on the same dataset and folds. Five factors are watch-only and three rejected; none passed the candidate gate, so its composite ranking is now excluded from decision consensus.
+- Node unit/API regression: 84/84 passed. Python quant regression: 20/20 passed. Playwright desktop/mobile regression: 5/5 passed.
+- Official npm registry audit reported 0 vulnerabilities. Changed JavaScript syntax checks and Python compilation completed successfully.
+- Final installer: 121,126,771 bytes, SHA-256 `996B8F71D07B1273ACC9B8EEC36794724728402CB64D52C7C55A047F6D41F3AA`.
+- Final portable EXE: 111,808,086 bytes, SHA-256 `93028EACF23C25D9C6BA19D8FCDA8EBC6764FAB2C295B05B0DC90515EEE8CB58`.
+- Isolated portable launch returned HTTP 200, created its own `WebStockData/webstock.db`, exposed the runtime installer, contained the decision/paper/factor sources and no tests, `.venv` or database in `app.asar`.
+- Installer, portable wrapper and unpacked `WebStock.exe` exposed the same black/teal atom icon. The existing formal portable database remained byte-identical with SHA-256 `295B4E0F6C33BE936DED9CD4D4BE17A4B0DDA5F8914B51E0A3E4678C2E1B244C`.
+
+Follow-ups:
+- Replace exploratory public current-universe daily data with licensed or terms-verified point-in-time adjusted data before approving any model or factor.
+- Add paper-account price snapshots, simulated fills, daily attribution and model-versus-portfolio drift review before calling phase D complete.
+- Keep AlphaAgent, RD-Agent(Q), TradingAgents and FinRL-X marked planned until their isolated adapters and acceptance evidence exist.
