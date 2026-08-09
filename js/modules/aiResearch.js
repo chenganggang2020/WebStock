@@ -37,7 +37,8 @@ const QUANT_JOB_KIND_LABELS = {
   pilot: '小样本试跑',
   collect: '市场数据采集',
   run: '数据集训练',
-  'factor-lab': '因子样本外体检'
+  'factor-lab': '因子样本外体检',
+  'research-suite': '完整研究流水线'
 };
 
 const QUANT_JOB_STATUS_LABELS = {
@@ -178,6 +179,7 @@ function quantWarningText(value) {
     'Exploratory MASTER comparison on the same public, unadjusted daily dataset and rolling folds as LightGBM.': 'MASTER 与 LightGBM 使用同一公开未复权日线、标签和滚动窗口，本结果仅为探索性对照。',
     'Validation inference keeps all feature-valid stocks; missing labels are filtered only when metrics are computed.': '验证和预测保留全部特征有效股票，仅在计算损失或指标时过滤空标签。',
     'This implementation follows the official MASTER architecture concepts under its MIT license; it is not an official pretrained checkpoint.': '本实现依据官方 MASTER 架构与 MIT 许可证重新实现，不是官方预训练检查点。',
+    'Each fold selects a bounded liquid universe using training-period coverage and volume only.': '每个滚动窗口只使用训练期覆盖率和成交量选择受控股票池，测试期不参与选池。',
     'Factor directions and ensemble weights are selected from each validation window only.': '每个滚动窗口的因子方向和复合权重只使用验证期确定。',
     'Admission labels are exploratory gates, not evidence of future profitability.': '通过、观察和拒绝仅是探索性研究门禁，不代表未来可以盈利。',
     'Public unadjusted daily data cannot support production factor approval.': '公开未复权日线不足以支持生产级因子批准。'
@@ -997,6 +999,13 @@ function aiResearchBind() {
     const datasetId = document.getElementById('quantDatasetSelect').value;
     if (!datasetId) return alert('请先选择一个数据集。');
     aiResearchStartQuant('/api/quant/factor-labs', { datasetId: datasetId })
+      .catch(function(error) { alert(error.message); });
+  });
+  document.getElementById('runResearchSuiteBtn').addEventListener('click', function() {
+    const datasetId = document.getElementById('quantDatasetSelect').value;
+    if (!datasetId) return alert('请先同步或选择一个全市场数据集。');
+    if (!confirm('将依次运行 LightGBM、因子样本外门禁和受控股票池 MASTER。任务可能持续数小时，继续？')) return;
+    aiResearchStartQuant('/api/quant/research-suite', { datasetId: datasetId })
       .catch(function(error) { alert(error.message); });
   });
   document.getElementById('quantDatasetSelect').addEventListener('change', aiResearchRenderFactorLab);

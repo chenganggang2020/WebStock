@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 import copy
+import hashlib
 import math
 import os
 from datetime import datetime, timezone
@@ -397,6 +398,47 @@ def predict_master_batches(model, batches, device_name="cpu"):
     return pd.DataFrame(rows, columns=["date", "code", "name", "score", "label"])
 
 
+def select_master_universe(features, fold, max_instruments=600, minimum_coverage=0.8):
+    maximum = max(int(max_instruments), 3)
+    training = features[
+        (features["date"] >= fold.train_start) & (features["date"] <= fold.train_end)
+    ].copy()
+    if training.empty:
+        raise ValueError("MASTER universe selection has no training rows")
+    training["volume"] = pd.to_numeric(training["volume"], errors="coerce")
+    expected_dates = max(int(training["date"].nunique()), 1)
+    stats = training.groupby("code", sort=True).agg(
+        observations=("date", "nunique"),
+        medianVolume=("volume", "median"),
+    ).reset_index()
+    stats["coverage"] = stats["observations"] / expected_dates
+    eligible = stats[
+        (stats["coverage"] >= float(minimum_coverage))
+        & np.isfinite(stats["medianVolume"])
+        & (stats["medianVolume"] > 0)
+    ].copy()
+    eligible = eligible.sort_values(
+        ["medianVolume", "coverage", "code"],
+        ascending=[False, False, True],
+        kind="stable",
+    )
+    selected = sorted(eligible.head(maximum)["code"].astype(str).tolist())
+    if len(selected) < 3:
+        raise ValueError("MASTER universe selection requires at least three liquid instruments")
+    digest = hashlib.sha256("\n".join(selected).encode("utf-8")).hexdigest()
+    return selected, {
+        "method": "training-only-median-volume-and-coverage-v1",
+        "selectionStart": pd.Timestamp(fold.train_start).strftime("%Y-%m-%d"),
+        "selectionEnd": pd.Timestamp(fold.train_end).strftime("%Y-%m-%d"),
+        "sourceCount": int(stats["code"].nunique()),
+        "eligibleCount": int(len(eligible)),
+        "selectedCount": int(len(selected)),
+        "maxInstruments": int(maximum),
+        "minimumCoverage": float(minimum_coverage),
+        "codesSha256": digest,
+    }
+
+
 def run_master_baseline(
     dataset_dir,
     workspace,
@@ -420,6 +462,7 @@ def run_master_baseline(
     dropout=0.1,
     gate_temperature=1.0,
     batch_days=16,
+    max_instruments=600,
     emit=None,
 ):
     _require_torch()
@@ -458,24 +501,28 @@ def run_master_baseline(
     fitted = []
     training_summaries = []
     for fold_index, fold in enumerate(folds, start=1):
-        train_frame = features[
-            (features["date"] >= fold.train_start) & (features["date"] <= fold.train_end)
+        selected_codes, universe_summary = select_master_universe(
+            features, fold, max_instruments=max_instruments
+        )
+        fold_features = features[features["code"].isin(selected_codes)].copy()
+        train_frame = fold_features[
+            (fold_features["date"] >= fold.train_start) & (fold_features["date"] <= fold.train_end)
         ]
         scaler = fit_robust_scaler(train_frame, FEATURE_COLUMNS)
         train_batches = build_daily_sequences(
-            features,
+            fold_features,
             dates[(dates >= fold.train_start) & (dates <= fold.train_end)],
             scaler,
             lookback=lookback,
         )
         validation_batches = build_daily_sequences(
-            features,
+            fold_features,
             dates[(dates >= fold.validation_start) & (dates <= fold.validation_end)],
             scaler,
             lookback=lookback,
         )
         test_batches = build_daily_sequences(
-            features,
+            fold_features,
             dates[(dates >= fold.test_start) & (dates <= fold.test_end)],
             scaler,
             lookback=lookback,
@@ -513,8 +560,12 @@ def run_master_baseline(
         predictions = predict_master_batches(model, test_batches)
         predictions["fold"] = fold_index
         prediction_frames.append(predictions)
-        fitted.append((model, fold, scaler))
-        training_summaries.append(dict(training_summary, fold=fold_index))
+        fitted.append((model, fold, scaler, selected_codes))
+        training_summaries.append(dict(
+            training_summary,
+            fold=fold_index,
+            universe=universe_summary,
+        ))
 
     all_predictions = pd.concat(prediction_frames, ignore_index=True)
     metrics = evaluate_predictions(
@@ -526,8 +577,11 @@ def run_master_baseline(
     metrics = {key: (_finite(value) if not isinstance(value, int) else value) for key, value in metrics.items()}
 
     latest_date = pd.Timestamp(features["date"].max())
-    last_model, last_fold, last_scaler = fitted[-1]
-    latest_batches = build_daily_sequences(features, [latest_date], last_scaler, lookback=lookback)
+    last_model, last_fold, last_scaler, last_codes = fitted[-1]
+    latest_features = features[features["code"].isin(last_codes)]
+    latest_batches = build_daily_sequences(
+        latest_features, [latest_date], last_scaler, lookback=lookback
+    )
     if not latest_batches:
         raise ValueError("latest dataset date has no complete MASTER sequences")
     latest = predict_master_batches(last_model, latest_batches).sort_values("score", ascending=False)
@@ -557,6 +611,7 @@ def run_master_baseline(
             "median": last_scaler.median.tolist(),
             "scale": last_scaler.scale.tolist(),
         },
+        "universeCodes": last_codes,
     }, model_path)
 
     warnings = list(manifest.get("warnings") or [])
@@ -564,6 +619,7 @@ def run_master_baseline(
         "Exploratory MASTER comparison on the same public, unadjusted daily dataset and rolling folds as LightGBM.",
         "Validation inference keeps all feature-valid stocks; missing labels are filtered only when metrics are computed.",
         "This implementation follows the official MASTER architecture concepts under its MIT license; it is not an official pretrained checkpoint.",
+        "Each fold selects a bounded liquid universe using training-period coverage and volume only.",
     ])
     result = {
         "schema": "webstock.quant.result.v1",
@@ -601,6 +657,8 @@ def run_master_baseline(
             "dropout": float(dropout),
             "gateTemperature": float(gate_temperature),
             "batchDays": int(batch_days),
+            "maxInstruments": int(max_instruments),
+            "universeSelection": "training-only-median-volume-and-coverage-v1",
             "preprocessing": "training-only robust-zscore-clip3-fill0; daily-label-trim5pct-cszscore",
         },
         "folds": [fold.to_contract() for fold in folds],

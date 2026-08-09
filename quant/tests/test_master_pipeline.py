@@ -14,10 +14,11 @@ from webstock_quant.master_model import (
     normalize_cross_section_labels,
     predict_master_batches,
     run_master_baseline,
+    select_master_universe,
     train_master_model,
 )
 from webstock_quant.manifest import file_sha256, manifest_sha256, write_json_atomic
-from webstock_quant.pipeline import FEATURE_COLUMNS, build_features
+from webstock_quant.pipeline import FEATURE_COLUMNS, build_features, build_rolling_folds
 
 
 def sample_panel(days=90, instruments=("000001", "600000", "300750")):
@@ -92,11 +93,52 @@ class MasterDataTests(unittest.TestCase):
             "--run-id", "run-001", "--model", "master",
         ])
         self.assertEqual(master.model, "master")
+        bounded = parser.parse_args([
+            "run", "--workspace", "workspace", "--dataset-id", "dataset-001",
+            "--run-id", "run-003", "--model", "master",
+            "--master-max-instruments", "480",
+        ])
+        self.assertEqual(bounded.master_max_instruments, 480)
         with self.assertRaises(SystemExit):
             parser.parse_args([
                 "run", "--workspace", "workspace", "--dataset-id", "dataset-001",
                 "--run-id", "run-002", "--model", "unknown-model",
             ])
+
+    def test_master_universe_selection_uses_training_period_only(self):
+        instruments = ("000001", "000002", "000003", "000004", "000005")
+        panel = sample_panel(days=180, instruments=instruments)
+        volume_scale = {code: index + 1 for index, code in enumerate(instruments)}
+        panel["volume"] = panel.apply(
+            lambda row: row["volume"] * volume_scale[row["code"]], axis=1
+        )
+        features = build_features(panel, label_horizon=5)
+        dates = pd.DatetimeIndex(features["date"].unique()).sort_values()
+        fold = build_rolling_folds(
+            dates,
+            train_days=80,
+            validation_days=30,
+            test_days=20,
+            step_days=20,
+            label_horizon=5,
+            max_folds=1,
+        )[0]
+
+        baseline, baseline_summary = select_master_universe(features, fold, max_instruments=3)
+        changed = features.copy()
+        changed.loc[
+            changed["date"] > fold.train_end,
+            "volume",
+        ] = changed.loc[changed["date"] > fold.train_end, "code"].map({
+            "000001": 10**15,
+            "000002": 10**14,
+        }).fillna(1)
+        repeated, repeated_summary = select_master_universe(changed, fold, max_instruments=3)
+
+        self.assertEqual(baseline, ["000003", "000004", "000005"])
+        self.assertEqual(repeated, baseline)
+        self.assertEqual(baseline_summary["selectedCount"], 3)
+        self.assertEqual(repeated_summary["selectionEnd"], fold.train_end.strftime("%Y-%m-%d"))
 
     def test_relative_manifest_output_is_resolved_from_the_run_workspace(self):
         result_path = Path("D:/quant-workspace/runs/master-run/result.json")

@@ -1,5 +1,6 @@
 const childProcess = require('node:child_process');
 const fs = require('node:fs');
+const os = require('node:os');
 const path = require('node:path');
 const crypto = require('node:crypto');
 const researchRuns = require('./researchRunService');
@@ -309,6 +310,14 @@ function publicJob(job) {
     };
     return copy;
   }
+  if (copy.kind === 'research-suite' && copy.output) {
+    copy.output = {
+      suiteId: copy.output.suiteId || '',
+      datasetId: copy.output.datasetId || '',
+      completedSteps: Array.isArray(copy.output.completedSteps) ? copy.output.completedSteps : []
+    };
+    return copy;
+  }
   if (copy.output) {
     const factorCount = copy.output.factorCount;
     const manifest = copy.output.manifest || {};
@@ -374,6 +383,13 @@ function commonEvaluationArgs(input) {
   ];
 }
 
+function defaultMasterMaxInstruments(totalMemory = os.totalmem()) {
+  const gib = Number(totalMemory) / (1024 ** 3);
+  if (gib >= 24) return 600;
+  if (gib >= 12) return 350;
+  return 200;
+}
+
 function commonModelArgs(input) {
   return commonEvaluationArgs(input).concat([
     '--num-boost-round', String(Math.round(numeric(input.numBoostRound, 300, 20, 2000))),
@@ -387,7 +403,13 @@ function commonModelArgs(input) {
     '--master-cross-stock-heads', String(Math.round(numeric(input.masterCrossStockHeads, 2, 1, 8))),
     '--master-dropout', String(numeric(input.masterDropout, 0.1, 0, 0.8)),
     '--master-gate-temperature', String(numeric(input.masterGateTemperature, 1, 0.05, 20)),
-    '--master-batch-days', String(Math.round(numeric(input.masterBatchDays, 16, 1, 64)))
+    '--master-batch-days', String(Math.round(numeric(input.masterBatchDays, 16, 1, 64))),
+    '--master-max-instruments', String(Math.round(numeric(
+      input.masterMaxInstruments,
+      defaultMasterMaxInstruments(),
+      50,
+      1200
+    )))
   ]);
 }
 
@@ -660,6 +682,142 @@ function startFactorLab(input = {}) {
   return startJob('factor-lab', args, Object.assign({}, input, { datasetId, runId }));
 }
 
+function researchSuiteSteps(input = {}) {
+  const datasetId = String(input.datasetId || '').trim();
+  if (!/^[A-Za-z0-9._-]{3,100}$/.test(datasetId)) throw new Error('请选择有效的数据集。');
+  const timestamp = String(input.suiteTimestamp || compactUtcTimestamp()).replace(/[^A-Za-z0-9_-]/g, '');
+  const workspace = ensureWorkspace();
+  const modelArgs = commonModelArgs(input);
+  const evaluationArgs = commonEvaluationArgs(input);
+  return [
+    {
+      kind: 'lightgbm',
+      label: 'LightGBM 全市场基线',
+      args: ['run', '--workspace', workspace, '--dataset-id', datasetId,
+        '--run-id', 'qlib-lightgbm-suite-' + timestamp, '--model', 'lightgbm'].concat(modelArgs)
+    },
+    {
+      kind: 'factor-lab',
+      label: '因子样本外门禁',
+      args: ['factor-lab', '--workspace', workspace, '--dataset-id', datasetId,
+        '--run-id', 'factor-lab-suite-' + timestamp].concat(evaluationArgs)
+    },
+    {
+      kind: 'master',
+      label: 'MASTER 流动性股票池二筛',
+      args: ['run', '--workspace', workspace, '--dataset-id', datasetId,
+        '--run-id', 'master-suite-' + timestamp, '--model', 'master'].concat(modelArgs)
+    }
+  ];
+}
+
+function startResearchSuite(input = {}) {
+  const runtime = getRuntimeStatus();
+  if (!['configured', 'available'].includes(runtime.status)) {
+    const error = new Error(runtime.reason);
+    error.status = 409;
+    throw error;
+  }
+  const existing = activeJob();
+  if (existing) {
+    const error = new Error('已有量化任务正在运行：' + existing.id);
+    error.status = 409;
+    throw error;
+  }
+  const datasetId = String(input.datasetId || '').trim();
+  const steps = researchSuiteSteps(Object.assign({}, input, {
+    datasetId,
+    suiteTimestamp: compactUtcTimestamp()
+  }));
+  const manifestPath = path.join(ensureWorkspace(), 'datasets', datasetId, 'manifest.json');
+  if (!fs.existsSync(manifestPath)) {
+    const error = new Error('所选数据集不存在，请先同步全市场数据。');
+    error.status = 404;
+    throw error;
+  }
+  verifyManifest(manifestPath, { verifyHashes: false });
+
+  const job = {
+    id: newJobId('research-suite'),
+    kind: 'research-suite',
+    status: 'queued',
+    request: Object.assign({}, input, {
+      datasetId,
+      masterMaxInstruments: Math.round(numeric(
+        input.masterMaxInstruments,
+        defaultMasterMaxInstruments(),
+        50,
+        1200
+      ))
+    }),
+    progress: { stage: 'queued', message: '等待启动完整研究流水线。' },
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    output: null,
+    error: ''
+  };
+  jobs.set(job.id, job);
+  persistJob(job);
+
+  (async function executeSuite() {
+    const completedSteps = [];
+    job.status = 'running';
+    job.updatedAt = new Date().toISOString();
+    persistJob(job);
+    for (let index = 0; index < steps.length; index += 1) {
+      if (job.status === 'cancelled') throw new Error('完整研究流水线已停止。');
+      const step = steps[index];
+      job.progress = {
+        stage: 'suite-step',
+        current: index + 1,
+        total: steps.length,
+        message: '正在执行：' + step.label
+      };
+      job.updatedAt = new Date().toISOString();
+      persistJob(job);
+      const output = await runProtocol(step.args, {
+        onChild(child) { children.set(job.id, child); },
+        onEvent(event) {
+          job.progress = Object.assign({}, event, {
+            suiteCurrent: index + 1,
+            suiteTotal: steps.length,
+            suiteLabel: step.label,
+            message: step.label + '：' + (event.message || '运行中')
+          });
+          job.updatedAt = new Date().toISOString();
+          persistJob(job);
+        }
+      });
+      const verified = step.kind === 'factor-lab'
+        ? verifyFactorResult(output)
+        : verifyResult(output);
+      const result = verified.result;
+      completedSteps.push({
+        kind: step.kind,
+        label: step.label,
+        runId: result.runId,
+        modelId: result.modelId || 'local-factor-lab-v1',
+        validationStatus: result.validationStatus,
+        asOf: result.asOf,
+        metrics: step.kind === 'factor-lab' ? result.composite.metrics : result.metrics
+      });
+    }
+    job.status = 'completed';
+    job.progress = { stage: 'completed', message: '完整研究流水线已完成。' };
+    job.output = { suiteId: job.id, datasetId, completedSteps };
+    job.updatedAt = new Date().toISOString();
+    persistJob(job);
+  })().catch(error => {
+    if (job.status !== 'cancelled') job.status = 'failed';
+    job.error = error.message;
+    job.progress = { stage: job.status, message: error.message };
+    job.updatedAt = new Date().toISOString();
+    persistJob(job);
+  }).finally(() => children.delete(job.id));
+
+  return publicJob(job);
+}
+
 function loadPersistedJobs() {
   const dir = path.join(ensureWorkspace(), 'jobs');
   fs.readdirSync(dir, { withFileTypes: true }).filter(entry => entry.isFile() && entry.name.endsWith('.json')).forEach(entry => {
@@ -772,7 +930,10 @@ module.exports = {
   startCollection,
   startRun,
   startFactorLab,
+  startResearchSuite,
   collectionDatasetId,
+  defaultMasterMaxInstruments,
+  researchSuiteSteps,
   listJobs,
   getJob,
   cancelJob,

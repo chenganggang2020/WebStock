@@ -143,6 +143,7 @@ def _run(args, dataset_dir=None, run_id=None):
             dropout=args.master_dropout,
             gate_temperature=args.master_gate_temperature,
             batch_days=args.master_batch_days,
+            max_instruments=args.master_max_instruments,
         )
     else:
         result_path, result = run_lightgbm_baseline(
@@ -259,6 +260,7 @@ def add_master_arguments(parser):
     parser.add_argument("--master-dropout", type=float, default=0.1)
     parser.add_argument("--master-gate-temperature", type=float, default=1.0)
     parser.add_argument("--master-batch-days", type=int, default=16)
+    parser.add_argument("--master-max-instruments", type=int, default=600)
 
 
 def build_parser():

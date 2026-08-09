@@ -132,6 +132,34 @@ test('full-market collection IDs are deterministic for resumable date ranges', (
   );
 });
 
+test('MASTER universe limits scale conservatively with available memory', () => {
+  const gb = 1024 ** 3;
+  assert.equal(quant.defaultMasterMaxInstruments(8 * gb), 200);
+  assert.equal(quant.defaultMasterMaxInstruments(16 * gb), 350);
+  assert.equal(quant.defaultMasterMaxInstruments(32 * gb), 600);
+});
+
+test('research suite plans baseline, factor gate and bounded MASTER in order', () => {
+  const steps = quant.researchSuiteSteps({ datasetId: 'dataset-demo', masterMaxInstruments: 480 });
+  assert.deepEqual(steps.map(step => step.kind), ['lightgbm', 'factor-lab', 'master']);
+  assert.ok(steps[0].args.includes('lightgbm'));
+  assert.ok(steps[1].args.includes('factor-lab'));
+  assert.ok(steps[2].args.includes('master'));
+  assert.ok(steps[2].args.includes('480'));
+});
+
+test('research suite API refuses to start without the isolated runtime', async t => {
+  const server = app.listen(0);
+  t.after(() => server.close());
+  const response = await requestJson(server, {
+    path: '/api/quant/research-suite',
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' }
+  }, { datasetId: 'dataset-demo' });
+  assert.equal(response.statusCode, 409);
+  assert.match(response.json.error, /Python|runtime/i);
+});
+
 test.after(() => {
   require('../db').close();
   fs.rmSync(root, { recursive: true, force: true });
