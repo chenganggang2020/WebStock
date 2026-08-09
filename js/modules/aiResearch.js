@@ -5,6 +5,11 @@ let aiResearchEditingSourceId = null;
 let aiResearchLoaded = false;
 let aiResearchLoading = null;
 let aiResearchBound = false;
+let quantRuntime = null;
+let quantDatasets = [];
+let quantResults = [];
+let quantJobs = [];
+let quantPollTimer = null;
 
 const AI_RESEARCH_STATUS_LABELS = {
   available: '可用',
@@ -22,6 +27,31 @@ const AI_RESEARCH_SOURCE_LABELS = {
   transcript: '访谈 / 直播转录',
   research: '研报',
   note: '个人笔记'
+};
+
+const QUANT_JOB_KIND_LABELS = {
+  pilot: '小样本试跑',
+  collect: '市场数据采集',
+  run: '数据集训练'
+};
+
+const QUANT_JOB_STATUS_LABELS = {
+  queued: '等待中',
+  running: '运行中',
+  completed: '已完成',
+  failed: '失败',
+  cancelled: '已停止',
+  interrupted: '已中断'
+};
+
+const AI_RESEARCH_COST_LABELS = {
+  'local-free': '本地免费',
+  'existing-subscription': '使用现有订阅',
+  'provider-billed': '服务商计费',
+  'local-compute': '本机算力',
+  'data-and-llm-dependent': '取决于数据与模型调用',
+  'llm-and-compute': '模型调用与本机算力',
+  'multi-llm-calls': '多次模型调用'
 };
 
 function aiResearchEscape(value) {
@@ -72,13 +102,176 @@ function aiResearchRenderModels() {
         '<td><strong>' + aiResearchEscape(model.name) + '</strong><div class="muted">' + aiResearchEscape((model.capabilities || []).join(' / ')) + '</div></td>' +
         '<td><span class="model-status ' + aiResearchEscape(model.status) + '">' + aiResearchEscape(label) + '</span></td>' +
         '<td>' + aiResearchEscape(model.runtime || '-') + '</td>' +
-        '<td>' + aiResearchEscape(model.costMode || '-') + '</td>' +
+        '<td>' + aiResearchEscape(AI_RESEARCH_COST_LABELS[model.costMode] || model.costMode || '-') + '</td>' +
         '<td><span>' + aiResearchEscape(model.note || '') + '</span>' +
           ((model.requirements || []).length ? '<div class="muted">条件：' + aiResearchEscape(model.requirements.join('；')) + '</div>' : '') + '</td>' +
       '</tr>';
     }).join('') + '</tbody></table></div>';
   const available = aiResearchModels.filter(function(model) { return model.status === 'available'; }).length;
   aiResearchSetStatus('aiModelRegistryStatus', available + ' 项当前可用 / ' + aiResearchModels.length + ' 项已登记');
+}
+
+function quantPercent(value, digits) {
+  const number = Number(value);
+  return Number.isFinite(number) ? (number * 100).toFixed(digits == null ? 2 : digits) + '%' : '--';
+}
+
+function quantNumber(value, digits) {
+  const number = Number(value);
+  return Number.isFinite(number) ? number.toFixed(digits == null ? 3 : digits) : '--';
+}
+
+function quantMetricClass(value) {
+  const number = Number(value);
+  return number > 0 ? 'pnl-up' : number < 0 ? 'pnl-down' : '';
+}
+
+function aiResearchRenderQuantRuntime() {
+  const target = document.getElementById('quantRuntimeStatus');
+  if (!target) return;
+  if (!quantRuntime) {
+    target.textContent = '--';
+    return;
+  }
+  const label = AI_RESEARCH_STATUS_LABELS[quantRuntime.status] || quantRuntime.status;
+  const versions = quantRuntime.versions || {};
+  target.innerHTML = '<span class="model-status ' + aiResearchEscape(quantRuntime.status) + '">' + aiResearchEscape(label) + '</span>' +
+    (versions.qlib ? ' <span>Python ' + aiResearchEscape(versions.python) + ' / Qlib ' + aiResearchEscape(versions.qlib) + ' / LightGBM ' + aiResearchEscape(versions.lightgbm) + '</span>' : '') +
+    '<span class="quant-runtime-reason">' + aiResearchEscape(quantRuntime.reason || '') + '</span>';
+}
+
+function aiResearchRenderQuantDatasets() {
+  const select = document.getElementById('quantDatasetSelect');
+  if (!select) return;
+  const previous = select.value;
+  const valid = quantDatasets.filter(function(entry) { return entry.valid && entry.manifest; });
+  select.innerHTML = valid.length ? valid.map(function(entry) {
+    const manifest = entry.manifest;
+    return '<option value="' + aiResearchEscape(manifest.datasetId) + '">' +
+      aiResearchEscape(manifest.datasetId + ' · ' + manifest.coverage.succeeded + '只 · 截止' + manifest.asOf) + '</option>';
+  }).join('') : '<option value="">暂无数据集</option>';
+  if (valid.some(function(entry) { return entry.manifest.datasetId === previous; })) select.value = previous;
+}
+
+function aiResearchActiveQuantJob() {
+  return quantJobs.find(function(job) { return job.status === 'queued' || job.status === 'running'; }) || null;
+}
+
+function aiResearchRenderQuantJob() {
+  const target = document.getElementById('quantJobStatus');
+  const cancel = document.getElementById('cancelQuantJobBtn');
+  const active = aiResearchActiveQuantJob();
+  if (cancel) cancel.style.display = active ? '' : 'none';
+  if (!target) return;
+  const job = active || quantJobs[0];
+  if (!job) {
+    target.innerHTML = '<span class="muted">尚未启动量化任务。</span>';
+    return;
+  }
+  const progress = job.progress || {};
+  const current = Number(progress.current || 0);
+  const total = Number(progress.total || 0);
+  const percent = total > 0 ? Math.min(Math.max(current / total * 100, 0), 100) : (job.status === 'completed' ? 100 : 0);
+  const kindLabel = QUANT_JOB_KIND_LABELS[job.kind] || job.kind;
+  const statusLabel = QUANT_JOB_STATUS_LABELS[job.status] || job.status;
+  target.innerHTML = '<div class="quant-job-line"><strong>' + aiResearchEscape(kindLabel + ' · ' + statusLabel) + '</strong>' +
+    '<span>' + aiResearchEscape(progress.message || job.error || '') + '</span><time>' + aiResearchEscape(aiResearchDate(job.updatedAt)) + '</time></div>' +
+    '<div class="quant-progress-track"><span style="width:' + percent.toFixed(1) + '%"></span></div>' +
+    (job.error ? '<div class="quant-job-error">' + aiResearchEscape(job.error) + '</div>' : '');
+}
+
+function aiResearchRenderQuantResult() {
+  const target = document.getElementById('quantResultPanel');
+  if (!target) return;
+  const entry = quantResults.find(function(item) { return item.valid && item.result; });
+  if (!entry) {
+    target.innerHTML = '<div class="empty-state compact">尚无通过契约校验的量化结果。</div>';
+    return;
+  }
+  const result = entry.result;
+  const metrics = result.metrics || {};
+  const candidates = result.candidates || [];
+  const dataset = quantDatasets.find(function(item) {
+    return item.manifest && item.manifest.datasetId === result.dataManifest.datasetId;
+  });
+  const manifest = dataset && dataset.manifest;
+  const coverage = manifest && manifest.coverage || {};
+  const warnings = result.warnings || [];
+  const metricItems = [
+    ['Rank IC', quantNumber(metrics.rankIc, 3), metrics.rankIc],
+    ['ICIR', quantNumber(metrics.icir, 2), metrics.icir],
+    ['年化收益', quantPercent(metrics.annualizedReturn), metrics.annualizedReturn],
+    ['基准年化', quantPercent(metrics.benchmarkAnnualizedReturn), metrics.benchmarkAnnualizedReturn],
+    ['最大回撤', quantPercent(metrics.maxDrawdown), metrics.maxDrawdown],
+    ['Sharpe', quantNumber(metrics.sharpe, 2), metrics.sharpe],
+    ['平均换手', quantPercent(metrics.turnover), -Math.abs(Number(metrics.turnover || 0))],
+    ['累计成本', quantPercent(metrics.totalCost), -Math.abs(Number(metrics.totalCost || 0))],
+    ['交易笔数', String(metrics.tradeCount == null ? '--' : metrics.tradeCount), 0],
+    ['调仓次数', String(metrics.rebalanceCount == null ? '--' : metrics.rebalanceCount), 0]
+  ];
+  target.innerHTML = '<div class="quant-result-head"><div><strong>Qlib + LightGBM</strong>' +
+      '<span class="model-status ' + (result.validationStatus === 'validated' ? 'available' : 'planned') + '">' +
+      aiResearchEscape(result.validationStatus === 'validated' ? '已验证' : '探索性') + '</span></div>' +
+      '<div class="muted">截止 ' + aiResearchEscape(result.asOf) + ' · ' + result.folds.length + ' 个滚动窗口 · ' +
+      aiResearchEscape(result.dataManifest.datasetId) + '</div></div>' +
+    '<div class="quant-coverage-line"><span>成功 <strong>' + aiResearchEscape(coverage.succeeded == null ? '--' : coverage.succeeded) + '</strong> 只</span>' +
+      '<span>失败 <strong>' + aiResearchEscape(coverage.failed == null ? '--' : coverage.failed) + '</strong> 只</span>' +
+      '<span>样本 <strong>' + aiResearchEscape(coverage.rows == null ? '--' : coverage.rows) + '</strong> 行</span>' +
+      '<span>成本 <strong>' + aiResearchEscape(result.parameters.costBps) + ' bp</strong></span></div>' +
+    '<div class="quant-metric-grid">' + metricItems.map(function(item) {
+      return '<div><span>' + item[0] + '</span><strong class="' + quantMetricClass(item[2]) + '">' + aiResearchEscape(item[1]) + '</strong></div>';
+    }).join('') + '</div>' +
+    '<details class="quant-warning-block"' + (result.validationStatus !== 'validated' ? ' open' : '') + '><summary>数据与结论限制（' + warnings.length + '）</summary><ul>' +
+      warnings.map(function(warning) { return '<li>' + aiResearchEscape(warning) + '</li>'; }).join('') + '</ul></details>' +
+    '<div class="panel-title-row quant-candidate-title"><h3>最新候选</h3><span class="muted">模型分数只用于排序</span></div>' +
+    '<div class="table-scroll compact-scroll"><table class="data-table quant-candidate-table"><thead><tr><th>代码</th><th>名称</th><th>分数</th><th>行情截止</th><th>模型训练截止</th></tr></thead><tbody>' +
+      candidates.map(function(candidate) { return '<tr data-quant-code="' + aiResearchEscape(candidate.code) + '" data-quant-name="' + aiResearchEscape(candidate.name) + '">' +
+        '<td><button class="stock-link-btn" type="button">' + aiResearchEscape(candidate.code) + '</button></td><td>' + aiResearchEscape(candidate.name) + '</td>' +
+        '<td>' + aiResearchEscape(quantNumber(candidate.score, 5)) + '</td><td>' + aiResearchEscape(candidate.asOf || result.asOf) + '</td>' +
+        '<td>' + aiResearchEscape(candidate.modelTrainedThrough || '--') + '</td></tr>'; }).join('') +
+      '</tbody></table></div>';
+}
+
+function aiResearchRenderQuant() {
+  aiResearchRenderQuantRuntime();
+  aiResearchRenderQuantDatasets();
+  aiResearchRenderQuantJob();
+  aiResearchRenderQuantResult();
+}
+
+async function aiResearchLoadQuant() {
+  const values = await Promise.all([
+    aiResearchApi('/api/quant/runtime'),
+    aiResearchApi('/api/quant/datasets?limit=30'),
+    aiResearchApi('/api/quant/results?limit=20'),
+    aiResearchApi('/api/quant/jobs?limit=30')
+  ]);
+  quantRuntime = values[0];
+  quantDatasets = values[1];
+  quantResults = values[2];
+  quantJobs = values[3];
+  aiResearchRenderQuant();
+  const active = aiResearchActiveQuantJob();
+  if (active) aiResearchScheduleQuantPoll();
+}
+
+function aiResearchScheduleQuantPoll() {
+  if (quantPollTimer) clearTimeout(quantPollTimer);
+  quantPollTimer = setTimeout(async function poll() {
+    try {
+      await aiResearchLoadQuant();
+      if (!aiResearchActiveQuantJob()) await aiResearchLoadModels();
+    } catch (error) {
+      aiResearchSetStatus('quantJobStatus', error.message, true);
+    }
+  }, 1800);
+}
+
+async function aiResearchStartQuant(path, body) {
+  const job = await aiResearchApi(path, { method: 'POST', body: body || {}, timeoutMs: 30000 });
+  quantJobs.unshift(job);
+  aiResearchRenderQuantJob();
+  aiResearchScheduleQuantPoll();
 }
 
 function aiResearchRenderSourceOptions() {
@@ -392,7 +585,7 @@ async function aiResearchLoadRuns() {
 function aiResearchEnsureLoaded(force) {
   if (aiResearchLoading) return aiResearchLoading;
   if (aiResearchLoaded && !force) return Promise.resolve();
-  aiResearchLoading = Promise.all([aiResearchLoadModels(), aiResearchLoadSources(), aiResearchLoadRuns()])
+  aiResearchLoading = Promise.all([aiResearchLoadModels(), aiResearchLoadSources(), aiResearchLoadRuns(), aiResearchLoadQuant()])
     .then(function() { aiResearchLoaded = true; })
     .finally(function() { aiResearchLoading = null; });
   return aiResearchLoading;
@@ -405,6 +598,50 @@ function aiResearchBind() {
     aiResearchEnsureLoaded(true).catch(function(error) { alert(error.message); });
   });
   document.getElementById('saveKnowledgeSourceBtn').addEventListener('click', aiResearchSaveSource);
+  document.getElementById('verifyQuantRuntimeBtn').addEventListener('click', async function() {
+    this.disabled = true;
+    try {
+      quantRuntime = await aiResearchApi('/api/quant/runtime?verify=1', { timeoutMs: 120000 });
+      aiResearchRenderQuantRuntime();
+      await aiResearchLoadModels();
+    } catch (error) {
+      alert(error.message);
+    } finally {
+      this.disabled = false;
+    }
+  });
+  document.getElementById('runQuantPilotBtn').addEventListener('click', function() {
+    aiResearchStartQuant('/api/quant/pilot', {
+      startDate: document.getElementById('quantStartDateInput').value,
+      limit: Number(document.getElementById('quantPilotLimitInput').value || 30)
+    }).catch(function(error) { alert(error.message); });
+  });
+  document.getElementById('collectQuantMarketBtn').addEventListener('click', function() {
+    if (!confirm('全市场公开日线同步可能持续较长时间并产生较大的本地数据文件，继续启动？')) return;
+    aiResearchStartQuant('/api/quant/datasets/collect', {
+      startDate: document.getElementById('quantStartDateInput').value,
+      limit: 5510
+    }).catch(function(error) { alert(error.message); });
+  });
+  document.getElementById('runQuantDatasetBtn').addEventListener('click', function() {
+    const datasetId = document.getElementById('quantDatasetSelect').value;
+    if (!datasetId) return alert('请先选择一个数据集。');
+    aiResearchStartQuant('/api/quant/runs', { datasetId: datasetId }).catch(function(error) { alert(error.message); });
+  });
+  document.getElementById('cancelQuantJobBtn').addEventListener('click', async function() {
+    const active = aiResearchActiveQuantJob();
+    if (!active || !confirm('停止当前量化任务？已写入的数据文件会保留用于排查。')) return;
+    await aiResearchApi('/api/quant/jobs/' + encodeURIComponent(active.id), { method: 'DELETE' });
+    await aiResearchLoadQuant();
+  });
+  document.getElementById('quantResultPanel').addEventListener('dblclick', function(event) {
+    const row = event.target.closest('[data-quant-code]');
+    if (!row || !window.StockList || !window.StockList.selectStock) return;
+    window.StockList.selectStock({
+      code: row.getAttribute('data-quant-code'),
+      name: row.getAttribute('data-quant-name')
+    }).catch(function(error) { alert(error.message); });
+  });
   document.getElementById('clearKnowledgeSourceBtn').addEventListener('click', aiResearchClearSourceForm);
   document.getElementById('importKnowledgeTextBtn').addEventListener('click', function() {
     document.getElementById('knowledgeTextFileInput').click();

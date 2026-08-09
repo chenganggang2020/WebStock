@@ -15,6 +15,7 @@ test('portable runtime stores mutable data beside the portable executable', () =
   assert.equal(config.dbPath, path.join('D:\\Tools\\WebStock', 'WebStockData', 'webstock.db'));
   assert.equal(config.legacyDbPath, path.join('C:\\Users\\test\\AppData\\Roaming\\WebStock', 'webstock.db'));
   assert.equal(config.level2ConfigPath, path.join('D:\\Tools\\WebStock', 'WebStockData', 'level2-config.json'));
+  assert.equal(config.quantWorkspacePath, path.join('D:\\Tools\\WebStock', 'WebStockData', 'quant-workspace'));
 });
 
 test('installed runtime keeps the Electron user data directory and a stable port', () => {
@@ -25,5 +26,6 @@ test('installed runtime keeps the Electron user data directory and a stable port
 
   assert.equal(config.portable, false);
   assert.equal(config.userDataDir, 'C:\\Users\\test\\AppData\\Roaming\\WebStock');
+  assert.equal(config.quantWorkspacePath, path.join('C:\\Users\\test\\AppData\\Roaming\\WebStock', 'quant-workspace'));
   assert.equal(config.port, 3000);
 });

@@ -1,5 +1,6 @@
 const db = require('../db');
 const { getAIConfig, getAIEnabled, isValidApiKey } = require('../routes/ai');
+const quant = require('./quantService');
 
 function localFtsAvailable() {
   try {
@@ -18,6 +19,12 @@ function listModels() {
     : hasKey ? 'API Key 已配置；首次真实调用成功后才能确认服务可用。'
       : '未配置独立 API Key，可继续使用 ChatGPT 交接模式。';
   const ftsAvailable = localFtsAvailable();
+  const quantRuntime = quant.getRuntimeStatus();
+  const latestQuantEntry = quant.listResults(1).find(item => item.valid && item.result);
+  const latestQuantResult = latestQuantEntry ? latestQuantEntry.result : null;
+  const latestQuantStatus = latestQuantResult && latestQuantResult.validationStatus === 'validated'
+    ? '已验证'
+    : '探索性';
 
   return [
     {
@@ -68,12 +75,16 @@ function listModels() {
       id: 'qlib-lightgbm',
       name: 'Qlib + LightGBM 基线',
       kind: 'quant-model',
-      status: 'planned',
-      runtime: 'Python sidecar',
+      status: quantRuntime.status,
+      runtime: quantRuntime.versions
+        ? 'Python ' + quantRuntime.versions.python + ' / Qlib ' + quantRuntime.versions.qlib + ' / LightGBM ' + quantRuntime.versions.lightgbm
+        : 'Python 3.12 sidecar',
       costMode: 'local-compute',
       capabilities: ['因子数据集', '收益排名', '滚动回测', '基线比较'],
       requirements: ['独立 Python 环境', '有时间戳的数据清单', '无前视切分'],
-      note: '作为第一个可复现机器学习基线，尚未在当前桌面进程部署。'
+      note: quantRuntime.reason + (latestQuantResult
+        ? ' 已有' + latestQuantStatus + '运行：' + latestQuantResult.runId + '。'
+        : ' 尚无通过契约校验的运行结果。')
     },
     {
       id: 'master',

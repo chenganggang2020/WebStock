@@ -1,8 +1,8 @@
 # WebStock AI 投研平台设计与实施规范
 
-版本：1.0
+版本：1.1
 评审日期：2026-08-09
-状态：已批准进入增量实现
+状态：阶段 A 已完成；阶段 B 的探索性基线已落地，正式数据验收待完成
 
 ## 1. 目标与边界
 
@@ -63,7 +63,7 @@ Electron 桌面 UI
         +-- Model Registry and Research Runs
               +-- local-factor-v1
               +-- knowledge-fts-v1
-              +-- qlib-lightgbm sidecar
+              +-- qlib-lightgbm sidecar (Windows/Python 3.12，已接通)
               +-- MASTER / AlphaAgent / RD-Agent / TradingAgents / FinRL-X
 ```
 
@@ -89,18 +89,18 @@ Electron 桌面 UI
 
 ```json
 {
-  "runId": "uuid",
-  "modelId": "qlib-lightgbm",
+  "runId": "qlib-lightgbm-20260809T101736Z",
+  "modelId": "qlib-lightgbm-v2",
+  "createdAt": "2026-08-09T10:17:40Z",
+  "validationStatus": "exploratory",
   "asOf": "2026-08-09",
-  "universe": "csi500",
-  "featureSet": "alpha158-v1",
-  "trainRange": ["2018-01-01", "2024-12-31"],
-  "validationRange": ["2025-01-01", "2025-12-31"],
-  "testRange": ["2026-01-01", "2026-07-31"],
-  "dataManifest": { "source": "licensed-provider", "sha256": "..." },
+  "featureSet": "webstock-daily-technical-v1",
+  "dataManifest": { "datasetId": "dataset-id", "sha256": "..." },
+  "folds": [{ "train": {}, "validation": {}, "test": {}, "purgeDays": 5 }],
   "parameters": {},
-  "predictions": [{ "date": "2026-08-09", "code": "000001", "score": 0.12 }],
+  "candidates": [{ "code": "000001", "score": 0.12, "modelTrainedThrough": "2026-04-16" }],
   "metrics": { "rankIc": 0.0, "turnover": 0.0, "maxDrawdown": 0.0 },
+  "artifacts": [{ "path": "predictions.parquet", "sha256": "...", "rows": 1000 }],
   "warnings": []
 }
 ```
@@ -199,11 +199,21 @@ Electron 桌面 UI
 
 ### 阶段 B：可复现量化基线
 
-实施状态：待开始。阻塞条件不是代码名称，而是可追溯、按当时可得信息对齐的历史数据清单和隔离 Python 环境。
+实施状态：探索性实现已于 2026-08-09 完成；正式验证仍受点时点、复权且使用条款明确的数据源约束。
 
-- 独立 Python sidecar；Qlib + LightGBM 在固定数据清单上训练、预测、回测。
-- WebStock 可启动任务、查看进度、导入标准结果并与本地规则对比。
-- 至少一个无前视的滚动回测及交易成本报告通过验收。
+- 已建立独立 Python 3.12 sidecar，实测版本为 Qlib 0.9.7、LightGBM 4.7.0。
+- 已实现小样本采集、全市场采集、既有数据集训练、任务进度、取消、重启中断识别和研究记录保存。
+- 数据清单、原始 Parquet、预测产物和结果均带 SHA-256；服务端重新校验路径、哈希、覆盖率、滚动时间窗和净交易成本。
+- 特征只使用当日及以前数据；标签为未来 5 日收益；训练、验证和测试之间保留不少于标签跨度的清洗间隔。
+- 安装版量化工作区位于 `%APPDATA%/WebStock/quant-workspace`，便携版位于程序旁的 `WebStockData/quant-workspace`。
+
+探索性真实试跑证据：
+
+- 数据集 `sina-pilot-20260809T094830Z`：请求 12 只、成功 11 只、失败 1 只，共 16,659 行；清单契约哈希为 `a6fb34a47342527c6e040f7988b8c751186bb3cbdcace94c3f95264df9d28e22`。
+- 运行 `qlib-lightgbm-20260809T102750Z`（`qlib-lightgbm-v2`）：2 个滚动窗口，Rank IC -0.0626、ICIR -1.1859、年化收益 -39.53%、基准年化 -25.67%、最大回撤 -24.68%、Sharpe -1.13、平均换手 76.15%，共 26 次调仓、104 笔权重变动交易并扣除 0.01664 的累计成本，其中包含 0.0008 的末期平仓成本。结果文件哈希为 `a3423897ac9c7cac03e061cf811539500b2000ee33620f1de18d9ba5167ac222`。
+- 上述结果较差且只能标记为 `exploratory`。它证明执行、追溯和失败披露链路可用，不证明模型有效，也不作为交易建议。
+
+进入“已验证”仍需同时满足：历史点时点股票池、历史 ST 状态、明确复权口径、可追溯财务/资讯发布时间、数据使用授权，以及更长区间和更大股票池上的稳定样本外对照。
 
 ### 阶段 C：复杂模型实验
 

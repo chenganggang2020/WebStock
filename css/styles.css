@@ -2660,6 +2660,185 @@ body.dark .md-body blockquote { background: rgba(99,102,241,0.12); }
   background: var(--card-bg);
 }
 
+.quant-research-band {
+  padding: 14px 20px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
+}
+
+.quant-research-band h3 {
+  margin: 0;
+  font-size: 15px;
+}
+
+#quantRuntimeStatus {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.quant-runtime-reason {
+  max-width: 520px;
+}
+
+.quant-control-grid {
+  display: grid;
+  grid-template-columns: 150px 130px minmax(260px, 1fr) auto;
+  gap: 10px 12px;
+  align-items: end;
+  margin-top: 10px;
+}
+
+.quant-control-grid label {
+  display: grid;
+  gap: 5px;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.quant-control-grid input,
+.quant-control-grid select {
+  min-width: 0;
+  width: 100%;
+  padding: 7px 9px;
+  border: 1px solid var(--btn-border);
+  border-radius: 6px;
+  background: var(--card-bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  letter-spacing: 0;
+}
+
+.quant-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.quant-job-status {
+  margin-top: 10px;
+  min-height: 24px;
+}
+
+.quant-job-line {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.quant-job-line strong {
+  color: var(--text-primary);
+}
+
+.quant-progress-track {
+  height: 3px;
+  margin-top: 6px;
+  overflow: hidden;
+  background: var(--border);
+}
+
+.quant-progress-track span {
+  display: block;
+  height: 100%;
+  background: var(--focus);
+  transition: width 180ms ease;
+}
+
+.quant-job-error {
+  margin-top: 6px;
+  color: #dc2626;
+}
+
+.quant-result-panel {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.quant-result-head,
+.quant-result-head > div,
+.quant-coverage-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.quant-result-head {
+  justify-content: space-between;
+}
+
+.quant-coverage-line {
+  gap: 8px 20px;
+  margin-top: 8px;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.quant-coverage-line strong {
+  color: var(--text-primary);
+}
+
+.quant-metric-grid {
+  display: grid;
+  grid-template-columns: repeat(8, minmax(88px, 1fr));
+  margin-top: 10px;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.quant-metric-grid > div {
+  display: grid;
+  gap: 4px;
+  padding: 9px 10px;
+}
+
+.quant-metric-grid > div + div {
+  border-left: 1px solid var(--border);
+}
+
+.quant-metric-grid span {
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
+.quant-metric-grid strong {
+  font-size: 15px;
+}
+
+.quant-warning-block {
+  margin-top: 10px;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.quant-warning-block summary {
+  color: #92400e;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.quant-warning-block ul {
+  margin: 7px 0 0;
+  padding-left: 20px;
+  line-height: 1.55;
+}
+
+.quant-candidate-title {
+  margin-top: 12px;
+}
+
+.quant-candidate-table {
+  min-width: 720px;
+}
+
 .ai-model-band h3,
 .ai-research-pane h3 {
   margin: 0;
@@ -2969,6 +3148,23 @@ body.dark .model-status.unavailable {
 }
 
 @media (max-width: 1180px) {
+  .quant-control-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .quant-actions {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+  }
+
+  .quant-metric-grid {
+    grid-template-columns: repeat(4, minmax(88px, 1fr));
+  }
+
+  .quant-metric-grid > div:nth-child(5) {
+    border-left: 0;
+  }
+
   .ai-research-workspace {
     grid-template-columns: 1fr;
   }
@@ -2980,6 +3176,27 @@ body.dark .model-status.unavailable {
 }
 
 @media (max-width: 720px) {
+  .quant-control-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .quant-actions {
+    grid-column: auto;
+  }
+
+  .quant-job-line {
+    grid-template-columns: 1fr;
+    gap: 3px;
+  }
+
+  .quant-metric-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .quant-metric-grid > div:nth-child(odd) {
+    border-left: 0;
+  }
+
   .ai-model-table {
     min-width: 0;
     border: 0;

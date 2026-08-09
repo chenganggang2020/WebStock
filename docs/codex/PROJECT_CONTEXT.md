@@ -1,6 +1,6 @@
 # Project Context
 
-Last reviewed: 2026-08-09 17:10 Asia/Shanghai
+Last reviewed: 2026-08-09 18:20 Asia/Shanghai
 
 ## Purpose
 
@@ -15,6 +15,7 @@ The AI research direction is defined in `docs/ai-research/AI_PLATFORM_DESIGN.md`
 - Desktop run: `npm run desktop`
 - Unit/API tests: `npm test`
 - Browser tests: `npm run test:frontend`
+- Quant tests: `npm run test:quant`
 - Installer: `npm run dist:win`
 - Portable package: `npm run dist:win:portable`
 
@@ -28,6 +29,7 @@ The AI research direction is defined in `docs/ai-research/AI_PLATFORM_DESIGN.md`
 | API routes | `routes/` | HTTP boundary | Most new routes use `{ success, data/error }` envelopes |
 | Domain services | `services/` | Portfolio, screener, news, themes, backup | Keep model/data logic outside route handlers |
 | AI research | `services/knowledgeService.js`, `routes/aiResearch.js` | Expert sources, evidence retrieval, honest model registry and research runs | External model names remain planned until verified |
+| Quant sidecar | `quant/`, `services/quantService.js`, `routes/quant.js` | Hashed datasets, isolated Qlib/LightGBM jobs, rolling evaluation and verified result import | Public Sina adapter is exploratory only |
 | Frontend | `index.html`, `js/modules/`, `css/styles.css` | Vanilla JS desktop UI | Views are switched by `switchMainView` |
 | Tests | `test/` | Node unit/API and Playwright flows | Tests use isolated temporary SQLite files |
 
@@ -37,6 +39,7 @@ The AI research direction is defined in `docs/ai-research/AI_PLATFORM_DESIGN.md`
 - Local screening: scope + market/kline snapshots -> `screenerService` -> explainable candidates -> save/review/compare.
 - AI handoff: server builds prompt -> `AIAssistant` copies/opens ChatGPT -> result block import -> local history/task linkage.
 - Expert review: source text -> stable FTS evidence -> local screener candidates -> evidence-bearing AI handoff -> saved research run.
+- Quant baseline: explicit universe -> hashed daily dataset -> purged rolling Qlib/LightGBM run -> artifact verification -> candidates/metrics/research run.
 - Portfolio: trade records -> `portfolioService` accounting -> positions/PnL -> dashboard and exports.
 - Backup: selected personal tables -> versioned JSON -> import preview -> replace/merge transaction.
 
@@ -46,6 +49,7 @@ The AI research direction is defined in `docs/ai-research/AI_PLATFORM_DESIGN.md`
 - Screener missing data stays `null` and is reported through coverage; missing quotes must not be interpreted as zero movement.
 - The all-market screener uses the local stock catalog plus personal/context records and excludes ST names.
 - AI output is decision support. Direct API and ChatGPT handoff must share the same evidence-bearing prompt where practical.
+- Quant results are net of configured turnover costs, preserve failed-symbol coverage, and cannot become `validated` when the dataset is marked `exploratory_only`.
 
 ## Data, Configuration, And External Systems
 
@@ -59,7 +63,7 @@ The AI research direction is defined in `docs/ai-research/AI_PLATFORM_DESIGN.md`
 
 - External public data may be incomplete, rate-limited or delayed.
 - A ChatGPT Pro subscription is not an API entitlement; handoff remains the no-extra-API-cost path.
-- Qlib, MASTER and agent frameworks require separate environments and licensed/traceable historical data before valid model claims.
+- Qlib + LightGBM is connected as an isolated exploratory runtime. MASTER and agent frameworks remain planned; valid model claims still require licensed or terms-verified point-in-time data.
 - Real brokerage execution remains out of scope.
 
 ## Verification Notes

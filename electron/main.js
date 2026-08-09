@@ -41,6 +41,7 @@ function canListen(port) {
 function configureEnvironment() {
   process.env.WEBSTOCK_DB_PATH = process.env.WEBSTOCK_DB_PATH || runtimeConfig.dbPath;
   process.env.WEBSTOCK_LEVEL2_CONFIG_PATH = process.env.WEBSTOCK_LEVEL2_CONFIG_PATH || runtimeConfig.level2ConfigPath;
+  process.env.WEBSTOCK_QUANT_WORKSPACE = process.env.WEBSTOCK_QUANT_WORKSPACE || runtimeConfig.quantWorkspacePath;
   process.env.WEBSTOCK_SKIP_FUND_REFRESH = process.env.WEBSTOCK_SKIP_FUND_REFRESH || '1';
 }
 

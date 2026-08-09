@@ -14,4 +14,9 @@ release-*/
 data/*.db
 data/*.db-*
 data/level2-config.json
+quant/.venv/
+quant/workspace/
+quant/**/__pycache__/
+quant/**/*.pyc
+mlruns/
 .DS_Store

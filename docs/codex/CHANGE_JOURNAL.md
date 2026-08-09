@@ -43,3 +43,31 @@ Verification:
 Follow-ups:
 - Phase B requires a licensed or otherwise traceable point-in-time daily dataset before a Qlib/LightGBM rolling backtest can be accepted.
 - MASTER and agent frameworks remain visibly `planned`; they must not be marked available until same-data out-of-sample tests pass.
+
+## 2026-08-09 18:20 - Reproducible Qlib/LightGBM Baseline
+
+Status: phase B exploratory implementation delivered; formal data validation pending
+
+Problem:
+- WebStock had no executable model-training contract, no isolated Python runtime, and no way to distinguish a completed exploratory run from a validated strategy.
+- Public daily data can demonstrate the workflow but cannot support formal claims because current-list membership, historical ST state, adjustment rules and usage terms are incomplete.
+
+Change direction:
+- Add a Python 3.12 Qlib/LightGBM sidecar with bounded pilot collection, explicit dataset collection and existing-dataset runs.
+- Enforce hashed dataset/result contracts, purged rolling windows, future-return labels, transaction costs, candidate training cutoffs and artifact path confinement.
+- Add asynchronous job APIs and an AI Research UI for runtime health, progress, datasets, metrics, warnings and candidates.
+- Store installed and portable quant workspaces with the same persistence rules as other mutable desktop data.
+
+Verification:
+- Node tests: 67/67 passed.
+- Python quant tests: 9/9 passed, including no-lookahead features, purged/non-overlapping sample-out folds, non-overlapping holdings, terminal liquidation costs and workspace-contained MLflow artifacts.
+- API-started training completed and saved a `quant-backtest` research record; its result and prediction hashes were revalidated before display.
+- A 12-symbol public-data pilot completed with 11 successes and 1 explicit failure. Its negative sample-out metrics remain visibly `exploratory`.
+- `npm audit --audit-level=low`: 0 known vulnerabilities.
+- Final Windows packages built successfully: installer SHA-256 `2894D38A9AFF0750FBC8D2C884ECE4A04CF559A64C33730753D96BDAE3606040`; portable SHA-256 `78938864349E18FD76CE46CB72CE6A3F1B92EA4DA2DFE2BC74F6F208E1C83E58`.
+- Final portable-package inspection confirmed that quant source is present while tests, `.venv`, runtime workspaces and `webstock.db` are absent. An isolated launch returned HTTP 200 for both the application and quant-runtime API and created its own `WebStockData` directory.
+
+Follow-ups:
+- Add in-app installation of the isolated Python runtime for clean desktop machines; source packaging alone must not be described as an offline-ready model runtime.
+- Acquire or prepare terms-verified point-in-time adjusted A-share data before formal validation.
+- Run MASTER on the same immutable dataset and rolling folds only after the baseline data gate is satisfied.

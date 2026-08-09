@@ -17,6 +17,7 @@
     "test:api-json": "node scripts/test-api-json.js",
     "test:frontend": "playwright test test/frontend-click.spec.js",
     "test:portfolio": "node scripts/test-portfolio-api.js",
+    "test:quant": "set PYTHONPATH=quant&& set PYTHONUTF8=1&& quant\\.venv\\Scripts\\python.exe -m unittest discover -s quant\\tests -v",
     "smoke:openai": "node scripts/smoke-openai.js",
     "package:portable": "npm run dist:win:portable",
     "icon:win": "node scripts/create-ico.js"
@@ -42,7 +43,8 @@
     "afterPack": "scripts/after-pack.js",
     "asar": true,
     "asarUnpack": [
-      "node_modules/better-sqlite3/**"
+      "node_modules/better-sqlite3/**",
+      "quant/**"
     ],
     "artifactName": "WebStock-Setup-${version}.${ext}",
     "files": [
@@ -52,6 +54,12 @@
       "icons/**",
       "js/**",
       "prompt-templates/**",
+      "quant/**",
+      "!quant/.venv/**",
+      "!quant/workspace/**",
+      "!quant/tests/**",
+      "!quant/**/__pycache__/**",
+      "!quant/**/*.pyc",
       "routes/**",
       "services/**",
       "utils/**",

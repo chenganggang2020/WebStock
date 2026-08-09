@@ -471,6 +471,32 @@
           <button id="refreshAiResearchBtn">刷新</button>
         </div>
       </div>
+      <section class="quant-research-band">
+        <div class="panel-title-row">
+          <h3>可复现量化基线</h3>
+          <span id="quantRuntimeStatus" class="muted">--</span>
+        </div>
+        <div class="quant-control-grid">
+          <label>数据起点
+            <input id="quantStartDateInput" type="date" value="2019-01-01">
+          </label>
+          <label>试跑股票数
+            <input id="quantPilotLimitInput" type="number" min="8" max="120" step="1" value="30">
+          </label>
+          <label>已有数据集
+            <select id="quantDatasetSelect"><option value="">暂无数据集</option></select>
+          </label>
+          <div class="quant-actions">
+            <button id="verifyQuantRuntimeBtn" class="small-btn">检查环境</button>
+            <button id="runQuantPilotBtn" class="small-btn primary">公开数据试跑</button>
+            <button id="collectQuantMarketBtn" class="small-btn">同步全市场</button>
+            <button id="runQuantDatasetBtn" class="small-btn">运行已有数据</button>
+            <button id="cancelQuantJobBtn" class="small-btn danger" style="display:none;">停止</button>
+          </div>
+        </div>
+        <div id="quantJobStatus" class="quant-job-status" aria-live="polite"></div>
+        <div id="quantResultPanel" class="quant-result-panel"></div>
+      </section>
       <section class="ai-model-band">
         <div class="panel-title-row">
           <h3>模型与能力状态</h3>
