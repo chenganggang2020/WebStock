@@ -20,6 +20,7 @@ SINA_KLINE_URL = (
     "CN_MarketData.getKLineData"
 )
 EASTMONEY_KLINE_URL = "https://push2his.eastmoney.com/api/qt/stock/kline/get"
+EASTMONEY_KLINE_HTTP_FALLBACK_URL = "http://push2his.eastmoney.com/api/qt/stock/kline/get"
 TENCENT_KLINE_URL = "https://web.ifzq.gtimg.cn/appstock/app/kline/kline"
 DATA_COLUMNS = ["date", "code", "name", "open", "high", "low", "close", "volume"]
 
@@ -151,7 +152,17 @@ def fetch_eastmoney_history(session, stock, start_date, end_date, retries=3):
     last_error = None
     for attempt in range(retries + 1):
         try:
-            response = session.get(EASTMONEY_KLINE_URL, params=params, timeout=20)
+            source_id = "eastmoney-public-kline"
+            try:
+                response = session.get(EASTMONEY_KLINE_URL, params=params, timeout=20)
+            except requests.ConnectionError:
+                response = session.get(
+                    EASTMONEY_KLINE_HTTP_FALLBACK_URL,
+                    params=params,
+                    headers={"Referer": "https://quote.eastmoney.com/"},
+                    timeout=20,
+                )
+                source_id = "eastmoney-public-kline-http-fallback"
             response.raise_for_status()
             payload = response.json()
             klines = ((payload or {}).get("data") or {}).get("klines") or []
@@ -169,7 +180,9 @@ def fetch_eastmoney_history(session, stock, start_date, end_date, retries=3):
             frame["date"] = frame["date"].dt.strftime("%Y-%m-%d")
             frame["code"] = stock["code"]
             frame["name"] = stock["name"]
-            return frame[DATA_COLUMNS].sort_values("date").drop_duplicates("date", keep="last")
+            result = frame[DATA_COLUMNS].sort_values("date").drop_duplicates("date", keep="last")
+            result.attrs["source_id"] = source_id
+            return result
         except Exception as error:
             last_error = error
             if attempt < retries:
@@ -460,7 +473,7 @@ def collect_dataset(
                         frame = fetch_eastmoney_history(
                             thread_state.session, stock, start_day, end_day, retries=0
                         )
-                        source_id = "eastmoney-public-kline"
+                        source_id = frame.attrs.get("source_id", "eastmoney-public-kline")
                     except Exception:
                         with provider_lock:
                             eastmoney_disabled_until[0] = time.monotonic() + 300
@@ -480,7 +493,7 @@ def collect_dataset(
                     frame = fetch_eastmoney_history(
                         thread_state.session, stock, start_day, end_day, retries=0
                     )
-                    source_id = "eastmoney-public-kline"
+                    source_id = frame.attrs.get("source_id", "eastmoney-public-kline")
                 except Exception:
                     with provider_lock:
                         eastmoney_disabled_until[0] = time.monotonic() + 300
@@ -587,6 +600,12 @@ def collect_dataset(
     if len(provider_counts) > 1:
         warnings.append("数据集混合多个公开来源；成交量单位和历史修订差异可能影响横截面比较。")
 
+    if provider_counts.get("eastmoney-public-kline-http-fallback"):
+        warnings.append(
+            "部分东方财富公开日线在 HTTPS 连接被远端断开后使用了已声明的 HTTP 回退。"
+            "文件哈希可固定采集后的内容，但这些响应的传输端身份未经过认证。"
+        )
+
     manifest = {
         "schema": "webstock.quant.dataset.v1",
         "datasetId": dataset_id,
@@ -599,7 +618,12 @@ def collect_dataset(
             "accessMode": "public-http",
             "endpoint": SINA_KLINE_URL,
             "termsVerified": False,
-            "providers": [SINA_KLINE_URL, EASTMONEY_KLINE_URL, TENCENT_KLINE_URL],
+            "providers": [
+                SINA_KLINE_URL,
+                EASTMONEY_KLINE_URL,
+                EASTMONEY_KLINE_HTTP_FALLBACK_URL,
+                TENCENT_KLINE_URL,
+            ],
             "providerCounts": provider_counts,
         },
         "universe": {

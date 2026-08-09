@@ -131,6 +131,7 @@ class FeatureTests(unittest.TestCase):
             )
 
             self.assertTrue(result_path.exists())
+            self.assertEqual(result['inputSha256'], file_sha256(signals_path))
             self.assertEqual(result['coverage']['strictEligibleObservations'], 2)
             self.assertEqual(result['coverage']['excludedByReason']['secondary_evidence'], 1)
             event = result['events'][0]
@@ -284,6 +285,27 @@ class FeatureTests(unittest.TestCase):
         self.assertEqual(list(frame.columns), ["date", "code", "name", "open", "high", "low", "close", "volume"])
         self.assertEqual(frame.iloc[0]["close"], 10.1)
         self.assertIn("0.002398", session.get.call_args.kwargs["params"]["secid"])
+        self.assertEqual(frame.attrs["source_id"], "eastmoney-public-kline")
+
+    def test_eastmoney_uses_declared_http_fallback_after_https_transport_failure(self):
+        response = Mock()
+        response.raise_for_status.return_value = None
+        response.json.return_value = {"data": {"klines": [
+            "2025-01-02,10.00,10.10,10.20,9.90,10000",
+        ]}}
+        session = Mock()
+        session.get.side_effect = [requests.ConnectionError("TLS endpoint disconnected"), response]
+
+        frame = fetch_eastmoney_history(
+            session, {"code": "920000", "name": "Beijing sample"},
+            "2025-01-01", "2025-01-31", retries=0,
+        )
+
+        self.assertEqual(len(frame), 1)
+        self.assertEqual(session.get.call_count, 2)
+        self.assertTrue(session.get.call_args_list[0].args[0].startswith("https://"))
+        self.assertTrue(session.get.call_args_list[1].args[0].startswith("http://"))
+        self.assertEqual(frame.attrs["source_id"], "eastmoney-public-kline-http-fallback")
 
     def test_tencent_second_fallback_parses_public_daily_rows(self):
         response = Mock()
