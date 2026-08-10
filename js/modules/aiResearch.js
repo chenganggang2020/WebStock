@@ -142,10 +142,12 @@ function aiResearchRenderQuantRuntime() {
   const label = AI_RESEARCH_STATUS_LABELS[quantRuntime.status] || quantRuntime.status;
   const versions = quantRuntime.versions || {};
   const installer = quantRuntime.installer || {};
+  const linkButton = document.getElementById('linkQuantRuntimeBtn');
   const installButton = document.getElementById('installQuantRuntimeBtn');
   const repairButton = document.getElementById('repairQuantRuntimeBtn');
   const hasRuntime = quantRuntime.status === 'available' || quantRuntime.status === 'configured';
   const linkedRuntime = quantRuntime.runtimeSource === 'linked';
+  if (linkButton) linkButton.style.display = hasRuntime ? 'none' : '';
   if (installButton) installButton.style.display = !hasRuntime && installer.available ? '' : 'none';
   if (repairButton) repairButton.style.display = hasRuntime && !linkedRuntime && installer.available ? '' : 'none';
   target.title = quantRuntime.python || '';

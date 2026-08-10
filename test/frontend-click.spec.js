@@ -288,10 +288,9 @@ test('AI research view creates grounded expert knowledge and saves a handoff res
   await expect(page.locator('#aiModelRegistry')).toContainText('规划中');
   await expect(page.locator('#quantRuntimeStatus')).toContainText('已配置');
   await expect(page.locator('#quantRuntimeStatus')).toContainText('PyTorch 2.13.0');
+  await expect(page.locator('#linkQuantRuntimeBtn')).toBeHidden();
+  await expect(page.locator('#installQuantRuntimeBtn')).toBeHidden();
   await expect(page.locator('#repairQuantRuntimeBtn')).toBeVisible();
-  await page.click('#linkQuantRuntimeBtn');
-  await expect(page.locator('#quantRuntimeStatus')).toContainText('已复用本机已有量化环境');
-  await expect(page.locator('#repairQuantRuntimeBtn')).toBeHidden();
   await expect(page.locator('#quantIndexModeSelect')).toHaveValue('official');
   await expect(page.locator('#quantResultPanel')).toContainText('Rank IC');
   await expect(page.locator('#quantResultPanel')).toContainText('累计成本');

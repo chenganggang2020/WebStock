@@ -218,9 +218,14 @@ function verifiedRuntimeCache(result, reason) {
 
 async function verifyRuntime() {
   try {
+    const candidate = runtimeCandidate();
     const result = await runProtocol(['health', '--verify']);
     runtimeCache = verifiedRuntimeCache(result,
-      result.verified ? 'Qlib、LightGBM 与 PyTorch 导入检测通过。' : '已读取运行环境信息。');
+      result.verified
+        ? (candidate.source === 'linked'
+          ? '已复用本机已有量化环境，Qlib、LightGBM 与 PyTorch 导入检测通过。'
+          : 'Qlib、LightGBM 与 PyTorch 导入检测通过。')
+        : '已读取运行环境信息。');
   } catch (error) {
     runtimeCache = { status: 'unavailable', verified: false, reason: error.message, checkedAt: new Date().toISOString() };
   }
