@@ -120,6 +120,43 @@ test('research subject API stores chart material and supports deletion', async t
   assert.equal(removedChannel.json.data.deleted, true);
 });
 
+test('Douyin link import stores direct candidates as unverified and skips duplicates', async t => {
+  const server = app.listen(0);
+  t.after(() => server.close());
+
+  const created = await requestJson(server, '/api/expert/channels', 'POST', {
+    channelKey: 'douyin-direct-import-api',
+    displayName: '抖音测试作者',
+    platform: 'douyin'
+  });
+  const channelId = created.json.data.id;
+  const imported = await requestJson(server, '/api/expert/channels/' + channelId + '/douyin-links', 'POST', {
+    text: [
+      '公开视频 https://www.douyin.com/video/7533142185677114684?from=copy',
+      '重复 https://www.douyin.com/video/7533142185677114684/',
+      '无关 https://example.com/video/1'
+    ].join('\n')
+  });
+
+  assert.equal(imported.statusCode, 200);
+  assert.equal(imported.json.data.importedCount, 1);
+  assert.equal(imported.json.data.duplicateCount, 1);
+  assert.equal(imported.json.data.ignoredCount, 1);
+  assert.equal(imported.json.data.items[0].externalContentId, '7533142185677114684');
+  assert.equal(imported.json.data.items[0].availabilityStatus, 'unknown');
+  assert.equal(imported.json.data.items[0].evidenceLevel, 'commentary');
+  assert.deepEqual(imported.json.data.items[0].stockCodes, []);
+
+  const channel = await requestJson(server, '/api/expert/channels/' + channelId);
+  assert.equal(channel.json.data.directDouyinCount, 1);
+
+  const repeated = await requestJson(server, '/api/expert/channels/' + channelId + '/douyin-links', 'POST', {
+    text: 'https://open.douyin.com/player/video?vid=7533142185677114684&autoplay=0'
+  });
+  assert.equal(repeated.json.data.importedCount, 0);
+  assert.equal(repeated.json.data.duplicateCount, 1);
+});
+
 test.after(() => {
   require('../db').close();
   for (const suffix of ['', '-wal', '-shm']) {

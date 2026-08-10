@@ -351,6 +351,10 @@ test('AI research view creates grounded expert knowledge and saves a handoff res
 
 test('research library manages people, books, methods and curve material', async ({ page }) => {
   page.on('dialog', dialog => dialog.accept());
+  await page.route('**/api/stocklist', async route => {
+    await new Promise(resolve => setTimeout(resolve, 750));
+    await route.continue();
+  });
   await page.goto(baseURL + '/', { waitUntil: 'domcontentloaded' });
   await page.click('[data-main-view="aiResearch"]');
   await expect(page.locator('#aiResearchView')).toBeVisible();
@@ -381,6 +385,36 @@ test('research library manages people, books, methods and curve material', async
   await expect(page.locator('#expertTrackerStatus')).toContainText('资料及其知识索引已删除');
   await page.click('#deleteExpertChannelBtn');
   await expect(page.locator('#expertChannelSelect')).not.toContainText('Playwright 曲线分析方法');
+});
+
+test('research library imports and deduplicates direct Douyin share links', async ({ page }) => {
+  page.on('dialog', dialog => dialog.accept());
+  await page.goto(baseURL + '/', { waitUntil: 'domcontentloaded' });
+  await page.click('[data-main-view="aiResearch"]');
+
+  await page.click('#expertSubjectEditor summary');
+  await page.selectOption('#expertSubjectTypeSelect', 'creator');
+  await page.fill('#expertSubjectPlatformInput', 'douyin');
+  await page.fill('#expertSubjectNameInput', 'Playwright 抖音公开作者');
+  await page.click('#saveExpertSubjectBtn');
+
+  await expect(page.locator('#openDouyinSearchBtn')).toBeVisible();
+  await expect(page.locator('#expertDouyinImporter')).toBeVisible();
+  await page.click('#expertDouyinImporter summary');
+  await page.fill('#expertDouyinShareTextInput', [
+    '测试抖音直链 https://jingxuan.douyin.com/m/video/7641362696420887025',
+    '重复 https://www.douyin.com/video/7641362696420887025?from=copy',
+    '无关 https://example.com/video/1'
+  ].join('\n'));
+  await page.click('#importDouyinLinksBtn');
+
+  await expect(page.locator('#expertTrackerStatus')).toContainText('新增 1 条，重复 1 条，忽略 1 条');
+  await expect(page.locator('#expertChannelSelect')).toContainText('抖音直链 1');
+  await expect(page.locator('#expertTimeline')).toContainText('[待核验抖音账号]');
+  await expect(page.locator('#expertTimeline a[href*="open.douyin.com/player/video"]')).toHaveCount(1);
+
+  await page.click('#deleteExpertChannelBtn');
+  await expect(page.locator('#expertChannelSelect')).not.toContainText('Playwright 抖音公开作者');
 });
 
 test('main stock actions and workspace navigation do not throw', async ({ page }) => {

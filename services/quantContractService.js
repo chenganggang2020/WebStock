@@ -306,11 +306,14 @@ function sha256File(filePath) {
   return hash.digest('hex');
 }
 
-function canonicalJson(value) {
-  if (Array.isArray(value)) return '[' + value.map(canonicalJson).join(',') + ']';
+function canonicalJson(value, path = '') {
+  if (Array.isArray(value)) return '[' + value.map(item => canonicalJson(item, path + '[]')).join(',') + ']';
   if (value && typeof value === 'object') {
-    return '{' + Object.keys(value).sort().map(key => JSON.stringify(key) + ':' + canonicalJson(value[key])).join(',') + '}';
+    return '{' + Object.keys(value).sort().map(key => JSON.stringify(key) + ':' +
+      canonicalJson(value[key], path ? path + '.' + key : key)).join(',') + '}';
   }
+  // Python's collector serializes this schema field as a float, including 0.0 and 1.0.
+  if (path === 'quality.coverageRate' && typeof value === 'number' && Number.isInteger(value)) return value.toFixed(1);
   return JSON.stringify(value);
 }
 

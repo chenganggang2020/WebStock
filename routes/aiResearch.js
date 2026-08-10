@@ -4,6 +4,7 @@ const knowledge = require('../services/knowledgeService');
 const researchRuns = require('../services/researchRunService');
 const modelRegistry = require('../services/modelRegistryService');
 const expertChannels = require('../services/expertChannelService');
+const douyinSources = require('../services/douyinSourceService');
 const { isValidApiKey, getAIConfig, callAIModel } = require('./ai');
 
 function ok(res, data) {
@@ -101,6 +102,14 @@ router.get('/expert/channels/:id/observations', function(req, res) {
 router.post('/expert/channels/:id/observations', function(req, res) {
   try {
     ok(res, expertChannels.recordObservation(Number(req.params.id), req.body || {}));
+  } catch (error) {
+    fail(res, error, /不存在/.test(error.message) ? 404 : 400);
+  }
+});
+
+router.post('/expert/channels/:id/douyin-links', function(req, res) {
+  try {
+    ok(res, douyinSources.importDouyinLinks(Number(req.params.id), req.body || {}));
   } catch (error) {
     fail(res, error, /不存在/.test(error.message) ? 404 : 400);
   }

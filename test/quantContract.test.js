@@ -4,7 +4,8 @@ const assert = require('node:assert/strict');
 const {
   validateDatasetManifest,
   validateQuantResult,
-  validateFactorLabResult
+  validateFactorLabResult,
+  manifestSha256
 } = require('../services/quantContractService');
 
 function validManifest(overrides = {}) {
@@ -113,6 +114,15 @@ test('dataset manifests preserve source, coverage, hashes and provenance limits'
   assert.equal(manifest.datasetId, 'sina-pilot-20260809');
   assert.equal(manifest.eligibility, 'exploratory_only');
   assert.equal(manifest.coverage.succeeded + manifest.coverage.failed, manifest.coverage.requested);
+});
+
+test('manifest hashes match Python canonical JSON for integral coverage rates', () => {
+  const manifest = {
+    datasetId: 'cross-language',
+    quality: { coverageRate: 1, failed: 0 },
+    warnings: ['中文']
+  };
+  assert.equal(manifestSha256(manifest), '82680d857f6bae84ef6765d09479206ad21b5b3b2956390e1f6cb0154dca4b16');
 });
 
 test('dataset manifests reject inconsistent coverage and missing file hashes', () => {

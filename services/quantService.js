@@ -292,7 +292,13 @@ function verifyStoredResult(resultPath, options = {}) {
   const datasetId = String(result.dataManifest && result.dataManifest.datasetId || '');
   const manifestPath = path.resolve(datasetsRoot, datasetId, 'manifest.json');
   if (!isInside(datasetsRoot, manifestPath)) throw new Error('结果引用的数据集路径无效。');
-  const manifest = verifyManifest(manifestPath, { verifyHashes });
+  const manifestCache = options.manifestCache instanceof Map ? options.manifestCache : null;
+  const manifestCacheKey = manifestPath + '\0' + String(verifyHashes);
+  let manifest = manifestCache ? manifestCache.get(manifestCacheKey) : null;
+  if (!manifest) {
+    manifest = verifyManifest(manifestPath, { verifyHashes });
+    if (manifestCache) manifestCache.set(manifestCacheKey, manifest);
+  }
   validateQuantResult(result, manifest);
 
   const runRoot = path.dirname(resolvedResultPath);
@@ -319,7 +325,13 @@ function verifyStoredFactorResult(resultPath, options = {}) {
   const datasetId = String(result.dataManifest && result.dataManifest.datasetId || '');
   const manifestPath = path.resolve(datasetsRoot, datasetId, 'manifest.json');
   if (!isInside(datasetsRoot, manifestPath)) throw new Error('因子结果引用的数据集路径无效。');
-  const manifest = verifyManifest(manifestPath, { verifyHashes });
+  const manifestCache = options.manifestCache instanceof Map ? options.manifestCache : null;
+  const manifestCacheKey = manifestPath + '\0' + String(verifyHashes);
+  let manifest = manifestCache ? manifestCache.get(manifestCacheKey) : null;
+  if (!manifest) {
+    manifest = verifyManifest(manifestPath, { verifyHashes });
+    if (manifestCache) manifestCache.set(manifestCacheKey, manifest);
+  }
   validateFactorLabResult(result, manifest);
 
   const runRoot = path.dirname(resolvedResultPath);
@@ -1076,10 +1088,11 @@ function listDatasets(limit = 50) {
 
 function listResults(limit = 30) {
   const dir = path.join(ensureWorkspace(), 'runs');
+  const manifestCache = new Map();
   return fs.readdirSync(dir, { withFileTypes: true }).filter(entry => entry.isDirectory()).map(entry => {
     const resultPath = path.join(dir, entry.name, 'result.json');
     try {
-      const verified = verifyStoredResult(resultPath, { verifyHashes: false });
+      const verified = verifyStoredResult(resultPath, { verifyHashes: false, manifestCache });
       const createdAt = verified.result.createdAt || fs.statSync(resultPath).mtime.toISOString();
       return { resultPath, result: verified.result, createdAt, valid: true, error: '' };
     } catch (error) {
@@ -1091,10 +1104,11 @@ function listResults(limit = 30) {
 
 function listFactorResults(limit = 30) {
   const dir = path.join(ensureWorkspace(), 'factor-runs');
+  const manifestCache = new Map();
   return fs.readdirSync(dir, { withFileTypes: true }).filter(entry => entry.isDirectory()).map(entry => {
     const resultPath = path.join(dir, entry.name, 'result.json');
     try {
-      const verified = verifyStoredFactorResult(resultPath, { verifyHashes: false });
+      const verified = verifyStoredFactorResult(resultPath, { verifyHashes: false, manifestCache });
       const createdAt = verified.result.createdAt || fs.statSync(resultPath).mtime.toISOString();
       return { resultPath, result: verified.result, createdAt, valid: true, error: '' };
     } catch (error) {

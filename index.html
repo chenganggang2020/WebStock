@@ -573,7 +573,14 @@
           <button id="seedModelMrBtn" class="small-btn primary">导入“模型先生”公开线索</button>
           <button id="refreshExpertTimelineBtn" class="small-btn">刷新资料</button>
           <button id="analyzeExpertIntentBtn" class="small-btn">AI证据分析</button>
+          <select id="expertDiscoveryWindowSelect" title="新增线索时间范围">
+            <option value="1">近24小时</option>
+            <option value="7" selected>近7天</option>
+            <option value="30">近30天</option>
+            <option value="90">近90天</option>
+          </select>
           <button id="discoverExpertUpdatesBtn" class="small-btn">查找新增公开线索</button>
+          <button id="openDouyinSearchBtn" class="small-btn" hidden>打开抖音站内搜索</button>
           <button id="backtestExpertSignalsBtn" class="small-btn">回测已映射语录</button>
           <button id="deleteExpertChannelBtn" class="small-btn danger">删除研究对象</button>
         </div>
@@ -606,6 +613,17 @@
           </div>
           <div class="expert-observation-actions">
             <button id="saveExpertSubjectBtn" class="small-btn primary">保存研究对象</button>
+          </div>
+        </details>
+        <details id="expertDouyinImporter" class="expert-observation-editor" hidden>
+          <summary>导入抖音公开分享链接</summary>
+          <div class="expert-observation-grid">
+            <label class="span-2">分享文字或视频链接
+              <textarea id="expertDouyinShareTextInput" placeholder="粘贴一条或多条抖音公开分享文字"></textarea>
+            </label>
+          </div>
+          <div class="expert-observation-actions">
+            <button id="importDouyinLinksBtn" class="small-btn primary">导入抖音链接</button>
           </div>
         </details>
         <details id="expertObservationEditor" class="expert-observation-editor">

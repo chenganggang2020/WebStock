@@ -117,6 +117,7 @@ function rowToChannel(row) {
     enabled: Boolean(row.enabled),
     observationCount: Number(row.observation_count || 0),
     primaryCount: Number(row.primary_count || 0),
+    directDouyinCount: Number(row.direct_douyin_count || 0),
     deletedTraceCount: Number(row.deleted_trace_count || 0),
     createdAt: row.created_at,
     updatedAt: row.updated_at
@@ -166,6 +167,8 @@ const channelCountsSql = `
   SELECT channel.*,
     COUNT(observation.id) AS observation_count,
     SUM(CASE WHEN observation.evidence_level = 'primary' THEN 1 ELSE 0 END) AS primary_count,
+    SUM(CASE WHEN LOWER(observation.source_url) LIKE 'https://%.douyin.com/%'
+      OR LOWER(observation.source_url) LIKE 'https://douyin.com/%' THEN 1 ELSE 0 END) AS direct_douyin_count,
     SUM(CASE WHEN observation.availability_status = 'deleted_trace' THEN 1 ELSE 0 END) AS deleted_trace_count
   FROM expert_channels AS channel
   LEFT JOIN expert_observations AS observation ON observation.channel_id = channel.id
@@ -410,6 +413,26 @@ function listObservations(channelId, options = {}) {
     .all(params).map(rowToObservation);
 }
 
+function findObservationByIdentity(channelId, input = {}) {
+  getChannel(channelId);
+  const externalContentId = cleanText(input.externalContentId, 160);
+  const sourceUrl = normalizeUrl(input.sourceUrl);
+  const clauses = [];
+  const params = { channelId: Number(channelId) };
+  if (externalContentId) {
+    clauses.push('external_content_id = @externalContentId');
+    params.externalContentId = externalContentId;
+  }
+  if (sourceUrl) {
+    clauses.push('LOWER(source_url) = LOWER(@sourceUrl)');
+    params.sourceUrl = sourceUrl;
+  }
+  if (!clauses.length) return null;
+  const row = db.prepare(`SELECT * FROM expert_observations
+    WHERE channel_id = @channelId AND (${clauses.join(' OR ')}) LIMIT 1`).get(params);
+  return row ? rowToObservation(row) : null;
+}
+
 function deleteObservation(channelId, observationId) {
   const action = function() {
     getChannel(channelId);
@@ -567,6 +590,7 @@ module.exports = {
   listChannels,
   recordObservation,
   listObservations,
+  findObservationByIdentity,
   deleteObservation,
   deleteChannel,
   buildIntentContext,

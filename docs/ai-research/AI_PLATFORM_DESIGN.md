@@ -157,9 +157,11 @@ Android 原生伴侣 -- 局域网配对 ------+-- Express API
 
 自动发现采用可替换连接器。免费默认连接器只能保存公开搜索索引中的标题、摘要和链接；需要登录或商业授权的平台数据必须由用户在官方渠道导出或通过获授权接口接入。相同 URL、内容 ID 或内容哈希应幂等更新，不重复建档。
 
-当前已实现 ChatGPT Deep Research 交接和每日公开线索监测。交接提示词会带上已入库 URL 去重清单，并要求返回结构化候选；自动导入的搜索结果一律先保存为低置信度 `secondary_quote` 或 `commentary`、`fact_summary` 和 `unknown`，不自动填写股票代码，也不直接进入严格回测。监测任务不绕过登录、验证码、反爬、付费墙或平台权限；WebStock 未运行时只在当前任务报告候选，不直接修改 SQLite 文件。
+当前已实现 ChatGPT Deep Research 交接和每日公开线索监测。交接可选择近 24 小时、7 天、30 天或 90 天，提示词会优先要求抖音直接视频 URL、按时间排序，并带上已入库 URL 去重清单。自动导入的搜索结果一律先保存为低置信度 `secondary_quote` 或 `commentary`、`fact_summary` 和 `unknown`，不自动填写股票代码，也不直接进入严格回测。监测任务不绕过登录、验证码、反爬、付费墙或平台权限；WebStock 未运行时只在当前任务报告候选，不直接修改 SQLite 文件。
 
-截至 2026-08-10，“模型先生”档案已导入 9 条公开线索。当前只核验到一个抖音原始视频 URL；抖音直接页面对自动访问返回平台挑战，公开搜索结果尚未给出可核验主页 URL，因此系统没有宣称完成主页全量视频下载。其余材料均按第三方转述、评论、榜单或删除痕迹分别保存，不能替代原始视频。用户通过抖音官方能力导出或取得授权的视频文件，可作为 `user_owned`、`authorized` 或 `platform_download` 本地资料补录。
+抖音创作者频道支持粘贴一条或多条公开分享文字。系统识别 `www.douyin.com/video/{item_id}`、精选页、官方播放器 URL 和 `v.douyin.com` 分享短链，规范化可识别的视频 ID、按链接和内容 ID 去重，并统计“抖音直接链接”。新导入项默认标为身份待核验；已知数字视频 ID 可以打开抖音官方播放器。短链不会在后台静默跟随跳转，必须由用户在平台页面确认作者、标题、时间和正文。
+
+抖音官方的[视频搜索接口](https://developer.open-douyin.com/docs/resource/zh-CN/dop/develop/openapi/douyin-search-capability/aweme-dy-video-search)需要 `aweme.dy.video_search_v2` 权限；其[搜索能力说明](https://developer.open-douyin.com/docs/resource/zh-CN/dop/ability/search-management/item-search)当前将该能力标为实验且暂不对外开放。官方[授权账号视频能力](https://developer.open-douyin.com/capacity-center-page/capacity-detail/7180522194714230845)只允许在用户授权后查询该授权用户的视频。因此，普通抖音登录不能让 WebStock 合法地全量同步任意第三方创作者主页。当前只确认到一个“模型先生”抖音原始视频 URL，系统不宣称完成主页全量下载；其他材料仍需按第三方转述、评论、榜单或删除痕迹分别保存。用户通过抖音官方能力导出或取得授权的视频文件，可作为 `user_owned`、`authorized` 或 `platform_download` 本地资料补录。
 
 意图分析输出必须分成：
 
@@ -240,7 +242,7 @@ Android 原生伴侣 -- 局域网配对 ------+-- Express API
 - 已有兼容环境可通过“使用已有环境”选择其 `python.exe`。服务端先执行 Python 3.12.13、Qlib、LightGBM、PyTorch、pandas、PyArrow 和 BaoStock 导入检查，全部通过后才在量化工作区保存 `runtime-link.json`；该文件只保存路径和验证版本，不复制环境。路径失效时状态回落为未配置，不会误报可用。
 - 安装在量化工作区的临时目录完成；只有两次健康检查均通过才替换原环境。失败或取消会删除临时目录并保留原环境，数据集、运行结果和持仓数据库不参与替换。
 - 已实现小样本采集、全市场采集、既有数据集训练、任务进度、取消、重启中断识别和研究记录保存。
-- 数据清单、原始 Parquet、预测产物和结果均带 SHA-256；服务端重新校验路径、哈希、覆盖率、滚动时间窗和净交易成本。
+- 数据清单、原始 Parquet、预测产物和结果均带 SHA-256；服务端重新校验路径、哈希、覆盖率、滚动时间窗和净交易成本。Node 与 Python 的清单规范化已对 `quality.coverageRate` 的整数浮点表示保持一致，并用固定跨语言摘要回归测试防止同一清单被误判。
 - 特征只使用当日及以前数据；标签为未来 5 日收益；训练、验证和测试之间保留不少于标签跨度的清洗间隔。
 - 安装版量化工作区位于 `%APPDATA%/WebStock/quant-workspace`，便携版位于程序旁的 `WebStockData/quant-workspace`。
 

@@ -11,6 +11,13 @@ function localFtsAvailable() {
   }
 }
 
+function researchModelStatus(runtime, result, requiredDependency) {
+  const runtimeStatus = runtime && runtime.status ? runtime.status : 'not_configured';
+  if (!['available', 'configured'].includes(runtimeStatus)) return runtimeStatus;
+  if (requiredDependency && runtime.versions && !runtime.versions[requiredDependency]) return 'not_configured';
+  return result && result.validationStatus === 'validated' ? 'available' : 'configured';
+}
+
 function listModels() {
   const aiConfig = getAIConfig();
   const hasKey = isValidApiKey(aiConfig && aiConfig.apiKey);
@@ -30,6 +37,8 @@ function listModels() {
   const latestQuantStatus = latestQuantResult && latestQuantResult.validationStatus === 'validated'
     ? '已验证'
     : '探索性';
+  const quantRuntimeLocated = ['available', 'configured'].includes(quantRuntime.status);
+  const masterRuntimeLocated = quantRuntimeLocated && !(quantRuntime.versions && !quantRuntime.versions.torch);
   const paperPortfolioCount = db.prepare('SELECT COUNT(*) AS count FROM paper_portfolios').get().count;
   const paperSnapshotCount = db.prepare('SELECT COUNT(*) AS count FROM paper_portfolio_snapshots').get().count;
 
@@ -49,7 +58,7 @@ function listModels() {
       id: 'local-factor-lab-v1',
       name: '本地因子研究门禁',
       kind: 'research-agent',
-      status: ['available', 'configured'].includes(quantRuntime.status) ? quantRuntime.status : 'not_configured',
+      status: researchModelStatus(quantRuntime, latestFactorResult),
       runtime: quantRuntime.versions
         ? 'Python ' + quantRuntime.versions.python + ' / pandas ' + quantRuntime.versions.pandas
         : 'Python 3.12 sidecar',
@@ -119,7 +128,7 @@ function listModels() {
       id: 'qlib-lightgbm',
       name: 'Qlib + LightGBM 基线',
       kind: 'quant-model',
-      status: quantRuntime.status,
+      status: researchModelStatus(quantRuntime, latestQuantResult),
       runtime: quantRuntime.versions
         ? 'Python ' + quantRuntime.versions.python + ' / Qlib ' + quantRuntime.versions.qlib + ' / LightGBM ' + quantRuntime.versions.lightgbm
         : 'Python 3.12 sidecar',
@@ -127,16 +136,18 @@ function listModels() {
       capabilities: ['因子数据集', '收益排名', '滚动回测', '基线比较'],
       requirements: ['独立 Python 环境', '有时间戳的数据清单', '无前视切分'],
       note: quantRuntime.reason + (latestQuantResult
-        ? ' 已有' + latestQuantStatus + '运行：' + latestQuantResult.runId + '。'
-        : ' 尚无通过契约校验的运行结果。')
+        ? ' 已有' + latestQuantStatus + '运行：' + latestQuantResult.runId + (latestQuantResult.validationStatus === 'validated'
+          ? '。'
+          : '；仅证明训练与回测链路可执行，尚未证明策略有效。')
+        : quantRuntimeLocated
+          ? ' 已找到运行环境，但尚无通过契约校验的运行结果。'
+          : ' 尚未检测到运行环境或通过契约校验的运行结果。')
     },
     {
       id: 'master',
       name: 'MASTER 股票 Transformer',
       kind: 'quant-model',
-      status: quantRuntime.status === 'configured'
-        ? 'configured'
-        : quantRuntime.versions && quantRuntime.versions.torch ? quantRuntime.status : 'not_configured',
+      status: researchModelStatus(quantRuntime, latestMasterResult, 'torch'),
       runtime: quantRuntime.versions && quantRuntime.versions.torch
         ? 'Python ' + quantRuntime.versions.python + ' / PyTorch ' + quantRuntime.versions.torch + ' / CPU'
         : 'Python 3.12 / locked PyTorch sidecar',
@@ -144,8 +155,11 @@ function listModels() {
       capabilities: ['市场状态门控', '跨股票与跨时间关系建模', '同数据滚动对比'],
       requirements: ['与基线一致的数据和标签', 'PyTorch 运行环境', '样本外对照'],
       note: '验证阶段保留全部特征有效股票，只在计算指标时过滤空标签。' + (latestMasterResult
-        ? ' 已有' + (latestMasterResult.validationStatus === 'validated' ? '已验证' : '探索性') + '运行：' + latestMasterResult.runId + '。'
-        : ' 尚无通过契约校验的 MASTER 运行结果。')
+        ? ' 已有' + (latestMasterResult.validationStatus === 'validated' ? '已验证' : '探索性') + '运行：' + latestMasterResult.runId +
+          (latestMasterResult.validationStatus === 'validated' ? '。' : '；当前结果只证明深度学习链路可执行，尚未证明策略有效。')
+        : masterRuntimeLocated
+          ? ' 已找到量化运行环境，但尚无通过契约校验的 MASTER 运行结果；首次训练前需完成 PyTorch 检测。'
+          : ' 尚未检测到可运行 MASTER 的 PyTorch 环境。')
     },
     {
       id: 'alphaagent',

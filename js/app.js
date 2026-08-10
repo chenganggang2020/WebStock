@@ -1,3 +1,15 @@
+let mainNavigationBound = false;
+
+function bindMainNavigation() {
+  if (mainNavigationBound) return;
+  mainNavigationBound = true;
+  document.querySelectorAll('.main-tab, .sidebar-workspace-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      switchMainView(btn.getAttribute('data-main-view'));
+    });
+  });
+}
+
 function bindButtons() {
   const State = window.State;
   const Search = window.Search;
@@ -174,11 +186,7 @@ function bindButtons() {
     if (State.currentStock) Analysis.openAnalysisPanel(State.currentStock, true);
   });
 
-  document.querySelectorAll('.main-tab, .sidebar-workspace-btn').forEach(function(btn) {
-    btn.addEventListener('click', function() {
-      switchMainView(btn.getAttribute('data-main-view'));
-    });
-  });
+  bindMainNavigation();
 
   const watchlistGroupFilter = document.getElementById('watchlistGroupFilter');
   if (watchlistGroupFilter) watchlistGroupFilter.addEventListener('change', Watchlist.loadWatchlist);
@@ -377,7 +385,13 @@ function switchMainView(view, options) {
     window.SectorLeaders.load().catch(function(error) { alert(error.message); });
   }
   if (view === 'screener') window.StockScreener.ensureLoaded().catch(function(error) { alert(error.message); });
-  if (view === 'aiResearch' && window.AIResearch) window.AIResearch.ensureLoaded().catch(function(error) { alert(error.message); });
+  if (view === 'aiResearch') {
+    if (window.ExpertTracker) window.ExpertTracker.bind();
+    if (window.AIResearch) {
+      window.AIResearch.bind();
+      window.AIResearch.ensureLoaded().catch(function(error) { alert(error.message); });
+    }
+  }
   if (view === 'market' && window.StockList && State.currentStock && !State.currentRawData.length) {
     window.StockList.selectStock(State.currentStock).catch(function(error) { console.warn(error.message); });
   }
@@ -434,6 +448,8 @@ async function init() {
   const State = window.State;
   const StockList = window.StockList;
 
+  // Bind navigation before the first network wait so early user clicks are never dropped.
+  bindMainNavigation();
   State.allStocks = await window.ApiClient.fetchJsonData('/api/stocklist');
   State.filteredStocks = State.allStocks.slice(0, State.PAGE_SIZE);
   if (window.Watchlist) await window.Watchlist.loadWatchlist({ skipQuotes: true });
