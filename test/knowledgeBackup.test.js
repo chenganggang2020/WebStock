@@ -61,13 +61,16 @@ test('backup roundtrip restores knowledge, research runs and paper portfolios', 
     '600879': { price: 12.5, tradeDate: '2026-08-08', tradeTime: '15:00:00' }
   }, { source: 'test-quotes', capturedAt: '2026-08-08T07:00:00.000Z' });
   const expertChannel = expertChannels.createChannel({
-    channelKey: 'backup-model-mr', displayName: '模型先生', platform: 'douyin'
+    channelKey: 'backup-model-mr', displayName: '模型先生', subjectType: 'creator', platform: 'douyin',
+    description: '公开创作者资料备份测试。'
   });
   expertChannels.recordObservation(expertChannel.id, {
     externalKey: 'public-video-backup', title: '公开页面记录',
     sourceUrl: 'https://www.douyin.com/video/7533142185677114684',
     publishedAt: '2025-07-31T15:19', evidenceLevel: 'primary',
-    contentRole: 'direct_quote', stockCodes: ['688041'], stance: 'bullish'
+    contentRole: 'direct_quote', mediaType: 'chart', archiveStatus: 'local_reference',
+    rightsBasis: 'user_owned', curveData: '起点,10\n终点,12', analysisNotes: '测试曲线。',
+    stockCodes: ['688041'], stance: 'bullish'
   });
   expertChannels.recordBacktest(expertChannel.id, {
     runId: 'backup-expert-run', datasetId: 'dataset-demo',
@@ -75,8 +78,8 @@ test('backup roundtrip restores knowledge, research runs and paper portfolios', 
   });
 
   const backup = backupService.exportUserData();
-  assert.equal(backup.version, 4);
-  assert.equal(backup.tables.knowledgeSources.length, 1);
+  assert.equal(backup.version, 5);
+  assert.equal(backup.tables.knowledgeSources.length, 2);
   assert.equal(backup.tables.researchRuns.length, 1);
   assert.equal(backup.tables.paperPortfolios.length, 1);
   assert.equal(backup.tables.paperPortfolios[0].items[0].code, '600879');
@@ -84,7 +87,9 @@ test('backup roundtrip restores knowledge, research runs and paper portfolios', 
   assert.equal(backup.tables.paperPortfolios[0].snapshots.length, 1);
   assert.equal(backup.tables.knowledgeSources[0].sourceKey, source.sourceKey);
   assert.equal(backup.tables.expertChannels.length, 1);
+  assert.equal(backup.tables.expertChannels[0].description, '公开创作者资料备份测试。');
   assert.equal(backup.tables.expertChannels[0].observations[0].publishedTimePrecision, 'minute');
+  assert.equal(backup.tables.expertChannels[0].observations[0].curveData[1].y, 12);
   assert.equal(backup.tables.expertChannels[0].backtests[0].runId, 'backup-expert-run');
 
   paperPortfolios.deletePortfolio(paperPortfolio.id);
@@ -94,13 +99,13 @@ test('backup roundtrip restores knowledge, research runs and paper portfolios', 
   assert.equal(knowledge.search({ query: '商业航天' }).items.length, 0);
 
   const preview = backupService.previewUserDataImport(backup);
-  assert.equal(preview.incoming.knowledgeSources, 1);
+  assert.equal(preview.incoming.knowledgeSources, 2);
   assert.equal(preview.incoming.researchRuns, 1);
   assert.equal(preview.incoming.paperPortfolios, 1);
   assert.equal(preview.incoming.expertChannels, 1);
 
   const imported = backupService.importUserData(backup, { mode: 'replace' });
-  assert.equal(imported.knowledgeSources, 1);
+  assert.equal(imported.knowledgeSources, 2);
   assert.equal(imported.researchRuns, 1);
   assert.equal(imported.paperPortfolios, 1);
   assert.equal(imported.expertChannels, 1);
@@ -115,6 +120,10 @@ test('backup roundtrip restores knowledge, research runs and paper portfolios', 
   assert.equal(restoredPaper.snapshots.length, 1);
   assert.equal(restoredPaper.sourceRunId, null);
   const restoredExpert = expertChannels.listChannels({ query: '模型先生' })[0];
-  assert.equal(expertChannels.listObservations(restoredExpert.id)[0].publishedTimePrecision, 'minute');
+  assert.equal(restoredExpert.description, '公开创作者资料备份测试。');
+  const restoredObservation = expertChannels.listObservations(restoredExpert.id)[0];
+  assert.equal(restoredObservation.publishedTimePrecision, 'minute');
+  assert.equal(restoredObservation.mediaType, 'chart');
+  assert.equal(restoredObservation.curveData[1].y, 12);
   assert.equal(expertChannels.listBacktests(restoredExpert.id)[0].runId, 'backup-expert-run');
 });

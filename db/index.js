@@ -19,7 +19,15 @@ try {
       db.exec('ALTER TABLE ' + table + ' ADD COLUMN ' + column + ' ' + definition);
     }
   };
+  ensureColumn('expert_channels', 'subject_type', "TEXT NOT NULL DEFAULT 'creator'");
+  ensureColumn('expert_channels', 'description', "TEXT DEFAULT ''");
   ensureColumn('expert_observations', 'published_time_precision', "TEXT NOT NULL DEFAULT 'unknown'");
+  ensureColumn('expert_observations', 'media_type', "TEXT NOT NULL DEFAULT 'text'");
+  ensureColumn('expert_observations', 'archive_status', "TEXT NOT NULL DEFAULT 'linked'");
+  ensureColumn('expert_observations', 'rights_basis', "TEXT NOT NULL DEFAULT 'quotation_only'");
+  ensureColumn('expert_observations', 'local_asset_path', "TEXT DEFAULT ''");
+  ensureColumn('expert_observations', 'curve_data_json', "TEXT DEFAULT '[]'");
+  ensureColumn('expert_observations', 'analysis_notes', "TEXT DEFAULT ''");
   ensureColumn('expert_backtests', 'run_id', "TEXT DEFAULT ''");
   ensureColumn('expert_backtests', 'dataset_id', "TEXT DEFAULT ''");
   ensureColumn('expert_backtests', 'result_path', "TEXT DEFAULT ''");

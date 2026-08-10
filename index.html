@@ -564,23 +564,88 @@
       </section>
       <section class="expert-tracker-band">
         <div class="panel-title-row">
-          <h3>公开创作者研究库</h3>
-          <span id="expertTrackerStatus" class="muted">尚未建立频道</span>
+          <h3>人物、书籍与方法研究库</h3>
+          <span id="expertTrackerStatus" class="muted">尚未建立研究对象</span>
         </div>
         <div class="expert-channel-toolbar">
-          <select id="expertChannelSelect"><option value="">选择创作者频道</option></select>
-          <button id="seedModelMrBtn" class="small-btn primary">建立“模型先生”频道</button>
-          <button id="refreshExpertTimelineBtn" class="small-btn">刷新时间线</button>
-          <button id="analyzeExpertIntentBtn" class="small-btn">分析观点与意图</button>
+          <select id="expertChannelSelect"><option value="">选择研究对象</option></select>
+          <button id="seedModelMrBtn" class="small-btn primary">导入“模型先生”公开线索</button>
+          <button id="refreshExpertTimelineBtn" class="small-btn">刷新资料</button>
+          <button id="analyzeExpertIntentBtn" class="small-btn">AI证据分析</button>
           <button id="discoverExpertUpdatesBtn" class="small-btn">查找新增公开线索</button>
           <button id="backtestExpertSignalsBtn" class="small-btn">回测已映射语录</button>
+          <button id="deleteExpertChannelBtn" class="small-btn danger">删除研究对象</button>
         </div>
-        <details class="expert-observation-editor">
-          <summary>录入公开内容、存档或第三方转述</summary>
+        <details id="expertSubjectEditor" class="expert-observation-editor">
+          <summary>新增人物、书籍或分析方法</summary>
           <div class="expert-observation-grid">
+            <label>对象类型
+              <select id="expertSubjectTypeSelect">
+                <option value="creator">创作者</option>
+                <option value="person">人物</option>
+                <option value="book">书籍</option>
+                <option value="method">分析方法</option>
+              </select>
+            </label>
+            <label>来源 / 平台
+              <input id="expertSubjectPlatformInput" maxlength="60" placeholder="douyin、book、manual">
+            </label>
+            <label class="span-2">名称
+              <input id="expertSubjectNameInput" maxlength="160" placeholder="人物、书名或方法名称">
+            </label>
+            <label class="span-2">主页 / 出版信息链接
+              <input id="expertSubjectUrlInput" type="url" placeholder="https://">
+            </label>
+            <label class="span-2">别名
+              <input id="expertSubjectAliasesInput" placeholder="多个别名用逗号分隔">
+            </label>
+            <label class="span-2">说明
+              <textarea id="expertSubjectDescriptionInput" placeholder="身份边界、版本、作者或研究目的"></textarea>
+            </label>
+          </div>
+          <div class="expert-observation-actions">
+            <button id="saveExpertSubjectBtn" class="small-btn primary">保存研究对象</button>
+          </div>
+        </details>
+        <details id="expertObservationEditor" class="expert-observation-editor">
+          <summary>录入视频、书籍、图形、存档或第三方转述</summary>
+          <div class="expert-observation-grid">
+            <label>资料类型
+              <select id="expertMediaTypeSelect">
+                <option value="video">视频</option>
+                <option value="book">书籍 / 章节</option>
+                <option value="article">文章</option>
+                <option value="chart">曲线 / 图形</option>
+                <option value="image">图片</option>
+                <option value="pdf">PDF</option>
+                <option value="audio">音频</option>
+                <option value="note">笔记</option>
+                <option value="text">文本</option>
+              </select>
+            </label>
+            <label>归档状态
+              <select id="expertArchiveStatusSelect">
+                <option value="linked">仅保存公开链接</option>
+                <option value="local_reference">已有本地副本</option>
+                <option value="downloaded">平台允许下载</option>
+                <option value="blocked">平台限制，未下载</option>
+                <option value="failed">归档失败</option>
+                <option value="not_applicable">无需归档</option>
+              </select>
+            </label>
+            <label>使用依据
+              <select id="expertRightsBasisSelect">
+                <option value="quotation_only">仅引用公开页面</option>
+                <option value="user_owned">用户自有资料</option>
+                <option value="authorized">已获授权</option>
+                <option value="platform_download">平台下载功能</option>
+                <option value="public_domain">公共领域</option>
+                <option value="unknown">尚未核实</option>
+              </select>
+            </label>
             <label>证据等级
               <select id="expertEvidenceLevelSelect">
-                <option value="primary">本人公开</option>
+                <option value="primary">原始来源 / 本人公开</option>
                 <option value="archive">合法公开存档</option>
                 <option value="secondary_quote">第三方转述</option>
                 <option value="commentary">第三方评论</option>
@@ -612,6 +677,9 @@
             <label class="span-2">公开来源链接
               <input id="expertObservationUrlInput" type="url" placeholder="https://">
             </label>
+            <label class="span-2">本地资料位置
+              <input id="expertLocalAssetPathInput" placeholder="仅填写自有或已获授权文件的位置">
+            </label>
             <label>关联股票
               <input id="expertObservationStocksInput" placeholder="688041, 300308">
             </label>
@@ -635,6 +703,12 @@
             </label>
             <label class="span-2">证据说明
               <textarea id="expertObservationSummaryInput" placeholder="说明首次发现位置、无法核实之处、删除痕迹或转述关系。"></textarea>
+            </label>
+            <label class="span-2">曲线数据
+              <textarea id="expertCurveDataInput" placeholder="每行：时间或标签, 数值"></textarea>
+            </label>
+            <label class="span-2">图形分析记录
+              <textarea id="expertAnalysisNotesInput" placeholder="记录坐标含义、观察窗口、判断规则和反例"></textarea>
             </label>
           </div>
           <div class="expert-observation-actions">

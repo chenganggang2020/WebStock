@@ -327,6 +327,40 @@ test('AI research view creates grounded expert knowledge and saves a handoff res
   await expect(page.locator('#handoffPromptText')).toHaveValue(/CPO|300308/i);
 });
 
+test('research library manages people, books, methods and curve material', async ({ page }) => {
+  page.on('dialog', dialog => dialog.accept());
+  await page.goto(baseURL + '/', { waitUntil: 'domcontentloaded' });
+  await page.click('[data-main-view="aiResearch"]');
+  await expect(page.locator('#aiResearchView')).toBeVisible();
+
+  await page.click('#expertSubjectEditor summary');
+  await page.selectOption('#expertSubjectTypeSelect', 'method');
+  await page.fill('#expertSubjectPlatformInput', 'manual');
+  await page.fill('#expertSubjectNameInput', 'Playwright 曲线分析方法');
+  await page.fill('#expertSubjectAliasesInput', '趋势曲线, 图形方法');
+  await page.fill('#expertSubjectDescriptionInput', '用于验证结构化曲线资料的新增和删除。');
+  await page.click('#saveExpertSubjectBtn');
+  await expect(page.locator('#expertChannelSelect')).toContainText('Playwright 曲线分析方法');
+
+  await page.click('#expertObservationEditor summary');
+  await page.selectOption('#expertMediaTypeSelect', 'chart');
+  await page.selectOption('#expertArchiveStatusSelect', 'local_reference');
+  await page.selectOption('#expertRightsBasisSelect', 'user_owned');
+  await page.fill('#expertObservationTitleInput', '两点趋势样例');
+  await page.fill('#expertObservationSummaryInput', '用户自有的曲线分析样例。');
+  await page.fill('#expertCurveDataInput', '起点,10\n终点,12.5');
+  await page.fill('#expertAnalysisNotesInput', '终点高于起点；真实分析还需说明窗口与反例。');
+  await page.click('#saveExpertObservationBtn');
+  await expect(page.locator('#expertTimeline')).toContainText('两点趋势样例');
+  await expect(page.locator('#expertTimeline')).toContainText('终点高于起点');
+  await expect(page.locator('.expert-curve-chart')).toHaveCount(1);
+
+  await page.click('.expert-delete-observation');
+  await expect(page.locator('#expertTrackerStatus')).toContainText('资料及其知识索引已删除');
+  await page.click('#deleteExpertChannelBtn');
+  await expect(page.locator('#expertChannelSelect')).not.toContainText('Playwright 曲线分析方法');
+});
+
 test('main stock actions and workspace navigation do not throw', async ({ page }) => {
   const dialogResponses = [];
   const dialogMessages = [];

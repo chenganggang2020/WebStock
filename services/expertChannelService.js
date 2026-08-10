@@ -7,9 +7,13 @@ const AVAILABILITY_STATUSES = new Set(['available', 'unavailable', 'deleted_trac
 const CONTENT_ROLES = new Set(['direct_quote', 'transcript', 'secondary_quote', 'fact_summary', 'model_inference']);
 const STANCES = new Set(['bullish', 'bearish', 'neutral', 'conditional', 'unknown']);
 const TIME_PRECISIONS = new Set(['date', 'minute', 'second', 'unknown']);
+const SUBJECT_TYPES = new Set(['creator', 'person', 'book', 'method']);
+const MEDIA_TYPES = new Set(['text', 'video', 'audio', 'image', 'chart', 'book', 'pdf', 'article', 'note']);
+const ARCHIVE_STATUSES = new Set(['linked', 'local_reference', 'downloaded', 'blocked', 'failed', 'not_applicable']);
+const RIGHTS_BASES = new Set(['quotation_only', 'user_owned', 'authorized', 'platform_download', 'public_domain', 'unknown']);
 
 const EVIDENCE_LABELS = {
-  primary: '本人公开',
+  primary: '原始来源 / 本人公开',
   archive: '公开存档',
   secondary_quote: '第三方转述',
   commentary: '第三方评论'
@@ -26,6 +30,31 @@ function normalizeArray(value, options = {}) {
     items = items.map(item => item.replace(/\D/g, '')).filter(item => /^\d{6}$/.test(item));
   }
   return items.filter((item, index) => items.indexOf(item) === index).slice(0, options.limit || 100);
+}
+
+function normalizeCurveData(value) {
+  let source = value;
+  if (typeof source === 'string') {
+    const raw = source.trim();
+    if (!raw) return [];
+    if (raw.startsWith('[')) {
+      try { source = JSON.parse(raw); } catch (error) { source = raw.split(/\r?\n/); }
+    } else {
+      source = raw.split(/\r?\n/);
+    }
+  }
+  if (!Array.isArray(source)) return [];
+  return source.slice(0, 2000).map((item, index) => {
+    if (typeof item === 'string') {
+      const parts = item.split(/[,，\t]/);
+      return { x: cleanText(parts[0], 80) || String(index + 1), y: Number(parts[1]) };
+    }
+    if (Array.isArray(item)) return { x: cleanText(item[0], 80) || String(index + 1), y: Number(item[1]) };
+    if (item && typeof item === 'object') {
+      return { x: cleanText(item.x == null ? item.label : item.x, 80) || String(index + 1), y: Number(item.y) };
+    }
+    return null;
+  }).filter(item => item && Number.isFinite(item.y));
 }
 
 function normalizeUrl(value) {
@@ -79,8 +108,10 @@ function rowToChannel(row) {
     id: Number(row.id),
     channelKey: row.channel_key,
     displayName: row.display_name,
+    subjectType: row.subject_type || 'creator',
     platform: row.platform,
     profileUrl: row.profile_url || '',
+    description: row.description || '',
     aliases: parseJson(row.aliases_json, []),
     discoveryQueries: parseJson(row.discovery_queries_json, []),
     enabled: Boolean(row.enabled),
@@ -116,6 +147,12 @@ function rowToObservation(row) {
     stockCodes: parseJson(row.stock_codes_json, []),
     sectors: parseJson(row.sectors_json, []),
     topics: parseJson(row.topics_json, []),
+    mediaType: row.media_type || 'text',
+    archiveStatus: row.archive_status || 'linked',
+    rightsBasis: row.rights_basis || 'quotation_only',
+    localAssetPath: row.local_asset_path || '',
+    curveData: parseJson(row.curve_data_json, []),
+    analysisNotes: row.analysis_notes || '',
     stance: row.stance || 'unknown',
     horizon: row.horizon || 'unspecified',
     confidence: Number(row.confidence),
@@ -136,7 +173,7 @@ const channelCountsSql = `
 
 function getChannel(id) {
   const row = db.prepare(channelCountsSql + ' WHERE channel.id = ? GROUP BY channel.id').get(Number(id));
-  if (!row) throw new Error('创作者频道不存在');
+  if (!row) throw new Error('研究对象不存在');
   return rowToChannel(row);
 }
 
@@ -144,8 +181,8 @@ function listChannels(options = {}) {
   const params = { limit: Math.min(Math.max(Number(options.limit) || 100, 1), 500) };
   const query = cleanText(options.query, 200);
   const where = query ? ` WHERE (
-    channel.display_name LIKE @query OR channel.platform LIKE @query OR
-    channel.aliases_json LIKE @query OR channel.discovery_queries_json LIKE @query
+    channel.display_name LIKE @query OR channel.platform LIKE @query OR channel.subject_type LIKE @query OR
+    channel.description LIKE @query OR channel.aliases_json LIKE @query OR channel.discovery_queries_json LIKE @query
   )` : '';
   if (query) params.query = '%' + query + '%';
   return db.prepare(channelCountsSql + where + ` GROUP BY channel.id
@@ -155,27 +192,33 @@ function listChannels(options = {}) {
 function createChannel(input = {}) {
   const displayName = cleanText(input.displayName, 160);
   const platform = cleanText(input.platform, 60).toLowerCase();
-  if (!displayName) throw new Error('创作者名称不能为空');
-  if (!platform) throw new Error('平台不能为空');
-  const channelKey = cleanText(input.channelKey, 120) || sha256(platform + '\n' + displayName).slice(0, 24);
+  const subjectType = cleanText(input.subjectType, 30).toLowerCase() || 'creator';
+  if (!displayName) throw new Error('研究对象名称不能为空');
+  if (!platform) throw new Error('来源或平台不能为空');
+  if (!SUBJECT_TYPES.has(subjectType)) throw new Error('不支持的研究对象类型');
+  const channelKey = cleanText(input.channelKey, 120) || sha256(subjectType + '\n' + platform + '\n' + displayName).slice(0, 24);
   const profileUrl = normalizeUrl(input.profileUrl);
+  const description = cleanText(input.description, 10000);
   const aliases = normalizeArray(input.aliases, { maxLength: 160 });
   const discoveryQueries = normalizeArray(input.discoveryQueries, { maxLength: 300, limit: 30 });
   const enabled = input.enabled === false ? 0 : 1;
   db.prepare(`
     INSERT INTO expert_channels (
-      channel_key, display_name, platform, profile_url, aliases_json, discovery_queries_json, enabled
-    ) VALUES (?, ?, ?, ?, ?, ?, ?)
+      channel_key, display_name, subject_type, platform, profile_url, description,
+      aliases_json, discovery_queries_json, enabled
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(channel_key) DO UPDATE SET
       display_name = excluded.display_name,
+      subject_type = excluded.subject_type,
       platform = excluded.platform,
       profile_url = excluded.profile_url,
+      description = excluded.description,
       aliases_json = excluded.aliases_json,
       discovery_queries_json = excluded.discovery_queries_json,
       enabled = excluded.enabled,
       updated_at = CURRENT_TIMESTAMP
   `).run(
-    channelKey, displayName, platform, profileUrl,
+    channelKey, displayName, subjectType, platform, profileUrl, description,
     JSON.stringify(aliases), JSON.stringify(discoveryQueries), enabled
   );
   const row = db.prepare('SELECT id FROM expert_channels WHERE channel_key = ?').get(channelKey);
@@ -198,18 +241,22 @@ function buildExternalKey(channel, input) {
 }
 
 function syncKnowledgeSource(channel, observation, existing) {
-  const sourceText = observation.content.length >= 10 ? observation.content : observation.summary;
+  const sourceText = [observation.content.length >= 10 ? observation.content : observation.summary,
+    observation.analysisNotes ? '图形 / 方法分析记录：\n' + observation.analysisNotes : '']
+    .filter(Boolean).join('\n\n');
   if (sourceText.length < 10) return existing && existing.knowledge_source_id || null;
   const prefix = '[' + (EVIDENCE_LABELS[observation.evidenceLevel] || observation.evidenceLevel) + '] ';
   const sourceInput = {
     sourceKey: 'expert-' + sha256(channel.channelKey + '\n' + observation.externalKey).slice(0, 40),
-    sourceType: observation.contentRole === 'transcript' ? 'transcript' : 'video',
+    sourceType: observation.contentRole === 'transcript' ? 'transcript'
+      : ['book', 'article', 'video', 'note'].includes(observation.mediaType) ? observation.mediaType : 'note',
     title: prefix + observation.title,
     author: channel.displayName,
     sourceUrl: observation.sourceUrl,
     publishedAt: observation.publishedAt,
-    tags: ['创作者追踪', 'evidence:' + observation.evidenceLevel, 'status:' + observation.availabilityStatus,
-      'role:' + observation.contentRole, channel.platform].concat(observation.topics),
+    tags: ['研究资料', 'subject:' + channel.subjectType, 'media:' + observation.mediaType,
+      'evidence:' + observation.evidenceLevel, 'status:' + observation.availabilityStatus,
+      'archive:' + observation.archiveStatus, 'role:' + observation.contentRole, channel.platform].concat(observation.topics),
     stockCodes: observation.stockCodes,
     sectors: observation.sectors,
     content: sourceText
@@ -231,10 +278,16 @@ function recordObservation(channelId, input = {}) {
   const contentRole = cleanText(input.contentRole == null && existing ? existing.contentRole : input.contentRole, 40)
     || (evidenceLevel === 'primary' ? 'direct_quote' : 'secondary_quote');
   const stance = cleanText(input.stance == null && existing ? existing.stance : input.stance, 40) || 'unknown';
+  const mediaType = cleanText(input.mediaType == null && existing ? existing.mediaType : input.mediaType, 40) || 'text';
+  const archiveStatus = cleanText(input.archiveStatus == null && existing ? existing.archiveStatus : input.archiveStatus, 40) || 'linked';
+  const rightsBasis = cleanText(input.rightsBasis == null && existing ? existing.rightsBasis : input.rightsBasis, 40) || 'quotation_only';
   if (!EVIDENCE_LEVELS.has(evidenceLevel)) throw new Error('不支持的证据等级');
   if (!AVAILABILITY_STATUSES.has(availabilityStatus)) throw new Error('不支持的可用状态');
   if (!CONTENT_ROLES.has(contentRole)) throw new Error('不支持的文本角色');
   if (!STANCES.has(stance)) throw new Error('不支持的观点方向');
+  if (!MEDIA_TYPES.has(mediaType)) throw new Error('不支持的资料类型');
+  if (!ARCHIVE_STATUSES.has(archiveStatus)) throw new Error('不支持的归档状态');
+  if (!RIGHTS_BASES.has(rightsBasis)) throw new Error('不支持的使用依据');
 
   const title = cleanText(input.title == null && existing ? existing.title : input.title, 300);
   if (!title) throw new Error('观察记录标题不能为空');
@@ -251,6 +304,7 @@ function recordObservation(channelId, input = {}) {
   const stockCodes = normalizeArray(input.stockCodes == null && existing ? existing.stockCodes : input.stockCodes, { stockCodes: true });
   const sectors = normalizeArray(input.sectors == null && existing ? existing.sectors : input.sectors);
   const topics = normalizeArray(input.topics == null && existing ? existing.topics : input.topics);
+  const curveData = normalizeCurveData(input.curveData == null && existing ? existing.curveData : input.curveData);
   const confidence = Math.min(Math.max(Number(input.confidence == null && existing ? existing.confidence : input.confidence) || 0.5, 0), 1);
   const observation = {
     externalKey,
@@ -267,10 +321,18 @@ function recordObservation(channelId, input = {}) {
     contentRole,
     content,
     summary,
-    contentHash: sha256(content || summary || title + '\n' + sourceUrl),
+    contentHash: sha256([content, summary, JSON.stringify(curveData),
+      cleanText(input.analysisNotes == null && existing ? existing.analysisNotes : input.analysisNotes, 20000),
+      title, sourceUrl].join('\n')),
     stockCodes,
     sectors,
     topics,
+    mediaType,
+    archiveStatus,
+    rightsBasis,
+    localAssetPath: cleanText(input.localAssetPath == null && existing ? existing.localAssetPath : input.localAssetPath, 2000),
+    curveData,
+    analysisNotes: cleanText(input.analysisNotes == null && existing ? existing.analysisNotes : input.analysisNotes, 20000),
     stance,
     horizon: cleanText(input.horizon == null && existing ? existing.horizon : input.horizon, 80) || 'unspecified',
     confidence
@@ -282,8 +344,9 @@ function recordObservation(channelId, input = {}) {
       channel_id, external_key, external_content_id, source_url, title, author, published_at, published_time_precision,
       first_seen_at, last_seen_at, evidence_level, availability_status, content_role,
       content_text, summary_text, content_hash, stock_codes_json, sectors_json, topics_json,
+      media_type, archive_status, rights_basis, local_asset_path, curve_data_json, analysis_notes,
       stance, horizon, confidence, knowledge_source_id
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(channel_id, external_key) DO UPDATE SET
       external_content_id = excluded.external_content_id,
       source_url = excluded.source_url,
@@ -301,6 +364,12 @@ function recordObservation(channelId, input = {}) {
       stock_codes_json = excluded.stock_codes_json,
       sectors_json = excluded.sectors_json,
       topics_json = excluded.topics_json,
+      media_type = excluded.media_type,
+      archive_status = excluded.archive_status,
+      rights_basis = excluded.rights_basis,
+      local_asset_path = excluded.local_asset_path,
+      curve_data_json = excluded.curve_data_json,
+      analysis_notes = excluded.analysis_notes,
       stance = excluded.stance,
       horizon = excluded.horizon,
       confidence = excluded.confidence,
@@ -312,6 +381,8 @@ function recordObservation(channelId, input = {}) {
     observation.lastSeenAt, observation.evidenceLevel, observation.availabilityStatus,
     observation.contentRole, observation.content, observation.summary, observation.contentHash,
     JSON.stringify(observation.stockCodes), JSON.stringify(observation.sectors), JSON.stringify(observation.topics),
+    observation.mediaType, observation.archiveStatus, observation.rightsBasis, observation.localAssetPath,
+    JSON.stringify(observation.curveData), observation.analysisNotes,
     observation.stance, observation.horizon, observation.confidence, knowledgeSourceId
   );
   return rowToObservation(observationRow(channel.id, externalKey));
@@ -339,12 +410,40 @@ function listObservations(channelId, options = {}) {
     .all(params).map(rowToObservation);
 }
 
+function deleteObservation(channelId, observationId) {
+  const action = function() {
+    getChannel(channelId);
+    const row = db.prepare('SELECT id, knowledge_source_id FROM expert_observations WHERE id = ? AND channel_id = ?')
+      .get(Number(observationId), Number(channelId));
+    if (!row) return false;
+    db.prepare('DELETE FROM expert_observations WHERE id = ?').run(row.id);
+    if (row.knowledge_source_id) knowledge.deleteSource(Number(row.knowledge_source_id));
+    return true;
+  };
+  return db.inTransaction ? action() : db.transaction(action)();
+}
+
+function deleteChannel(channelId) {
+  const action = function() {
+    const channel = getChannel(channelId);
+    const sourceIds = db.prepare('SELECT knowledge_source_id FROM expert_observations WHERE channel_id = ? AND knowledge_source_id IS NOT NULL')
+      .all(channel.id).map(item => Number(item.knowledge_source_id));
+    db.prepare('DELETE FROM expert_channels WHERE id = ?').run(channel.id);
+    sourceIds.forEach(id => knowledge.deleteSource(id));
+    return true;
+  };
+  return db.inTransaction ? action() : db.transaction(action)();
+}
+
 function buildIntentContext(channelId, input = {}) {
   const channel = getChannel(channelId);
   const observations = listObservations(channel.id, { limit: 500 });
   const sourceIds = observations.map(item => item.knowledgeSourceId).filter(Boolean);
-  if (!sourceIds.length) throw new Error('该创作者频道还没有可检索的正文证据');
-  const question = cleanText(input.question, 1000) || ('根据可核对证据，分析' + channel.displayName + '近期直接表达的观点、可能意图及其替代解释。');
+  if (!sourceIds.length) throw new Error('该研究对象还没有可检索的正文证据');
+  const isCreator = ['creator', 'person'].includes(channel.subjectType);
+  const question = cleanText(input.question, 1000) || (isCreator
+    ? '根据可核对证据，分析' + channel.displayName + '近期直接表达的观点、可能意图及其替代解释。'
+    : '根据可核对证据，总结' + channel.displayName + '的核心方法、适用条件、可检验规则和反例。');
   const context = knowledge.buildAnalysisContext({
     question,
     searchQuery: cleanText(input.searchQuery, 500) || channel.displayName,
@@ -353,11 +452,12 @@ function buildIntentContext(channelId, input = {}) {
     limit: input.limit || 10
   });
   const boundary = [
-    '## 创作者证据边界',
+    '## 研究资料证据边界',
     '- `primary` 仅表示本人公开页面；`archive` 表示合法公开存档。',
     '- `secondary_quote` 和 `commentary` 均为第三方材料，不得改写为本人原话。',
     '- `deleted_trace` 只证明公开页面或第三方材料提到内容已不可用，不证明系统掌握被删除原文。',
     '- “意图/暗示”必须作为模型推断，列出前提、置信度、替代解释和反证，不能陈述成事实。',
+    '- 曲线和图形分析必须说明数据来源、坐标含义、观察窗口及可证伪条件，不得仅凭形状下结论。',
     ''
   ].join('\n');
   return Object.assign({}, context, {
@@ -432,8 +532,10 @@ function exportChannels() {
   return listChannels({ limit: 500 }).map(channel => ({
     channelKey: channel.channelKey,
     displayName: channel.displayName,
+    subjectType: channel.subjectType,
     platform: channel.platform,
     profileUrl: channel.profileUrl,
+    description: channel.description,
     aliases: channel.aliases,
     discoveryQueries: channel.discoveryQueries,
     enabled: channel.enabled,
@@ -456,11 +558,17 @@ module.exports = {
   CONTENT_ROLES,
   STANCES,
   TIME_PRECISIONS,
+  SUBJECT_TYPES,
+  MEDIA_TYPES,
+  ARCHIVE_STATUSES,
+  RIGHTS_BASES,
   createChannel,
   getChannel,
   listChannels,
   recordObservation,
   listObservations,
+  deleteObservation,
+  deleteChannel,
   buildIntentContext,
   recordBacktest,
   listBacktests,

@@ -4,7 +4,7 @@ const paperPortfolioService = require('./paperPortfolioService');
 const researchRunService = require('./researchRunService');
 const expertChannelService = require('./expertChannelService');
 
-const BACKUP_VERSION = 4;
+const BACKUP_VERSION = 5;
 const MAX_ITEMS_PER_TABLE = 5000;
 
 function text(value, fallback = '', maxLength = 2000) {
@@ -338,8 +338,10 @@ function normalizeExpertChannel(item) {
   return {
     channelKey: text(item.channelKey, '', 120),
     displayName: text(item.displayName, '', 160),
+    subjectType: text(item.subjectType, 'creator', 30),
     platform: text(item.platform, '', 60),
     profileUrl: text(item.profileUrl, '', 1200),
+    description: text(item.description, '', 10000),
     aliases: normalizeStringArray(item.aliases, 100),
     discoveryQueries: normalizeStringArray(item.discoveryQueries, 30),
     enabled: item.enabled !== false,
@@ -361,6 +363,12 @@ function normalizeExpertChannel(item) {
       stockCodes: normalizeStringArray(observation.stockCodes).filter(code => /^\d{6}$/.test(code)),
       sectors: normalizeStringArray(observation.sectors),
       topics: normalizeStringArray(observation.topics),
+      mediaType: text(observation.mediaType, 'text', 40),
+      archiveStatus: text(observation.archiveStatus, 'linked', 40),
+      rightsBasis: text(observation.rightsBasis, 'quotation_only', 40),
+      localAssetPath: text(observation.localAssetPath, '', 2000),
+      curveData: Array.isArray(observation.curveData) ? observation.curveData.slice(0, 2000) : [],
+      analysisNotes: text(observation.analysisNotes, '', 20000),
       stance: text(observation.stance, 'unknown', 40),
       horizon: text(observation.horizon, 'unspecified', 80),
       confidence: Math.min(Math.max(numberOrZero(observation.confidence), 0), 1)

@@ -130,7 +130,7 @@ test('evidence packet and paper portfolio preserve provenance, caps and draft-on
   }, { source: 'test-quotes', capturedAt: '2026-08-09T07:02:00.000Z' }), /早于|倒序/);
 
   const exported = backup.exportUserData();
-  assert.equal(exported.version, 4);
+  assert.equal(exported.version, 5);
   assert.equal(exported.tables.paperPortfolios.length, 1);
   const preview = backup.previewUserDataImport(exported);
   assert.equal(preview.incoming.paperPortfolios, 1);

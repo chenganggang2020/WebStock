@@ -82,6 +82,14 @@ router.get('/expert/channels/:id', function(req, res) {
   }
 });
 
+router.delete('/expert/channels/:id', function(req, res) {
+  try {
+    ok(res, { deleted: expertChannels.deleteChannel(Number(req.params.id)) });
+  } catch (error) {
+    fail(res, error, /不存在/.test(error.message) ? 404 : 400);
+  }
+});
+
 router.get('/expert/channels/:id/observations', function(req, res) {
   try {
     ok(res, expertChannels.listObservations(Number(req.params.id), req.query || {}));
@@ -93,6 +101,14 @@ router.get('/expert/channels/:id/observations', function(req, res) {
 router.post('/expert/channels/:id/observations', function(req, res) {
   try {
     ok(res, expertChannels.recordObservation(Number(req.params.id), req.body || {}));
+  } catch (error) {
+    fail(res, error, /不存在/.test(error.message) ? 404 : 400);
+  }
+});
+
+router.delete('/expert/channels/:id/observations/:observationId', function(req, res) {
+  try {
+    ok(res, { deleted: expertChannels.deleteObservation(Number(req.params.id), Number(req.params.observationId)) });
   } catch (error) {
     fail(res, error, /不存在/.test(error.message) ? 404 : 400);
   }

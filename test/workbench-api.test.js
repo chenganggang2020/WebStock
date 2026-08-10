@@ -498,7 +498,7 @@ test('user backup export and import roundtrip', async (t) => {
   const exported = await requestJson(server, '/api/user/export');
   assert.equal(exported.statusCode, 200);
   assert.equal(exported.json.success, true);
-  assert.equal(exported.json.data.version, 4);
+  assert.equal(exported.json.data.version, 5);
   assert.equal(exported.json.data.tables.watchlist[0].code, '000001');
   assert.equal(exported.json.data.tables.trades[0].quantity, 100);
   assert.equal(exported.json.data.tables.sectors[0].name, 'Backup Sector');

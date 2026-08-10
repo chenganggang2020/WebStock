@@ -82,6 +82,44 @@ test('expert channel API persists a timeline and creates a provenance-aware hand
   assert.match(analysis.json.data.prompt, /WEBSTOCK_RESULT_START/);
 });
 
+test('research subject API stores chart material and supports deletion', async t => {
+  const server = app.listen(0);
+  t.after(() => server.close());
+
+  const created = await requestJson(server, '/api/expert/channels', 'POST', {
+    channelKey: 'method-chart-api',
+    displayName: '图形分析方法',
+    subjectType: 'method',
+    platform: 'manual',
+    description: '用户维护的方法资料。'
+  });
+  assert.equal(created.statusCode, 200);
+  assert.equal(created.json.data.subjectType, 'method');
+  const channelId = created.json.data.id;
+
+  const saved = await requestJson(server, '/api/expert/channels/' + channelId + '/observations', 'POST', {
+    externalKey: 'chart-api-1',
+    title: '价格曲线样例',
+    mediaType: 'chart',
+    archiveStatus: 'local_reference',
+    rightsBasis: 'user_owned',
+    curveData: '09:30,10.2\n10:00,10.8',
+    analysisNotes: '盘中曲线示例。',
+    summary: '用于界面预览的自有曲线数据。'
+  });
+  assert.equal(saved.statusCode, 200);
+  assert.deepEqual(saved.json.data.curveData.map(item => item.y), [10.2, 10.8]);
+
+  const removedObservation = await requestJson(server,
+    '/api/expert/channels/' + channelId + '/observations/' + saved.json.data.id, 'DELETE');
+  assert.equal(removedObservation.statusCode, 200);
+  assert.equal(removedObservation.json.data.deleted, true);
+
+  const removedChannel = await requestJson(server, '/api/expert/channels/' + channelId, 'DELETE');
+  assert.equal(removedChannel.statusCode, 200);
+  assert.equal(removedChannel.json.data.deleted, true);
+});
+
 test.after(() => {
   require('../db').close();
   for (const suffix of ['', '-wal', '-shm']) {

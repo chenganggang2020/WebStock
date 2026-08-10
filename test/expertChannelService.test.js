@@ -39,7 +39,7 @@ test('expert channel keeps primary content and deleted traces at distinct eviden
   });
   assert.equal(primary.evidenceLevel, 'primary');
   assert.equal(primary.publishedTimePrecision, 'second');
-  assert.equal(primary.evidenceLabel, '本人公开');
+  assert.equal(primary.evidenceLabel, '原始来源 / 本人公开');
   assert.ok(primary.knowledgeSourceId > 0);
 
   const trace = experts.recordObservation(channel.id, {
@@ -113,6 +113,46 @@ test('intent handoff explicitly separates quotes, third-party evidence and infer
   assert.match(context.prompt, /deleted_trace/);
   assert.match(context.prompt, /意图\/暗示.*模型推断/);
   assert.match(context.prompt, /WEBSTOCK_RESULT_START/);
+});
+
+test('research library supports books, curve evidence and explicit deletion', () => {
+  const subject = experts.createChannel({
+    channelKey: 'book-curve-methods',
+    displayName: '曲线分析方法笔记',
+    subjectType: 'book',
+    platform: 'book',
+    description: '用于保存书籍、图形和可检验规则。',
+    aliases: ['曲线方法']
+  });
+  assert.equal(subject.subjectType, 'book');
+  assert.match(subject.description, /可检验规则/);
+
+  const observation = experts.recordObservation(subject.id, {
+    externalKey: 'chapter-1-curve',
+    title: '第一章趋势曲线',
+    evidenceLevel: 'primary',
+    contentRole: 'fact_summary',
+    mediaType: 'chart',
+    archiveStatus: 'local_reference',
+    rightsBasis: 'user_owned',
+    localAssetPath: 'D:\\Research\\curve-note.png',
+    curveData: [{ x: '第1日', y: 10 }, { x: '第2日', y: 12.5 }],
+    analysisNotes: '第二个点较第一个点上升。',
+    summary: '用户自有书籍笔记中的示例曲线。'
+  });
+  assert.equal(observation.mediaType, 'chart');
+  assert.equal(observation.archiveStatus, 'local_reference');
+  assert.equal(observation.rightsBasis, 'user_owned');
+  assert.equal(observation.curveData.length, 2);
+  assert.equal(observation.curveData[1].y, 12.5);
+  assert.match(require('../services/knowledgeService').getSource(observation.knowledgeSourceId).content, /第二个点较第一个点上升/);
+
+  const knowledgeSourceId = observation.knowledgeSourceId;
+  assert.equal(experts.deleteObservation(subject.id, observation.id), true);
+  assert.equal(experts.listObservations(subject.id).length, 0);
+  assert.throws(() => require('../services/knowledgeService').getSource(knowledgeSourceId), /不存在/);
+  assert.equal(experts.deleteChannel(subject.id), true);
+  assert.throws(() => experts.getChannel(subject.id), /不存在/);
 });
 
 test.after(() => {
