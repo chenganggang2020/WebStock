@@ -6,6 +6,7 @@ const {
   parseDouyinItemUrl,
   parseVisibleWorkCount,
   inferVisibleLoggedIn,
+  selectVisibleProfileCandidate,
   normalizeDouyinPageSnapshot,
   buildDouyinPageSnapshotScript
 } = require('../electron/douyinPageCapture');
@@ -36,6 +37,18 @@ test('visible profile metrics support the live Douyin label order and login plac
   assert.equal(inferVisibleLoggedIn('最新作品 登录 置顶视频', false), false);
   assert.equal(inferVisibleLoggedIn('搜索 充钻石 通知 消息 投稿 模型先生', false), true);
   assert.equal(inferVisibleLoggedIn('搜索 充钻石 通知 消息 投稿', true), false);
+});
+
+test('video detail profile selection skips the signed-in user and keeps the creator link', () => {
+  assert.deepEqual(selectVisibleProfileCandidate([
+    { href: 'https://www.douyin.com/user/self', text: '' },
+    { href: 'https://www.douyin.com/user/model-mr', text: '' },
+    { href: 'https://www.douyin.com/user/model-mr', text: '模型先生' },
+    { href: 'https://www.douyin.com/user/commenter?from=comment', text: '评论用户' }
+  ], 'https://www.douyin.com/video/7672339420096779953', true), {
+    profileUrl: 'https://www.douyin.com/user/model-mr',
+    displayName: '模型先生'
+  });
 });
 
 test('Douyin page snapshots are sanitized, deduplicated and bounded before leaving Electron', () => {

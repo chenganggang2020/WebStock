@@ -56,6 +56,35 @@ function inferVisibleLoggedIn(value, hasVisibleLoginControl) {
   return !/(^|\s)登录(?:后查看)?(?=\s|$)/.test(text);
 }
 
+function selectVisibleProfileCandidate(links, currentPageUrl, isItemPage) {
+  function normalizedProfile(value) {
+    try {
+      const parsed = new URL(String(value || ''));
+      const host = parsed.hostname.toLowerCase();
+      const match = parsed.pathname.match(/^\/user\/([^/]+)\/?$/i);
+      if (parsed.protocol !== 'https:' || !(host === 'douyin.com' || host.endsWith('.douyin.com')) || !match) return '';
+      if (match[1].toLowerCase() === 'self') return '';
+      return 'https://www.douyin.com/user/' + match[1];
+    } catch (error) {
+      return '';
+    }
+  }
+
+  const candidates = (Array.isArray(links) ? links : []).map(function(item) {
+    return {
+      profileUrl: normalizedProfile(item && item.href),
+      displayName: String(item && item.text || '').replace(/\s+/g, ' ').trim().slice(0, 160)
+    };
+  }).filter(function(item) { return item.profileUrl; });
+  const currentProfile = isItemPage ? '' : normalizedProfile(currentPageUrl);
+  const profileUrl = currentProfile || (candidates[0] && candidates[0].profileUrl) || '';
+  if (!profileUrl) return { profileUrl: '', displayName: '' };
+  const named = candidates.find(function(item) {
+    return item.profileUrl === profileUrl && item.displayName;
+  });
+  return { profileUrl, displayName: named ? named.displayName : '' };
+}
+
 function normalizeVisibleUrl(value) {
   if (!isAllowedDouyinUrl(value)) return '';
   try {
@@ -117,7 +146,7 @@ function normalizeDouyinPageSnapshot(raw = {}) {
   };
 }
 
-function douyinVisiblePageSnapshot(parseWorkCount, inferLoggedIn) {
+function douyinVisiblePageSnapshot(parseWorkCount, inferLoggedIn, selectProfile) {
   function compact(value, limit) {
     return String(value == null ? '' : value).replace(/\s+/g, ' ').trim().slice(0, limit);
   }
@@ -164,14 +193,14 @@ function douyinVisiblePageSnapshot(parseWorkCount, inferLoggedIn) {
     : currentItem ? currentItem.mediaType
       : /^\/search\//i.test(pathname) ? 'search' : 'other';
   const bodyText = compact(document.body && document.body.innerText, 200000);
-  const profileLink = document.querySelector('a[href*="/user/"]');
-  const profileUrl = /^\/user\//i.test(pathname) ? href : absoluteUrl(profileLink && profileLink.getAttribute('href'));
-  const displayName = firstText([
-    '[data-e2e="user-title"]',
-    '[data-e2e="video-author-name"]',
-    'h1',
-    'header h2'
-  ], 160);
+  const profileLinks = Array.from(document.querySelectorAll('a[href*="/user/"]')).map(function(anchor) {
+    return { href: absoluteUrl(anchor.getAttribute('href')), text: compact(anchor.textContent, 160) };
+  });
+  const selectedProfile = selectProfile(profileLinks, href, Boolean(currentItem));
+  const profileUrl = selectedProfile.profileUrl;
+  const displayName = currentItem
+    ? selectedProfile.displayName || firstText(['[data-e2e="video-author-name"]', 'main header h2'], 160)
+    : firstText(['[data-e2e="user-title"]', 'h1', 'header h2'], 160) || selectedProfile.displayName;
   const idMatch = bodyText.match(/抖音号\s*[：:]\s*([A-Za-z0-9_.-]{2,160})/);
   const workCount = parseWorkCount(bodyText);
 
@@ -224,7 +253,8 @@ function douyinVisiblePageSnapshot(parseWorkCount, inferLoggedIn) {
 
 function buildDouyinPageSnapshotScript() {
   return '(' + douyinVisiblePageSnapshot.toString() + ')(' +
-    parseVisibleWorkCount.toString() + ',' + inferVisibleLoggedIn.toString() + ')';
+    parseVisibleWorkCount.toString() + ',' + inferVisibleLoggedIn.toString() + ',' +
+    selectVisibleProfileCandidate.toString() + ')';
 }
 
 module.exports = {
@@ -232,6 +262,7 @@ module.exports = {
   parseDouyinItemUrl,
   parseVisibleWorkCount,
   inferVisibleLoggedIn,
+  selectVisibleProfileCandidate,
   normalizeDouyinPageSnapshot,
   buildDouyinPageSnapshotScript
 };

@@ -97,3 +97,27 @@ test('Douyin session rejects external URLs and collection before the window is o
   await assert.rejects(() => manager.collect(), /尚未打开/);
   assert.equal(BrowserWindow.instances.length, 0);
 });
+
+test('Douyin session returns control when the remote page keeps loading', async () => {
+  const BrowserWindow = createFakeBrowserWindow();
+  const manager = createDouyinSessionManager({
+    BrowserWindow,
+    getParentWindow: () => null,
+    loadTimeoutMs: 5
+  });
+  BrowserWindow.prototype.loadURL = function(url) {
+    this.loadedUrls.push(url);
+    this.webContents.currentUrl = url;
+    return new Promise(() => {});
+  };
+
+  const result = await Promise.race([
+    manager.open('https://www.douyin.com/video/7672339420096779953'),
+    new Promise((resolve, reject) => setTimeout(() => reject(new Error('open did not yield')), 50))
+  ]);
+
+  assert.equal(result.windowOpen, true);
+  assert.equal(result.loading, true);
+  assert.equal(BrowserWindow.instances[0].visible, true);
+  assert.equal(BrowserWindow.instances[0].focused, true);
+});

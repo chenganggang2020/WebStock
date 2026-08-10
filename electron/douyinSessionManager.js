@@ -9,6 +9,7 @@ function createDouyinSessionManager(options = {}) {
   if (typeof BrowserWindow !== 'function') throw new Error('缺少 Electron BrowserWindow');
   const getParentWindow = typeof options.getParentWindow === 'function' ? options.getParentWindow : () => null;
   const log = typeof options.log === 'function' ? options.log : () => {};
+  const loadTimeoutMs = Number(options.loadTimeoutMs) > 0 ? Number(options.loadTimeoutMs) : 15000;
   let window = null;
 
   function activeWindow() {
@@ -73,10 +74,25 @@ function createDouyinSessionManager(options = {}) {
     if (!isAllowedDouyinUrl(target)) throw new Error('只能在登录窗口中打开抖音 HTTPS 页面');
     const current = activeWindow() || createWindow();
     window = current;
-    await current.loadURL(target);
     current.show();
     current.focus();
-    return status();
+    const loadPromise = Promise.resolve().then(function() { return current.loadURL(target); });
+    let timer = null;
+    let loadState;
+    try {
+      loadState = await Promise.race([
+        loadPromise.then(function() { return 'loaded'; }),
+        new Promise(function(resolve) {
+          timer = setTimeout(function() { resolve('loading'); }, loadTimeoutMs);
+        })
+      ]);
+    } finally {
+      if (timer) clearTimeout(timer);
+    }
+    if (loadState === 'loading') {
+      loadPromise.catch(function(error) { log('Douyin page failed after yielding control', error); });
+    }
+    return Object.assign(status(), { loading: loadState === 'loading' });
   }
 
   async function collect() {
