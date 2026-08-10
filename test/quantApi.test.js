@@ -51,6 +51,21 @@ test('quant API reports a missing isolated runtime without claiming availability
   assert.equal(response.json.data.installer.python, '3.12.13');
 });
 
+test('quant API rejects linking a missing existing Python environment', async t => {
+  const server = app.listen(0);
+  t.after(() => server.close());
+
+  const response = await requestJson(server, {
+    path: '/api/quant/runtime/link',
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' }
+  }, { pythonPath: path.join(root, 'not-found', 'python.exe') });
+
+  assert.equal(response.statusCode, 400);
+  assert.equal(response.json.success, false);
+  assert.match(response.json.error, /不存在/);
+});
+
 test('quant API refuses to start a model job when the runtime is missing', async t => {
   const server = app.listen(0);
   t.after(() => server.close());

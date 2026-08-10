@@ -6,5 +6,8 @@ contextBridge.exposeInMainWorld('webstockDesktop', Object.freeze({
   },
   setLanAccessEnabled(enabled) {
     return ipcRenderer.invoke('webstock:set-lan-access', enabled === true);
+  },
+  selectQuantPython() {
+    return ipcRenderer.invoke('webstock:select-quant-python');
   }
 }));

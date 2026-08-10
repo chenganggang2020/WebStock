@@ -145,12 +145,38 @@ function aiResearchRenderQuantRuntime() {
   const installButton = document.getElementById('installQuantRuntimeBtn');
   const repairButton = document.getElementById('repairQuantRuntimeBtn');
   const hasRuntime = quantRuntime.status === 'available' || quantRuntime.status === 'configured';
+  const linkedRuntime = quantRuntime.runtimeSource === 'linked';
   if (installButton) installButton.style.display = !hasRuntime && installer.available ? '' : 'none';
-  if (repairButton) repairButton.style.display = hasRuntime && installer.available ? '' : 'none';
+  if (repairButton) repairButton.style.display = hasRuntime && !linkedRuntime && installer.available ? '' : 'none';
+  target.title = quantRuntime.python || '';
   target.innerHTML = '<span class="model-status ' + aiResearchEscape(quantRuntime.status) + '">' + aiResearchEscape(label) + '</span>' +
     (versions.qlib ? ' <span>Python ' + aiResearchEscape(versions.python) + ' / Qlib ' + aiResearchEscape(versions.qlib) + ' / LightGBM ' + aiResearchEscape(versions.lightgbm) +
       (versions.torch ? ' / PyTorch ' + aiResearchEscape(versions.torch) : '') + '</span>' : '') +
     '<span class="quant-runtime-reason">' + aiResearchEscape(quantRuntime.reason || '') + '</span>';
+}
+
+async function aiResearchLinkQuantRuntime(button) {
+  let pythonPath = '';
+  if (window.webstockDesktop && typeof window.webstockDesktop.selectQuantPython === 'function') {
+    pythonPath = await window.webstockDesktop.selectQuantPython();
+  } else {
+    pythonPath = prompt('请输入已有量化环境中 python.exe 的完整路径：') || '';
+  }
+  if (!pythonPath) return;
+  button.disabled = true;
+  try {
+    quantRuntime = await aiResearchApi('/api/quant/runtime/link', {
+      method: 'POST',
+      body: { pythonPath },
+      timeoutMs: 120000
+    });
+    aiResearchRenderQuantRuntime();
+    await aiResearchLoadModels();
+  } catch (error) {
+    alert(error.message);
+  } finally {
+    button.disabled = false;
+  }
 }
 
 function quantModelChoice(modelId) {
@@ -956,6 +982,9 @@ function aiResearchBind() {
     } finally {
       this.disabled = false;
     }
+  });
+  document.getElementById('linkQuantRuntimeBtn').addEventListener('click', function() {
+    aiResearchLinkQuantRuntime(this).catch(function(error) { alert(error.message); });
   });
   document.getElementById('installQuantRuntimeBtn').addEventListener('click', function() {
     const bytes = quantRuntime && quantRuntime.installer && Number(quantRuntime.installer.estimatedBytes || 0);

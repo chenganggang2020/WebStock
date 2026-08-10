@@ -78,6 +78,19 @@ test.beforeEach(async ({ page }) => {
         })
       });
     }
+    if (url.includes('/api/quant/runtime/link') && route.request().method() === 'POST') {
+      return route.fulfill({ contentType: 'application/json', body: JSON.stringify({
+        success: true,
+        data: {
+          status: 'available',
+          verified: true,
+          reason: '已复用本机已有量化环境，依赖导入检测通过。',
+          runtimeSource: 'linked',
+          versions: { python: '3.12.13', qlib: '0.9.7', lightgbm: '4.7.0', torch: '2.13.0' },
+          installer: { available: true, python: '3.12.13', estimatedBytes: 3221225472 }
+        }
+      }) });
+    }
     if (url.includes('/api/quant/runtime')) {
       return route.fulfill({ contentType: 'application/json', body: JSON.stringify({
         success: true,
@@ -260,6 +273,13 @@ test.beforeEach(async ({ page }) => {
 
 test('AI research view creates grounded expert knowledge and saves a handoff result', async ({ page }) => {
   page.on('dialog', dialog => dialog.accept());
+  await page.addInitScript(() => {
+    window.webstockDesktop = {
+      selectQuantPython() {
+        return Promise.resolve('D:\\Webstock\\quant\\.venv\\Scripts\\python.exe');
+      }
+    };
+  });
   await page.goto(baseURL + '/', { waitUntil: 'domcontentloaded' });
   await page.click('[data-main-view="aiResearch"]');
 
@@ -269,6 +289,9 @@ test('AI research view creates grounded expert knowledge and saves a handoff res
   await expect(page.locator('#quantRuntimeStatus')).toContainText('已配置');
   await expect(page.locator('#quantRuntimeStatus')).toContainText('PyTorch 2.13.0');
   await expect(page.locator('#repairQuantRuntimeBtn')).toBeVisible();
+  await page.click('#linkQuantRuntimeBtn');
+  await expect(page.locator('#quantRuntimeStatus')).toContainText('已复用本机已有量化环境');
+  await expect(page.locator('#repairQuantRuntimeBtn')).toBeHidden();
   await expect(page.locator('#quantIndexModeSelect')).toHaveValue('official');
   await expect(page.locator('#quantResultPanel')).toContainText('Rank IC');
   await expect(page.locator('#quantResultPanel')).toContainText('累计成本');

@@ -163,6 +163,15 @@ ipcMain.handle('webstock:set-lan-access', async function(_event, enabled) {
   return serverController.setEnabled(enabled === true);
 });
 
+ipcMain.handle('webstock:select-quant-python', async function() {
+  const result = await dialog.showOpenDialog(mainWindow || undefined, {
+    title: '选择已有量化环境的 python.exe',
+    properties: ['openFile'],
+    filters: [{ name: 'Python', extensions: ['exe'] }]
+  });
+  return result.canceled ? '' : String(result.filePaths[0] || '');
+});
+
 const gotLock = app.requestSingleInstanceLock();
 if (!gotLock) {
   app.quit();

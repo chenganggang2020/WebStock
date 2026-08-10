@@ -11,6 +11,11 @@ const {
   runtimePythonPath
 } = require('./quantRuntimeInstaller');
 const {
+  normalizePythonPath,
+  readRuntimeLink,
+  saveRuntimeLink
+} = require('./quantRuntimeLink');
+const {
   validateDatasetManifest,
   validateQuantResult,
   validateFactorLabResult,
@@ -43,12 +48,23 @@ function workspacePath() {
   return path.resolve(process.env.WEBSTOCK_QUANT_WORKSPACE || path.join(__dirname, '..', 'quant', 'workspace'));
 }
 
-function pythonPath() {
-  if (process.env.WEBSTOCK_QUANT_PYTHON) return path.resolve(process.env.WEBSTOCK_QUANT_PYTHON);
+function runtimeCandidate() {
+  if (process.env.WEBSTOCK_QUANT_PYTHON) {
+    return { python: path.resolve(process.env.WEBSTOCK_QUANT_PYTHON), source: 'environment', link: null, linkError: '' };
+  }
+  let link = null;
+  let linkError = '';
+  try {
+    link = readRuntimeLink(workspacePath());
+  } catch (error) {
+    linkError = error.message;
+  }
+  if (link) return { python: link.pythonPath, source: 'linked', link, linkError: '' };
   const local = path.join(quantRoot(), '.venv', 'Scripts', 'python.exe');
-  if (fs.existsSync(local)) return local;
+  if (fs.existsSync(local)) return { python: local, source: 'development', link: null, linkError };
   const managed = runtimePythonPath(workspacePath());
-  return fs.existsSync(managed) ? managed : null;
+  if (fs.existsSync(managed)) return { python: managed, source: 'managed', link: null, linkError };
+  return { python: null, source: '', link: null, linkError };
 }
 
 function ensureWorkspace() {
@@ -92,29 +108,35 @@ function compactUtcTimestamp() {
 }
 
 function getRuntimeStatus() {
-  const python = pythonPath();
+  const candidate = runtimeCandidate();
+  const python = candidate.python;
   const runner = runnerPath();
   const installer = getRuntimeInstallInfo();
   if (!python || !fs.existsSync(python)) {
     return {
       status: 'not_configured',
       verified: false,
-      reason: '尚未安装独立的 Python 3.12 量化运行环境。',
+      reason: candidate.linkError || '尚未关联或安装 Python 3.12 量化运行环境。',
       python: python || '',
       runner,
+      runtimeSource: candidate.source,
       installer
     };
   }
   if (!fs.existsSync(runner)) {
-    return { status: 'unavailable', verified: false, reason: '量化运行脚本缺失。', python, runner, installer };
+    return { status: 'unavailable', verified: false, reason: '量化运行脚本缺失。', python, runner, runtimeSource: candidate.source, installer };
   }
-  if (runtimeCache) return Object.assign({ python, runner, installer }, runtimeCache);
+  if (runtimeCache) return Object.assign({ python, runner, runtimeSource: candidate.source, installer }, runtimeCache);
   return {
     status: 'configured',
     verified: false,
-    reason: '已找到独立运行环境，请执行环境检测后再开始训练。',
+    reason: candidate.source === 'linked'
+      ? '已关联已有量化环境，请执行环境检测后再开始训练。'
+      : '已找到独立运行环境，请执行环境检测后再开始训练。',
     python,
     runner,
+    runtimeSource: candidate.source,
+    linkedAt: candidate.link && candidate.link.linkedAt || '',
     installer
   };
 }
@@ -131,16 +153,10 @@ function parseProtocolLine(line, state) {
   }
 }
 
-function runProtocol(args, options = {}) {
-  const runtime = getRuntimeStatus();
-  if (!['configured', 'available'].includes(runtime.status)) {
-    const error = new Error(runtime.reason);
-    error.status = 409;
-    return Promise.reject(error);
-  }
+function runProtocolWithPython(python, args, options = {}) {
   const workspace = ensureWorkspace();
   return new Promise((resolve, reject) => {
-    const child = childProcess.spawn(runtime.python, [runtime.runner].concat(args), {
+    const child = childProcess.spawn(python, [runnerPath()].concat(args), {
       cwd: workspace,
       windowsHide: true,
       env: Object.assign({}, process.env, {
@@ -180,19 +196,60 @@ function runProtocol(args, options = {}) {
   });
 }
 
+function runProtocol(args, options = {}) {
+  const runtime = getRuntimeStatus();
+  if (!['configured', 'available'].includes(runtime.status)) {
+    const error = new Error(runtime.reason);
+    error.status = 409;
+    return Promise.reject(error);
+  }
+  return runProtocolWithPython(runtime.python, args, options);
+}
+
+function verifiedRuntimeCache(result, reason) {
+  return {
+    status: result.status === 'available' ? 'available' : 'configured',
+    verified: !!result.verified,
+    reason,
+    versions: Object.assign({ python: result.python }, result.packages || {}),
+    checkedAt: result.checkedAt
+  };
+}
+
 async function verifyRuntime() {
   try {
     const result = await runProtocol(['health', '--verify']);
-    runtimeCache = {
-      status: result.status === 'available' ? 'available' : 'configured',
-      verified: !!result.verified,
-      reason: result.verified ? 'Qlib、LightGBM 与 PyTorch 导入检测通过。' : '已读取运行环境信息。',
-      versions: Object.assign({ python: result.python }, result.packages || {}),
-      checkedAt: result.checkedAt
-    };
+    runtimeCache = verifiedRuntimeCache(result,
+      result.verified ? 'Qlib、LightGBM 与 PyTorch 导入检测通过。' : '已读取运行环境信息。');
   } catch (error) {
     runtimeCache = { status: 'unavailable', verified: false, reason: error.message, checkedAt: new Date().toISOString() };
   }
+  return getRuntimeStatus();
+}
+
+async function linkExistingRuntime(input = {}) {
+  const existing = activeJob();
+  if (existing) {
+    const error = new Error('已有量化任务正在运行：' + existing.id);
+    error.status = 409;
+    throw error;
+  }
+  const python = normalizePythonPath(input.pythonPath);
+  const manifest = loadRuntimeManifest(quantRoot());
+  const result = await runProtocolWithPython(python, ['health', '--verify']);
+  if (!result.verified || result.status !== 'available') throw new Error('已有量化环境健康检查未通过。');
+  if (String(result.python) !== String(manifest.python)) {
+    throw new Error('已有环境 Python 版本为 ' + result.python + '，程序要求 ' + manifest.python + '。');
+  }
+  const packages = result.packages || {};
+  const missing = ['qlib', 'lightgbm', 'pandas', 'pyarrow', 'baostock', 'torch'].filter(name => !packages[name]);
+  if (missing.length) throw new Error('已有环境缺少量化依赖：' + missing.join('、') + '。');
+  saveRuntimeLink(workspacePath(), {
+    pythonPath: python,
+    linkedAt: result.checkedAt || new Date().toISOString(),
+    versions: Object.assign({ python: result.python }, packages)
+  });
+  runtimeCache = verifiedRuntimeCache(result, '已复用本机已有量化环境，依赖导入检测通过。');
   return getRuntimeStatus();
 }
 
@@ -1048,6 +1105,7 @@ loadPersistedJobs();
 module.exports = {
   getRuntimeStatus,
   verifyRuntime,
+  linkExistingRuntime,
   startRuntimeInstall,
   startPilot,
   startCollection,

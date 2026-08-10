@@ -483,7 +483,7 @@
           <label>试跑股票数
             <input id="quantPilotLimitInput" type="number" min="8" max="120" step="1" value="30">
           </label>
-          <label>环境下载
+          <label>依赖下载源
             <select id="quantIndexModeSelect">
               <option value="official">官方 PyPI</option>
               <option value="china">国内镜像</option>
@@ -500,6 +500,7 @@
           </label>
           <div class="quant-actions">
             <button id="verifyQuantRuntimeBtn" class="small-btn">检查环境</button>
+            <button id="linkQuantRuntimeBtn" class="small-btn primary">使用已有环境</button>
             <button id="installQuantRuntimeBtn" class="small-btn primary" style="display:none;">安装环境</button>
             <button id="repairQuantRuntimeBtn" class="small-btn" style="display:none;">修复环境</button>
             <button id="runQuantPilotBtn" class="small-btn primary">公开数据试跑</button>
