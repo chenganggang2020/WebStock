@@ -2691,6 +2691,22 @@ body.dark .md-body blockquote { background: rgba(99,102,241,0.12); }
   color: var(--text);
 }
 
+.douyin-desktop-controls {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.douyin-desktop-controls[hidden] {
+  display: none;
+}
+
+#douyinDesktopSessionStatus {
+  max-width: 520px;
+  line-height: 1.35;
+}
+
 .expert-observation-editor {
   margin-top: 10px;
   border-top: 1px solid var(--border);

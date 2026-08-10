@@ -5,10 +5,12 @@ const { app, BrowserWindow, Menu, dialog, shell, ipcMain } = require('electron')
 const { migrateLegacyDatabase } = require('./dataMigration');
 const { resolveRuntimeConfig } = require('./runtimeConfig');
 const { createLanServerController } = require('./lanServerController');
+const { createDouyinSessionManager } = require('./douyinSessionManager');
 const { readLanEnabled } = require('../services/lanHostService');
 
 let mainWindow = null;
 let serverController = null;
+let douyinSessionManager = null;
 
 app.setName('WebStock');
 
@@ -128,6 +130,23 @@ function createWindow(url) {
   });
 }
 
+function getDouyinSessionManager() {
+  if (douyinSessionManager) return douyinSessionManager;
+  douyinSessionManager = createDouyinSessionManager({
+    BrowserWindow,
+    getParentWindow: function() { return mainWindow; },
+    iconPath: path.join(__dirname, '..', 'icons', process.platform === 'win32' ? 'webstock.ico' : 'webstock-512.png'),
+    log
+  });
+  return douyinSessionManager;
+}
+
+function assertMainWindowSender(event) {
+  if (!mainWindow || event.sender !== mainWindow.webContents) {
+    throw new Error('不允许从非 WebStock 主窗口调用桌面功能');
+  }
+}
+
 async function startServer() {
   const migration = await migrateLegacyDatabase({
     portable: runtimeConfig.portable,
@@ -172,6 +191,21 @@ ipcMain.handle('webstock:select-quant-python', async function() {
   return result.canceled ? '' : String(result.filePaths[0] || '');
 });
 
+ipcMain.handle('webstock:open-douyin-session', async function(event, url) {
+  assertMainWindowSender(event);
+  return getDouyinSessionManager().open(url);
+});
+
+ipcMain.handle('webstock:douyin-session-status', function(event) {
+  assertMainWindowSender(event);
+  return getDouyinSessionManager().status();
+});
+
+ipcMain.handle('webstock:collect-douyin-page', async function(event) {
+  assertMainWindowSender(event);
+  return getDouyinSessionManager().collect();
+});
+
 const gotLock = app.requestSingleInstanceLock();
 if (!gotLock) {
   app.quit();
@@ -194,6 +228,7 @@ if (!gotLock) {
   });
 
   app.on('window-all-closed', function() {
+    if (douyinSessionManager) douyinSessionManager.dispose();
     if (serverController) serverController.stop().catch(function(error) {
       log('Failed to stop local WebStock server cleanly', error);
     });

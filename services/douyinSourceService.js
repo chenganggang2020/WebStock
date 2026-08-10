@@ -1,4 +1,5 @@
 const expertChannels = require('./expertChannelService');
+const { normalizeDouyinPageSnapshot } = require('../electron/douyinPageCapture');
 
 const URL_PATTERN = /https?:\/\/[^\s<>"']+/gi;
 const TRAILING_PUNCTUATION = /[)\]}>，。；;！？!?、]+$/u;
@@ -23,19 +24,20 @@ function normalizeDouyinLink(value) {
   const host = parsed.hostname.toLowerCase();
   if (parsed.protocol !== 'https:' || !(host === 'douyin.com' || host.endsWith('.douyin.com'))) return null;
 
-  const pathMatch = parsed.pathname.match(/\/(?:m\/)?video\/(\d{12,24})(?:\/|$)/i);
+  const pathMatch = parsed.pathname.match(/\/(?:m\/)?(video|note)\/(\d{12,24})(?:\/|$)/i);
   const playerId = host === 'open.douyin.com' && /^\/player\/video\/?$/i.test(parsed.pathname)
     ? String(parsed.searchParams.get('vid') || '')
     : '';
   const overlayId = String(parsed.searchParams.get('modal_id') || parsed.searchParams.get('aweme_id') || '');
-  const videoId = pathMatch ? pathMatch[1]
+  const videoId = pathMatch ? pathMatch[2]
     : /^\d{12,24}$/.test(playerId) ? playerId
       : /^\d{12,24}$/.test(overlayId) ? overlayId : '';
   if (videoId) {
+    const kind = pathMatch ? pathMatch[1].toLowerCase() : 'video';
     return {
-      sourceUrl: 'https://www.douyin.com/video/' + videoId,
+      sourceUrl: 'https://www.douyin.com/' + kind + '/' + videoId,
       videoId,
-      kind: 'video'
+      kind
     };
   }
 
@@ -123,9 +125,154 @@ function importDouyinLinks(channelId, input = {}) {
   };
 }
 
+function profileIdentity(value) {
+  try {
+    const parsed = new URL(String(value || ''));
+    const host = parsed.hostname.toLowerCase();
+    if (parsed.protocol !== 'https:' || !(host === 'douyin.com' || host.endsWith('.douyin.com'))) return '';
+    if (!/^\/user\/[^/]+\/?$/i.test(parsed.pathname)) return '';
+    return host + parsed.pathname.replace(/\/$/, '').toLowerCase();
+  } catch (error) {
+    return '';
+  }
+}
+
+function identityName(value) {
+  return String(value || '').replace(/\s+/g, '').trim().toLowerCase();
+}
+
+function captureIdentity(channel, capture) {
+  const channelProfile = profileIdentity(channel.profileUrl);
+  const capturedProfile = profileIdentity(capture.profile.profileUrl ||
+    (capture.pageType === 'profile' ? capture.pageUrl : ''));
+  const profileMatched = Boolean(channelProfile && capturedProfile && channelProfile === capturedProfile);
+  const profileConflicted = Boolean(channelProfile && capturedProfile && channelProfile !== capturedProfile);
+  const acceptedNames = [channel.displayName].concat(channel.aliases || []).map(identityName).filter(Boolean);
+  const nameMatched = acceptedNames.includes(identityName(capture.profile.displayName));
+  return {
+    matched: profileMatched || (!profileConflicted && nameMatched),
+    matchType: profileMatched ? 'profile_url' : (!profileConflicted && nameMatched) ? 'display_name' : 'unverified'
+  };
+}
+
+function mergeUnique(left, right) {
+  return (Array.isArray(left) ? left : []).concat(Array.isArray(right) ? right : [])
+    .filter(Boolean).filter((value, index, values) => values.indexOf(value) === index);
+}
+
+function normalizedPublishedAt(value, fallback) {
+  const raw = String(value || fallback || '').trim();
+  if (!raw) return '';
+  const parsed = new Date(raw);
+  return Number.isNaN(parsed.getTime()) ? '' : parsed.toISOString();
+}
+
+function comparableObservation(item) {
+  return JSON.stringify({
+    sourceUrl: item.sourceUrl || '',
+    title: item.title || '',
+    author: item.author || '',
+    publishedAt: item.publishedAt || '',
+    evidenceLevel: item.evidenceLevel || '',
+    availabilityStatus: item.availabilityStatus || '',
+    contentRole: item.contentRole || '',
+    summary: item.summary || '',
+    topics: item.topics || [],
+    mediaType: item.mediaType || '',
+    archiveStatus: item.archiveStatus || '',
+    rightsBasis: item.rightsBasis || '',
+    confidence: Number(item.confidence || 0)
+  });
+}
+
+function capturedObservationInput(channel, capture, identity, item, existing) {
+  const matched = identity.matched;
+  const visibleTitle = String(item.title || '').trim();
+  const fallbackTitle = (item.mediaType === 'note' ? '抖音图文 ' : '抖音视频 ') + item.contentId;
+  const existingTitle = existing && String(existing.title || '');
+  const keepExistingTitle = !visibleTitle && existingTitle;
+  const baseTitle = keepExistingTitle || visibleTitle || fallbackTitle;
+  const title = matched ? baseTitle.replace(/^\[(?:待核验抖音账号|身份待核验)\]\s*/, '')
+    : (/^\[身份待核验\]/.test(baseTitle) ? baseTitle : '[身份待核验] ' + baseTitle.replace(/^\[待核验抖音账号\]\s*/, ''));
+  const existingSummary = existing && String(existing.summary || '');
+  const placeholderSummary = /当前仅确认链接属于抖音|身份.*尚待.*核验/.test(existingSummary);
+  const summary = String(item.summary || '').trim() ||
+    (matched && (!existingSummary || placeholderSummary)
+      ? '已在登录后的抖音公开页面确认该作品属于“' + channel.displayName + '”；当前页面未提供可可靠提取的正文摘要。'
+      : existingSummary || '从当前抖音页面采集到公开作品链接，作者身份尚未与研究对象核验一致。');
+  const topics = mergeUnique(existing && existing.topics, [
+    '抖音登录会话同步',
+    matched ? '身份已匹配' : '身份待核验'
+  ]);
+
+  return {
+    externalContentId: item.contentId,
+    sourceUrl: item.sourceUrl,
+    title,
+    author: matched ? channel.displayName : '待核验抖音账号',
+    publishedAt: normalizedPublishedAt(item.publishedAt, existing && existing.publishedAt),
+    evidenceLevel: matched ? 'primary' : 'commentary',
+    availabilityStatus: matched ? 'available' : 'unknown',
+    contentRole: 'fact_summary',
+    mediaType: item.mediaType,
+    archiveStatus: 'linked',
+    rightsBasis: 'quotation_only',
+    summary,
+    topics,
+    stance: existing && existing.stance || 'unknown',
+    horizon: existing && existing.horizon || 'unspecified',
+    confidence: matched ? (identity.matchType === 'profile_url' ? 0.85 : 0.7) : 0.2,
+    stockCodes: existing && existing.stockCodes || [],
+    sectors: existing && existing.sectors || [],
+    lastSeenAt: capture.capturedAt
+  };
+}
+
+function importCapturedPage(channelId, input = {}) {
+  const channel = expertChannels.getChannel(channelId);
+  if (channel.platform !== 'douyin') throw new Error('只有抖音创作者频道可以同步抖音页面');
+  const capture = normalizeDouyinPageSnapshot(input.capture || input);
+  const identity = captureIdentity(channel, capture);
+  const items = [];
+  let addedCount = 0;
+  let updatedCount = 0;
+  let unchangedCount = 0;
+
+  capture.items.forEach(item => {
+    const existing = expertChannels.findObservationByIdentity(channel.id, {
+      externalContentId: item.contentId,
+      sourceUrl: item.sourceUrl
+    });
+    const observationInput = capturedObservationInput(channel, capture, identity, item, existing);
+    if (existing && comparableObservation(existing) === comparableObservation(observationInput)) {
+      unchangedCount += 1;
+      items.push(existing);
+      return;
+    }
+    const saved = expertChannels.recordObservation(channel.id, observationInput);
+    if (existing) updatedCount += 1;
+    else addedCount += 1;
+    items.push(saved);
+  });
+
+  return {
+    pageUrl: capture.pageUrl,
+    pageType: capture.pageType,
+    loggedIn: capture.loggedIn,
+    identityMatched: identity.matched,
+    identityMatchType: identity.matchType,
+    capturedCount: capture.items.length,
+    addedCount,
+    updatedCount,
+    unchangedCount,
+    items
+  };
+}
+
 module.exports = {
   normalizeDouyinLink,
   extractDouyinShareLinks,
   douyinPlayerUrl,
-  importDouyinLinks
+  importDouyinLinks,
+  importCapturedPage
 };

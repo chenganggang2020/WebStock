@@ -417,6 +417,68 @@ test('research library imports and deduplicates direct Douyin share links', asyn
   await expect(page.locator('#expertChannelSelect')).not.toContainText('Playwright 抖音公开作者');
 });
 
+test('desktop research library opens a persistent Douyin session and syncs the visible page', async ({ page }) => {
+  page.on('dialog', dialog => dialog.accept());
+  await page.addInitScript(() => {
+    window.__douyinOpenCalls = [];
+    window.webstockDesktop = {
+      openDouyinSession(url) {
+        window.__douyinOpenCalls.push(url);
+        return Promise.resolve({ supported: true, windowOpen: true, currentUrl: url });
+      },
+      getDouyinSessionStatus() {
+        return Promise.resolve({ supported: true, windowOpen: false, currentUrl: '' });
+      },
+      collectDouyinPage() {
+        return Promise.resolve({
+          pageType: 'profile',
+          pageUrl: 'https://www.douyin.com/user/playwright-desktop-author',
+          loggedIn: true,
+          capturedAt: '2026-08-11T10:00:00.000Z',
+          profile: {
+            displayName: '桌面抖音作者',
+            profileUrl: 'https://www.douyin.com/user/playwright-desktop-author',
+            douyinId: 'playwright-author',
+            workCount: 1
+          },
+          items: [{
+            sourceUrl: 'https://www.douyin.com/video/7512345678901234567',
+            title: '桌面会话同步测试视频',
+            publishedAt: '2026-08-11T09:30:00+08:00',
+            summary: '从当前可见页面读取的摘要。',
+            author: '桌面抖音作者'
+          }]
+        });
+      }
+    };
+  });
+  await page.goto(baseURL + '/', { waitUntil: 'domcontentloaded' });
+  await page.click('[data-main-view="aiResearch"]');
+
+  await page.click('#expertSubjectEditor summary');
+  await page.selectOption('#expertSubjectTypeSelect', 'creator');
+  await page.fill('#expertSubjectPlatformInput', 'douyin');
+  await page.fill('#expertSubjectNameInput', '桌面抖音作者');
+  await page.fill('#expertSubjectUrlInput', 'https://www.douyin.com/user/playwright-desktop-author');
+  await page.click('#saveExpertSubjectBtn');
+
+  await expect(page.locator('#openDouyinSessionBtn')).toBeVisible();
+  await expect(page.locator('#syncDouyinSessionBtn')).toBeVisible();
+  await page.click('#openDouyinSessionBtn');
+  await expect.poll(() => page.evaluate(() => window.__douyinOpenCalls.length)).toBe(1);
+  await expect.poll(() => page.evaluate(() => window.__douyinOpenCalls[0]))
+    .toBe('https://www.douyin.com/user/playwright-desktop-author');
+
+  await page.click('#syncDouyinSessionBtn');
+  await expect(page.locator('#douyinDesktopSessionStatus')).toContainText('同步完成');
+  await expect(page.locator('#douyinDesktopSessionStatus')).toContainText('新增 1 条');
+  await expect(page.locator('#expertTimeline')).toContainText('桌面会话同步测试视频');
+  await expect(page.locator('#expertTimeline')).toContainText('原始来源 / 本人公开');
+
+  await page.click('#deleteExpertChannelBtn');
+  await expect(page.locator('#expertChannelSelect')).not.toContainText('桌面抖音作者');
+});
+
 test('main stock actions and workspace navigation do not throw', async ({ page }) => {
   const dialogResponses = [];
   const dialogMessages = [];

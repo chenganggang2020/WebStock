@@ -115,6 +115,14 @@ router.post('/expert/channels/:id/douyin-links', function(req, res) {
   }
 });
 
+router.post('/expert/channels/:id/douyin-capture', function(req, res) {
+  try {
+    ok(res, douyinSources.importCapturedPage(Number(req.params.id), req.body || {}));
+  } catch (error) {
+    fail(res, error, /不存在/.test(error.message) ? 404 : 400);
+  }
+});
+
 router.delete('/expert/channels/:id/observations/:observationId', function(req, res) {
   try {
     ok(res, { deleted: expertChannels.deleteObservation(Number(req.params.id), Number(req.params.observationId)) });

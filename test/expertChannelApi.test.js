@@ -157,6 +157,109 @@ test('Douyin link import stores direct candidates as unverified and skips duplic
   assert.equal(repeated.json.data.duplicateCount, 1);
 });
 
+test('Douyin desktop capture upgrades verified profile items and remains idempotent', async t => {
+  const server = app.listen(0);
+  t.after(() => server.close());
+
+  const profileUrl = 'https://www.douyin.com/user/MS4wLjABAAAA-capture-test';
+  const created = await requestJson(server, '/api/expert/channels', 'POST', {
+    channelKey: 'douyin-desktop-capture-api',
+    displayName: '模型先生',
+    platform: 'douyin',
+    profileUrl,
+    aliases: ['抖音模型先生']
+  });
+  const channelId = created.json.data.id;
+
+  await requestJson(server, '/api/expert/channels/' + channelId + '/douyin-links', 'POST', {
+    text: '待核验 https://www.douyin.com/video/7533142185677114684'
+  });
+
+  const capture = {
+    pageType: 'profile',
+    pageUrl: profileUrl,
+    loggedIn: true,
+    capturedAt: '2026-08-11T10:00:00.000Z',
+    profile: {
+      displayName: '模型先生',
+      profileUrl,
+      douyinId: 'moxingxiansheng',
+      workCount: 368
+    },
+    items: [{
+      sourceUrl: 'https://www.douyin.com/video/7533142185677114684?from=profile',
+      title: '科创芯片观察',
+      publishedAt: '2025-07-31T15:19:00+08:00',
+      summary: '当前登录页面中可见的内容摘要。',
+      author: '模型先生'
+    }, {
+      sourceUrl: 'https://www.douyin.com/note/7641362696420887025',
+      title: '产业曲线图文记录',
+      author: '模型先生'
+    }]
+  };
+
+  const imported = await requestJson(server, '/api/expert/channels/' + channelId + '/douyin-capture', 'POST', capture);
+  assert.equal(imported.statusCode, 200);
+  assert.equal(imported.json.data.identityMatched, true);
+  assert.equal(imported.json.data.addedCount, 1);
+  assert.equal(imported.json.data.updatedCount, 1);
+  assert.equal(imported.json.data.unchangedCount, 0);
+
+  const timeline = await requestJson(server, '/api/expert/channels/' + channelId + '/observations?limit=20');
+  assert.equal(timeline.json.data.length, 2);
+  const video = timeline.json.data.find(item => item.externalContentId === '7533142185677114684');
+  const note = timeline.json.data.find(item => item.externalContentId === '7641362696420887025');
+  assert.equal(video.title, '科创芯片观察');
+  assert.equal(video.author, '模型先生');
+  assert.equal(video.evidenceLevel, 'primary');
+  assert.equal(video.availabilityStatus, 'available');
+  assert.equal(video.summary, '当前登录页面中可见的内容摘要。');
+  assert.equal(note.mediaType, 'note');
+  assert.equal(note.evidenceLevel, 'primary');
+
+  const repeated = await requestJson(server, '/api/expert/channels/' + channelId + '/douyin-capture', 'POST', capture);
+  assert.equal(repeated.statusCode, 200);
+  assert.equal(repeated.json.data.addedCount, 0);
+  assert.equal(repeated.json.data.updatedCount, 0);
+  assert.equal(repeated.json.data.unchangedCount, 2);
+
+  const repeatedTimeline = await requestJson(server, '/api/expert/channels/' + channelId + '/observations?limit=20');
+  assert.equal(repeatedTimeline.json.data.length, 2);
+});
+
+test('Douyin desktop capture keeps identity mismatches as unverified commentary', async t => {
+  const server = app.listen(0);
+  t.after(() => server.close());
+
+  const created = await requestJson(server, '/api/expert/channels', 'POST', {
+    channelKey: 'douyin-capture-mismatch-api',
+    displayName: '目标作者',
+    platform: 'douyin',
+    profileUrl: 'https://www.douyin.com/user/target-author'
+  });
+  const response = await requestJson(server,
+    '/api/expert/channels/' + created.json.data.id + '/douyin-capture', 'POST', {
+      pageType: 'profile',
+      pageUrl: 'https://www.douyin.com/user/different-author',
+      loggedIn: true,
+      profile: {
+        displayName: '另一个作者',
+        profileUrl: 'https://www.douyin.com/user/different-author'
+      },
+      items: [{
+        sourceUrl: 'https://www.douyin.com/video/7641362696420887025',
+        title: '来源身份不一致的视频'
+      }]
+    });
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.json.data.identityMatched, false);
+  assert.equal(response.json.data.items[0].evidenceLevel, 'commentary');
+  assert.equal(response.json.data.items[0].availabilityStatus, 'unknown');
+  assert.match(response.json.data.items[0].title, /^\[身份待核验\]/);
+});
+
 test.after(() => {
   require('../db').close();
   for (const suffix of ['', '-wal', '-shm']) {

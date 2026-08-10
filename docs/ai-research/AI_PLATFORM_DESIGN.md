@@ -159,9 +159,11 @@ Android 原生伴侣 -- 局域网配对 ------+-- Express API
 
 当前已实现 ChatGPT Deep Research 交接和每日公开线索监测。交接可选择近 24 小时、7 天、30 天或 90 天，提示词会优先要求抖音直接视频 URL、按时间排序，并带上已入库 URL 去重清单。自动导入的搜索结果一律先保存为低置信度 `secondary_quote` 或 `commentary`、`fact_summary` 和 `unknown`，不自动填写股票代码，也不直接进入严格回测。监测任务不绕过登录、验证码、反爬、付费墙或平台权限；WebStock 未运行时只在当前任务报告候选，不直接修改 SQLite 文件。
 
-抖音创作者频道支持粘贴一条或多条公开分享文字。系统识别 `www.douyin.com/video/{item_id}`、精选页、官方播放器 URL 和 `v.douyin.com` 分享短链，规范化可识别的视频 ID、按链接和内容 ID 去重，并统计“抖音直接链接”。新导入项默认标为身份待核验；已知数字视频 ID 可以打开抖音官方播放器。短链不会在后台静默跟随跳转，必须由用户在平台页面确认作者、标题、时间和正文。
+抖音创作者频道支持粘贴一条或多条公开分享文字。系统识别 `www.douyin.com/video/{item_id}`、`www.douyin.com/note/{item_id}`、精选页、官方播放器 URL 和 `v.douyin.com` 分享短链，规范化可识别的内容 ID、按链接和内容 ID 去重，并统计“抖音直接链接”。新导入项默认标为身份待核验；已知数字视频 ID 可以打开抖音官方播放器。短链不会在后台静默跟随跳转，必须由用户在平台页面确认作者、标题、时间和正文。
 
-抖音官方的[视频搜索接口](https://developer.open-douyin.com/docs/resource/zh-CN/dop/develop/openapi/douyin-search-capability/aweme-dy-video-search)需要 `aweme.dy.video_search_v2` 权限；其[搜索能力说明](https://developer.open-douyin.com/docs/resource/zh-CN/dop/ability/search-management/item-search)当前将该能力标为实验且暂不对外开放。官方[授权账号视频能力](https://developer.open-douyin.com/capacity-center-page/capacity-detail/7180522194714230845)只允许在用户授权后查询该授权用户的视频。因此，普通抖音登录不能让 WebStock 合法地全量同步任意第三方创作者主页。当前只确认到一个“模型先生”抖音原始视频 URL，系统不宣称完成主页全量下载；其他材料仍需按第三方转述、评论、榜单或删除痕迹分别保存。用户通过抖音官方能力导出或取得授权的视频文件，可作为 `user_owned`、`authorized` 或 `platform_download` 本地资料补录。
+Windows 桌面版另提供 `persist:webstock-douyin` 隔离会话窗口。用户在该窗口内亲自完成登录和验证码，Electron 只保存平台正常产生的本机会话；WebStock 主页面无法读取账号密码、Cookie、`localStorage` 或 `sessionStorage`。用户点击“同步当前抖音页”时，程序仅从当前已加载 DOM 提取公开作品链接、可见标题、作者、发布时间和页面摘要，单次最多 200 条。同步结果先校验研究频道主页 URL 或显示名称：匹配后可标记为 `primary/available`，冲突或无法确认时只能标记为 `commentary/unknown`。相同内容 ID 幂等升级，不重复建档。
+
+抖音官方的[视频搜索接口](https://developer.open-douyin.com/docs/resource/zh-CN/dop/develop/openapi/douyin-search-capability/aweme-dy-video-search)需要 `aweme.dy.video_search_v2` 权限；其[搜索能力说明](https://developer.open-douyin.com/docs/resource/zh-CN/dop/ability/search-management/item-search)当前将该能力标为实验且暂不对外开放。官方[授权账号视频能力](https://developer.open-douyin.com/capacity-center-page/capacity-detail/7180522194714230845)只允许在用户授权后查询该授权用户的视频。因此，普通抖音登录不能让 WebStock 合法地全量同步任意第三方创作者主页。当前已核对“模型先生”公开主页及抖音号 `moxingxiansheng`，但系统仍不宣称完成主页全量下载；用户需要在登录窗口中浏览或滚动，并主动同步当前已加载的页面。其他材料仍需按第三方转述、评论、榜单或删除痕迹分别保存。用户通过抖音官方能力导出或取得授权的视频文件，可作为 `user_owned`、`authorized` 或 `platform_download` 本地资料补录。
 
 意图分析输出必须分成：
 

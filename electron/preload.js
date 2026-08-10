@@ -9,5 +9,14 @@ contextBridge.exposeInMainWorld('webstockDesktop', Object.freeze({
   },
   selectQuantPython() {
     return ipcRenderer.invoke('webstock:select-quant-python');
+  },
+  openDouyinSession(url) {
+    return ipcRenderer.invoke('webstock:open-douyin-session', String(url || ''));
+  },
+  getDouyinSessionStatus() {
+    return ipcRenderer.invoke('webstock:douyin-session-status');
+  },
+  collectDouyinPage() {
+    return ipcRenderer.invoke('webstock:collect-douyin-page');
   }
 }));

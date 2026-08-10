@@ -4,6 +4,8 @@ let expertBacktests = [];
 let expertCurveCharts = [];
 let expertTrackerBound = false;
 
+const MODEL_MR_DOUYIN_PROFILE_URL = 'https://www.douyin.com/user/MS4wLjABAAAAK713M9d8PGNb_WiMYf7yKhOI5y60H4uELJK2guDjJT0';
+
 const EXPERT_SUBJECT_LABELS = { creator: '创作者', person: '人物', book: '书籍', method: '方法' };
 const EXPERT_MEDIA_LABELS = {
   text: '文本', video: '视频', audio: '音频', image: '图片', chart: '曲线 / 图形',
@@ -93,10 +95,35 @@ function expertDouyinPlayerUrl(value) {
 
 function expertSyncChannelControls() {
   const isDouyin = Boolean(expertSelectedChannel() && expertSelectedChannel().platform === 'douyin');
+  const hasDesktopSession = Boolean(window.webstockDesktop &&
+    typeof window.webstockDesktop.openDouyinSession === 'function' &&
+    typeof window.webstockDesktop.collectDouyinPage === 'function');
   const searchButton = document.getElementById('openDouyinSearchBtn');
   const importer = document.getElementById('expertDouyinImporter');
-  if (searchButton) searchButton.hidden = !isDouyin;
+  const desktopControls = document.getElementById('douyinDesktopControls');
+  if (searchButton) searchButton.hidden = !isDouyin || hasDesktopSession;
   if (importer) importer.hidden = !isDouyin;
+  if (desktopControls) desktopControls.hidden = !isDouyin || !hasDesktopSession;
+  if (isDouyin && hasDesktopSession) expertRefreshDouyinSessionStatus();
+}
+
+function expertSetDouyinSessionStatus(message, isError) {
+  const target = document.getElementById('douyinDesktopSessionStatus');
+  if (!target) return;
+  target.textContent = message || '';
+  target.classList.toggle('error', !!isError);
+}
+
+async function expertRefreshDouyinSessionStatus() {
+  if (!window.webstockDesktop || typeof window.webstockDesktop.getDouyinSessionStatus !== 'function') return;
+  try {
+    const status = await window.webstockDesktop.getDouyinSessionStatus();
+    expertSetDouyinSessionStatus(status && status.windowOpen
+      ? '登录窗口已打开，可在窗口中登录、浏览或滚动后同步当前页。'
+      : '登录窗口未打开；登录状态会保存在本机独立会话中。');
+  } catch (error) {
+    expertSetDouyinSessionStatus(error.message, true);
+  }
 }
 
 function expertRenderChannelOptions() {
@@ -312,7 +339,8 @@ async function expertSeedModelMr() {
         displayName: '模型先生',
         subjectType: 'creator',
         platform: 'douyin',
-        description: '抖音财经创作者研究档案。当前仅确认公开视频 7533142185677114684 与公开第三方讨论；主页 URL 尚未核验，不把同名雪球账号视为本人。',
+        profileUrl: MODEL_MR_DOUYIN_PROFILE_URL,
+        description: '抖音财经创作者研究档案。已核对公开主页与抖音号 moxingxiansheng；第三方论坛同名账号仍不视为本人原始来源。',
         aliases: ['模型先生', '抖音模型先生'],
         discoveryQueries: [
           'site:douyin.com/video 模型先生 股票',
@@ -489,6 +517,60 @@ function expertOpenDouyinSearch() {
   if (!channel || channel.platform !== 'douyin') return alert('请先选择抖音创作者频道。');
   expertSetStatus('已打开“' + channel.displayName + '”抖音站内搜索；可将公开分享链接粘贴回研究库。');
   window.open('https://www.douyin.com/search/' + encodeURIComponent(channel.displayName), '_blank', 'noopener');
+}
+
+function expertDouyinStartUrl(channel) {
+  if (channel && expertIsDouyinUrl(channel.profileUrl)) return channel.profileUrl;
+  if (channel && channel.channelKey === 'douyin-model-mr') return MODEL_MR_DOUYIN_PROFILE_URL;
+  return 'https://www.douyin.com/search/' + encodeURIComponent(channel ? channel.displayName : '');
+}
+
+async function expertOpenDouyinSession() {
+  const channel = expertSelectedChannel();
+  if (!channel || channel.platform !== 'douyin') return alert('请先选择抖音创作者频道。');
+  if (!window.webstockDesktop || typeof window.webstockDesktop.openDouyinSession !== 'function') {
+    return alert('该功能只在 WebStock Windows 桌面程序中可用。');
+  }
+  const button = document.getElementById('openDouyinSessionBtn');
+  button.disabled = true;
+  try {
+    await window.webstockDesktop.openDouyinSession(expertDouyinStartUrl(channel));
+    expertSetDouyinSessionStatus('窗口已打开。请亲自完成登录或验证码；浏览、滚动到需要的公开内容后再点击同步。');
+  } catch (error) {
+    expertSetDouyinSessionStatus(error.message, true);
+  } finally {
+    button.disabled = false;
+  }
+}
+
+async function expertSyncDouyinSession() {
+  const channel = expertSelectedChannel();
+  if (!channel || channel.platform !== 'douyin') return alert('请先选择抖音创作者频道。');
+  if (!window.webstockDesktop || typeof window.webstockDesktop.collectDouyinPage !== 'function') {
+    return alert('该功能只在 WebStock Windows 桌面程序中可用。');
+  }
+  const button = document.getElementById('syncDouyinSessionBtn');
+  button.disabled = true;
+  expertSetDouyinSessionStatus('正在读取当前窗口中已经显示的公开页面内容...');
+  try {
+    const capture = await window.webstockDesktop.collectDouyinPage();
+    const result = await expertApi('/api/expert/channels/' + channel.id + '/douyin-capture', {
+      method: 'POST',
+      body: capture
+    });
+    await expertLoadChannels();
+    document.getElementById('expertChannelSelect').value = String(channel.id);
+    await expertLoadTimeline();
+    if (window.AIResearch && typeof window.AIResearch.reload === 'function') await window.AIResearch.reload();
+    const identityText = result.identityMatched ? '身份已匹配' : '身份未匹配，已按待核验保存';
+    const loginText = result.loggedIn ? '当前页面未显示登录要求' : '当前页面仍显示登录要求';
+    expertSetDouyinSessionStatus('同步完成：新增 ' + result.addedCount + ' 条，更新 ' + result.updatedCount +
+      ' 条，未变化 ' + result.unchangedCount + ' 条；' + identityText + '；' + loginText + '。', !result.identityMatched);
+  } catch (error) {
+    expertSetDouyinSessionStatus(error.message, true);
+  } finally {
+    button.disabled = false;
+  }
 }
 
 async function expertImportDouyinLinks() {
@@ -784,6 +866,8 @@ function bindExpertTracker() {
   document.getElementById('analyzeExpertIntentBtn').addEventListener('click', expertAnalyzeIntent);
   document.getElementById('discoverExpertUpdatesBtn').addEventListener('click', expertDiscoverUpdates);
   document.getElementById('openDouyinSearchBtn').addEventListener('click', expertOpenDouyinSearch);
+  document.getElementById('openDouyinSessionBtn').addEventListener('click', expertOpenDouyinSession);
+  document.getElementById('syncDouyinSessionBtn').addEventListener('click', expertSyncDouyinSession);
   document.getElementById('importDouyinLinksBtn').addEventListener('click', expertImportDouyinLinks);
   document.getElementById('backtestExpertSignalsBtn').addEventListener('click', expertBacktestSignals);
   document.getElementById('expertTimeline').addEventListener('click', function(event) {
