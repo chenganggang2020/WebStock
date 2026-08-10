@@ -5,6 +5,7 @@ const {
   isAllowedDouyinUrl,
   parseDouyinItemUrl,
   parseVisibleWorkCount,
+  parseVisibleMetricCount,
   inferVisibleLoggedIn,
   selectVisibleProfileCandidate,
   normalizeDouyinPageSnapshot,
@@ -39,6 +40,13 @@ test('visible profile metrics support the live Douyin label order and login plac
   assert.equal(inferVisibleLoggedIn('搜索 充钻石 通知 消息 投稿', true), false);
 });
 
+test('visible engagement counts support Chinese compact units', () => {
+  assert.equal(parseVisibleMetricCount('1.2万'), 12000);
+  assert.equal(parseVisibleMetricCount('3.4w'), 34000);
+  assert.equal(parseVisibleMetricCount('892'), 892);
+  assert.equal(parseVisibleMetricCount('--'), null);
+});
+
 test('video detail profile selection skips the signed-in user and keeps the creator link', () => {
   assert.deepEqual(selectVisibleProfileCandidate([
     { href: 'https://www.douyin.com/user/self', text: '' },
@@ -68,9 +76,15 @@ test('Douyin page snapshots are sanitized, deduplicated and bounded before leavi
       {
         sourceUrl: 'https://www.douyin.com/video/7533142185677114684?from=copy',
         title: ' 科创芯片观察 ',
+        description: ' 半导体设备与先进封装的产业观察 ',
+        transcript: '先进封装仍需观察订单兑现。',
         publishedAt: '2025-07-31 15:19',
         summary: '页面上可见的章节摘要',
-        author: '模型先生'
+        author: '模型先生',
+        hashtags: ['半导体', '先进封装', '半导体'],
+        engagement: { likes: 12000, comments: 86, favorites: 520, shares: 41, plays: 95000 },
+        coverUrl: 'https://p3-sign.douyinpic.com/cover.jpeg',
+        durationSeconds: 73
       },
       {
         sourceUrl: 'https://jingxuan.douyin.com/m/video/7533142185677114684',
@@ -99,6 +113,16 @@ test('Douyin page snapshots are sanitized, deduplicated and bounded before leavi
   assert.equal(normalized.items.length, 2);
   assert.equal(normalized.items[0].contentId, '7533142185677114684');
   assert.equal(normalized.items[0].mediaType, 'video');
+  assert.equal(normalized.items[0].transcript, '先进封装仍需观察订单兑现。');
+  assert.deepEqual(normalized.items[0].hashtags, ['半导体', '先进封装']);
+  assert.deepEqual(normalized.items[0].engagement, {
+    likes: 12000,
+    comments: 86,
+    favorites: 520,
+    shares: 41,
+    plays: 95000
+  });
+  assert.equal(normalized.items[0].durationSeconds, 73);
   assert.equal(normalized.items[1].mediaType, 'note');
   assert.equal(Object.prototype.hasOwnProperty.call(normalized.profile, 'ignoredSecret'), false);
 });
@@ -106,6 +130,9 @@ test('Douyin page snapshots are sanitized, deduplicated and bounded before leavi
 test('page snapshot script only reads visible DOM data, not browser credentials or storage', () => {
   const script = buildDouyinPageSnapshotScript();
   assert.match(script, /querySelector/);
+  assert.match(script, /user-post-list/);
+  assert.match(script, /video-player-digg/);
+  assert.match(script, /feed-comment-icon/);
   assert.doesNotMatch(script, /cookie/i);
   assert.doesNotMatch(script, /localStorage/i);
   assert.doesNotMatch(script, /sessionStorage/i);

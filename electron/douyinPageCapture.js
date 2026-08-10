@@ -49,6 +49,14 @@ function parseVisibleWorkCount(value) {
   return Math.round(Number(match[1]) * (match[2] ? 10000 : 1));
 }
 
+function parseVisibleMetricCount(value) {
+  const text = String(value == null ? '' : value).replace(/,/g, '').trim().toLowerCase();
+  const match = text.match(/([0-9]+(?:\.[0-9]+)?)\s*(万|w)?/i);
+  if (!match) return null;
+  const number = Number(match[1]) * (match[2] ? 10000 : 1);
+  return Number.isFinite(number) ? Math.round(number) : null;
+}
+
 function inferVisibleLoggedIn(value, hasVisibleLoginControl) {
   if (hasVisibleLoginControl) return false;
   const text = String(value || '').replace(/\s+/g, ' ').trim();
@@ -96,6 +104,33 @@ function normalizeVisibleUrl(value) {
   }
 }
 
+function normalizeHttpsUrl(value) {
+  try {
+    const parsed = new URL(String(value || ''));
+    return parsed.protocol === 'https:' ? parsed.href : '';
+  } catch (error) {
+    return '';
+  }
+}
+
+function normalizeStringArray(value, maxItems = 30, maxLength = 100) {
+  return (Array.isArray(value) ? value : []).map(function(item) {
+    return cleanText(item, maxLength).replace(/^#/, '');
+  }).filter(Boolean).filter(function(item, index, items) {
+    return items.indexOf(item) === index;
+  }).slice(0, maxItems);
+}
+
+function normalizeEngagement(value) {
+  const source = value && typeof value === 'object' ? value : {};
+  const result = {};
+  ['likes', 'comments', 'favorites', 'shares', 'plays'].forEach(function(key) {
+    const number = Number(source[key]);
+    if (Number.isFinite(number) && number >= 0) result[key] = Math.round(number);
+  });
+  return result;
+}
+
 function normalizeDouyinPageSnapshot(raw = {}) {
   const pageTypes = new Set(['profile', 'video', 'note', 'search', 'other']);
   const pageUrl = normalizeVisibleUrl(raw.pageUrl);
@@ -125,7 +160,13 @@ function normalizeDouyinPageSnapshot(raw = {}) {
       title: cleanText(source.title, 300),
       author: cleanText(source.author, 160),
       publishedAt: cleanText(source.publishedAt, 80),
-      summary: cleanText(source.summary, 10000)
+      description: cleanText(source.description, 20000),
+      transcript: cleanText(source.transcript, 200000),
+      summary: cleanText(source.summary, 20000),
+      hashtags: normalizeStringArray(source.hashtags),
+      engagement: normalizeEngagement(source.engagement),
+      coverUrl: normalizeHttpsUrl(source.coverUrl),
+      durationSeconds: Math.min(Math.max(Number(source.durationSeconds) || 0, 0), 86400)
     });
     if (items.length >= MAX_ITEMS) break;
   }
@@ -140,13 +181,14 @@ function normalizeDouyinPageSnapshot(raw = {}) {
     pageType: pageTypes.has(String(raw.pageType)) ? String(raw.pageType) : 'other',
     pageUrl,
     loggedIn: raw.loggedIn === true,
+    loadError: raw.loadError === true,
     capturedAt,
     profile,
     items
   };
 }
 
-function douyinVisiblePageSnapshot(parseWorkCount, inferLoggedIn, selectProfile) {
+function douyinVisiblePageSnapshot(parseWorkCount, parseMetricCount, inferLoggedIn, selectProfile) {
   function compact(value, limit) {
     return String(value == null ? '' : value).replace(/\s+/g, ' ').trim().slice(0, limit);
   }
@@ -165,6 +207,36 @@ function douyinVisiblePageSnapshot(parseWorkCount, inferLoggedIn, selectProfile)
       if (value) return value;
     }
     return '';
+  }
+
+  function firstAttribute(selectors, attribute, limit) {
+    for (const selector of selectors) {
+      const element = document.querySelector(selector);
+      const value = element && compact(element.getAttribute(attribute), limit);
+      if (value) return value;
+    }
+    return '';
+  }
+
+  function visibleTextList(selectors, limit) {
+    const values = [];
+    selectors.forEach(function(selector) {
+      document.querySelectorAll(selector).forEach(function(element) {
+        if (!visible(element)) return;
+        const value = compact(element.textContent, limit);
+        if (value && !values.includes(value)) values.push(value);
+      });
+    });
+    return values;
+  }
+
+  function visibleCount(selectors, fallbackLabel) {
+    const value = firstText(selectors, 80);
+    const direct = parseMetricCount(value);
+    if (direct != null) return direct;
+    const pattern = new RegExp(fallbackLabel + '\\s*[：:]?\\s*([0-9]+(?:\\.[0-9]+)?(?:万|[wW])?)');
+    const match = bodyText.match(pattern);
+    return match ? parseMetricCount(match[1]) : null;
   }
 
   function absoluteUrl(value) {
@@ -205,17 +277,25 @@ function douyinVisiblePageSnapshot(parseWorkCount, inferLoggedIn, selectProfile)
   const workCount = parseWorkCount(bodyText);
 
   const itemsById = new Map();
-  document.querySelectorAll('a[href*="/video/"], a[href*="/note/"]').forEach(function(anchor) {
-    const identity = itemIdentity(anchor.href || anchor.getAttribute('href'));
-    if (!identity || itemsById.has(identity.contentId)) return;
-    const container = anchor.closest('li, article, [data-e2e], div');
-    const title = compact(
-      anchor.getAttribute('aria-label') || anchor.getAttribute('title') || anchor.textContent ||
-      (container && container.textContent),
-      300
-    );
-    itemsById.set(identity.contentId, Object.assign(identity, { title }));
-  });
+  if (!currentItem) {
+    const itemRoot = pageType === 'profile' ? document.querySelector('[data-e2e="user-post-list"]') : document;
+    if (itemRoot) itemRoot.querySelectorAll('a[href*="/video/"], a[href*="/note/"]').forEach(function(anchor) {
+      const identity = itemIdentity(anchor.href || anchor.getAttribute('href'));
+      if (!identity || itemsById.has(identity.contentId)) return;
+      const container = anchor.closest('li, article, [data-e2e], div');
+      const image = anchor.querySelector('img[alt]');
+      const title = compact(
+        anchor.getAttribute('aria-label') || anchor.getAttribute('title') ||
+        (image && image.getAttribute('alt')) || anchor.textContent || (container && container.textContent),
+        300
+      );
+      const plays = parseMetricCount(anchor.textContent);
+      itemsById.set(identity.contentId, Object.assign(identity, {
+        title,
+        engagement: plays == null ? {} : { plays }
+      }));
+    });
+  }
 
   if (currentItem) {
     const metaTitle = document.querySelector('meta[property="og:title"]');
@@ -228,11 +308,40 @@ function douyinVisiblePageSnapshot(parseWorkCount, inferLoggedIn, selectProfile)
     ], 300) || compact(metaTitle && metaTitle.getAttribute('content'), 300) || compact(document.title, 300);
     const publishedMatch = bodyText.match(/发布时间\s*[：:]?\s*(\d{4}[-/.年]\d{1,2}[-/.月]\d{1,2}(?:日)?(?:\s+\d{1,2}:\d{2})?)/);
     const chapterMatch = bodyText.match(/章节要点\s*([\s\S]{1,10000}?)(?:内容由AI生成|免责声明|评论|相关推荐|$)/);
+    const description = firstText(['[data-e2e="video-desc"]', '[data-e2e="video-title"]', '[data-e2e="note-desc"]'], 20000) ||
+      firstAttribute(['meta[property="og:description"]', 'meta[name="description"]'], 'content', 20000);
+    const transcript = visibleTextList([
+      '[data-e2e*="subtitle"]',
+      '[data-e2e*="caption"]',
+      '[class*="subtitle"]',
+      '[class*="caption"]'
+    ], 20000).join('\n').slice(0, 200000);
+    const hashtagValues = Array.from(document.querySelectorAll('a[href*="/search/"]')).map(function(anchor) {
+      const value = compact(anchor.textContent, 100);
+      return /^#/.test(value) ? value.slice(1) : '';
+    }).filter(Boolean);
+    const engagement = {
+      likes: visibleCount(['[data-e2e="video-player-digg"]', '[data-e2e="video-digg-count"]', '[data-e2e*="like-count"]'], '点赞'),
+      comments: visibleCount(['[data-e2e="feed-comment-icon"]', '[data-e2e="video-comment-count"]', '[data-e2e*="comment-count"]'], '评论'),
+      favorites: visibleCount(['[data-e2e="video-player-collect"]', '[data-e2e="video-collect-count"]', '[data-e2e*="collect-count"]'], '收藏'),
+      shares: visibleCount(['[data-e2e="video-player-share"]', '[data-e2e="video-share-count"]', '[data-e2e*="share-count"]'], '分享'),
+      plays: visibleCount(['[data-e2e="video-play-count"]', '[data-e2e*="play-count"]'], '播放')
+    };
+    Object.keys(engagement).forEach(function(key) {
+      if (engagement[key] == null) delete engagement[key];
+    });
+    const durationRaw = firstAttribute(['meta[property="video:duration"]'], 'content', 30);
     itemsById.set(currentItem.contentId, Object.assign(currentItem, {
       title,
       author: displayName,
       publishedAt: publishedMatch ? compact(publishedMatch[1], 80) : '',
-      summary: chapterMatch ? compact(chapterMatch[1], 10000) : ''
+      description,
+      transcript,
+      summary: chapterMatch ? compact(chapterMatch[1], 20000) : '',
+      hashtags: hashtagValues,
+      engagement,
+      coverUrl: firstAttribute(['meta[property="og:image"]'], 'content', 2000),
+      durationSeconds: Number(durationRaw) || 0
     }));
   }
 
@@ -245,6 +354,7 @@ function douyinVisiblePageSnapshot(parseWorkCount, inferLoggedIn, selectProfile)
     pageType,
     pageUrl: href,
     loggedIn: inferLoggedIn(bodyText, loginRequired),
+    loadError: /服务异常[，,]?\s*重新刷新拉取数据/.test(bodyText),
     capturedAt: new Date().toISOString(),
     profile: { displayName, profileUrl, douyinId: idMatch ? idMatch[1] : '', workCount },
     items: Array.from(itemsById.values()).slice(0, 200)
@@ -253,7 +363,7 @@ function douyinVisiblePageSnapshot(parseWorkCount, inferLoggedIn, selectProfile)
 
 function buildDouyinPageSnapshotScript() {
   return '(' + douyinVisiblePageSnapshot.toString() + ')(' +
-    parseVisibleWorkCount.toString() + ',' + inferVisibleLoggedIn.toString() + ',' +
+    parseVisibleWorkCount.toString() + ',' + parseVisibleMetricCount.toString() + ',' + inferVisibleLoggedIn.toString() + ',' +
     selectVisibleProfileCandidate.toString() + ')';
 }
 
@@ -261,6 +371,7 @@ module.exports = {
   isAllowedDouyinUrl,
   parseDouyinItemUrl,
   parseVisibleWorkCount,
+  parseVisibleMetricCount,
   inferVisibleLoggedIn,
   selectVisibleProfileCandidate,
   normalizeDouyinPageSnapshot,

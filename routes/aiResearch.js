@@ -5,6 +5,7 @@ const researchRuns = require('../services/researchRunService');
 const modelRegistry = require('../services/modelRegistryService');
 const expertChannels = require('../services/expertChannelService');
 const douyinSources = require('../services/douyinSourceService');
+const douyinSyncState = require('../services/douyinSyncStateService');
 const { isValidApiKey, getAIConfig, callAIModel } = require('./ai');
 
 function ok(res, data) {
@@ -107,6 +108,14 @@ router.post('/expert/channels/:id/observations', function(req, res) {
   }
 });
 
+router.get('/expert/channels/:id/observations/:observationId/metrics', function(req, res) {
+  try {
+    ok(res, expertChannels.listObservationMetrics(Number(req.params.id), Number(req.params.observationId), req.query || {}));
+  } catch (error) {
+    fail(res, error, /不存在/.test(error.message) ? 404 : 400);
+  }
+});
+
 router.post('/expert/channels/:id/douyin-links', function(req, res) {
   try {
     ok(res, douyinSources.importDouyinLinks(Number(req.params.id), req.body || {}));
@@ -118,6 +127,25 @@ router.post('/expert/channels/:id/douyin-links', function(req, res) {
 router.post('/expert/channels/:id/douyin-capture', function(req, res) {
   try {
     ok(res, douyinSources.importCapturedPage(Number(req.params.id), req.body || {}));
+  } catch (error) {
+    fail(res, error, /不存在/.test(error.message) ? 404 : 400);
+  }
+});
+
+router.get('/expert/channels/:id/sync', function(req, res) {
+  try {
+    expertChannels.getChannel(Number(req.params.id));
+    ok(res, douyinSyncState.getJob(Number(req.params.id)));
+  } catch (error) {
+    fail(res, error, /不存在/.test(error.message) ? 404 : 400);
+  }
+});
+
+router.put('/expert/channels/:id/sync', function(req, res) {
+  try {
+    const channel = expertChannels.getChannel(Number(req.params.id));
+    if (channel.platform !== 'douyin') throw new Error('自动同步仅支持抖音创作者频道');
+    ok(res, douyinSyncState.updateSettings(channel.id, req.body || {}));
   } catch (error) {
     fail(res, error, /不存在/.test(error.message) ? 404 : 400);
   }

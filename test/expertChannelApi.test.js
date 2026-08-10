@@ -189,9 +189,15 @@ test('Douyin desktop capture upgrades verified profile items and remains idempot
     items: [{
       sourceUrl: 'https://www.douyin.com/video/7533142185677114684?from=profile',
       title: '科创芯片观察',
+      description: '讨论科创芯片和先进封装产业趋势。',
+      transcript: '中期继续看好先进封装，但需要等待订单兑现。',
       publishedAt: '2025-07-31T15:19:00+08:00',
       summary: '当前登录页面中可见的内容摘要。',
-      author: '模型先生'
+      author: '模型先生',
+      hashtags: ['科创芯片', '先进封装'],
+      engagement: { likes: 12000, comments: 86, favorites: 520, shares: 41 },
+      coverUrl: 'https://p3-sign.douyinpic.com/cover.jpeg',
+      durationSeconds: 73
     }, {
       sourceUrl: 'https://www.douyin.com/note/7641362696420887025',
       title: '产业曲线图文记录',
@@ -215,6 +221,13 @@ test('Douyin desktop capture upgrades verified profile items and remains idempot
   assert.equal(video.evidenceLevel, 'primary');
   assert.equal(video.availabilityStatus, 'available');
   assert.equal(video.summary, '当前登录页面中可见的内容摘要。');
+  assert.equal(video.description, '讨论科创芯片和先进封装产业趋势。');
+  assert.equal(video.transcript, '中期继续看好先进封装，但需要等待订单兑现。');
+  assert.equal(video.content, '中期继续看好先进封装，但需要等待订单兑现。');
+  assert.equal(video.engagement.likes, 12000);
+  assert.equal(video.mediaMetadata.durationSeconds, 73);
+  assert.ok(video.signal.sectors.includes('先进封装'));
+  assert.equal(video.signal.horizon, 'medium');
   assert.equal(note.mediaType, 'note');
   assert.equal(note.evidenceLevel, 'primary');
 
@@ -226,6 +239,110 @@ test('Douyin desktop capture upgrades verified profile items and remains idempot
 
   const repeatedTimeline = await requestJson(server, '/api/expert/channels/' + channelId + '/observations?limit=20');
   assert.equal(repeatedTimeline.json.data.length, 2);
+
+  const changedCapture = JSON.parse(JSON.stringify(capture));
+  changedCapture.capturedAt = '2026-08-11T10:10:00.000Z';
+  changedCapture.items[0].engagement.likes = 12050;
+  const changed = await requestJson(server, '/api/expert/channels/' + channelId + '/douyin-capture', 'POST', changedCapture);
+  assert.equal(changed.json.data.updatedCount, 1);
+  const changedVideo = changed.json.data.items.find(item => item.externalContentId === '7533142185677114684');
+  assert.equal(changedVideo.engagement.delta.likes, 50);
+  const metrics = await requestJson(server,
+    '/api/expert/channels/' + channelId + '/observations/' + changedVideo.id + '/metrics?limit=10');
+  assert.equal(metrics.json.data.length, 2);
+  assert.equal(metrics.json.data[0].likes, 12050);
+  assert.equal(metrics.json.data[1].likes, 12000);
+});
+
+test('Douyin signal rule upgrades replace stale automatic stock matches without removing source topics', async t => {
+  const server = app.listen(0);
+  t.after(() => server.close());
+
+  const created = await requestJson(server, '/api/expert/channels', 'POST', {
+    channelKey: 'douyin-rule-upgrade-api',
+    displayName: '\u6a21\u578b\u5148\u751f',
+    platform: 'douyin',
+    profileUrl: 'https://www.douyin.com/user/rule-upgrade-test'
+  });
+  const channelId = created.json.data.id;
+  const service = require('../services/expertChannelService');
+  service.recordObservation(channelId, {
+    externalContentId: '7671834569137647601',
+    sourceUrl: 'https://www.douyin.com/video/7671834569137647601',
+    title: '\u6709\u8272\u677f\u5757\u5206\u6790',
+    author: '\u6a21\u578b\u5148\u751f',
+    evidenceLevel: 'primary',
+    mediaType: 'video',
+    summary: '\u6709\u8272\u677f\u5757\u9f99\u5934\u5e02\u503c\u6709\u671b\u4e0e\u79d1\u6280\u9f99\u5934\u76f8\u5f53\uff0c\u76ee\u524d\u5904\u4e8e\u65e9\u671f\u53d1\u5c55\u9636\u6bb5\u3002',
+    signal: {
+      analysisMethod: 'rule-v1',
+      stockCodes: ['000838'],
+      sectors: ['\u6df1\u4e3b\u677f', '\u6709\u8272\u91d1\u5c5e'],
+      topics: ['\u6df1\u4e3b\u677f', '\u6709\u8272\u91d1\u5c5e']
+    },
+    stockCodes: ['000838'],
+    sectors: ['\u6df1\u4e3b\u677f', '\u6709\u8272\u91d1\u5c5e'],
+    topics: ['\u6296\u97f3\u767b\u5f55\u4f1a\u8bdd\u540c\u6b65', '\u8eab\u4efd\u5df2\u5339\u914d', '\u6df1\u4e3b\u677f', '\u6709\u8272\u91d1\u5c5e']
+  });
+
+  const result = require('../services/douyinSourceService').reanalyzeChannelObservations(channelId);
+  const timeline = await requestJson(server, '/api/expert/channels/' + channelId + '/observations');
+  const observation = timeline.json.data[0];
+  assert.equal(result.updatedCount, 1);
+  assert.equal(observation.signal.analysisMethod, 'rule-v2');
+  assert.deepEqual(observation.stockCodes, []);
+  assert.deepEqual(observation.sectors, ['\u6709\u8272\u91d1\u5c5e']);
+  assert.ok(observation.topics.includes('\u6296\u97f3\u767b\u5f55\u4f1a\u8bdd\u540c\u6b65'));
+  assert.ok(!observation.topics.includes('\u6df1\u4e3b\u677f'));
+});
+
+test('Douyin sync settings persist the ten-minute schedule and latest run status', async t => {
+  const server = app.listen(0);
+  t.after(() => server.close());
+
+  const created = await requestJson(server, '/api/expert/channels', 'POST', {
+    channelKey: 'douyin-sync-settings-api',
+    displayName: '定时采集测试',
+    platform: 'douyin',
+    profileUrl: 'https://www.douyin.com/user/sync-test'
+  });
+  const channelId = created.json.data.id;
+  const initial = await requestJson(server, '/api/expert/channels/' + channelId + '/sync');
+  assert.equal(initial.json.data.enabled, false);
+  assert.equal(initial.json.data.intervalMinutes, 10);
+
+  const updated = await requestJson(server, '/api/expert/channels/' + channelId + '/sync', 'PUT', {
+    enabled: true,
+    intervalMinutes: 10
+  });
+  assert.equal(updated.json.data.enabled, true);
+  assert.equal(updated.json.data.intervalMinutes, 10);
+  assert.ok(updated.json.data.nextRunAt);
+});
+
+test('profile discovery stores multiple pending videos without duplicate placeholder knowledge text', async t => {
+  const server = app.listen(0);
+  t.after(() => server.close());
+  const profileUrl = 'https://www.douyin.com/user/pending-detail-test';
+  const created = await requestJson(server, '/api/expert/channels', 'POST', {
+    channelKey: 'douyin-pending-detail-api',
+    displayName: '待补详情作者',
+    platform: 'douyin',
+    profileUrl
+  });
+  const response = await requestJson(server,
+    '/api/expert/channels/' + created.json.data.id + '/douyin-capture', 'POST', {
+      pageType: 'profile', pageUrl: profileUrl, loggedIn: true,
+      profile: { displayName: '待补详情作者', profileUrl, workCount: 2 },
+      items: [
+        { sourceUrl: 'https://www.douyin.com/video/7611111111111111111', title: '作品一' },
+        { sourceUrl: 'https://www.douyin.com/video/7622222222222222222', title: '作品二' }
+      ]
+    });
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.json.data.addedCount, 2);
+  assert.ok(response.json.data.items.every(item => item.summary === ''));
+  assert.ok(response.json.data.items.every(item => item.knowledgeSourceId == null));
 });
 
 test('Douyin desktop capture keeps identity mismatches as unverified commentary', async t => {

@@ -217,6 +217,21 @@ CREATE TABLE IF NOT EXISTS expert_channels (
   updated_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS expert_sync_jobs (
+  channel_id INTEGER PRIMARY KEY,
+  enabled INTEGER NOT NULL DEFAULT 0,
+  interval_minutes INTEGER NOT NULL DEFAULT 10,
+  status TEXT NOT NULL DEFAULT 'idle',
+  last_started_at TEXT DEFAULT '',
+  last_completed_at TEXT DEFAULT '',
+  next_run_at TEXT DEFAULT '',
+  last_error TEXT DEFAULT '',
+  last_result_json TEXT DEFAULT '{}',
+  run_count INTEGER NOT NULL DEFAULT 0,
+  updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (channel_id) REFERENCES expert_channels(id) ON DELETE CASCADE
+);
+
 CREATE TABLE IF NOT EXISTS expert_observations (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   channel_id INTEGER NOT NULL,
@@ -234,6 +249,11 @@ CREATE TABLE IF NOT EXISTS expert_observations (
   content_role TEXT NOT NULL,
   content_text TEXT DEFAULT '',
   summary_text TEXT DEFAULT '',
+  description_text TEXT DEFAULT '',
+  transcript_text TEXT DEFAULT '',
+  engagement_json TEXT DEFAULT '{}',
+  media_metadata_json TEXT DEFAULT '{}',
+  signal_json TEXT DEFAULT '{}',
   content_hash TEXT NOT NULL,
   stock_codes_json TEXT DEFAULT '[]',
   sectors_json TEXT DEFAULT '[]',
@@ -257,6 +277,23 @@ CREATE TABLE IF NOT EXISTS expert_observations (
 
 CREATE INDEX IF NOT EXISTS idx_expert_observations_channel_time
   ON expert_observations(channel_id, published_at, first_seen_at);
+
+CREATE TABLE IF NOT EXISTS expert_observation_metrics (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  observation_id INTEGER NOT NULL,
+  observed_at TEXT NOT NULL,
+  likes INTEGER,
+  comments INTEGER,
+  favorites INTEGER,
+  shares INTEGER,
+  plays INTEGER,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(observation_id, observed_at),
+  FOREIGN KEY (observation_id) REFERENCES expert_observations(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_expert_observation_metrics_time
+  ON expert_observation_metrics(observation_id, observed_at);
 
 CREATE TABLE IF NOT EXISTS expert_backtests (
   id INTEGER PRIMARY KEY AUTOINCREMENT,

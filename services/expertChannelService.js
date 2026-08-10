@@ -144,6 +144,11 @@ function rowToObservation(row) {
     contentRole: row.content_role,
     content: row.content_text || '',
     summary: row.summary_text || '',
+    description: row.description_text || '',
+    transcript: row.transcript_text || '',
+    engagement: parseJson(row.engagement_json, {}),
+    mediaMetadata: parseJson(row.media_metadata_json, {}),
+    signal: parseJson(row.signal_json, {}),
     contentHash: row.content_hash,
     stockCodes: parseJson(row.stock_codes_json, []),
     sectors: parseJson(row.sectors_json, []),
@@ -233,6 +238,24 @@ function observationRow(channelId, externalKey) {
     .get(Number(channelId), externalKey);
 }
 
+function metricValue(value) {
+  const number = Number(value);
+  return Number.isFinite(number) && number >= 0 ? Math.round(number) : null;
+}
+
+function recordEngagementSnapshot(observationId, engagement) {
+  if (!engagement || typeof engagement !== 'object' || !engagement.observedAt) return;
+  const values = ['likes', 'comments', 'favorites', 'shares', 'plays'].map(key => metricValue(engagement[key]));
+  if (values.every(value => value == null)) return;
+  db.prepare(`INSERT INTO expert_observation_metrics
+    (observation_id, observed_at, likes, comments, favorites, shares, plays)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(observation_id, observed_at) DO UPDATE SET
+      likes = excluded.likes, comments = excluded.comments, favorites = excluded.favorites,
+      shares = excluded.shares, plays = excluded.plays`)
+    .run(Number(observationId), safeIso(engagement.observedAt), ...values);
+}
+
 function buildExternalKey(channel, input) {
   const supplied = cleanText(input.externalKey, 200);
   if (supplied) return supplied;
@@ -244,7 +267,8 @@ function buildExternalKey(channel, input) {
 }
 
 function syncKnowledgeSource(channel, observation, existing) {
-  const sourceText = [observation.content.length >= 10 ? observation.content : observation.summary,
+  const evidenceText = observation.transcript || observation.content || observation.description || observation.summary;
+  const sourceText = [evidenceText.length >= 10 ? evidenceText : '',
     observation.analysisNotes ? '图形 / 方法分析记录：\n' + observation.analysisNotes : '']
     .filter(Boolean).join('\n\n');
   if (sourceText.length < 10) return existing && existing.knowledge_source_id || null;
@@ -297,6 +321,14 @@ function recordObservation(channelId, input = {}) {
   const sourceUrl = input.sourceUrl == null && existing ? existing.sourceUrl : normalizeUrl(input.sourceUrl);
   const content = cleanText(input.content == null && existing ? existing.content : input.content, 800000);
   const summary = cleanText(input.summary == null && existing ? existing.summary : input.summary, 10000);
+  const description = cleanText(input.description == null && existing ? existing.description : input.description, 20000);
+  const transcript = cleanText(input.transcript == null && existing ? existing.transcript : input.transcript, 800000);
+  const engagement = input.engagement == null && existing ? existing.engagement
+    : (input.engagement && typeof input.engagement === 'object' ? input.engagement : {});
+  const mediaMetadata = input.mediaMetadata == null && existing ? existing.mediaMetadata
+    : (input.mediaMetadata && typeof input.mediaMetadata === 'object' ? input.mediaMetadata : {});
+  const signal = input.signal == null && existing ? existing.signal
+    : (input.signal && typeof input.signal === 'object' ? input.signal : {});
   const rawPublishedAt = input.publishedAt == null && existing ? existing.publishedAt : input.publishedAt;
   const publishedAt = safeIso(rawPublishedAt, '');
   const publishedTimePrecision = input.publishedAt == null && existing
@@ -324,7 +356,13 @@ function recordObservation(channelId, input = {}) {
     contentRole,
     content,
     summary,
-    contentHash: sha256([content, summary, JSON.stringify(curveData),
+    description,
+    transcript,
+    engagement,
+    mediaMetadata,
+    signal,
+    contentHash: sha256([content, summary, description, transcript, JSON.stringify(engagement),
+      JSON.stringify(mediaMetadata), JSON.stringify(signal), JSON.stringify(curveData),
       cleanText(input.analysisNotes == null && existing ? existing.analysisNotes : input.analysisNotes, 20000),
       title, sourceUrl].join('\n')),
     stockCodes,
@@ -346,10 +384,11 @@ function recordObservation(channelId, input = {}) {
     INSERT INTO expert_observations (
       channel_id, external_key, external_content_id, source_url, title, author, published_at, published_time_precision,
       first_seen_at, last_seen_at, evidence_level, availability_status, content_role,
-      content_text, summary_text, content_hash, stock_codes_json, sectors_json, topics_json,
+      content_text, summary_text, description_text, transcript_text, engagement_json, media_metadata_json,
+      signal_json, content_hash, stock_codes_json, sectors_json, topics_json,
       media_type, archive_status, rights_basis, local_asset_path, curve_data_json, analysis_notes,
       stance, horizon, confidence, knowledge_source_id
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(channel_id, external_key) DO UPDATE SET
       external_content_id = excluded.external_content_id,
       source_url = excluded.source_url,
@@ -363,6 +402,11 @@ function recordObservation(channelId, input = {}) {
       content_role = excluded.content_role,
       content_text = excluded.content_text,
       summary_text = excluded.summary_text,
+      description_text = excluded.description_text,
+      transcript_text = excluded.transcript_text,
+      engagement_json = excluded.engagement_json,
+      media_metadata_json = excluded.media_metadata_json,
+      signal_json = excluded.signal_json,
       content_hash = excluded.content_hash,
       stock_codes_json = excluded.stock_codes_json,
       sectors_json = excluded.sectors_json,
@@ -382,13 +426,17 @@ function recordObservation(channelId, input = {}) {
     channel.id, observation.externalKey, observation.externalContentId, observation.sourceUrl,
     observation.title, observation.author, observation.publishedAt, observation.publishedTimePrecision, observation.firstSeenAt,
     observation.lastSeenAt, observation.evidenceLevel, observation.availabilityStatus,
-    observation.contentRole, observation.content, observation.summary, observation.contentHash,
+    observation.contentRole, observation.content, observation.summary, observation.description,
+    observation.transcript, JSON.stringify(observation.engagement), JSON.stringify(observation.mediaMetadata),
+    JSON.stringify(observation.signal), observation.contentHash,
     JSON.stringify(observation.stockCodes), JSON.stringify(observation.sectors), JSON.stringify(observation.topics),
     observation.mediaType, observation.archiveStatus, observation.rightsBasis, observation.localAssetPath,
     JSON.stringify(observation.curveData), observation.analysisNotes,
     observation.stance, observation.horizon, observation.confidence, knowledgeSourceId
   );
-  return rowToObservation(observationRow(channel.id, externalKey));
+  const savedRow = observationRow(channel.id, externalKey);
+  recordEngagementSnapshot(savedRow.id, observation.engagement);
+  return rowToObservation(savedRow);
 }
 
 function listObservations(channelId, options = {}) {
@@ -431,6 +479,17 @@ function findObservationByIdentity(channelId, input = {}) {
   const row = db.prepare(`SELECT * FROM expert_observations
     WHERE channel_id = @channelId AND (${clauses.join(' OR ')}) LIMIT 1`).get(params);
   return row ? rowToObservation(row) : null;
+}
+
+function listObservationMetrics(channelId, observationId, options = {}) {
+  getChannel(channelId);
+  const observation = db.prepare('SELECT id FROM expert_observations WHERE id = ? AND channel_id = ?')
+    .get(Number(observationId), Number(channelId));
+  if (!observation) throw new Error('观察记录不存在');
+  const limit = Math.min(Math.max(Number(options.limit) || 200, 1), 2000);
+  return db.prepare(`SELECT observed_at AS observedAt, likes, comments, favorites, shares, plays
+    FROM expert_observation_metrics WHERE observation_id = ?
+    ORDER BY datetime(observed_at) DESC, id DESC LIMIT ?`).all(observation.id, limit);
 }
 
 function deleteObservation(channelId, observationId) {
@@ -591,6 +650,7 @@ module.exports = {
   recordObservation,
   listObservations,
   findObservationByIdentity,
+  listObservationMetrics,
   deleteObservation,
   deleteChannel,
   buildIntentContext,

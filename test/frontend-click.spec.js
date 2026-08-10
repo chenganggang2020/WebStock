@@ -411,7 +411,7 @@ test('research library imports and deduplicates direct Douyin share links', asyn
   await expect(page.locator('#expertTrackerStatus')).toContainText('新增 1 条，重复 1 条，忽略 1 条');
   await expect(page.locator('#expertChannelSelect')).toContainText('抖音直链 1');
   await expect(page.locator('#expertTimeline')).toContainText('[待核验抖音账号]');
-  await expect(page.locator('#expertTimeline a[href*="open.douyin.com/player/video"]')).toHaveCount(1);
+  await expect(page.locator('#expertTimeline a[href="https://www.douyin.com/video/7641362696420887025"]')).toHaveText('来源证据');
 
   await page.click('#deleteExpertChannelBtn');
   await expect(page.locator('#expertChannelSelect')).not.toContainText('Playwright 抖音公开作者');

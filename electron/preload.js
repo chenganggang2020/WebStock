@@ -18,5 +18,8 @@ contextBridge.exposeInMainWorld('webstockDesktop', Object.freeze({
   },
   collectDouyinPage() {
     return ipcRenderer.invoke('webstock:collect-douyin-page');
+  },
+  syncDouyinChannel(channelId) {
+    return ipcRenderer.invoke('webstock:sync-douyin-channel', Number(channelId));
   }
 }));

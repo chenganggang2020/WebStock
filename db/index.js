@@ -28,6 +28,11 @@ try {
   ensureColumn('expert_observations', 'local_asset_path', "TEXT DEFAULT ''");
   ensureColumn('expert_observations', 'curve_data_json', "TEXT DEFAULT '[]'");
   ensureColumn('expert_observations', 'analysis_notes', "TEXT DEFAULT ''");
+  ensureColumn('expert_observations', 'description_text', "TEXT DEFAULT ''");
+  ensureColumn('expert_observations', 'transcript_text', "TEXT DEFAULT ''");
+  ensureColumn('expert_observations', 'engagement_json', "TEXT DEFAULT '{}'");
+  ensureColumn('expert_observations', 'media_metadata_json', "TEXT DEFAULT '{}'");
+  ensureColumn('expert_observations', 'signal_json', "TEXT DEFAULT '{}'");
   ensureColumn('expert_backtests', 'run_id', "TEXT DEFAULT ''");
   ensureColumn('expert_backtests', 'dataset_id', "TEXT DEFAULT ''");
   ensureColumn('expert_backtests', 'result_path', "TEXT DEFAULT ''");

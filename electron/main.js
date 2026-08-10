@@ -6,11 +6,13 @@ const { migrateLegacyDatabase } = require('./dataMigration');
 const { resolveRuntimeConfig } = require('./runtimeConfig');
 const { createLanServerController } = require('./lanServerController');
 const { createDouyinSessionManager } = require('./douyinSessionManager');
+const { createDouyinAutoSync } = require('./douyinAutoSync');
 const { readLanEnabled } = require('../services/lanHostService');
 
 let mainWindow = null;
 let serverController = null;
 let douyinSessionManager = null;
+let douyinAutoSync = null;
 
 app.setName('WebStock');
 
@@ -171,6 +173,24 @@ async function startServer() {
   return 'http://127.0.0.1:' + port + '/';
 }
 
+function startDouyinAutoSync() {
+  const expertChannels = require('../services/expertChannelService');
+  const douyinSources = require('../services/douyinSourceService');
+  const syncState = require('../services/douyinSyncStateService');
+  const modelMr = expertChannels.listChannels({ limit: 500 }).find(function(channel) {
+    return channel.channelKey === 'douyin-model-mr';
+  });
+  if (modelMr) syncState.ensureJob(modelMr.id, { enabled: true, intervalMinutes: 10 });
+  douyinAutoSync = createDouyinAutoSync({
+    sessionManager: getDouyinSessionManager(),
+    channels: expertChannels,
+    sources: douyinSources,
+    syncState,
+    log
+  });
+  douyinAutoSync.start();
+}
+
 ipcMain.handle('webstock:lan-access-status', function() {
   return serverController
     ? serverController.status()
@@ -206,6 +226,12 @@ ipcMain.handle('webstock:collect-douyin-page', async function(event) {
   return getDouyinSessionManager().collect();
 });
 
+ipcMain.handle('webstock:sync-douyin-channel', async function(event, channelId) {
+  assertMainWindowSender(event);
+  if (!douyinAutoSync) throw new Error('抖音自动同步服务尚未启动');
+  return douyinAutoSync.syncChannel(Number(channelId));
+});
+
 const gotLock = app.requestSingleInstanceLock();
 if (!gotLock) {
   app.quit();
@@ -221,6 +247,7 @@ if (!gotLock) {
     log('Electron app ready');
     const url = await startServer();
     createWindow(url);
+    startDouyinAutoSync();
   }).catch(function(error) {
     log('WebStock startup failed', error);
     dialog.showErrorBox('WebStock startup failed', error.stack || error.message || String(error));
@@ -229,6 +256,7 @@ if (!gotLock) {
 
   app.on('window-all-closed', function() {
     if (douyinSessionManager) douyinSessionManager.dispose();
+    if (douyinAutoSync) douyinAutoSync.stop();
     if (serverController) serverController.stop().catch(function(error) {
       log('Failed to stop local WebStock server cleanly', error);
     });

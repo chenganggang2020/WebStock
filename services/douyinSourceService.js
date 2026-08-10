@@ -1,8 +1,10 @@
 const expertChannels = require('./expertChannelService');
 const { normalizeDouyinPageSnapshot } = require('../electron/douyinPageCapture');
+const { analyzeInvestmentText } = require('./investmentSignalService');
 
 const URL_PATTERN = /https?:\/\/[^\s<>"']+/gi;
 const TRAILING_PUNCTUATION = /[)\]}>，。；;！？!?、]+$/u;
+const CURRENT_SIGNAL_RULE = 'rule-v2';
 
 function cleanUrlToken(value) {
   return String(value || '').trim().replace(TRAILING_PUNCTUATION, '');
@@ -160,6 +162,28 @@ function mergeUnique(left, right) {
     .filter(Boolean).filter((value, index, values) => values.indexOf(value) === index);
 }
 
+function isAutomaticSignal(signal) {
+  return /^rule-v\d+$/.test(String(signal && signal.analysisMethod || ''));
+}
+
+function generatedAnalysisNotes(signal) {
+  const hasExtractedSignal = signal.keyPoints.length || signal.riskFlags.length ||
+    signal.stockCodes.length || signal.sectors.length;
+  return [
+    signal.keyPoints.length ? '自动提取要点：' + signal.keyPoints.join('；') : '',
+    signal.riskFlags.length ? '风险条件：' + signal.riskFlags.join('；') : '',
+    hasExtractedSignal ? '分析方法：本地规则提取 ' + CURRENT_SIGNAL_RULE + '，原文不足时不推断股票代码。' : ''
+  ].filter(Boolean).join('\n');
+}
+
+function topicsWithoutPreviousSignal(existing) {
+  const previousSignal = existing && existing.signal && typeof existing.signal === 'object'
+    ? existing.signal : {};
+  const stale = new Set([].concat(previousSignal.topics || [], previousSignal.sectors || []));
+  const topics = existing && Array.isArray(existing.topics) ? existing.topics : [];
+  return isAutomaticSignal(previousSignal) ? topics.filter(topic => !stale.has(topic)) : topics;
+}
+
 function normalizedPublishedAt(value, fallback) {
   const raw = String(value || fallback || '').trim();
   if (!raw) return '';
@@ -176,8 +200,18 @@ function comparableObservation(item) {
     evidenceLevel: item.evidenceLevel || '',
     availabilityStatus: item.availabilityStatus || '',
     contentRole: item.contentRole || '',
+    content: item.content || '',
+    description: item.description || '',
+    transcript: item.transcript || '',
     summary: item.summary || '',
+    engagement: item.engagement || {},
+    mediaMetadata: item.mediaMetadata || {},
+    signal: item.signal || {},
+    stockCodes: item.stockCodes || [],
+    sectors: item.sectors || [],
     topics: item.topics || [],
+    stance: item.stance || 'unknown',
+    horizon: item.horizon || 'unspecified',
     mediaType: item.mediaType || '',
     archiveStatus: item.archiveStatus || '',
     rightsBasis: item.rightsBasis || '',
@@ -198,12 +232,52 @@ function capturedObservationInput(channel, capture, identity, item, existing) {
   const placeholderSummary = /当前仅确认链接属于抖音|身份.*尚待.*核验/.test(existingSummary);
   const summary = String(item.summary || '').trim() ||
     (matched && (!existingSummary || placeholderSummary)
-      ? '已在登录后的抖音公开页面确认该作品属于“' + channel.displayName + '”；当前页面未提供可可靠提取的正文摘要。'
+      ? ''
       : existingSummary || '从当前抖音页面采集到公开作品链接，作者身份尚未与研究对象核验一致。');
-  const topics = mergeUnique(existing && existing.topics, [
+  const previousSignal = existing && existing.signal && typeof existing.signal === 'object'
+    ? existing.signal : {};
+  const replaceAutomaticSignal = isAutomaticSignal(previousSignal);
+  const topics = mergeUnique(topicsWithoutPreviousSignal(existing), [
     '抖音登录会话同步',
     matched ? '身份已匹配' : '身份待核验'
   ]);
+  const description = String(item.description || existing && existing.description || '').trim();
+  const transcript = String(item.transcript || existing && existing.transcript || '').trim();
+  const content = transcript || description || existing && existing.content || '';
+  const visibleEngagement = item.engagement && typeof item.engagement === 'object' ? item.engagement : {};
+  const previousEngagement = existing && existing.engagement || {};
+  const engagementDelta = {};
+  Object.keys(visibleEngagement).forEach(function(key) {
+    const current = Number(visibleEngagement[key]);
+    const previous = Number(previousEngagement[key]);
+    if (Number.isFinite(current) && Number.isFinite(previous) && current !== previous) {
+      engagementDelta[key] = current - previous;
+    }
+  });
+  const engagement = Object.keys(visibleEngagement).length
+    ? Object.assign({}, previousEngagement, visibleEngagement, {
+      observedAt: capture.capturedAt,
+      delta: engagementDelta
+    })
+    : existing && existing.engagement || {};
+  const mediaMetadata = Object.assign({}, existing && existing.mediaMetadata || {});
+  if (item.coverUrl) mediaMetadata.coverUrl = item.coverUrl;
+  if (Number(item.durationSeconds) > 0) mediaMetadata.durationSeconds = Number(item.durationSeconds);
+  if (capture.pageType === 'video' || capture.pageType === 'note') mediaMetadata.detailCapturedAt = capture.capturedAt;
+  if (Object.keys(mediaMetadata).length) mediaMetadata.observedAt = capture.capturedAt;
+  const signal = analyzeInvestmentText({
+    title,
+    description,
+    transcript,
+    summary,
+    hashtags: item.hashtags
+  });
+  const stockCodes = replaceAutomaticSignal ? signal.stockCodes
+    : mergeUnique(existing && existing.stockCodes, signal.stockCodes);
+  const sectors = replaceAutomaticSignal ? signal.sectors
+    : mergeUnique(existing && existing.sectors, signal.sectors);
+  const enrichedTopics = mergeUnique(topics, mergeUnique(item.hashtags, signal.topics));
+  const analysisNotes = generatedAnalysisNotes(signal);
 
   return {
     externalContentId: item.contentId,
@@ -213,19 +287,67 @@ function capturedObservationInput(channel, capture, identity, item, existing) {
     publishedAt: normalizedPublishedAt(item.publishedAt, existing && existing.publishedAt),
     evidenceLevel: matched ? 'primary' : 'commentary',
     availabilityStatus: matched ? 'available' : 'unknown',
-    contentRole: 'fact_summary',
+    contentRole: transcript ? 'transcript' : 'fact_summary',
+    content,
+    description,
+    transcript,
+    engagement,
+    mediaMetadata,
+    signal,
     mediaType: item.mediaType,
     archiveStatus: 'linked',
     rightsBasis: 'quotation_only',
     summary,
-    topics,
-    stance: existing && existing.stance || 'unknown',
-    horizon: existing && existing.horizon || 'unspecified',
-    confidence: matched ? (identity.matchType === 'profile_url' ? 0.85 : 0.7) : 0.2,
-    stockCodes: existing && existing.stockCodes || [],
-    sectors: existing && existing.sectors || [],
+    topics: enrichedTopics,
+    stance: replaceAutomaticSignal ? signal.stance
+      : signal.stance !== 'unknown' ? signal.stance : existing && existing.stance || 'unknown',
+    horizon: replaceAutomaticSignal ? signal.horizon
+      : signal.horizon !== 'unspecified' ? signal.horizon : existing && existing.horizon || 'unspecified',
+    confidence: matched ? (transcript ? 0.92 : identity.matchType === 'profile_url' ? 0.85 : 0.7) : 0.2,
+    stockCodes,
+    sectors,
+    analysisNotes,
     lastSeenAt: capture.capturedAt
   };
+}
+
+function reanalyzeChannelObservations(channelId) {
+  const channel = expertChannels.getChannel(channelId);
+  if (channel.platform !== 'douyin') return { scannedCount: 0, updatedCount: 0 };
+  const observations = expertChannels.listObservations(channel.id, { limit: 1000 });
+  let scannedCount = 0;
+  let updatedCount = 0;
+
+  observations.forEach(function(existing) {
+    const previousSignal = existing.signal && typeof existing.signal === 'object' ? existing.signal : {};
+    if (existing.evidenceLevel !== 'primary' || !isAutomaticSignal(previousSignal) ||
+        previousSignal.analysisMethod === CURRENT_SIGNAL_RULE) return;
+    scannedCount += 1;
+    const preservedTopics = topicsWithoutPreviousSignal(existing);
+    const signal = analyzeInvestmentText({
+      title: existing.title,
+      description: existing.description,
+      transcript: existing.transcript || existing.content,
+      summary: existing.summary,
+      hashtags: preservedTopics
+    });
+    const topics = mergeUnique(preservedTopics, signal.topics);
+    expertChannels.recordObservation(channel.id, {
+      externalKey: existing.externalKey,
+      stockCodes: signal.stockCodes,
+      sectors: signal.sectors,
+      topics,
+      signal,
+      stance: signal.stance,
+      horizon: signal.horizon,
+      analysisNotes: generatedAnalysisNotes(signal),
+      firstSeenAt: existing.firstSeenAt,
+      lastSeenAt: existing.lastSeenAt
+    });
+    updatedCount += 1;
+  });
+
+  return { scannedCount, updatedCount };
 }
 
 function importCapturedPage(channelId, input = {}) {
@@ -269,10 +391,18 @@ function importCapturedPage(channelId, input = {}) {
   };
 }
 
+function verifyCapturedIdentity(channelId, input = {}) {
+  const channel = expertChannels.getChannel(channelId);
+  const capture = normalizeDouyinPageSnapshot(input.capture || input);
+  return captureIdentity(channel, capture);
+}
+
 module.exports = {
   normalizeDouyinLink,
   extractDouyinShareLinks,
   douyinPlayerUrl,
   importDouyinLinks,
-  importCapturedPage
+  importCapturedPage,
+  verifyCapturedIdentity,
+  reanalyzeChannelObservations
 };

@@ -582,12 +582,21 @@
           <button id="discoverExpertUpdatesBtn" class="small-btn">查找新增公开线索</button>
           <button id="openDouyinSearchBtn" class="small-btn" hidden>打开抖音站内搜索</button>
           <span id="douyinDesktopControls" class="douyin-desktop-controls" hidden>
-            <button id="openDouyinSessionBtn" class="small-btn primary">抖音登录 / 主页</button>
-            <button id="syncDouyinSessionBtn" class="small-btn">同步当前抖音页</button>
-            <span id="douyinDesktopSessionStatus" class="muted">登录窗口未打开</span>
+            <button id="openDouyinSessionBtn" class="small-btn">登录 / 检查账号</button>
+            <button id="syncDouyinSessionBtn" class="small-btn">采集当前页（诊断）</button>
           </span>
           <button id="backtestExpertSignalsBtn" class="small-btn">回测已映射语录</button>
           <button id="deleteExpertChannelBtn" class="small-btn danger">删除研究对象</button>
+        </div>
+        <div id="douyinAutoSyncPanel" class="douyin-auto-sync-panel" hidden>
+          <label class="douyin-sync-toggle">
+            <input id="douyinAutoSyncToggle" type="checkbox">
+            <span>自动收集</span>
+          </label>
+          <strong>每 10 分钟检查新视频</strong>
+          <button id="runDouyinSyncNowBtn" class="small-btn primary">立即同步数据</button>
+          <span id="douyinDesktopSessionStatus" class="muted">等待检查登录状态</span>
+          <div id="douyinAutoSyncSummary" class="douyin-auto-sync-summary"></div>
         </div>
         <details id="expertSubjectEditor" class="expert-observation-editor">
           <summary>新增人物、书籍或分析方法</summary>
