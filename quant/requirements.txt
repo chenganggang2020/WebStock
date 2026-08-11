@@ -1,4 +1,5 @@
 baostock==0.8.9
+faster-whisper==1.2.1
 lightgbm==4.7.0
 pandas==2.3.3
 pyarrow==25.0.0

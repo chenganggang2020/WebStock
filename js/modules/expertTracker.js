@@ -153,6 +153,8 @@ function expertRenderDouyinSyncState() {
     result.discoveredCount != null ? '发现 ' + Number(result.discoveredCount) + ' 条' : '',
     result.reanalyzedCount ? '重算历史 ' + Number(result.reanalyzedCount) + ' 条' : '',
     result.detailedCount != null ? '提取详情 ' + Number(result.detailedCount) + ' 条' : '',
+    result.transcribedCount != null ? '语音转写 ' + Number(result.transcribedCount) + ' 条' : '',
+    result.transcriptErrors && result.transcriptErrors.length ? '转写失败 ' + result.transcriptErrors.length + ' 条' : '',
     result.addedCount != null ? '新增 ' + Number(result.addedCount) + ' 条' : ''
   ].filter(Boolean);
   target.innerHTML = '<span class="douyin-sync-state ' + expertEscape(expertDouyinSyncState.status) + '">' +
@@ -206,7 +208,8 @@ async function expertRunDouyinAutoSync() {
     await expertLoadDouyinSyncState();
     expertSetDouyinSessionStatus('同步完成：发现 ' + result.discoveredCount + ' 条，重算历史 ' +
       Number(result.reanalyzedCount || 0) + ' 条，提取详情 ' +
-      result.detailedCount + ' 条，新增 ' + result.addedCount + ' 条，更新 ' + result.updatedCount + ' 条。');
+      result.detailedCount + ' 条，语音转写 ' + Number(result.transcribedCount || 0) +
+      ' 条，新增 ' + result.addedCount + ' 条，更新 ' + result.updatedCount + ' 条。');
   } catch (error) {
     await expertLoadDouyinSyncState().catch(function() {});
     expertSetDouyinSessionStatus(error.message, true);
@@ -245,6 +248,13 @@ function expertFormatMetric(value) {
   return String(Math.round(number));
 }
 
+function expertFormatOffset(value) {
+  const seconds = Math.max(Number(value) || 0, 0);
+  const minutes = Math.floor(seconds / 60);
+  const remainder = Math.floor(seconds % 60);
+  return String(minutes).padStart(2, '0') + ':' + String(remainder).padStart(2, '0');
+}
+
 function expertRenderTimeline() {
   const target = document.getElementById('expertTimeline');
   if (!target) return;
@@ -263,6 +273,13 @@ function expertRenderTimeline() {
       .filter(function(value, index, values) { return value && values.indexOf(value) === index; })
       .slice(0, 12);
     const body = item.transcript || item.description || item.content || item.summary || '仅保留来源痕迹，暂无可核对正文。';
+    const mediaMetadata = item.mediaMetadata || {};
+    const asr = mediaMetadata.asr || {};
+    const hasCompletedAsr = asr.status === 'complete' && Boolean(item.transcript);
+    const asrSegments = hasCompletedAsr && Array.isArray(asr.segments) ? asr.segments : [];
+    const contentLabel = hasCompletedAsr ? 'ASR 原始逐字稿'
+      : item.transcript ? '页面可见字幕 / 正文（可能不完整）'
+        : item.description ? '页面描述' : '资料正文';
     const hasCurve = Array.isArray(item.curveData) && item.curveData.length > 1;
     const engagement = item.engagement || {};
     const signal = item.signal || {};
@@ -296,8 +313,17 @@ function expertRenderTimeline() {
       (metrics.length ? '<div class="expert-engagement-row">' + metrics.map(function(metric) {
         return '<span>' + expertEscape(metric) + '</span>';
       }).join('') + '<span>采集于 ' + expertEscape(expertFormatTime(engagement.observedAt)) + '</span></div>' : '') +
-      '<div class="expert-content-block"><span>' + (item.transcript ? '字幕 / 正文' : item.summary ? '页面摘要' : '页面描述') +
+      '<div class="expert-content-block"><span>' + contentLabel +
         '</span><p>' + expertEscape(body) + '</p></div>' +
+      (item.summary && item.summary !== body ? '<div class="expert-content-block expert-page-summary"><span>抖音页面 AI 摘要</span><p>' +
+        expertEscape(item.summary) + '</p></div>' : '') +
+      (asrSegments.length ? '<details class="expert-asr-segments"><summary>带时间戳逐字稿 · ' + asrSegments.length +
+        ' 段 · ' + expertEscape(asr.model || 'small') + ' / ' + expertEscape(asr.computeType || 'int8') + '</summary><ol>' +
+        asrSegments.map(function(segment) {
+          return '<li><time>' + expertEscape(expertFormatOffset(segment.start)) + '–' +
+            expertEscape(expertFormatOffset(segment.end)) + '</time><span>' + expertEscape(segment.text) + '</span></li>';
+        }).join('') + '</ol></details>' : '') +
+      (asr.status === 'error' ? '<div class="expert-asr-error">本地语音识别失败：' + expertEscape(asr.message || '未知错误') + '</div>' : '') +
       (keyPoints.length ? '<div class="expert-signal-block"><strong>自动提取的投资信息</strong><ul>' + keyPoints.map(function(point) {
         return '<li>' + expertEscape(point) + '</li>';
       }).join('') + '</ul>' + (risks.length ? '<div class="expert-risk-line">风险条件：' + expertEscape(risks.join('；')) + '</div>' : '') + '</div>' : '') +

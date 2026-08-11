@@ -145,7 +145,7 @@ function createDouyinSessionManager(options = {}) {
         if (capture.loadError) break;
         if (expectedItem) {
           const detail = capture.items.find(function(item) { return item.contentId === expectedItem.contentId; });
-          const hasUsefulDetail = detail && (detail.description || detail.transcript || detail.summary || detail.publishedAt ||
+          const hasUsefulDetail = detail && (detail.description || detail.transcript || detail.summary || detail.mediaUrl || detail.publishedAt ||
             Object.keys(detail.engagement || {}).length);
           if (capture.profile.profileUrl && hasUsefulDetail) return capture;
         } else if (capture.pageType === 'profile' && capture.profile.profileUrl && capture.profile.displayName && capture.items.length) {

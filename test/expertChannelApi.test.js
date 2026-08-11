@@ -280,6 +280,12 @@ test('Douyin signal rule upgrades replace stale automatic stock matches without 
       sectors: ['\u6df1\u4e3b\u677f', '\u6709\u8272\u91d1\u5c5e'],
       topics: ['\u6df1\u4e3b\u677f', '\u6709\u8272\u91d1\u5c5e']
     },
+    engagement: {
+      likes: 19000,
+      plays: 19000,
+      observedAt: '2026-08-10T19:01:54.364Z'
+    },
+    mediaMetadata: { detailCapturedAt: '2026-08-10T19:01:54.364Z' },
     stockCodes: ['000838'],
     sectors: ['\u6df1\u4e3b\u677f', '\u6709\u8272\u91d1\u5c5e'],
     topics: ['\u6296\u97f3\u767b\u5f55\u4f1a\u8bdd\u540c\u6b65', '\u8eab\u4efd\u5df2\u5339\u914d', '\u6df1\u4e3b\u677f', '\u6709\u8272\u91d1\u5c5e']
@@ -292,8 +298,61 @@ test('Douyin signal rule upgrades replace stale automatic stock matches without 
   assert.equal(observation.signal.analysisMethod, 'rule-v2');
   assert.deepEqual(observation.stockCodes, []);
   assert.deepEqual(observation.sectors, ['\u6709\u8272\u91d1\u5c5e']);
+  assert.equal(observation.engagement.plays, undefined);
+  assert.equal(observation.mediaMetadata.captureSchemaVersion, 'douyin-visible-v2');
   assert.ok(observation.topics.includes('\u6296\u97f3\u767b\u5f55\u4f1a\u8bdd\u540c\u6b65'));
   assert.ok(!observation.topics.includes('\u6df1\u4e3b\u677f'));
+  const metrics = await requestJson(server,
+    '/api/expert/channels/' + channelId + '/observations/' + observation.id + '/metrics');
+  assert.equal(metrics.json.data[0].plays, null);
+});
+
+test('completed ASR transcript survives later page-caption refreshes and stores no signed URL', async t => {
+  const server = app.listen(0);
+  t.after(() => server.close());
+  const profileUrl = 'https://www.douyin.com/user/asr-priority-test';
+  const created = await requestJson(server, '/api/expert/channels', 'POST', {
+    channelKey: 'douyin-asr-priority-api',
+    displayName: '模型先生',
+    platform: 'douyin',
+    profileUrl
+  });
+  const channelId = created.json.data.id;
+  const capture = {
+    pageType: 'video',
+    pageUrl: 'https://www.douyin.com/video/7671834569137647601',
+    loggedIn: true,
+    capturedAt: '2026-08-11T10:00:00.000Z',
+    profile: { displayName: '模型先生', profileUrl },
+    items: [{
+      sourceUrl: 'https://www.douyin.com/video/7671834569137647601',
+      title: '有色板块分析',
+      transcript: '页面当前显示的一句字幕。',
+      mediaUrl: 'https://v3-dy-o.zjcdn.com/video/sample.mp4?token=must-not-persist'
+    }]
+  };
+  await requestJson(server, '/api/expert/channels/' + channelId + '/douyin-capture', 'POST', capture);
+  const service = require('../services/douyinSourceService');
+  service.applyTranscription(channelId, '7671834569137647601', {
+    transcript: '有色板块现在还处于早期，资源自主可控很重要。',
+    engine: 'faster-whisper', engineVersion: '1.2.1', model: 'small',
+    language: 'zh', languageProbability: 1,
+    mediaSha256: 'b'.repeat(64), mediaBytes: 9648974, mediaContentType: 'video/mp4',
+    transcribedAt: '2026-08-11T10:01:00.000Z',
+    segments: [{ start: 0.5, end: 3.2, text: '有色板块现在还处于早期。' }]
+  });
+
+  capture.capturedAt = '2026-08-11T10:10:00.000Z';
+  capture.items[0].transcript = '页面后来显示的另一句字幕。';
+  await requestJson(server, '/api/expert/channels/' + channelId + '/douyin-capture', 'POST', capture);
+  const timeline = await requestJson(server, '/api/expert/channels/' + channelId + '/observations');
+  const observation = timeline.json.data[0];
+  assert.equal(observation.transcript, '有色板块现在还处于早期，资源自主可控很重要。');
+  assert.equal(observation.contentRole, 'transcript');
+  assert.equal(observation.mediaMetadata.asr.status, 'complete');
+  assert.equal(observation.mediaMetadata.asr.segments[0].start, 0.5);
+  assert.equal(observation.mediaMetadata.asr.mediaSha256, 'b'.repeat(64));
+  assert.doesNotMatch(JSON.stringify(observation), /must-not-persist/);
 });
 
 test('Douyin sync settings persist the ten-minute schedule and latest run status', async t => {

@@ -5,6 +5,7 @@ const { analyzeInvestmentText } = require('./investmentSignalService');
 const URL_PATTERN = /https?:\/\/[^\s<>"']+/gi;
 const TRAILING_PUNCTUATION = /[)\]}>，。；;！？!?、]+$/u;
 const CURRENT_SIGNAL_RULE = 'rule-v2';
+const CURRENT_CAPTURE_SCHEMA = 'douyin-visible-v2';
 
 function cleanUrlToken(value) {
   return String(value || '').trim().replace(TRAILING_PUNCTUATION, '');
@@ -242,10 +243,16 @@ function capturedObservationInput(channel, capture, identity, item, existing) {
     matched ? '身份已匹配' : '身份待核验'
   ]);
   const description = String(item.description || existing && existing.description || '').trim();
-  const transcript = String(item.transcript || existing && existing.transcript || '').trim();
+  const existingAsr = existing && existing.mediaMetadata && existing.mediaMetadata.asr;
+  const transcript = String(existingAsr && existingAsr.status === 'complete'
+    ? existing.transcript || ''
+    : item.transcript || existing && existing.transcript || '').trim();
   const content = transcript || description || existing && existing.content || '';
   const visibleEngagement = item.engagement && typeof item.engagement === 'object' ? item.engagement : {};
   const previousEngagement = existing && existing.engagement || {};
+  const previousMediaMetadata = existing && existing.mediaMetadata || {};
+  const playCountExplicit = (capture.pageType === 'video' || capture.pageType === 'note') &&
+    Object.prototype.hasOwnProperty.call(visibleEngagement, 'plays') || previousMediaMetadata.playCountExplicit === true;
   const engagementDelta = {};
   Object.keys(visibleEngagement).forEach(function(key) {
     const current = Number(visibleEngagement[key]);
@@ -259,12 +266,17 @@ function capturedObservationInput(channel, capture, identity, item, existing) {
       observedAt: capture.capturedAt,
       delta: engagementDelta
     })
-    : existing && existing.engagement || {};
-  const mediaMetadata = Object.assign({}, existing && existing.mediaMetadata || {});
+    : Object.assign({}, previousEngagement);
+  if (!playCountExplicit) delete engagement.plays;
+  const mediaMetadata = Object.assign({}, previousMediaMetadata, {
+    captureSchemaVersion: CURRENT_CAPTURE_SCHEMA,
+    playCountExplicit
+  });
   if (item.coverUrl) mediaMetadata.coverUrl = item.coverUrl;
   if (Number(item.durationSeconds) > 0) mediaMetadata.durationSeconds = Number(item.durationSeconds);
   if (capture.pageType === 'video' || capture.pageType === 'note') mediaMetadata.detailCapturedAt = capture.capturedAt;
-  if (Object.keys(mediaMetadata).length) mediaMetadata.observedAt = capture.capturedAt;
+  if (item.coverUrl || Number(item.durationSeconds) > 0 || Object.keys(visibleEngagement).length ||
+      capture.pageType === 'video' || capture.pageType === 'note') mediaMetadata.observedAt = capture.capturedAt;
   const signal = analyzeInvestmentText({
     title,
     description,
@@ -320,27 +332,39 @@ function reanalyzeChannelObservations(channelId) {
 
   observations.forEach(function(existing) {
     const previousSignal = existing.signal && typeof existing.signal === 'object' ? existing.signal : {};
-    if (existing.evidenceLevel !== 'primary' || !isAutomaticSignal(previousSignal) ||
-        previousSignal.analysisMethod === CURRENT_SIGNAL_RULE) return;
+    const previousMediaMetadata = existing.mediaMetadata && typeof existing.mediaMetadata === 'object'
+      ? existing.mediaMetadata : {};
+    const needsSignalUpgrade = isAutomaticSignal(previousSignal) &&
+      previousSignal.analysisMethod !== CURRENT_SIGNAL_RULE;
+    const needsCaptureUpgrade = previousMediaMetadata.captureSchemaVersion !== CURRENT_CAPTURE_SCHEMA;
+    if (existing.evidenceLevel !== 'primary' || (!needsSignalUpgrade && !needsCaptureUpgrade)) return;
     scannedCount += 1;
     const preservedTopics = topicsWithoutPreviousSignal(existing);
-    const signal = analyzeInvestmentText({
-      title: existing.title,
-      description: existing.description,
-      transcript: existing.transcript || existing.content,
-      summary: existing.summary,
-      hashtags: preservedTopics
+    const signal = needsSignalUpgrade ? analyzeInvestmentText({
+        title: existing.title,
+        description: existing.description,
+        transcript: existing.transcript || existing.content,
+        summary: existing.summary,
+        hashtags: preservedTopics
+      }) : previousSignal;
+    const topics = needsSignalUpgrade ? mergeUnique(preservedTopics, signal.topics) : existing.topics;
+    const engagement = Object.assign({}, existing.engagement || {});
+    const mediaMetadata = Object.assign({}, previousMediaMetadata, {
+      captureSchemaVersion: CURRENT_CAPTURE_SCHEMA,
+      playCountExplicit: previousMediaMetadata.playCountExplicit === true
     });
-    const topics = mergeUnique(preservedTopics, signal.topics);
+    if (!mediaMetadata.playCountExplicit) delete engagement.plays;
     expertChannels.recordObservation(channel.id, {
       externalKey: existing.externalKey,
-      stockCodes: signal.stockCodes,
-      sectors: signal.sectors,
+      stockCodes: needsSignalUpgrade ? signal.stockCodes : existing.stockCodes,
+      sectors: needsSignalUpgrade ? signal.sectors : existing.sectors,
       topics,
       signal,
-      stance: signal.stance,
-      horizon: signal.horizon,
-      analysisNotes: generatedAnalysisNotes(signal),
+      engagement,
+      mediaMetadata,
+      stance: needsSignalUpgrade ? signal.stance : existing.stance,
+      horizon: needsSignalUpgrade ? signal.horizon : existing.horizon,
+      analysisNotes: needsSignalUpgrade ? generatedAnalysisNotes(signal) : existing.analysisNotes,
       firstSeenAt: existing.firstSeenAt,
       lastSeenAt: existing.lastSeenAt
     });
@@ -397,6 +421,80 @@ function verifyCapturedIdentity(channelId, input = {}) {
   return captureIdentity(channel, capture);
 }
 
+function sanitizedAsrMetadata(result = {}) {
+  return {
+    status: 'complete',
+    engine: String(result.engine || 'faster-whisper').slice(0, 80),
+    engineVersion: String(result.engineVersion || '').slice(0, 80),
+    model: String(result.model || 'small').slice(0, 80),
+    device: String(result.device || 'cpu').slice(0, 40),
+    computeType: String(result.computeType || 'int8').slice(0, 40),
+    language: String(result.language || '').slice(0, 20),
+    languageProbability: Math.min(Math.max(Number(result.languageProbability) || 0, 0), 1),
+    durationSeconds: Math.max(Number(result.durationSeconds) || 0, 0),
+    elapsedSeconds: Math.max(Number(result.elapsedSeconds) || 0, 0),
+    mediaSha256: String(result.mediaSha256 || '').toLowerCase().slice(0, 64),
+    mediaBytes: Math.max(Number(result.mediaBytes) || 0, 0),
+    mediaContentType: String(result.mediaContentType || '').slice(0, 120),
+    transcribedAt: String(result.transcribedAt || new Date().toISOString()),
+    segments: (Array.isArray(result.segments) ? result.segments : []).map(function(segment) {
+      return {
+        start: Math.max(Number(segment.start) || 0, 0),
+        end: Math.max(Number(segment.end) || 0, 0),
+        text: String(segment.text || '').trim().slice(0, 4000)
+      };
+    }).filter(function(segment) { return segment.text && segment.end >= segment.start; }).slice(0, 10000)
+  };
+}
+
+function applyTranscription(channelId, contentId, result = {}) {
+  const channel = expertChannels.getChannel(channelId);
+  const existing = expertChannels.findObservationByIdentity(channel.id, { externalContentId: contentId });
+  if (!existing || existing.evidenceLevel !== 'primary') throw new Error('找不到身份已核验的抖音视频记录。');
+  const transcript = String(result.transcript || '').trim();
+  if (!transcript) throw new Error('语音识别结果为空。');
+  const asr = sanitizedAsrMetadata(result);
+  const signal = analyzeInvestmentText({
+    title: existing.title,
+    description: existing.description,
+    transcript,
+    summary: existing.summary,
+    hashtags: topicsWithoutPreviousSignal(existing)
+  });
+  const topics = mergeUnique(topicsWithoutPreviousSignal(existing), signal.topics);
+  return expertChannels.recordObservation(channel.id, {
+    externalKey: existing.externalKey,
+    contentRole: 'transcript',
+    content: transcript,
+    transcript,
+    mediaMetadata: Object.assign({}, existing.mediaMetadata || {}, { asr }),
+    signal,
+    stockCodes: signal.stockCodes,
+    sectors: signal.sectors,
+    topics,
+    stance: signal.stance,
+    horizon: signal.horizon,
+    confidence: Math.max(Number(existing.confidence) || 0, 0.92),
+    analysisNotes: generatedAnalysisNotes(signal),
+    lastSeenAt: asr.transcribedAt
+  });
+}
+
+function recordTranscriptionError(channelId, contentId, error) {
+  const existing = expertChannels.findObservationByIdentity(channelId, { externalContentId: contentId });
+  if (!existing || existing.evidenceLevel !== 'primary') return null;
+  return expertChannels.recordObservation(channelId, {
+    externalKey: existing.externalKey,
+    mediaMetadata: Object.assign({}, existing.mediaMetadata || {}, {
+      asr: {
+        status: 'error',
+        message: String(error && error.message || error || '本地语音识别失败').slice(0, 500),
+        attemptedAt: new Date().toISOString()
+      }
+    })
+  });
+}
+
 module.exports = {
   normalizeDouyinLink,
   extractDouyinShareLinks,
@@ -404,5 +502,7 @@ module.exports = {
   importDouyinLinks,
   importCapturedPage,
   verifyCapturedIdentity,
-  reanalyzeChannelObservations
+  reanalyzeChannelObservations,
+  applyTranscription,
+  recordTranscriptionError
 };

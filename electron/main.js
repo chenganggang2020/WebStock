@@ -7,6 +7,7 @@ const { resolveRuntimeConfig } = require('./runtimeConfig');
 const { createLanServerController } = require('./lanServerController');
 const { createDouyinSessionManager } = require('./douyinSessionManager');
 const { createDouyinAutoSync } = require('./douyinAutoSync');
+const { createDouyinTranscriptService } = require('../services/douyinTranscriptService');
 const { readLanEnabled } = require('../services/lanHostService');
 
 let mainWindow = null;
@@ -185,6 +186,7 @@ function startDouyinAutoSync() {
     sessionManager: getDouyinSessionManager(),
     channels: expertChannels,
     sources: douyinSources,
+    transcriber: createDouyinTranscriptService(),
     syncState,
     log
   });

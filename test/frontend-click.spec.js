@@ -475,6 +475,29 @@ test('desktop research library opens a persistent Douyin session and syncs the v
   await expect(page.locator('#expertTimeline')).toContainText('桌面会话同步测试视频');
   await expect(page.locator('#expertTimeline')).toContainText('原始来源 / 本人公开');
 
+  const channelId = await page.locator('#expertChannelSelect').inputValue();
+  await page.request.post(baseURL + '/api/expert/channels/' + channelId + '/observations', {
+    data: {
+      externalContentId: '7512345678901234567',
+      sourceUrl: 'https://www.douyin.com/video/7512345678901234567',
+      title: '桌面会话同步测试视频',
+      contentRole: 'transcript',
+      content: '这是本地语音识别得到的完整内容。',
+      transcript: '这是本地语音识别得到的完整内容。',
+      mediaMetadata: {
+        asr: {
+          status: 'complete', model: 'small', computeType: 'int8',
+          segments: [{ start: 0.5, end: 3.2, text: '这是本地语音识别得到的完整内容。' }]
+        }
+      }
+    }
+  });
+  await page.click('#refreshExpertTimelineBtn');
+  await expect(page.locator('#expertTimeline')).toContainText('ASR 原始逐字稿');
+  await expect(page.locator('.expert-asr-segments summary')).toContainText('带时间戳逐字稿');
+  await page.locator('.expert-asr-segments summary').click();
+  await expect(page.locator('.expert-asr-segments')).toContainText('00:00–00:03');
+
   await page.click('#deleteExpertChannelBtn');
   await expect(page.locator('#expertChannelSelect')).not.toContainText('桌面抖音作者');
 });

@@ -49,11 +49,13 @@ def _versions(verify=False):
         "pandas": "pandas",
         "pyarrow": "pyarrow",
         "baostock": "baostock",
+        "faster_whisper": "faster-whisper",
         "torch": "torch",
     }
     versions = {name: importlib.metadata.version(package) for name, package in packages.items()}
     if verify:
         import lightgbm  # noqa: F401
+        import faster_whisper  # noqa: F401
         import pandas  # noqa: F401
         import pyarrow  # noqa: F401
         import qlib  # noqa: F401

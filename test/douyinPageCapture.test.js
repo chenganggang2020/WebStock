@@ -127,13 +127,48 @@ test('Douyin page snapshots are sanitized, deduplicated and bounded before leavi
   assert.equal(Object.prototype.hasOwnProperty.call(normalized.profile, 'ignoredSecret'), false);
 });
 
+test('detail snapshots expose only an ephemeral HTTPS media URL for local transcription', () => {
+  const detail = normalizeDouyinPageSnapshot({
+    pageType: 'video',
+    pageUrl: 'https://www.douyin.com/video/7533142185677114684',
+    profile: { profileUrl: 'https://www.douyin.com/user/model-mr' },
+    items: [{
+      sourceUrl: 'https://www.douyin.com/video/7533142185677114684',
+      mediaUrl: 'https://v3-dy-o.zjcdn.com/video/sample.mp4?token=signed'
+    }]
+  });
+  assert.equal(detail.items[0].mediaUrl, 'https://v3-dy-o.zjcdn.com/video/sample.mp4?token=signed');
+
+  const insecure = normalizeDouyinPageSnapshot({
+    pageType: 'video',
+    pageUrl: 'https://www.douyin.com/video/7533142185677114684',
+    items: [{
+      sourceUrl: 'https://www.douyin.com/video/7533142185677114684',
+      mediaUrl: 'http://v3-dy-o.zjcdn.com/video/sample.mp4'
+    }]
+  });
+  assert.equal(insecure.items[0].mediaUrl, '');
+
+  const profile = normalizeDouyinPageSnapshot({
+    pageType: 'profile',
+    pageUrl: 'https://www.douyin.com/user/model-mr',
+    items: [{
+      sourceUrl: 'https://www.douyin.com/video/7533142185677114684',
+      mediaUrl: 'https://v3-dy-o.zjcdn.com/video/sample.mp4?token=signed'
+    }]
+  });
+  assert.equal(Object.prototype.hasOwnProperty.call(profile.items[0], 'mediaUrl'), false);
+});
+
 test('page snapshot script only reads visible DOM data, not browser credentials or storage', () => {
   const script = buildDouyinPageSnapshotScript();
   assert.match(script, /querySelector/);
   assert.match(script, /user-post-list/);
   assert.match(script, /video-player-digg/);
   assert.match(script, /feed-comment-icon/);
+  assert.match(script, /currentSrc/);
   assert.doesNotMatch(script, /cookie/i);
   assert.doesNotMatch(script, /localStorage/i);
   assert.doesNotMatch(script, /sessionStorage/i);
+  assert.doesNotMatch(script, /engagement:\s*plays/);
 });

@@ -172,3 +172,102 @@ test('automatic sync never imports a recommendation whose detail author does not
   await assert.rejects(() => sync.syncChannel(11), /未能提取任何身份匹配/);
   assert.equal(imports, 0);
 });
+
+test('automatic sync transcribes one identity-matched video and persists the result', async () => {
+  const profileUrl = 'https://www.douyin.com/user/model-mr';
+  const itemUrl = 'https://www.douyin.com/video/7671834569137647601';
+  const applied = [];
+  const sync = createDouyinAutoSync({
+    sessionManager: {
+      async captureUrl(url) {
+        if (url === profileUrl) return {
+          pageType: 'profile', pageUrl: profileUrl, loggedIn: true,
+          profile: { displayName: '模型先生', profileUrl, workCount: 1 },
+          items: [{ sourceUrl: itemUrl, contentId: '7671834569137647601', title: '有色板块' }]
+        };
+        return {
+          pageType: 'video', pageUrl: itemUrl, loggedIn: true,
+          profile: { displayName: '模型先生', profileUrl },
+          items: [{
+            sourceUrl: itemUrl, contentId: '7671834569137647601', title: '有色板块',
+            mediaUrl: 'https://v3-dy-o.zjcdn.com/video/sample.mp4?token=signed'
+          }]
+        };
+      }
+    },
+    channels: {
+      getChannel() { return { id: 12, displayName: '模型先生', platform: 'douyin', profileUrl }; },
+      listObservations() { return []; }
+    },
+    sources: {
+      verifyCapturedIdentity() { return { matched: true }; },
+      importCapturedPage() {
+        return { addedCount: 1, items: [{ id: 60, externalContentId: '7671834569137647601', mediaMetadata: {} }] };
+      },
+      applyTranscription(channelId, contentId, result) { applied.push({ channelId, contentId, result }); }
+    },
+    transcriber: {
+      async transcribe(input) {
+        assert.match(input.mediaUrl, /token=signed/);
+        return {
+          transcript: '有色板块现在还处于早期。',
+          segments: [{ start: 0.5, end: 3.2, text: '有色板块现在还处于早期。' }]
+        };
+      }
+    },
+    syncState: { markRunning() {}, markCompleted() {}, markFailed() {} },
+    maxDetailsPerRun: 1,
+    maxTranscriptionsPerRun: 1
+  });
+
+  const result = await sync.syncChannel(12);
+  assert.equal(result.transcribedCount, 1);
+  assert.deepEqual(result.transcriptErrors, []);
+  assert.equal(applied.length, 1);
+  assert.equal(applied[0].contentId, '7671834569137647601');
+  assert.doesNotMatch(JSON.stringify(applied), /token=signed/);
+});
+
+test('automatic sync caps failed transcription attempts per run', async () => {
+  const profileUrl = 'https://www.douyin.com/user/model-mr';
+  const items = ['7671834569137647601', '7671834569137647602'].map(function(contentId) {
+    return { sourceUrl: 'https://www.douyin.com/video/' + contentId, contentId, title: contentId };
+  });
+  let attempts = 0;
+  const sync = createDouyinAutoSync({
+    sessionManager: {
+      async captureUrl(url) {
+        if (url === profileUrl) return {
+          pageType: 'profile', pageUrl: profileUrl, loggedIn: true,
+          profile: { displayName: '模型先生', profileUrl }, items
+        };
+        const item = items.find(candidate => candidate.sourceUrl === url);
+        return {
+          pageType: 'video', pageUrl: url, loggedIn: true,
+          profile: { displayName: '模型先生', profileUrl },
+          items: [Object.assign({}, item, { mediaUrl: 'https://v3-dy-o.zjcdn.com/video/sample.mp4' })]
+        };
+      }
+    },
+    channels: {
+      getChannel() { return { id: 13, displayName: '模型先生', platform: 'douyin', profileUrl }; },
+      listObservations() { return []; }
+    },
+    sources: {
+      verifyCapturedIdentity() { return { matched: true }; },
+      importCapturedPage(_id, capture) {
+        return { addedCount: 1, items: [{ externalContentId: capture.items[0].contentId, mediaMetadata: {} }] };
+      },
+      applyTranscription() {}, recordTranscriptionError() {}
+    },
+    transcriber: { async transcribe() { attempts += 1; throw new Error('planned ASR failure'); } },
+    syncState: { markRunning() {}, markCompleted() {}, markFailed() {} },
+    maxDetailsPerRun: 2,
+    maxTranscriptionsPerRun: 1
+  });
+
+  const result = await sync.syncChannel(13);
+  assert.equal(attempts, 1);
+  assert.equal(result.transcriptionAttemptedCount, 1);
+  assert.equal(result.transcriptErrors.length, 1);
+});

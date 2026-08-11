@@ -202,6 +202,27 @@ test('background detail collection does not accept a generic title as extracted 
   assert.equal(capture.items[0].summary, '页面已经渲染出的章节摘要。');
 });
 
+test('background detail collection accepts a loaded media stream for transcription', async () => {
+  const BrowserWindow = createFakeBrowserWindow();
+  const manager = createDouyinSessionManager({
+    BrowserWindow,
+    getParentWindow: () => null,
+    pageSettleMs: 0,
+    capturePollMs: 1,
+    captureReadyTimeoutMs: 50
+  });
+  const url = 'https://www.douyin.com/video/7671834569137647601';
+  const pending = manager.captureUrl(url);
+  BrowserWindow.instances[0].webContents.scriptResults = [{
+    pageType: 'video', pageUrl: url, loggedIn: true,
+    profile: { displayName: '模型先生', profileUrl: 'https://www.douyin.com/user/model-mr' },
+    items: [{ sourceUrl: url, mediaUrl: 'https://v3-dy-o.zjcdn.com/video/sample.mp4?token=signed' }]
+  }];
+
+  const capture = await pending;
+  assert.match(capture.items[0].mediaUrl, /token=signed/);
+});
+
 test('background collection reloads a recoverable Douyin service error', async () => {
   const BrowserWindow = createFakeBrowserWindow();
   const manager = createDouyinSessionManager({

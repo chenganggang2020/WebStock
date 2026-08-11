@@ -25,7 +25,7 @@ function normalizePythonPath(value) {
 function normalizeVersions(value) {
   const source = value && typeof value === 'object' ? value : {};
   const versions = {};
-  ['python', 'qlib', 'lightgbm', 'pandas', 'pyarrow', 'baostock', 'torch'].forEach(name => {
+  ['python', 'qlib', 'lightgbm', 'pandas', 'pyarrow', 'baostock', 'faster_whisper', 'torch'].forEach(name => {
     const version = String(source[name] || '').trim().slice(0, 80);
     if (version) versions[name] = version;
   });

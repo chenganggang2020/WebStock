@@ -2896,6 +2896,52 @@ body.dark .md-body blockquote { background: rgba(99,102,241,0.12); }
   margin-bottom: 0;
 }
 
+.expert-page-summary {
+  border-left-color: #2563eb;
+}
+
+.expert-asr-segments {
+  margin-top: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  background: var(--card-bg);
+}
+
+.expert-asr-segments summary {
+  cursor: pointer;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.expert-asr-segments ol {
+  max-height: 320px;
+  margin: 8px 0 0;
+  padding: 0;
+  overflow: auto;
+  list-style: none;
+}
+
+.expert-asr-segments li {
+  display: grid;
+  grid-template-columns: 88px minmax(0, 1fr);
+  gap: 8px;
+  padding: 5px 0;
+  border-top: 1px solid var(--border);
+  line-height: 1.5;
+}
+
+.expert-asr-segments time {
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.expert-asr-error {
+  margin-top: 8px;
+  color: #b45309;
+  font-size: 12px;
+}
+
 .expert-signal-block {
   margin-top: 8px;
   padding: 8px 10px;

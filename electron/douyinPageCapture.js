@@ -153,7 +153,7 @@ function normalizeDouyinPageSnapshot(raw = {}) {
     const parsed = parseDouyinItemUrl(source.sourceUrl);
     if (!parsed || seen.has(parsed.contentId)) continue;
     seen.add(parsed.contentId);
-    items.push({
+    const normalizedItem = {
       sourceUrl: parsed.sourceUrl,
       contentId: parsed.contentId,
       mediaType: parsed.mediaType,
@@ -167,7 +167,11 @@ function normalizeDouyinPageSnapshot(raw = {}) {
       engagement: normalizeEngagement(source.engagement),
       coverUrl: normalizeHttpsUrl(source.coverUrl),
       durationSeconds: Math.min(Math.max(Number(source.durationSeconds) || 0, 0), 86400)
-    });
+    };
+    if ((raw.pageType === 'video' || raw.pageType === 'note') && source.contentId !== '') {
+      normalizedItem.mediaUrl = normalizeHttpsUrl(source.mediaUrl);
+    }
+    items.push(normalizedItem);
     if (items.length >= MAX_ITEMS) break;
   }
 
@@ -289,15 +293,14 @@ function douyinVisiblePageSnapshot(parseWorkCount, parseMetricCount, inferLogged
         (image && image.getAttribute('alt')) || anchor.textContent || (container && container.textContent),
         300
       );
-      const plays = parseMetricCount(anchor.textContent);
       itemsById.set(identity.contentId, Object.assign(identity, {
-        title,
-        engagement: plays == null ? {} : { plays }
+        title
       }));
     });
   }
 
   if (currentItem) {
+    const video = document.querySelector('video');
     const metaTitle = document.querySelector('meta[property="og:title"]');
     const title = firstText([
       '[data-e2e="video-desc"]',
@@ -341,7 +344,8 @@ function douyinVisiblePageSnapshot(parseWorkCount, parseMetricCount, inferLogged
       hashtags: hashtagValues,
       engagement,
       coverUrl: firstAttribute(['meta[property="og:image"]'], 'content', 2000),
-      durationSeconds: Number(durationRaw) || 0
+      durationSeconds: Number(durationRaw) || 0,
+      mediaUrl: compact(video && (video.currentSrc || video.src), 4000)
     }));
   }
 

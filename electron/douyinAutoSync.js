@@ -9,13 +9,21 @@ function observationNeedsDetail(observation) {
   return !hasText || !hasPublishedAt || !(mediaMetadata.detailCapturedAt || engagement.observedAt);
 }
 
+function observationNeedsTranscription(observation) {
+  const mediaMetadata = observation && observation.mediaMetadata && typeof observation.mediaMetadata === 'object'
+    ? observation.mediaMetadata : {};
+  return !mediaMetadata.asr || mediaMetadata.asr.status !== 'complete';
+}
+
 function createDouyinAutoSync(options = {}) {
   const sessionManager = options.sessionManager;
   const channels = options.channels;
   const sources = options.sources;
   const syncState = options.syncState;
+  const transcriber = options.transcriber || null;
   const log = typeof options.log === 'function' ? options.log : () => {};
   const maxDetailsPerRun = Math.min(Math.max(Number(options.maxDetailsPerRun) || 8, 1), 30);
+  const maxTranscriptionsPerRun = Math.min(Math.max(Number(options.maxTranscriptionsPerRun) || 1, 1), 5);
   const pollMs = Math.max(Number(options.pollMs) || 60000, 1000);
   const startupDelayMs = Math.max(Number(options.startupDelayMs) || 15000, 0);
   const setIntervalFn = options.setInterval || setInterval;
@@ -49,7 +57,9 @@ function createDouyinAutoSync(options = {}) {
         const profileIdentity = sources.verifyCapturedIdentity(id, profileCapture);
         if (!profileIdentity.matched) throw new Error('抖音主页身份与研究对象不一致，本轮不会入库');
         const pending = profileCapture.items.filter(function(item) {
-          return item && item.contentId && observationNeedsDetail(existingByContentId.get(String(item.contentId)));
+          const observation = existingByContentId.get(String(item && item.contentId));
+          return item && item.contentId && (observationNeedsDetail(observation) ||
+            (transcriber && observationNeedsTranscription(observation)));
         });
         const recent = profileCapture.items.slice(0, 3);
         const candidates = recent.concat(pending).filter(function(item, index, items) {
@@ -59,7 +69,10 @@ function createDouyinAutoSync(options = {}) {
         let updatedCount = 0;
         let unchangedCount = 0;
         let detailedCount = 0;
+        let transcribedCount = 0;
+        let transcriptionAttemptedCount = 0;
         const detailErrors = [];
+        const transcriptErrors = [];
 
         for (const item of candidates) {
           try {
@@ -76,6 +89,28 @@ function createDouyinAutoSync(options = {}) {
             updatedCount += Number(detailResult.updatedCount || 0);
             unchangedCount += Number(detailResult.unchangedCount || 0);
             detailedCount += 1;
+            const saved = (detailResult.items || []).find(function(observation) {
+              return String(observation.externalContentId || '') === String(item.contentId);
+            });
+            if (transcriber && transcriptionAttemptedCount < maxTranscriptionsPerRun && currentItem.mediaUrl &&
+                observationNeedsTranscription(saved)) {
+              transcriptionAttemptedCount += 1;
+              try {
+                const transcription = await transcriber.transcribe({
+                  mediaUrl: currentItem.mediaUrl,
+                  contentId: item.contentId,
+                  prompt: [currentItem.title, currentItem.summary].concat(currentItem.hashtags || []).filter(Boolean).join('；')
+                });
+                sources.applyTranscription(id, item.contentId, transcription);
+                transcribedCount += 1;
+              } catch (error) {
+                transcriptErrors.push({ contentId: item.contentId, message: error.message || String(error) });
+                if (typeof sources.recordTranscriptionError === 'function') {
+                  sources.recordTranscriptionError(id, item.contentId, error);
+                }
+                log('Douyin transcription failed for ' + item.contentId, error);
+              }
+            }
           } catch (error) {
             detailErrors.push({ contentId: item.contentId, message: error.message || String(error) });
             log('Douyin detail capture failed for ' + item.contentId, error);
@@ -96,7 +131,10 @@ function createDouyinAutoSync(options = {}) {
           addedCount,
           updatedCount,
           unchangedCount,
-          detailErrors
+          transcribedCount,
+          transcriptionAttemptedCount,
+          detailErrors,
+          transcriptErrors
         };
         syncState.markCompleted(id, result);
         return result;
@@ -136,4 +174,4 @@ function createDouyinAutoSync(options = {}) {
   return { syncChannel, runDue, start, stop };
 }
 
-module.exports = { createDouyinAutoSync, observationNeedsDetail };
+module.exports = { createDouyinAutoSync, observationNeedsDetail, observationNeedsTranscription };

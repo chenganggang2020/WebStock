@@ -247,7 +247,7 @@ async function linkExistingRuntime(input = {}) {
     throw new Error('已有环境 Python 版本为 ' + result.python + '，程序要求 ' + manifest.python + '。');
   }
   const packages = result.packages || {};
-  const missing = ['qlib', 'lightgbm', 'pandas', 'pyarrow', 'baostock', 'torch'].filter(name => !packages[name]);
+  const missing = ['qlib', 'lightgbm', 'pandas', 'pyarrow', 'baostock', 'faster_whisper', 'torch'].filter(name => !packages[name]);
   if (missing.length) throw new Error('已有环境缺少量化依赖：' + missing.join('、') + '。');
   saveRuntimeLink(workspacePath(), {
     pythonPath: python,
