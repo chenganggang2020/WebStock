@@ -2464,6 +2464,96 @@ body.dark .md-body blockquote { background: rgba(99,102,241,0.12); }
   opacity: 0.6;
 }
 
+.portfolio-account-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--border);
+  background: var(--card-bg);
+}
+
+.portfolio-account-picker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.portfolio-account-picker label {
+  color: #475467;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.portfolio-account-picker select,
+.portfolio-account-picker button {
+  min-height: 34px;
+  padding: 6px 10px;
+  border: 1px solid var(--btn-border);
+  border-radius: 6px;
+  background: var(--btn-bg);
+  color: var(--btn-color);
+}
+
+.portfolio-account-picker select {
+  min-width: 190px;
+}
+
+.portfolio-account-picker button {
+  cursor: pointer;
+}
+
+.portfolio-account-meta {
+  color: #667085;
+  font-size: 12px;
+  text-align: right;
+}
+
+.portfolio-account-compare {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 8px;
+  padding: 10px 20px 0;
+}
+
+.portfolio-account-card {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 4px 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--card-bg);
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.portfolio-account-card.active {
+  border-color: var(--focus);
+  box-shadow: inset 3px 0 0 var(--focus);
+}
+
+.portfolio-account-card strong,
+.portfolio-account-card span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.portfolio-account-card small {
+  color: #667085;
+}
+
+.portfolio-account-card em {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  align-self: center;
+  font-style: normal;
+  font-weight: 700;
+}
+
 .small-btn.danger {
   color: #fff;
   background: #ef4444;
@@ -4326,6 +4416,22 @@ body.dark .model-status.unavailable {
   font-size: 16px;
 }
 
+.portfolio-account-modal .form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 12px;
+}
+
+.portfolio-account-modal .form-grid-wide {
+  grid-column: 1 / -1;
+}
+
+.portfolio-account-modal input,
+.portfolio-account-modal textarea {
+  width: 100%;
+  margin-top: 6px;
+}
+
 .modal select,
 .modal textarea {
   width: 100%;
@@ -4584,6 +4690,33 @@ a.small-btn {
 
   .summary-cards {
     grid-template-columns: repeat(2, minmax(120px, 1fr));
+  }
+
+  .portfolio-account-toolbar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .portfolio-account-meta {
+    text-align: left;
+  }
+
+  .portfolio-account-picker {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .portfolio-account-picker select {
+    flex: 1;
+    min-width: 150px;
+  }
+
+  .portfolio-account-modal .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .portfolio-account-modal .form-grid-wide {
+    grid-column: auto;
   }
 
   .portfolio-charts {

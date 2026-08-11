@@ -6,6 +6,12 @@ const DEFAULT_TRADE_FEE = 5;
 const DEFAULT_TRADE_TAX = 0;
 const TRADE_ENTER_FLOW = ['tradeDateInput', 'tradePriceInput', 'tradeQuantityInput', 'tradeFeeInput'];
 
+function currentPortfolioAccountId() {
+  return window.Portfolio && window.Portfolio.activeAccountId
+    ? window.Portfolio.activeAccountId()
+    : Number(window.State.activePortfolioAccountId) || 1;
+}
+
 function todayStr() {
   if (window.WebStockTime && window.WebStockTime.todayDate) return window.WebStockTime.todayDate();
   const now = new Date();
@@ -64,6 +70,7 @@ function collectFilters() {
   const startDate = document.getElementById('tradeStartDate') ? document.getElementById('tradeStartDate').value : '';
   const endDate = document.getElementById('tradeEndDate') ? document.getElementById('tradeEndDate').value : '';
   const query = new URLSearchParams();
+  query.set('accountId', String(currentPortfolioAccountId()));
   if (code) query.set('code', code);
   if (side) query.set('side', side);
   if (startDate) query.set('startDate', startDate);
@@ -131,7 +138,9 @@ function refreshAfterTradeChange() {
 
 async function loadTrades(filters) {
   const State = window.State;
-  const query = filters ? new URLSearchParams(filters).toString() : collectFilters();
+  const query = filters
+    ? new URLSearchParams(Object.assign({}, filters, { accountId: currentPortfolioAccountId() })).toString()
+    : collectFilters();
   State.trades = await tradesApi('/trades' + (query ? '?' + query : ''));
   renderTrades();
   return State.trades;
@@ -152,7 +161,7 @@ function renderTrades() {
   const empty = document.getElementById('tradesEmpty');
   const summary = document.getElementById('tradesResultSummary');
   if (!tbody) return;
-  const hasFilters = Boolean(collectFilters());
+  const hasFilters = Object.values(currentTradeFilters()).some(Boolean);
   if (summary) {
     summary.textContent = State.trades.length
       ? 'Showing ' + State.trades.length + ' trade' + (State.trades.length === 1 ? '' : 's') + (hasFilters ? ' for current filters.' : '.')
@@ -233,6 +242,7 @@ function closeTradeModal() {
 
 function collectTradeForm() {
   return {
+    accountId: currentPortfolioAccountId(),
     code: document.getElementById('tradeCodeInput').value.trim(),
     name: document.getElementById('tradeNameInput').value.trim(),
     side: document.getElementById('tradeSideInput').value,

@@ -64,6 +64,8 @@ function rowToWatchlist(row) {
 function rowToTrade(row) {
   return {
     id: row.id,
+    accountId: row.account_id,
+    sourceType: row.source_type || 'manual',
     code: row.code,
     name: row.name,
     side: row.side,
@@ -148,8 +150,10 @@ function removeWatchlistByCode(code) {
 }
 
 function buildTradeWhere(filters = {}) {
-  const where = [];
-  const params = {};
+  const accountId = normalizeAccountId(filters.accountId);
+  getAccount(accountId);
+  const where = ['account_id = @accountId'];
+  const params = { accountId };
   if (filters.code) {
     where.push('(code = @code OR name LIKE @nameLike)');
     params.code = String(filters.code);
@@ -183,6 +187,9 @@ function listTradesAscending(filters = {}) {
 }
 
 function normalizeTradeInput(input, existing = {}) {
+  const accountId = normalizeAccountId(input.accountId !== undefined ? input.accountId : existing.accountId);
+  getAccount(accountId);
+  const sourceType = String(input.sourceType !== undefined ? input.sourceType : (existing.sourceType || 'manual')).trim() || 'manual';
   const code = input.code !== undefined ? String(input.code) : existing.code;
   const name = input.name !== undefined ? String(input.name).trim() : existing.name;
   const side = input.side !== undefined ? String(input.side) : existing.side;
@@ -215,7 +222,7 @@ function normalizeTradeInput(input, existing = {}) {
   }
   if (amount < 0 && side !== 'fee') throw new Error('金额不能小于 0');
 
-  return { code, name, side, tradeDate, price, quantity, fee, tax, amount: round(amount, 4), note };
+  return { accountId, sourceType, code, name, side, tradeDate, price, quantity, fee, tax, amount: round(amount, 4), note };
 }
 
 function calculatePositionStates(trades) {
@@ -280,7 +287,7 @@ function calculateTodayPnl(trades, code, quote, currentPrice) {
 
   trades.forEach(function(trade) {
     if (trade.code !== code || trade.tradeDate > quoteDate) return;
-    if (trade.tradeDate < quoteDate) {
+    if (trade.tradeDate < quoteDate || trade.sourceType === 'holding_snapshot') {
       if (trade.side === 'buy') startQuantity += trade.quantity;
       else if (trade.side === 'sell') startQuantity -= trade.quantity;
       return;
@@ -294,7 +301,7 @@ function calculateTodayPnl(trades, code, quote, currentPrice) {
 
   endQuantity = startQuantity;
   trades.forEach(function(trade) {
-    if (trade.code !== code || trade.tradeDate !== quoteDate) return;
+    if (trade.code !== code || trade.tradeDate !== quoteDate || trade.sourceType === 'holding_snapshot') return;
     if (trade.side === 'buy') endQuantity += trade.quantity;
     else if (trade.side === 'sell') endQuantity -= trade.quantity;
   });
@@ -306,6 +313,93 @@ function calculateTodayPnl(trades, code, quote, currentPrice) {
     value: round(endMarketValue + dayCashFlow - startMarketValue, 2),
     date: quoteDate
   };
+}
+
+function rowToAccount(row) {
+  return {
+    id: row.id,
+    accountKey: row.account_key,
+    name: row.name,
+    broker: row.broker || '',
+    maskedNumber: row.masked_number || '',
+    cashBalance: round(row.cash_balance, 2),
+    isDefault: row.is_default === 1,
+    enabled: row.enabled === 1,
+    note: row.note || '',
+    createdAt: row.created_at,
+    updatedAt: row.updated_at
+  };
+}
+
+function normalizeAccountId(value) {
+  const id = Number(value || 1);
+  if (!Number.isInteger(id) || id <= 0) throw new Error('账户编号不合法');
+  return id;
+}
+
+function getAccount(id = 1) {
+  const row = db.prepare('SELECT * FROM portfolio_accounts WHERE id = ? AND enabled = 1').get(normalizeAccountId(id));
+  if (!row) throw new Error('持仓账户不存在');
+  return rowToAccount(row);
+}
+
+function listAccounts() {
+  return db.prepare('SELECT * FROM portfolio_accounts WHERE enabled = 1 ORDER BY is_default DESC, id ASC')
+    .all()
+    .map(rowToAccount);
+}
+
+function createAccount(input = {}) {
+  const name = String(input.name || '').trim();
+  if (!name) throw new Error('账户名称不能为空');
+  const broker = String(input.broker || '').trim();
+  const maskedNumber = String(input.maskedNumber || '').trim();
+  const cashBalance = normalizeNumber(input.cashBalance, 0);
+  if (cashBalance < 0) throw new Error('可用资金不能小于 0');
+  const accountKey = String(input.accountKey || ('account-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8))).trim();
+  const info = db.prepare(`
+    INSERT INTO portfolio_accounts (account_key, name, broker, masked_number, cash_balance, note)
+    VALUES (@accountKey, @name, @broker, @maskedNumber, @cashBalance, @note)
+  `).run({
+    accountKey,
+    name,
+    broker,
+    maskedNumber,
+    cashBalance: round(cashBalance, 2),
+    note: String(input.note || '').trim()
+  });
+  return getAccount(info.lastInsertRowid);
+}
+
+function updateAccount(id, input = {}) {
+  const existing = getAccount(id);
+  const name = input.name === undefined ? existing.name : String(input.name || '').trim();
+  const cashBalance = input.cashBalance === undefined ? existing.cashBalance : normalizeNumber(input.cashBalance, 0);
+  if (!name) throw new Error('账户名称不能为空');
+  if (cashBalance < 0) throw new Error('可用资金不能小于 0');
+  db.prepare(`
+    UPDATE portfolio_accounts
+    SET name = @name, broker = @broker, masked_number = @maskedNumber,
+        cash_balance = @cashBalance, note = @note, updated_at = CURRENT_TIMESTAMP
+    WHERE id = @id
+  `).run({
+    id: existing.id,
+    name,
+    broker: input.broker === undefined ? existing.broker : String(input.broker || '').trim(),
+    maskedNumber: input.maskedNumber === undefined ? existing.maskedNumber : String(input.maskedNumber || '').trim(),
+    cashBalance: round(cashBalance, 2),
+    note: input.note === undefined ? existing.note : String(input.note || '').trim()
+  });
+  return getAccount(existing.id);
+}
+
+function deleteAccount(id) {
+  const account = getAccount(id);
+  if (account.isDefault) throw new Error('默认账户不能删除');
+  const tradeCount = db.prepare('SELECT COUNT(*) AS count FROM trades WHERE account_id = ?').get(account.id).count;
+  if (tradeCount > 0) throw new Error('账户已有交易或持仓，不能直接删除');
+  return db.prepare('UPDATE portfolio_accounts SET enabled = 0, updated_at = CURRENT_TIMESTAMP WHERE id = ?')
+    .run(account.id).changes > 0;
 }
 
 function calculatePositions(trades, quoteMap = {}) {
@@ -408,12 +502,12 @@ function validateTradeSet(candidateTrades) {
 
 function createTrade(input) {
   const payload = normalizeTradeInput(input);
-  const candidateTrades = listTradesAscending().concat([{ ...payload, id: Number.MAX_SAFE_INTEGER }]);
+  const candidateTrades = listTradesAscending({ accountId: payload.accountId }).concat([{ ...payload, id: Number.MAX_SAFE_INTEGER }]);
   validateTradeSet(candidateTrades);
 
   const info = db.prepare(`
-    INSERT INTO trades (code, name, side, trade_date, price, quantity, fee, tax, amount, note)
-    VALUES (@code, @name, @side, @tradeDate, @price, @quantity, @fee, @tax, @amount, @note)
+    INSERT INTO trades (account_id, source_type, code, name, side, trade_date, price, quantity, fee, tax, amount, note)
+    VALUES (@accountId, @sourceType, @code, @name, @side, @tradeDate, @price, @quantity, @fee, @tax, @amount, @note)
   `).run(payload);
 
   return rowToTrade(db.prepare('SELECT * FROM trades WHERE id = ?').get(info.lastInsertRowid));
@@ -424,13 +518,17 @@ function updateTrade(id, input) {
   if (!existingRow) throw new Error('交易记录不存在');
   const existing = rowToTrade(existingRow);
   const payload = normalizeTradeInput(input, existing);
+  if (payload.accountId !== existing.accountId) throw new Error('交易记录不能跨账户移动');
 
-  const candidateTrades = listTradesAscending().map(trade => trade.id === Number(id) ? { ...payload, id: Number(id) } : trade);
+  const candidateTrades = listTradesAscending({ accountId: existing.accountId })
+    .map(trade => trade.id === Number(id) ? { ...payload, id: Number(id) } : trade);
   validateTradeSet(candidateTrades);
 
   db.prepare(`
     UPDATE trades
-    SET code = @code,
+    SET account_id = @accountId,
+        source_type = @sourceType,
+        code = @code,
         name = @name,
         side = @side,
         trade_date = @tradeDate,
@@ -451,26 +549,30 @@ function deleteTrade(id) {
   const existing = db.prepare('SELECT * FROM trades WHERE id = ?').get(id);
   if (!existing) return false;
 
-  const candidateTrades = listTradesAscending().filter(trade => trade.id !== Number(id));
+  const existingTrade = rowToTrade(existing);
+  const candidateTrades = listTradesAscending({ accountId: existingTrade.accountId }).filter(trade => trade.id !== Number(id));
   validateTradeSet(candidateTrades);
   const result = db.prepare('DELETE FROM trades WHERE id = ?').run(id);
   return result.changes > 0;
 }
 
-function getPositions(quoteMap = {}) {
-  return calculatePositions(listTradesAscending(), quoteMap);
+function getPositions(quoteMap = {}, filters = {}) {
+  return calculatePositions(listTradesAscending(filters), quoteMap);
 }
 
-function getClosedPositions() {
-  return calculateClosedPositions(listTradesAscending());
+function getClosedPositions(filters = {}) {
+  return calculateClosedPositions(listTradesAscending(filters));
 }
 
-function getSummary(positions = getPositions()) {
-  const trades = listTradesAscending();
-  const totalMarketValue = positions.reduce((sum, pos) => sum + (pos.marketValue === null ? pos.costValue : pos.marketValue), 0);
-  const totalCost = positions.reduce((sum, pos) => sum + pos.costValue, 0);
-  const unrealizedPnl = positions.reduce((sum, pos) => sum + (pos.unrealizedPnl || 0), 0);
-  const todayPnl = positions.reduce((sum, pos) => {
+function getSummary(positions, filters = {}) {
+  const accountId = normalizeAccountId(filters.accountId);
+  const account = getAccount(accountId);
+  const resolvedPositions = positions || getPositions({}, { accountId });
+  const trades = listTradesAscending({ accountId });
+  const totalMarketValue = resolvedPositions.reduce((sum, pos) => sum + (pos.marketValue === null ? pos.costValue : pos.marketValue), 0);
+  const totalCost = resolvedPositions.reduce((sum, pos) => sum + pos.costValue, 0);
+  const unrealizedPnl = resolvedPositions.reduce((sum, pos) => sum + (pos.unrealizedPnl || 0), 0);
+  const todayPnl = resolvedPositions.reduce((sum, pos) => {
     const value = pos.todayPnl !== undefined && pos.todayPnl !== null ? pos.todayPnl : pos.todayReferencePnl;
     return sum + (value || 0);
   }, 0);
@@ -479,6 +581,10 @@ function getSummary(positions = getPositions()) {
   const lifetimeBuyCost = trades.reduce((sum, trade) => trade.side === 'buy' ? sum + Number(trade.amount || 0) : sum, 0);
 
   return {
+    accountId,
+    accountName: account.name,
+    cashBalance: round(account.cashBalance, 2),
+    totalAssets: round(totalMarketValue + account.cashBalance, 2),
     totalMarketValue: round(totalMarketValue, 2),
     totalCost: round(totalCost, 2),
     unrealizedPnl: round(unrealizedPnl, 2),
@@ -488,9 +594,9 @@ function getSummary(positions = getPositions()) {
     totalPnl: round(totalPnl, 2),
     lifetimeBuyCost: round(lifetimeBuyCost, 2),
     totalPnlRate: lifetimeBuyCost > 0 ? round(totalPnl / lifetimeBuyCost * 100, 2) : 0,
-    positionCount: positions.length,
-    winCount: positions.filter(pos => (pos.unrealizedPnl || 0) > 0).length,
-    lossCount: positions.filter(pos => (pos.unrealizedPnl || 0) < 0).length
+    positionCount: resolvedPositions.length,
+    winCount: resolvedPositions.filter(pos => (pos.unrealizedPnl || 0) > 0).length,
+    lossCount: resolvedPositions.filter(pos => (pos.unrealizedPnl || 0) < 0).length
   };
 }
 
@@ -507,8 +613,141 @@ function getAllocation(positions = getPositions()) {
   });
 }
 
+function rowToPortfolioSnapshot(row) {
+  let holdings = [];
+  try { holdings = JSON.parse(row.holdings_json || '[]'); } catch (error) {}
+  return {
+    id: row.id,
+    accountId: row.account_id,
+    snapshotDate: row.snapshot_date,
+    totalMarketValue: round(row.total_market_value, 2),
+    cashBalance: round(row.cash_balance, 2),
+    totalAssets: round(row.total_assets, 2),
+    totalCost: round(row.total_cost, 2),
+    unrealizedPnl: round(row.unrealized_pnl, 2),
+    realizedPnl: round(row.realized_pnl, 2),
+    totalPnl: round(row.total_pnl, 2),
+    todayPnl: round(row.today_pnl, 2),
+    sourceLabel: row.source_label || '',
+    holdings,
+    createdAt: row.created_at
+  };
+}
+
+function getLatestSnapshot(accountId = 1) {
+  const id = normalizeAccountId(accountId);
+  getAccount(id);
+  const row = db.prepare(`
+    SELECT * FROM portfolio_snapshots
+    WHERE account_id = ?
+    ORDER BY snapshot_date DESC, id DESC
+    LIMIT 1
+  `).get(id);
+  return row ? rowToPortfolioSnapshot(row) : null;
+}
+
+function importHoldingSnapshot(accountId, input = {}) {
+  const id = normalizeAccountId(accountId);
+  getAccount(id);
+  assertDate(input.snapshotDate);
+  const holdings = Array.isArray(input.holdings) ? input.holdings : [];
+  if (!holdings.length) throw new Error('截图持仓不能为空');
+  const seenCodes = new Set();
+  const normalizedHoldings = holdings.map(function(holding) {
+    const code = String(holding.code || '');
+    const name = String(holding.name || '').trim();
+    const quantity = Math.trunc(normalizeNumber(holding.quantity, 0));
+    const costValue = normalizeNumber(holding.costValue, 0);
+    const currentPrice = normalizeNumber(holding.currentPrice, 0);
+    assertCode(code);
+    if (!name) throw new Error(code + ' 股票名称不能为空');
+    if (quantity <= 0 || costValue <= 0) throw new Error(code + ' 的数量和持仓成本必须大于 0');
+    if (seenCodes.has(code)) throw new Error(code + ' 在截图持仓中重复');
+    seenCodes.add(code);
+    return {
+      code,
+      name,
+      quantity,
+      costValue: round(costValue, 4),
+      avgCost: round(costValue / quantity, 6),
+      currentPrice: currentPrice > 0 ? round(currentPrice, 3) : null,
+      marketValue: currentPrice > 0 ? round(currentPrice * quantity, 2) : null,
+      pnl: holding.pnl === undefined || holding.pnl === null ? null : round(holding.pnl, 2),
+      pnlRate: holding.pnlRate === undefined || holding.pnlRate === null ? null : round(holding.pnlRate, 3)
+    };
+  });
+  const cashBalance = normalizeNumber(input.cashBalance, 0);
+  const totalCost = round(normalizedHoldings.reduce((sum, item) => sum + item.costValue, 0), 2);
+  const calculatedMarketValue = round(normalizedHoldings.reduce((sum, item) => sum + (item.marketValue || 0), 0), 2);
+  const totalMarketValue = input.totalMarketValue === undefined
+    ? calculatedMarketValue : round(input.totalMarketValue, 2);
+  const totalAssets = input.totalAssets === undefined
+    ? round(totalMarketValue + cashBalance, 2) : round(input.totalAssets, 2);
+  if (calculatedMarketValue > 0 && Math.abs(totalMarketValue - calculatedMarketValue) > 0.05) {
+    throw new Error('截图持仓市值合计与账户总市值不一致');
+  }
+  if (Math.abs(totalAssets - totalMarketValue - cashBalance) > 0.05) {
+    throw new Error('截图总资产与总市值、可用资金不一致');
+  }
+
+  const transaction = db.transaction(function() {
+    const existingCount = db.prepare('SELECT COUNT(*) AS count FROM trades WHERE account_id = ?').get(id).count;
+    if (existingCount > 0) throw new Error('目标账户已有交易，不能重复导入持仓基线');
+    updateAccount(id, { cashBalance });
+    normalizedHoldings.forEach(function(holding) {
+      createTrade({
+        accountId: id,
+        sourceType: 'holding_snapshot',
+        code: holding.code,
+        name: holding.name,
+        side: 'buy',
+        tradeDate: input.snapshotDate,
+        price: holding.costValue / holding.quantity,
+        quantity: holding.quantity,
+        fee: 0,
+        tax: 0,
+        amount: holding.costValue,
+        note: '截图持仓基线导入；成本价采用券商口径，历史手续费不重复计算。'
+      });
+    });
+    const totalPnl = input.totalPnl === undefined ? round(totalMarketValue - totalCost, 2) : round(input.totalPnl, 2);
+    const info = db.prepare(`
+      INSERT INTO portfolio_snapshots (
+        account_id, snapshot_date, total_market_value, cash_balance, total_assets,
+        total_cost, unrealized_pnl, realized_pnl, total_pnl, today_pnl, source_label, holdings_json
+      ) VALUES (
+        @accountId, @snapshotDate, @totalMarketValue, @cashBalance, @totalAssets,
+        @totalCost, @totalPnl, 0, @totalPnl, @todayPnl, @sourceLabel, @holdingsJson
+      )
+    `).run({
+      accountId: id,
+      snapshotDate: input.snapshotDate,
+      totalMarketValue,
+      cashBalance: round(cashBalance, 2),
+      totalAssets,
+      totalCost,
+      totalPnl,
+      todayPnl: round(input.todayPnl, 2),
+      sourceLabel: String(input.sourceLabel || '持仓截图导入').trim(),
+      holdingsJson: JSON.stringify(normalizedHoldings)
+    });
+    return info.lastInsertRowid;
+  });
+
+  const snapshotId = transaction();
+  const snapshot = rowToPortfolioSnapshot(db.prepare('SELECT * FROM portfolio_snapshots WHERE id = ?').get(snapshotId));
+  return { account: getAccount(id), snapshot, importedCount: normalizedHoldings.length };
+}
+
 module.exports = {
   VALID_SIDES,
+  listAccounts,
+  getAccount,
+  createAccount,
+  updateAccount,
+  deleteAccount,
+  getLatestSnapshot,
+  importHoldingSnapshot,
   listWatchlist,
   addWatchlistItem,
   updateWatchlistItem,

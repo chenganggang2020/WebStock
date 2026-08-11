@@ -11,8 +11,29 @@ CREATE TABLE IF NOT EXISTS watchlist (
   updated_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS portfolio_accounts (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  account_key TEXT NOT NULL UNIQUE,
+  name TEXT NOT NULL,
+  broker TEXT DEFAULT '',
+  masked_number TEXT DEFAULT '',
+  cash_balance REAL NOT NULL DEFAULT 0,
+  is_default INTEGER NOT NULL DEFAULT 0,
+  enabled INTEGER NOT NULL DEFAULT 1,
+  note TEXT DEFAULT '',
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+INSERT OR IGNORE INTO portfolio_accounts
+  (id, account_key, name, broker, masked_number, cash_balance, is_default, enabled, note)
+VALUES
+  (1, 'default', '默认账户', '', '', 0, 1, 1, '升级前已有持仓和交易记录');
+
 CREATE TABLE IF NOT EXISTS trades (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
+  account_id INTEGER NOT NULL DEFAULT 1,
+  source_type TEXT NOT NULL DEFAULT 'manual',
   code TEXT NOT NULL,
   name TEXT NOT NULL,
   side TEXT NOT NULL CHECK(side IN ('buy', 'sell', 'dividend', 'fee')),
@@ -24,18 +45,26 @@ CREATE TABLE IF NOT EXISTS trades (
   amount REAL DEFAULT 0,
   note TEXT DEFAULT '',
   created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-  updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+  updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (account_id) REFERENCES portfolio_accounts(id) ON DELETE RESTRICT
 );
 
 CREATE TABLE IF NOT EXISTS portfolio_snapshots (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
+  account_id INTEGER NOT NULL DEFAULT 1,
   snapshot_date TEXT NOT NULL,
   total_market_value REAL DEFAULT 0,
+  cash_balance REAL DEFAULT 0,
+  total_assets REAL DEFAULT 0,
   total_cost REAL DEFAULT 0,
   unrealized_pnl REAL DEFAULT 0,
   realized_pnl REAL DEFAULT 0,
   total_pnl REAL DEFAULT 0,
-  created_at TEXT DEFAULT CURRENT_TIMESTAMP
+  today_pnl REAL DEFAULT 0,
+  source_label TEXT DEFAULT '',
+  holdings_json TEXT DEFAULT '[]',
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (account_id) REFERENCES portfolio_accounts(id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS recent_stocks (

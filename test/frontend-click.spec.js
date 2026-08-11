@@ -561,6 +561,41 @@ test('Douyin creator workbench shows coverage, searchable videos and transcript 
   await expect(page.locator('#expertCreatorVideoList')).toContainText('待处理视频');
 });
 
+test('portfolio accounts switch without mixing holdings or trades', async ({ page }) => {
+  page.on('dialog', dialog => dialog.accept());
+  await page.goto(baseURL + '/', { waitUntil: 'domcontentloaded' });
+  await page.click('[data-main-view="portfolio"]');
+  await expect(page.locator('#portfolioAccountSelect')).toContainText('默认账户');
+
+  await page.click('#addPortfolioAccountBtn');
+  await expect(page.locator('#portfolioAccountModalOverlay')).toBeVisible();
+  await page.fill('#portfolioAccountNameInput', 'Playwright 独立账户');
+  await page.fill('#portfolioAccountBrokerInput', '测试券商');
+  await page.fill('#portfolioAccountMaskedInput', '**9901');
+  await page.fill('#portfolioAccountCashInput', '12000');
+  await page.click('#portfolioAccountModalOk');
+  await expect(page.locator('#portfolioAccountSelect')).toContainText('Playwright 独立账户');
+  await expect(page.locator('#summaryCashBalance')).toHaveText('12000.00');
+
+  const isolatedAccountId = await page.locator('#portfolioAccountSelect').inputValue();
+  await page.click('#addTradeFromPortfolioBtn');
+  await page.fill('#tradeCodeInput', '601999');
+  await page.fill('#tradeNameInput', '出版传媒');
+  await page.selectOption('#tradeSideInput', 'buy');
+  await page.fill('#tradePriceInput', '8.5');
+  await page.fill('#tradeQuantityInput', '100');
+  await page.click('#tradeModalOk');
+  await expect(page.locator('#positionsTbody')).toContainText('601999');
+
+  await page.selectOption('#portfolioAccountSelect', { label: '默认账户' });
+  await expect(page.locator('#positionsTbody')).not.toContainText('601999');
+  await page.selectOption('#portfolioAccountSelect', isolatedAccountId);
+  await expect(page.locator('#positionsTbody')).toContainText('601999');
+  await page.click('[data-main-view="trades"]');
+  await expect(page.locator('#tradeAccountSelect')).toHaveValue(isolatedAccountId);
+  await expect(page.locator('#tradesTbody')).toContainText('601999');
+});
+
 test('main stock actions and workspace navigation do not throw', async ({ page }) => {
   const dialogResponses = [];
   const dialogMessages = [];

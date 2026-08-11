@@ -215,3 +215,55 @@ test('today pnl adjusts for same-day buys, sells, fees and taxes', () => {
   assert.equal(position.todayPnl, 75);
   assert.notEqual(position.todayPnl, 84);
 });
+
+test('portfolio accounts isolate trades and import a broker holding snapshot without changing the default account', () => {
+  const defaultAccount = portfolio.listAccounts().find(account => account.isDefault);
+  assert.ok(defaultAccount);
+  const defaultTradesBefore = portfolio.listTrades({ accountId: defaultAccount.id });
+
+  const account = portfolio.createAccount({
+    name: '广发证券 **7280',
+    broker: '广发证券',
+    maskedNumber: '**7280',
+    cashBalance: 10000
+  });
+  const imported = portfolio.importHoldingSnapshot(account.id, {
+    snapshotDate: '2026-08-11',
+    sourceLabel: '同花顺 App 持仓截图',
+    cashBalance: 10000,
+    totalAssets: 88469,
+    totalMarketValue: 78469,
+    totalPnl: 514.06,
+    todayPnl: -2013,
+    holdings: [
+      { code: '600183', name: '生益科技', quantity: 100, costValue: 17728.75, currentPrice: 135.05, pnl: -4223.75 },
+      { code: '600552', name: '凯盛科技', quantity: 400, costValue: 7089, currentPrice: 18.01, pnl: 115 },
+      { code: '600584', name: '长电科技', quantity: 200, costValue: 11933.76, currentPrice: 77.45, pnl: 3556.24 },
+      { code: '000657', name: '中钨高新', quantity: 200, costValue: 12505, currentPrice: 68.48, pnl: 1191 },
+      { code: '000938', name: '紫光股份', quantity: 300, costValue: 11877.82, currentPrice: 37.02, pnl: -771.82 },
+      { code: '000977', name: '浪潮信息', quantity: 100, costValue: 8636, currentPrice: 75.65, pnl: -1071 },
+      { code: '002428', name: '云南锗业', quantity: 100, costValue: 8184.61, currentPrice: 99.03, pnl: 1718.39 }
+    ]
+  });
+
+  assert.equal(imported.importedCount, 7);
+  assert.equal(portfolio.listTrades({ accountId: defaultAccount.id }).length, defaultTradesBefore.length);
+  assert.equal(portfolio.listTrades({ accountId: account.id }).length, 7);
+  assert.ok(portfolio.listTrades({ accountId: account.id }).every(trade => trade.sourceType === 'holding_snapshot'));
+  assert.equal(portfolio.getPositions({}, { accountId: defaultAccount.id }).some(item => item.code === '600183'), false);
+
+  const quotes = Object.fromEntries(imported.snapshot.holdings.map(item => [item.code, {
+    price: item.currentPrice,
+    prevClose: item.currentPrice,
+    tradeDate: '2026-08-11'
+  }]));
+  const positions = portfolio.getPositions(quotes, { accountId: account.id });
+  const summary = portfolio.getSummary(positions, { accountId: account.id });
+  assert.equal(positions.length, 7);
+  assert.equal(positions.find(item => item.code === '600183').avgCost, 177.2875);
+  assert.equal(summary.totalMarketValue, 78469);
+  assert.equal(summary.unrealizedPnl, 514.06);
+  assert.equal(summary.todayPnl, 0);
+  assert.equal(summary.cashBalance, 10000);
+  assert.equal(summary.totalAssets, 88469);
+});

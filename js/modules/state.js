@@ -20,6 +20,8 @@ let trades = [];
 let positions = [];
 let portfolioSummary = null;
 let portfolioAllocation = [];
+let portfolioAccounts = [];
+let activePortfolioAccountId = 1;
 let klineSnapshots = {};
 let minuteSeriesByCode = {};
 let screenerReviewSummary = [];
@@ -69,6 +71,10 @@ const State = {
   set portfolioSummary(val) { portfolioSummary = val; },
   get portfolioAllocation() { return portfolioAllocation; },
   set portfolioAllocation(val) { portfolioAllocation = val; },
+  get portfolioAccounts() { return portfolioAccounts; },
+  set portfolioAccounts(val) { portfolioAccounts = Array.isArray(val) ? val : []; },
+  get activePortfolioAccountId() { return activePortfolioAccountId; },
+  set activePortfolioAccountId(val) { activePortfolioAccountId = Number(val) || 1; },
   get klineSnapshots() { return klineSnapshots; },
   set klineSnapshots(val) { klineSnapshots = val || {}; },
   get minuteSeriesByCode() { return minuteSeriesByCode; },

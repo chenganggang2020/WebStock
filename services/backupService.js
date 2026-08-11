@@ -4,7 +4,7 @@ const paperPortfolioService = require('./paperPortfolioService');
 const researchRunService = require('./researchRunService');
 const expertChannelService = require('./expertChannelService');
 
-const BACKUP_VERSION = 5;
+const BACKUP_VERSION = 6;
 const MAX_ITEMS_PER_TABLE = 5000;
 
 function text(value, fallback = '', maxLength = 2000) {
@@ -44,6 +44,14 @@ function arrayFromBackup(backup, key) {
 }
 
 function exportUserData() {
+  const portfolioAccounts = db.prepare(`
+    SELECT account_key AS accountKey, name, broker, masked_number AS maskedNumber,
+      cash_balance AS cashBalance, is_default AS isDefault, note
+    FROM portfolio_accounts
+    WHERE enabled = 1
+    ORDER BY is_default DESC, id ASC
+  `).all().map(item => ({ ...item, isDefault: item.isDefault === 1 }));
+
   const recentStocks = db.prepare(`
     SELECT code, name, last_viewed_at AS lastViewedAt, view_count AS viewCount,
       last_price AS lastPrice, last_change AS lastChange
@@ -59,10 +67,29 @@ function exportUserData() {
   `).all();
 
   const trades = db.prepare(`
-    SELECT code, name, side, trade_date AS tradeDate, price, quantity, fee, tax, amount, note
-    FROM trades
-    ORDER BY trade_date DESC, id DESC
+    SELECT account.account_key AS accountKey, trade.source_type AS sourceType, trade.code, trade.name, trade.side,
+      trade.trade_date AS tradeDate, trade.price, trade.quantity, trade.fee, trade.tax, trade.amount, trade.note
+    FROM trades AS trade
+    JOIN portfolio_accounts AS account ON account.id = trade.account_id
+    ORDER BY trade.trade_date DESC, trade.id DESC
   `).all();
+
+  const portfolioSnapshots = db.prepare(`
+    SELECT account.account_key AS accountKey, snapshot.snapshot_date AS snapshotDate,
+      snapshot.total_market_value AS totalMarketValue, snapshot.cash_balance AS cashBalance,
+      snapshot.total_assets AS totalAssets, snapshot.total_cost AS totalCost,
+      snapshot.unrealized_pnl AS unrealizedPnl, snapshot.realized_pnl AS realizedPnl,
+      snapshot.total_pnl AS totalPnl, snapshot.today_pnl AS todayPnl,
+      snapshot.source_label AS sourceLabel, snapshot.holdings_json AS holdingsJson
+    FROM portfolio_snapshots AS snapshot
+    JOIN portfolio_accounts AS account ON account.id = snapshot.account_id
+    ORDER BY snapshot.snapshot_date DESC, snapshot.id DESC
+  `).all().map(item => {
+    let holdings = [];
+    try { holdings = JSON.parse(item.holdingsJson || '[]'); } catch (error) {}
+    const { holdingsJson, ...snapshot } = item;
+    return { ...snapshot, holdings };
+  });
 
   const sectors = db.prepare(`
     SELECT id, name, description, sort_order AS sortOrder
@@ -119,9 +146,11 @@ function exportUserData() {
     version: BACKUP_VERSION,
     exportedAt: new Date().toISOString(),
     tables: {
+      portfolioAccounts,
       recentStocks,
       watchlist,
       trades,
+      portfolioSnapshots,
       sectors,
       sectorLeaders,
       sectorLeaderSnapshots,
@@ -158,6 +187,19 @@ function normalizeWatchlist(item) {
   };
 }
 
+function normalizePortfolioAccount(item) {
+  const accountKey = text(item.accountKey, '', 120);
+  return {
+    accountKey: accountKey || 'default',
+    name: text(item.name, accountKey === 'default' ? '默认账户' : '持仓账户', 120),
+    broker: text(item.broker, '', 120),
+    maskedNumber: text(item.maskedNumber, '', 40),
+    cashBalance: Math.max(numberOrZero(item.cashBalance), 0),
+    isDefault: item.isDefault === true || accountKey === 'default',
+    note: text(item.note, '', 2000)
+  };
+}
+
 function normalizeTrade(item) {
   const side = text(item.side, '', 20);
   if (!['buy', 'sell', 'dividend', 'fee'].includes(side)) throw new Error('Invalid trade side in backup');
@@ -170,6 +212,8 @@ function normalizeTrade(item) {
       : numberOrZero(item.amount);
 
   return {
+    accountKey: text(item.accountKey, 'default', 120) || 'default',
+    sourceType: text(item.sourceType, 'manual', 40) || 'manual',
     code: code(item.code),
     name: text(item.name || item.code, item.code, 80),
     side,
@@ -180,6 +224,34 @@ function normalizeTrade(item) {
     tax,
     amount: item.amount === undefined || item.amount === null || item.amount === '' ? fallbackAmount : numberOrZero(item.amount),
     note: text(item.note, '', 1000)
+  };
+}
+
+function normalizePortfolioSnapshot(item) {
+  const holdings = Array.isArray(item.holdings) ? item.holdings.slice(0, 500).map(holding => ({
+    code: code(holding.code),
+    name: text(holding.name || holding.code, holding.code, 100),
+    quantity: Math.max(integerOrZero(holding.quantity), 0),
+    costValue: Math.max(numberOrZero(holding.costValue), 0),
+    avgCost: Math.max(numberOrZero(holding.avgCost), 0),
+    currentPrice: numberOrNull(holding.currentPrice),
+    marketValue: numberOrNull(holding.marketValue),
+    pnl: numberOrNull(holding.pnl),
+    pnlRate: numberOrNull(holding.pnlRate)
+  })).filter(holding => holding.quantity > 0) : [];
+  return {
+    accountKey: text(item.accountKey, 'default', 120) || 'default',
+    snapshotDate: text(item.snapshotDate, new Date().toISOString().slice(0, 10), 20),
+    totalMarketValue: numberOrZero(item.totalMarketValue),
+    cashBalance: numberOrZero(item.cashBalance),
+    totalAssets: numberOrZero(item.totalAssets),
+    totalCost: numberOrZero(item.totalCost),
+    unrealizedPnl: numberOrZero(item.unrealizedPnl),
+    realizedPnl: numberOrZero(item.realizedPnl),
+    totalPnl: numberOrZero(item.totalPnl),
+    todayPnl: numberOrZero(item.todayPnl),
+    sourceLabel: text(item.sourceLabel, '', 200),
+    holdingsJson: JSON.stringify(holdings)
   };
 }
 
@@ -392,9 +464,14 @@ function normalizeExpertChannel(item) {
 
 function prepareImport(backup) {
   if (!backup || typeof backup !== 'object') throw new Error('Backup JSON is required');
+  const portfolioAccounts = arrayFromBackup(backup, 'portfolioAccounts').map(normalizePortfolioAccount);
+  if (!portfolioAccounts.some(account => account.accountKey === 'default')) {
+    portfolioAccounts.unshift(normalizePortfolioAccount({ accountKey: 'default', name: '默认账户', isDefault: true }));
+  }
   const recentStocks = arrayFromBackup(backup, 'recentStocks').map(normalizeRecent);
   const watchlist = arrayFromBackup(backup, 'watchlist').map(normalizeWatchlist);
   const trades = arrayFromBackup(backup, 'trades').map(normalizeTrade);
+  const portfolioSnapshots = arrayFromBackup(backup, 'portfolioSnapshots').map(normalizePortfolioSnapshot);
   const sectors = arrayFromBackup(backup, 'sectors').map(normalizeSector).filter(item => item.name);
   const sectorLeaders = arrayFromBackup(backup, 'sectorLeaders').map(normalizeLeader);
   const sectorLeaderSnapshots = arrayFromBackup(backup, 'sectorLeaderSnapshots').map(normalizeLeaderSnapshot);
@@ -406,9 +483,11 @@ function prepareImport(backup) {
   const expertChannels = arrayFromBackup(backup, 'expertChannels').map(normalizeExpertChannel)
     .filter(item => item.channelKey && item.displayName && item.platform);
   return {
+    portfolioAccounts,
     recentStocks,
     watchlist,
     trades,
+    portfolioSnapshots,
     sectors,
     sectorLeaders,
     sectorLeaderSnapshots,
@@ -423,9 +502,11 @@ function prepareImport(backup) {
 
 function countsForPrepared(prepared) {
   return {
+    portfolioAccounts: prepared.portfolioAccounts.length,
     recentStocks: prepared.recentStocks.length,
     watchlist: prepared.watchlist.length,
     trades: prepared.trades.length,
+    portfolioSnapshots: prepared.portfolioSnapshots.length,
     sectors: prepared.sectors.length,
     sectorLeaders: prepared.sectorLeaders.length,
     sectorLeaderSnapshots: prepared.sectorLeaderSnapshots.length,
@@ -440,9 +521,11 @@ function countsForPrepared(prepared) {
 
 function currentCounts() {
   return {
+    portfolioAccounts: db.prepare('SELECT COUNT(*) AS count FROM portfolio_accounts WHERE enabled = 1').get().count,
     recentStocks: db.prepare('SELECT COUNT(*) AS count FROM recent_stocks').get().count,
     watchlist: db.prepare('SELECT COUNT(*) AS count FROM watchlist').get().count,
     trades: db.prepare('SELECT COUNT(*) AS count FROM trades').get().count,
+    portfolioSnapshots: db.prepare('SELECT COUNT(*) AS count FROM portfolio_snapshots').get().count,
     sectors: db.prepare('SELECT COUNT(*) AS count FROM sectors').get().count,
     sectorLeaders: db.prepare('SELECT COUNT(*) AS count FROM sector_leaders').get().count,
     sectorLeaderSnapshots: db.prepare('SELECT COUNT(*) AS count FROM sector_leader_snapshots').get().count,
@@ -468,9 +551,11 @@ function importUserData(backup, options = {}) {
   const mode = options.mode === 'merge' ? 'merge' : 'replace';
   const prepared = prepareImport(backup);
   const {
+    portfolioAccounts,
     recentStocks,
     watchlist,
     trades,
+    portfolioSnapshots,
     sectors,
     sectorLeaders,
     sectorLeaderSnapshots,
@@ -496,6 +581,7 @@ function importUserData(backup, options = {}) {
       db.prepare('DELETE FROM watchlist').run();
       db.prepare('DELETE FROM trades').run();
       db.prepare('DELETE FROM portfolio_snapshots').run();
+      db.prepare('DELETE FROM portfolio_accounts WHERE is_default = 0').run();
       db.prepare('DELETE FROM screener_candidate_notes').run();
       db.prepare('DELETE FROM ai_screener_results').run();
       db.prepare('DELETE FROM ai_research_runs').run();
@@ -529,9 +615,33 @@ function importUserData(backup, options = {}) {
         updated_at = CURRENT_TIMESTAMP
     `);
 
+    const upsertPortfolioAccount = db.prepare(`
+      INSERT INTO portfolio_accounts (
+        account_key, name, broker, masked_number, cash_balance, is_default, enabled, note
+      ) VALUES (@accountKey, @name, @broker, @maskedNumber, @cashBalance, @isDefault, 1, @note)
+      ON CONFLICT(account_key) DO UPDATE SET
+        name = excluded.name,
+        broker = excluded.broker,
+        masked_number = excluded.masked_number,
+        cash_balance = excluded.cash_balance,
+        enabled = 1,
+        note = excluded.note,
+        updated_at = CURRENT_TIMESTAMP
+    `);
+    const findPortfolioAccount = db.prepare('SELECT id FROM portfolio_accounts WHERE account_key = ?');
+
     const insertTrade = db.prepare(`
-      INSERT INTO trades (code, name, side, trade_date, price, quantity, fee, tax, amount, note)
-      VALUES (@code, @name, @side, @tradeDate, @price, @quantity, @fee, @tax, @amount, @note)
+      INSERT INTO trades (account_id, source_type, code, name, side, trade_date, price, quantity, fee, tax, amount, note)
+      VALUES (@accountId, @sourceType, @code, @name, @side, @tradeDate, @price, @quantity, @fee, @tax, @amount, @note)
+    `);
+    const insertPortfolioSnapshot = db.prepare(`
+      INSERT INTO portfolio_snapshots (
+        account_id, snapshot_date, total_market_value, cash_balance, total_assets, total_cost,
+        unrealized_pnl, realized_pnl, total_pnl, today_pnl, source_label, holdings_json
+      ) VALUES (
+        @accountId, @snapshotDate, @totalMarketValue, @cashBalance, @totalAssets, @totalCost,
+        @unrealizedPnl, @realizedPnl, @totalPnl, @todayPnl, @sourceLabel, @holdingsJson
+      )
     `);
 
     const upsertSector = db.prepare(`
@@ -600,9 +710,24 @@ function importUserData(backup, options = {}) {
         @totalValue, @dailyPnl, @totalPnl, @totalReturn, @source, @sourceMetadataJson, @warningsJson)
     `);
 
+    const portfolioAccountIdMap = new Map();
+    portfolioAccounts.forEach(item => {
+      upsertPortfolioAccount.run({ ...item, isDefault: item.isDefault ? 1 : 0 });
+      const row = findPortfolioAccount.get(item.accountKey);
+      if (row) portfolioAccountIdMap.set(item.accountKey, row.id);
+    });
+    const defaultAccountId = (findPortfolioAccount.get('default') || { id: 1 }).id;
+
     recentStocks.forEach(item => insertRecent.run(item));
     watchlist.forEach(item => insertWatchlist.run(item));
-    trades.forEach(item => insertTrade.run(item));
+    trades.forEach(item => insertTrade.run({
+      ...item,
+      accountId: portfolioAccountIdMap.get(item.accountKey) || defaultAccountId
+    }));
+    portfolioSnapshots.forEach(item => insertPortfolioSnapshot.run({
+      ...item,
+      accountId: portfolioAccountIdMap.get(item.accountKey) || defaultAccountId
+    }));
     const screenerResultIdMap = new Map();
     screenerResults.forEach(item => {
       const info = insertScreenerResult.run({

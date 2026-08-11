@@ -54,11 +54,81 @@ async function fetchQuotesSafe(codes) {
   }
 }
 
-async function getPositionsWithQuotes() {
-  const rawPositions = portfolio.getPositions({});
-  const quoteMap = await fetchQuotesSafe(rawPositions.map(pos => pos.code));
-  return portfolio.getPositions(quoteMap);
+function requestAccountId(req) {
+  return Number((req.body && req.body.accountId) || req.query.accountId || 1);
 }
+
+async function getPositionsWithQuotes(accountId = 1) {
+  const rawPositions = portfolio.getPositions({}, { accountId });
+  const quoteMap = await fetchQuotesSafe(rawPositions.map(pos => pos.code));
+  return portfolio.getPositions(quoteMap, { accountId });
+}
+
+async function getAccountOverviews() {
+  const accounts = portfolio.listAccounts();
+  const rawPositions = new Map(accounts.map(account => [
+    account.id,
+    portfolio.getPositions({}, { accountId: account.id })
+  ]));
+  const codes = Array.from(new Set(Array.from(rawPositions.values()).flat().map(position => position.code)));
+  const quoteMap = await fetchQuotesSafe(codes);
+  return accounts.map(function(account) {
+    const positions = portfolio.getPositions(quoteMap, { accountId: account.id });
+    return {
+      ...account,
+      summary: portfolio.getSummary(positions, { accountId: account.id }),
+      latestSnapshot: portfolio.getLatestSnapshot(account.id)
+    };
+  });
+}
+
+router.get('/accounts/overview', async function(req, res) {
+  try {
+    ok(res, await getAccountOverviews());
+  } catch (error) {
+    fail(res, error);
+  }
+});
+
+router.get('/accounts', function(req, res) {
+  try {
+    ok(res, portfolio.listAccounts());
+  } catch (error) {
+    fail(res, error);
+  }
+});
+
+router.post('/accounts', function(req, res) {
+  try {
+    ok(res, portfolio.createAccount(req.body));
+  } catch (error) {
+    fail(res, error);
+  }
+});
+
+router.put('/accounts/:id', function(req, res) {
+  try {
+    ok(res, portfolio.updateAccount(Number(req.params.id), req.body));
+  } catch (error) {
+    fail(res, error);
+  }
+});
+
+router.delete('/accounts/:id', function(req, res) {
+  try {
+    ok(res, { deleted: portfolio.deleteAccount(Number(req.params.id)) });
+  } catch (error) {
+    fail(res, error);
+  }
+});
+
+router.post('/accounts/:id/import-holdings', function(req, res) {
+  try {
+    ok(res, portfolio.importHoldingSnapshot(Number(req.params.id), req.body));
+  } catch (error) {
+    fail(res, error);
+  }
+});
 
 router.get('/watchlist', function (req, res) {
   try {
@@ -103,6 +173,7 @@ router.delete('/watchlist/code/:code', function (req, res) {
 router.get('/trades', function (req, res) {
   try {
     ok(res, portfolio.listTrades({
+      accountId: requestAccountId(req),
       code: req.query.code,
       side: req.query.side,
       startDate: req.query.startDate,
@@ -139,7 +210,7 @@ router.delete('/trades/:id', function (req, res) {
 
 router.get('/trades/export', function (req, res) {
   try {
-    const trades = portfolio.listTrades(req.query);
+    const trades = portfolio.listTrades({ ...req.query, accountId: requestAccountId(req) });
     const rows = [['日期', '类型', '代码', '名称', '价格', '数量', '手续费', '印花税', '金额', '备注']];
     trades.forEach(trade => {
       rows.push([trade.tradeDate, trade.side, trade.code, trade.name, trade.price, trade.quantity, trade.fee, trade.tax, trade.amount, trade.note]);
@@ -155,7 +226,7 @@ router.get('/trades/export', function (req, res) {
 
 router.get('/positions', async function (req, res) {
   try {
-    ok(res, await getPositionsWithQuotes());
+    ok(res, await getPositionsWithQuotes(requestAccountId(req)));
   } catch (error) {
     fail(res, error);
   }
@@ -163,7 +234,7 @@ router.get('/positions', async function (req, res) {
 
 router.get('/closed-positions', function (req, res) {
   try {
-    ok(res, portfolio.getClosedPositions());
+    ok(res, portfolio.getClosedPositions({ accountId: requestAccountId(req) }));
   } catch (error) {
     fail(res, error);
   }
@@ -171,8 +242,9 @@ router.get('/closed-positions', function (req, res) {
 
 router.get('/summary', async function (req, res) {
   try {
-    const positions = await getPositionsWithQuotes();
-    ok(res, portfolio.getSummary(positions));
+    const accountId = requestAccountId(req);
+    const positions = await getPositionsWithQuotes(accountId);
+    ok(res, portfolio.getSummary(positions, { accountId }));
   } catch (error) {
     fail(res, error);
   }
@@ -180,7 +252,7 @@ router.get('/summary', async function (req, res) {
 
 router.get('/allocation', async function (req, res) {
   try {
-    const positions = await getPositionsWithQuotes();
+    const positions = await getPositionsWithQuotes(requestAccountId(req));
     ok(res, portfolio.getAllocation(positions));
   } catch (error) {
     fail(res, error);
@@ -189,10 +261,13 @@ router.get('/allocation', async function (req, res) {
 
 router.post('/recalculate', async function (req, res) {
   try {
-    const positions = await getPositionsWithQuotes();
+    const accountId = requestAccountId(req);
+    const positions = await getPositionsWithQuotes(accountId);
     ok(res, {
+      account: portfolio.getAccount(accountId),
+      latestSnapshot: portfolio.getLatestSnapshot(accountId),
       positions,
-      summary: portfolio.getSummary(positions),
+      summary: portfolio.getSummary(positions, { accountId }),
       allocation: portfolio.getAllocation(positions)
     });
   } catch (error) {
@@ -207,10 +282,11 @@ router.post('/ai-analysis', async function (req, res) {
       throw new Error('AI 未配置，请先配置 OpenAI API Key');
     }
 
-    const positions = await getPositionsWithQuotes();
-    const summary = portfolio.getSummary(positions);
+    const accountId = requestAccountId(req);
+    const positions = await getPositionsWithQuotes(accountId);
+    const summary = portfolio.getSummary(positions, { accountId });
     const allocation = portfolio.getAllocation(positions);
-    const trades = portfolio.listTrades().slice(0, 20);
+    const trades = portfolio.listTrades({ accountId }).slice(0, 20);
     const prompt = appendOneClickOutputInstructions(`你是一名谨慎的投资组合分析助手。请根据以下持仓、盈亏和交易记录，对该投资组合进行结构性分析。请注意：
 1. 不要承诺收益；
 2. 不要给出绝对化买入或卖出指令；

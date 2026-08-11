@@ -205,6 +205,23 @@ function bindButtons() {
 
   document.getElementById('addTradeFromPortfolioBtn').addEventListener('click', function() { Trades.openTradeModal('new'); });
   document.getElementById('refreshPortfolioBtn').addEventListener('click', Portfolio.refreshPortfolio);
+  document.getElementById('portfolioAccountSelect').addEventListener('change', function(event) {
+    Portfolio.switchAccount(event.target.value).catch(function(error) { alert(error.message); });
+  });
+  document.getElementById('tradeAccountSelect').addEventListener('change', function(event) {
+    Portfolio.switchAccount(event.target.value).catch(function(error) { alert(error.message); });
+  });
+  document.getElementById('portfolioAccountCompare').addEventListener('click', function(event) {
+    const button = event.target.closest('[data-account-id]');
+    if (button) Portfolio.switchAccount(button.dataset.accountId).catch(function(error) { alert(error.message); });
+  });
+  document.getElementById('addPortfolioAccountBtn').addEventListener('click', Portfolio.openAccountModal);
+  document.getElementById('portfolioAccountModalClose').addEventListener('click', Portfolio.closeAccountModal);
+  document.getElementById('portfolioAccountModalCancel').addEventListener('click', Portfolio.closeAccountModal);
+  document.getElementById('portfolioAccountModalOk').addEventListener('click', Portfolio.createAccountFromModal);
+  document.getElementById('portfolioAccountModalOverlay').addEventListener('click', function(event) {
+    if (event.target === this) Portfolio.closeAccountModal();
+  });
   const positionSearchInput = document.getElementById('positionSearchInput');
   if (positionSearchInput) positionSearchInput.addEventListener('input', Portfolio.renderPositions);
   const positionSortSelect = document.getElementById('positionSortSelect');

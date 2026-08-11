@@ -37,6 +37,16 @@ try {
   ensureColumn('expert_backtests', 'dataset_id', "TEXT DEFAULT ''");
   ensureColumn('expert_backtests', 'result_path', "TEXT DEFAULT ''");
   ensureColumn('expert_backtests', 'result_sha256', "TEXT DEFAULT ''");
+  ensureColumn('trades', 'account_id', 'INTEGER NOT NULL DEFAULT 1');
+  ensureColumn('trades', 'source_type', "TEXT NOT NULL DEFAULT 'manual'");
+  ensureColumn('portfolio_snapshots', 'account_id', 'INTEGER NOT NULL DEFAULT 1');
+  ensureColumn('portfolio_snapshots', 'cash_balance', 'REAL DEFAULT 0');
+  ensureColumn('portfolio_snapshots', 'total_assets', 'REAL DEFAULT 0');
+  ensureColumn('portfolio_snapshots', 'today_pnl', 'REAL DEFAULT 0');
+  ensureColumn('portfolio_snapshots', 'source_label', "TEXT DEFAULT ''");
+  ensureColumn('portfolio_snapshots', 'holdings_json', "TEXT DEFAULT '[]'");
+  db.exec('CREATE INDEX IF NOT EXISTS idx_trades_account_date ON trades(account_id, trade_date, id)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_portfolio_snapshots_account_date ON portfolio_snapshots(account_id, snapshot_date, id)');
   db.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_expert_backtests_run_id ON expert_backtests(run_id) WHERE run_id <> ''");
 } catch (error) {
   console.error('[DB] SQLite 初始化失败：' + error.message);

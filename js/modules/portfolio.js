@@ -2,6 +2,28 @@
   return window.apiFetch('/api/portfolio' + path, options);
 }
 
+function portfolioEscape(value) {
+  return String(value == null ? '' : value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function activeAccountId() {
+  return Number(window.State.activePortfolioAccountId) || 1;
+}
+
+function accountQuery(path) {
+  return path + (path.includes('?') ? '&' : '?') + 'accountId=' + encodeURIComponent(activeAccountId());
+}
+
+function rememberActiveAccount(id) {
+  window.State.activePortfolioAccountId = Number(id) || 1;
+  try { localStorage.setItem('webstock.activePortfolioAccountId', String(window.State.activePortfolioAccountId)); } catch (error) {}
+}
+
 function fmt(value, digits) {
   if (value === null || value === undefined || value === '') return '--';
   const n = Number(value);
@@ -56,11 +78,133 @@ function portfolioFileDate() {
     : new Date().toISOString().slice(0, 10);
 }
 
+function renderAccountControls() {
+  const accounts = window.State.portfolioAccounts || [];
+  const activeId = activeAccountId();
+  const options = accounts.map(function(account) {
+    const suffix = account.maskedNumber ? ' ' + account.maskedNumber : '';
+    const detail = account.name && account.broker && !account.name.includes(account.broker) ? ' · ' + account.broker + suffix : suffix;
+    return '<option value="' + account.id + '">' + portfolioEscape(account.name || account.broker || '账户') + portfolioEscape(detail) + '</option>';
+  }).join('');
+  ['portfolioAccountSelect', 'tradeAccountSelect'].forEach(function(id) {
+    const select = document.getElementById(id);
+    if (!select) return;
+    select.innerHTML = options;
+    select.value = String(activeId);
+  });
+  const account = accounts.find(item => Number(item.id) === activeId);
+  const meta = document.getElementById('portfolioAccountMeta');
+  if (meta) {
+    const snapshot = account && account.latestSnapshot;
+    meta.textContent = account
+      ? [account.broker, account.maskedNumber, '可用资金 ' + fmt(account.cashBalance), snapshot ? snapshot.sourceLabel + ' · ' + snapshot.snapshotDate : '']
+        .filter(Boolean).join(' · ')
+      : '';
+  }
+  const compare = document.getElementById('portfolioAccountCompare');
+  if (compare) {
+    compare.innerHTML = accounts.map(function(item) {
+      const summary = item.summary || {};
+      return '<button type="button" class="portfolio-account-card' + (Number(item.id) === activeId ? ' active' : '') +
+        '" data-account-id="' + item.id + '"><strong>' + portfolioEscape(item.name) + '</strong>' +
+        '<span>总资产 ' + fmt(summary.totalAssets) + ' · 市值 ' + fmt(summary.totalMarketValue) + '</span>' +
+        '<small>' + Number(summary.positionCount || 0) + ' 只持仓</small>' +
+        '<em class="' + pnlClass(summary.totalPnl) + '">' + fmt(summary.totalPnl) + '</em></button>';
+    }).join('');
+  }
+}
+
+async function loadAccounts() {
+  const accounts = await portfolioApi('/accounts');
+  const previous = new Map((window.State.portfolioAccounts || []).map(account => [Number(account.id), account]));
+  window.State.portfolioAccounts = (accounts || []).map(account => Object.assign({}, previous.get(Number(account.id)) || {}, account));
+  let preferred = activeAccountId();
+  try { preferred = Number(localStorage.getItem('webstock.activePortfolioAccountId')) || preferred; } catch (error) {}
+  if (!window.State.portfolioAccounts.some(account => Number(account.id) === preferred)) {
+    const fallback = window.State.portfolioAccounts.find(account => account.isDefault) || window.State.portfolioAccounts[0];
+    preferred = fallback ? fallback.id : 1;
+  }
+  rememberActiveAccount(preferred);
+  renderAccountControls();
+  return window.State.portfolioAccounts;
+}
+
+async function refreshAccountOverviews() {
+  const accounts = await portfolioApi('/accounts/overview');
+  window.State.portfolioAccounts = accounts || [];
+  renderAccountControls();
+  return window.State.portfolioAccounts;
+}
+
+async function switchAccount(id) {
+  if (Number(id) === activeAccountId()) return;
+  rememberActiveAccount(id);
+  renderAccountControls();
+  await loadPortfolio();
+  if (window.Trades) await window.Trades.loadTrades();
+}
+
+function openAccountModal() {
+  document.getElementById('portfolioAccountNameInput').value = '';
+  document.getElementById('portfolioAccountBrokerInput').value = '';
+  document.getElementById('portfolioAccountMaskedInput').value = '';
+  document.getElementById('portfolioAccountCashInput').value = '0';
+  document.getElementById('portfolioAccountNoteInput').value = '';
+  document.getElementById('portfolioAccountModalOverlay').style.display = 'flex';
+  setTimeout(function() { document.getElementById('portfolioAccountNameInput').focus(); }, 0);
+}
+
+function closeAccountModal() {
+  document.getElementById('portfolioAccountModalOverlay').style.display = 'none';
+}
+
+async function createAccountFromModal() {
+  const button = document.getElementById('portfolioAccountModalOk');
+  const payload = {
+    name: document.getElementById('portfolioAccountNameInput').value.trim(),
+    broker: document.getElementById('portfolioAccountBrokerInput').value.trim(),
+    maskedNumber: document.getElementById('portfolioAccountMaskedInput').value.trim(),
+    cashBalance: Number(document.getElementById('portfolioAccountCashInput').value || 0),
+    note: document.getElementById('portfolioAccountNoteInput').value.trim()
+  };
+  if (!payload.name) return alert('账户名称不能为空');
+  try {
+    button.disabled = true;
+    const account = await portfolioApi('/accounts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    window.State.portfolioAccounts = [];
+    rememberActiveAccount(account.id);
+    closeAccountModal();
+    await loadPortfolio();
+    if (window.Trades) await window.Trades.loadTrades();
+  } catch (error) {
+    alert(error.message);
+  } finally {
+    button.disabled = false;
+  }
+}
+
 async function loadPortfolio() {
-  const result = await portfolioApi('/recalculate', { method: 'POST' });
+  if (!(window.State.portfolioAccounts || []).length) await loadAccounts();
+  const result = await portfolioApi('/recalculate', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ accountId: activeAccountId() })
+  });
   window.State.positions = result.positions || [];
   window.State.portfolioSummary = result.summary || {};
   window.State.portfolioAllocation = result.allocation || [];
+  const accountIndex = window.State.portfolioAccounts.findIndex(account => Number(account.id) === activeAccountId());
+  if (accountIndex >= 0) {
+    window.State.portfolioAccounts[accountIndex] = Object.assign({}, window.State.portfolioAccounts[accountIndex], result.account || {}, {
+      summary: result.summary || {},
+      latestSnapshot: result.latestSnapshot || window.State.portfolioAccounts[accountIndex].latestSnapshot
+    });
+  }
+  renderAccountControls();
   renderSummary();
   renderPositions();
   await loadClosedPositions();
@@ -72,28 +216,31 @@ async function loadPortfolio() {
   renderStatsOverview();
   if (window.Dashboard) window.Dashboard.refreshCards();
   if (window.updateSidebarWorkspace) window.updateSidebarWorkspace();
+  refreshAccountOverviews().catch(function(error) { console.warn(error.message || error); });
 }
 
 async function loadSummary() {
-  window.State.portfolioSummary = await portfolioApi('/summary');
+  window.State.portfolioSummary = await portfolioApi(accountQuery('/summary'));
   renderSummary();
   return window.State.portfolioSummary;
 }
 
 async function loadPositions() {
-  window.State.positions = await portfolioApi('/positions');
+  window.State.positions = await portfolioApi(accountQuery('/positions'));
   renderPositions();
   return window.State.positions;
 }
 
 async function loadClosedPositions() {
-  window.State.closedPositions = await portfolioApi('/closed-positions');
+  window.State.closedPositions = await portfolioApi(accountQuery('/closed-positions'));
   renderClosedPositions();
   return window.State.closedPositions;
 }
 
 function renderSummary() {
   const summary = window.State.portfolioSummary || {};
+  document.getElementById('summaryTotalAssets').textContent = fmt(summary.totalAssets);
+  document.getElementById('summaryCashBalance').textContent = fmt(summary.cashBalance);
   document.getElementById('summaryMarketValue').textContent = fmt(summary.totalMarketValue);
   document.getElementById('summaryCost').textContent = fmt(summary.totalCost);
   const unrealized = document.getElementById('summaryUnrealizedPnl');
@@ -487,7 +634,11 @@ function viewTrades(code) {
 
 async function runAIAnalysis() {
   try {
-    const data = await portfolioApi('/ai-analysis', { method: 'POST' });
+    const data = await portfolioApi('/ai-analysis', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ accountId: activeAccountId() })
+    });
     const overlay = document.getElementById('analysisOverlay');
     const body = document.getElementById('analysisPanelBody');
     const badge = document.getElementById('aiStatusBadge');
@@ -545,6 +696,14 @@ async function runHoldingAnalysis(code) {
 }
 
 window.Portfolio = {
+  activeAccountId,
+  loadAccounts,
+  refreshAccountOverviews,
+  renderAccountControls,
+  switchAccount,
+  openAccountModal,
+  closeAccountModal,
+  createAccountFromModal,
   loadPortfolio,
   loadSummary,
   loadPositions,

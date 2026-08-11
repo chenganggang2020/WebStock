@@ -15,6 +15,7 @@ const paperPortfolios = require('../services/paperPortfolioService');
 const researchRuns = require('../services/researchRunService');
 const expertChannels = require('../services/expertChannelService');
 const backupService = require('../services/backupService');
+const portfolio = require('../services/portfolioService');
 const db = require('../db');
 
 test('backup roundtrip restores knowledge, research runs and paper portfolios', () => {
@@ -76,9 +77,20 @@ test('backup roundtrip restores knowledge, research runs and paper portfolios', 
     runId: 'backup-expert-run', datasetId: 'dataset-demo',
     result: { coverage: { strictEligibleObservations: 1 } }
   });
+  const brokerAccount = portfolio.createAccount({
+    accountKey: 'backup-broker-account', name: '备份券商账户', broker: '测试券商', cashBalance: 1000
+  });
+  portfolio.importHoldingSnapshot(brokerAccount.id, {
+    snapshotDate: '2026-08-08', sourceLabel: '备份测试截图', cashBalance: 1000,
+    totalMarketValue: 1250, totalAssets: 2250, totalPnl: 250,
+    holdings: [{ code: '600879', name: '航天电子', quantity: 100, costValue: 1000, currentPrice: 12.5, pnl: 250 }]
+  });
 
   const backup = backupService.exportUserData();
-  assert.equal(backup.version, 5);
+  assert.equal(backup.version, 6);
+  assert.equal(backup.tables.portfolioAccounts.length, 2);
+  assert.equal(backup.tables.portfolioSnapshots.length, 1);
+  assert.equal(backup.tables.trades[0].accountKey, 'backup-broker-account');
   assert.equal(backup.tables.knowledgeSources.length, 2);
   assert.equal(backup.tables.researchRuns.length, 1);
   assert.equal(backup.tables.paperPortfolios.length, 1);
@@ -109,6 +121,8 @@ test('backup roundtrip restores knowledge, research runs and paper portfolios', 
   assert.equal(imported.researchRuns, 1);
   assert.equal(imported.paperPortfolios, 1);
   assert.equal(imported.expertChannels, 1);
+  assert.equal(imported.portfolioAccounts, 2);
+  assert.equal(imported.portfolioSnapshots, 1);
   const restored = knowledge.search({ query: '商业航天' });
   assert.ok(restored.items.length >= 1);
   assert.equal(restored.items[0].evidenceId, evidenceId);
@@ -126,4 +140,8 @@ test('backup roundtrip restores knowledge, research runs and paper portfolios', 
   assert.equal(restoredObservation.mediaType, 'chart');
   assert.equal(restoredObservation.curveData[1].y, 12);
   assert.equal(expertChannels.listBacktests(restoredExpert.id)[0].runId, 'backup-expert-run');
+  const restoredBroker = portfolio.listAccounts().find(account => account.accountKey === 'backup-broker-account');
+  assert.ok(restoredBroker);
+  assert.equal(portfolio.getPositions({}, { accountId: restoredBroker.id })[0].code, '600879');
+  assert.equal(portfolio.getLatestSnapshot(restoredBroker.id).sourceLabel, '备份测试截图');
 });

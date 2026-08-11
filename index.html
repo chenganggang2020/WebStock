@@ -1072,7 +1072,18 @@
           <button id="aiPortfolioAnalysisBtn">AI组合诊断</button>
         </div>
       </div>
+      <div class="portfolio-account-toolbar">
+        <div class="portfolio-account-picker">
+          <label for="portfolioAccountSelect">持仓账户</label>
+          <select id="portfolioAccountSelect"></select>
+          <button id="addPortfolioAccountBtn" type="button">新增账户</button>
+        </div>
+        <div id="portfolioAccountMeta" class="portfolio-account-meta"></div>
+      </div>
+      <div id="portfolioAccountCompare" class="portfolio-account-compare" aria-label="账户对比"></div>
       <div class="summary-cards">
+        <div class="summary-card"><div class="summary-label">总资产</div><div class="summary-value" id="summaryTotalAssets">--</div></div>
+        <div class="summary-card"><div class="summary-label">可用资金</div><div class="summary-value" id="summaryCashBalance">--</div></div>
         <div class="summary-card"><div class="summary-label">总市值</div><div class="summary-value" id="summaryMarketValue">--</div></div>
         <div class="summary-card"><div class="summary-label">总成本</div><div class="summary-value" id="summaryCost">--</div></div>
         <div class="summary-card"><div class="summary-label">浮动盈亏</div><div class="summary-value" id="summaryUnrealizedPnl">--</div></div>
@@ -1114,6 +1125,7 @@
       <div class="section-header">
         <h2>交易记录</h2>
         <div class="section-actions">
+          <select id="tradeAccountSelect" aria-label="交易账户"></select>
           <input id="tradeCodeFilter" placeholder="代码/名称">
           <select id="tradeSideFilter">
             <option value="">全部类型</option>
@@ -1150,6 +1162,26 @@
           </thead>
           <tbody id="tradesTbody"></tbody>
         </table>
+      </div>
+    </div>
+
+    <div id="portfolioAccountModalOverlay" class="modal-overlay" style="display:none;">
+      <div class="trade-modal portfolio-account-modal" role="dialog" aria-modal="true" aria-labelledby="portfolioAccountModalTitle">
+        <div class="modal-header">
+          <h3 id="portfolioAccountModalTitle">新增持仓账户</h3>
+          <button id="portfolioAccountModalClose" class="icon-btn" type="button" title="关闭">×</button>
+        </div>
+        <div class="form-grid">
+          <label>账户名称<input id="portfolioAccountNameInput" placeholder="例如：广发证券 **7280"></label>
+          <label>券商<input id="portfolioAccountBrokerInput" placeholder="例如：广发证券"></label>
+          <label>账号尾号<input id="portfolioAccountMaskedInput" placeholder="例如：**7280"></label>
+          <label>可用资金<input id="portfolioAccountCashInput" type="number" min="0" step="0.01" value="0"></label>
+          <label class="form-grid-wide">备注<textarea id="portfolioAccountNoteInput" rows="3" placeholder="账户用途或数据来源"></textarea></label>
+        </div>
+        <div class="modal-actions">
+          <button id="portfolioAccountModalCancel" type="button">取消</button>
+          <button id="portfolioAccountModalOk" class="primary" type="button">创建账户</button>
+        </div>
       </div>
     </div>
 
