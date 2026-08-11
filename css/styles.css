@@ -2976,6 +2976,12 @@ body.dark .md-body blockquote { background: rgba(99,102,241,0.12); }
   color: #dc2626;
 }
 
+.creator-evidence-label {
+  color: #475467;
+  font-size: 12px;
+  font-weight: 600;
+}
+
 .creator-video-detail {
   min-width: 0;
   padding: 16px 18px 20px;

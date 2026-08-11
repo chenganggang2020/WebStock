@@ -341,6 +341,7 @@ function expertRenderCreatorDetail(item) {
   const asr = item.mediaMetadata && item.mediaMetadata.asr ? item.mediaMetadata.asr : {};
   const status = expertCreatorAsrStatus(item);
   const statusLabel = status === 'complete' ? '逐字稿已完成' : status === 'error' ? '转写失败' : '等待转写';
+  const evidenceLabel = EXPERT_EVIDENCE_LABELS[item.evidenceLevel] || item.evidenceLevel || '来源待核验';
   const segments = status === 'complete' && Array.isArray(asr.segments) ? asr.segments : [];
   const metrics = expertCreatorMetricLine(item);
   const signal = item.signal || {};
@@ -352,6 +353,7 @@ function expertRenderCreatorDetail(item) {
   const fallback = String(item.description || item.content || '').trim();
   target.innerHTML = '<header class="creator-detail-header">' +
     '<div><span class="creator-asr-status ' + status + '">' + expertEscape(statusLabel) + '</span>' +
+      '<span class="creator-evidence-label">' + expertEscape(evidenceLabel) + '</span>' +
       '<time>' + expertEscape(expertFormatTime(item.publishedAt || item.firstSeenAt)) + '</time></div>' +
     '<h4>' + expertEscape(item.title || '未命名视频') + '</h4>' +
     (metrics.length ? '<div class="creator-detail-metrics">' + metrics.map(function(metric) {

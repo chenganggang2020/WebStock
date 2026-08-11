@@ -410,8 +410,8 @@ test('research library imports and deduplicates direct Douyin share links', asyn
 
   await expect(page.locator('#expertTrackerStatus')).toContainText('新增 1 条，重复 1 条，忽略 1 条');
   await expect(page.locator('#expertChannelSelect')).toContainText('抖音直链 1');
-  await expect(page.locator('#expertTimeline')).toContainText('[待核验抖音账号]');
-  await expect(page.locator('#expertTimeline a[href="https://www.douyin.com/video/7641362696420887025"]')).toHaveText('来源证据');
+  await expect(page.locator('#expertCreatorWorkbench')).toContainText('[待核验抖音账号]');
+  await expect(page.locator('#expertCreatorVideoDetail a[href="https://www.douyin.com/video/7641362696420887025"]')).toHaveText('打开来源页面');
 
   await page.click('#deleteExpertChannelBtn');
   await expect(page.locator('#expertChannelSelect')).not.toContainText('Playwright 抖音公开作者');
@@ -472,8 +472,8 @@ test('desktop research library opens a persistent Douyin session and syncs the v
   await page.click('#syncDouyinSessionBtn');
   await expect(page.locator('#douyinDesktopSessionStatus')).toContainText('同步完成');
   await expect(page.locator('#douyinDesktopSessionStatus')).toContainText('新增 1 条');
-  await expect(page.locator('#expertTimeline')).toContainText('桌面会话同步测试视频');
-  await expect(page.locator('#expertTimeline')).toContainText('原始来源 / 本人公开');
+  await expect(page.locator('#expertCreatorWorkbench')).toContainText('桌面会话同步测试视频');
+  await expect(page.locator('#expertCreatorVideoDetail')).toContainText('原始来源 / 本人公开');
 
   const channelId = await page.locator('#expertChannelSelect').inputValue();
   await page.request.post(baseURL + '/api/expert/channels/' + channelId + '/observations', {
@@ -493,7 +493,7 @@ test('desktop research library opens a persistent Douyin session and syncs the v
     }
   });
   await page.click('#refreshExpertTimelineBtn');
-  await expect(page.locator('#expertTimeline')).toContainText('ASR 原始逐字稿');
+  await expect(page.locator('#expertCreatorVideoDetail')).toContainText('ASR 原始逐字稿');
   await expect(page.locator('.expert-asr-segments summary')).toContainText('带时间戳逐字稿');
   await page.locator('.expert-asr-segments summary').click();
   await expect(page.locator('.expert-asr-segments')).toContainText('00:00–00:03');
