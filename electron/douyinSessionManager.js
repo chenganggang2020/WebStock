@@ -5,6 +5,14 @@ const {
   buildDouyinPageSnapshotScript
 } = require('./douyinPageCapture');
 
+const PAUSE_MEDIA_SCRIPT = `(function() {
+  document.querySelectorAll('video, audio').forEach(function(media) {
+    media.muted = true;
+    media.pause();
+  });
+  return true;
+})()`;
+
 function createDouyinSessionManager(options = {}) {
   const BrowserWindow = options.BrowserWindow;
   if (typeof BrowserWindow !== 'function') throw new Error('缺少 Electron BrowserWindow');
@@ -61,6 +69,9 @@ function createDouyinSessionManager(options = {}) {
     if (parent && kind !== 'background') config.parent = parent;
     if (options.iconPath) config.icon = options.iconPath;
     const created = new BrowserWindow(config);
+    if (typeof created.webContents.setAudioMuted === 'function') {
+      created.webContents.setAudioMuted(true);
+    }
     created.webContents.session.setPermissionRequestHandler(function(_contents, _permission, callback) {
       callback(false);
     });
@@ -83,6 +94,18 @@ function createDouyinSessionManager(options = {}) {
 
   function wait(milliseconds) {
     return new Promise(function(resolve) { setTimeout(resolve, milliseconds); });
+  }
+
+  async function pauseMedia(current) {
+    if (!current || current.isDestroyed()) return;
+    if (typeof current.webContents.setAudioMuted === 'function') {
+      current.webContents.setAudioMuted(true);
+    }
+    try {
+      await current.webContents.executeJavaScript(PAUSE_MEDIA_SCRIPT, true);
+    } catch (error) {
+      log('Failed to pause Douyin background media', error);
+    }
   }
 
   async function loadPage(current, target, settleMs) {
@@ -141,20 +164,28 @@ function createDouyinSessionManager(options = {}) {
       do {
         const raw = await current.webContents.executeJavaScript(buildDouyinPageSnapshotScript(), true);
         capture = normalizeDouyinPageSnapshot(raw);
-        if (!capture.loggedIn) return capture;
+        if (!capture.loggedIn) {
+          await pauseMedia(current);
+          return capture;
+        }
         if (capture.loadError) break;
         if (expectedItem) {
           const detail = capture.items.find(function(item) { return item.contentId === expectedItem.contentId; });
           const hasUsefulDetail = detail && (detail.description || detail.transcript || detail.summary || detail.mediaUrl || detail.publishedAt ||
             Object.keys(detail.engagement || {}).length);
-          if (capture.profile.profileUrl && hasUsefulDetail) return capture;
+          if (capture.profile.profileUrl && hasUsefulDetail) {
+            await pauseMedia(current);
+            return capture;
+          }
         } else if (capture.pageType === 'profile' && capture.profile.profileUrl && capture.profile.displayName && capture.items.length) {
+          await pauseMedia(current);
           return capture;
         }
         if (Date.now() < deadline) await wait(capturePollMs);
       } while (Date.now() < deadline);
       if (attempt < captureReloadAttempts && captureRetryDelayMs) await wait(captureRetryDelayMs);
     }
+    await pauseMedia(current);
     if (capture && capture.loadError) throw new Error('抖音页面暂时服务异常，已自动重试');
     throw new Error(expectedItem ? '抖音视频详情尚未加载完成' : '抖音主页尚未加载出作品列表');
   }

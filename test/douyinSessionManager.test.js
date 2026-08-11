@@ -15,10 +15,12 @@ function createFakeBrowserWindow() {
       this.events = {};
       this.loadedUrls = [];
       this.navigationHandlers = {};
+      this.audioMuted = false;
       this.webContents = {
         currentUrl: '',
         scriptResult: {},
         permissionHandler: null,
+        setAudioMuted: value => { this.audioMuted = Boolean(value); },
         setWindowOpenHandler: handler => { this.navigationHandlers.windowOpen = handler; },
         on: (name, handler) => { this.navigationHandlers[name] = handler; },
         getURL: () => this.webContents.currentUrl,
@@ -67,6 +69,7 @@ test('Douyin session window is secure, persistent and reused across opens', asyn
   assert.equal(BrowserWindow.instances[0].options.webPreferences.nodeIntegration, false);
   assert.equal(BrowserWindow.instances[0].options.webPreferences.sandbox, true);
   assert.equal(BrowserWindow.instances[0].options.webPreferences.backgroundThrottling, false);
+  assert.equal(BrowserWindow.instances[0].audioMuted, true);
   assert.equal(BrowserWindow.instances[0].focused, true);
   assert.equal(BrowserWindow.instances[0].loadedUrls.length, 2);
 
@@ -148,6 +151,8 @@ test('background collection uses the persistent session without opening a visibl
   assert.equal(BrowserWindow.instances.length, 1);
   assert.equal(BrowserWindow.instances[0].visible, false);
   assert.equal(BrowserWindow.instances[0].options.webPreferences.partition, 'persist:webstock-douyin');
+  assert.equal(BrowserWindow.instances[0].audioMuted, true);
+  assert.match(BrowserWindow.instances[0].executedScript, /\.pause\(\)/);
   assert.equal(capture.items[0].contentId, '7672339420096779953');
 });
 
