@@ -1,12 +1,13 @@
 const path = require('path');
 const fs = require('fs');
 const net = require('net');
-const { app, BrowserWindow, Menu, dialog, shell, ipcMain } = require('electron');
+const { app, BrowserWindow, Menu, dialog, shell, ipcMain, Tray } = require('electron');
 const { migrateLegacyDatabase } = require('./dataMigration');
 const { resolveRuntimeConfig } = require('./runtimeConfig');
 const { createLanServerController } = require('./lanServerController');
 const { createDouyinSessionManager } = require('./douyinSessionManager');
-const { createDouyinAutoSync } = require('./douyinAutoSync');
+const { createDouyinAutoSync, ensureDouyinSyncJobs } = require('./douyinAutoSync');
+const { createBackgroundMode } = require('./backgroundMode');
 const { createDouyinTranscriptService } = require('../services/douyinTranscriptService');
 const { readLanEnabled } = require('../services/lanHostService');
 
@@ -14,6 +15,8 @@ let mainWindow = null;
 let serverController = null;
 let douyinSessionManager = null;
 let douyinAutoSync = null;
+let backgroundMode = null;
+let servicesStopped = false;
 
 app.setName('WebStock');
 
@@ -128,6 +131,7 @@ function createWindow(url) {
     return { action: 'deny' };
   });
   mainWindow.loadURL(url);
+  if (backgroundMode) mainWindow.on('close', backgroundMode.handleWindowClose);
   mainWindow.on('closed', function() {
     mainWindow = null;
   });
@@ -178,19 +182,42 @@ function startDouyinAutoSync() {
   const expertChannels = require('../services/expertChannelService');
   const douyinSources = require('../services/douyinSourceService');
   const syncState = require('../services/douyinSyncStateService');
-  const modelMr = expertChannels.listChannels({ limit: 500 }).find(function(channel) {
-    return channel.channelKey === 'douyin-model-mr';
-  });
-  if (modelMr) syncState.ensureJob(modelMr.id, { enabled: true, intervalMinutes: 10 });
+  ensureDouyinSyncJobs(expertChannels, syncState, { intervalMinutes: 10 });
   douyinAutoSync = createDouyinAutoSync({
     sessionManager: getDouyinSessionManager(),
     channels: expertChannels,
     sources: douyinSources,
     transcriber: createDouyinTranscriptService(),
     syncState,
+    maxTranscriptionsPerRun: 3,
     log
   });
   douyinAutoSync.start();
+}
+
+async function stopBackgroundServices() {
+  if (servicesStopped) return;
+  servicesStopped = true;
+  if (douyinAutoSync) douyinAutoSync.stop();
+  if (douyinSessionManager) douyinSessionManager.dispose();
+  if (serverController) await serverController.stop();
+}
+
+function createBackgroundController() {
+  backgroundMode = createBackgroundMode({
+    app,
+    Tray,
+    Menu,
+    iconPath: path.join(__dirname, '..', 'icons', process.platform === 'win32' ? 'webstock.ico' : 'webstock-512.png'),
+    getMainWindow: function() { return mainWindow; },
+    onSyncAll: async function() {
+      if (!douyinAutoSync) throw new Error('抖音自动同步服务尚未启动');
+      return douyinAutoSync.syncAll();
+    },
+    onExit: stopBackgroundServices,
+    log
+  });
+  backgroundMode.attach();
 }
 
 ipcMain.handle('webstock:lan-access-status', function() {
@@ -239,29 +266,28 @@ if (!gotLock) {
   app.quit();
 } else {
   app.on('second-instance', function() {
-    if (!mainWindow) return;
-    if (mainWindow.isMinimized()) mainWindow.restore();
-    mainWindow.focus();
+    if (backgroundMode) backgroundMode.showMainWindow();
   });
 
   app.whenReady().then(async function() {
     Menu.setApplicationMenu(null);
     log('Electron app ready');
     const url = await startServer();
-    createWindow(url);
     startDouyinAutoSync();
+    createBackgroundController();
+    createWindow(url);
   }).catch(function(error) {
     log('WebStock startup failed', error);
     dialog.showErrorBox('WebStock startup failed', error.stack || error.message || String(error));
     app.quit();
   });
 
-  app.on('window-all-closed', function() {
-    if (douyinSessionManager) douyinSessionManager.dispose();
+  app.on('before-quit', function() {
+    if (backgroundMode) backgroundMode.setQuitting(true);
     if (douyinAutoSync) douyinAutoSync.stop();
-    if (serverController) serverController.stop().catch(function(error) {
+    if (douyinSessionManager) douyinSessionManager.dispose();
+    if (!servicesStopped && serverController) serverController.stop().catch(function(error) {
       log('Failed to stop local WebStock server cleanly', error);
     });
-    app.quit();
   });
 }

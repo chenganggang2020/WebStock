@@ -15,6 +15,44 @@ function observationNeedsTranscription(observation) {
   return !mediaMetadata.asr || mediaMetadata.asr.status !== 'complete';
 }
 
+function summarizeObservationCoverage(observations) {
+  const videos = (Array.isArray(observations) ? observations : []).filter(function(observation) {
+    return observation && observation.externalContentId && observation.mediaType !== 'article';
+  });
+  let transcribedCount = 0;
+  let failedTranscriptionCount = 0;
+  videos.forEach(function(observation) {
+    const metadata = observation.mediaMetadata && typeof observation.mediaMetadata === 'object'
+      ? observation.mediaMetadata : {};
+    const status = metadata.asr && metadata.asr.status;
+    if (status === 'complete' && String(observation.transcript || '').trim()) transcribedCount += 1;
+    else if (status === 'error') failedTranscriptionCount += 1;
+  });
+  const pendingTranscriptionCount = Math.max(videos.length - transcribedCount - failedTranscriptionCount, 0);
+  return {
+    videoCount: videos.length,
+    transcribedCount,
+    pendingTranscriptionCount,
+    failedTranscriptionCount,
+    transcriptCoverage: videos.length ? Number((transcribedCount / videos.length).toFixed(4)) : 0
+  };
+}
+
+function ensureDouyinSyncJobs(channels, syncState, defaults = {}) {
+  if (!channels || typeof channels.listChannels !== 'function' || !syncState || typeof syncState.ensureJob !== 'function') {
+    return 0;
+  }
+  const settings = {
+    enabled: true,
+    intervalMinutes: Math.min(Math.max(Number(defaults.intervalMinutes) || 10, 5), 1440)
+  };
+  const eligible = channels.listChannels({ limit: 500 }).filter(function(channel) {
+    return channel && channel.enabled === true && channel.platform === 'douyin' && Boolean(channel.profileUrl);
+  });
+  eligible.forEach(function(channel) { syncState.ensureJob(channel.id, settings); });
+  return eligible.length;
+}
+
 function createDouyinAutoSync(options = {}) {
   const sessionManager = options.sessionManager;
   const channels = options.channels;
@@ -121,6 +159,7 @@ function createDouyinAutoSync(options = {}) {
           throw new Error('发现作品链接，但本轮未能提取任何身份匹配的视频详情');
         }
 
+        const coverage = summarizeObservationCoverage(channels.listObservations(id, { limit: 1000 }));
         const result = {
           channelId: id,
           pageUrl: profileCapture.pageUrl,
@@ -134,7 +173,8 @@ function createDouyinAutoSync(options = {}) {
           transcribedCount,
           transcriptionAttemptedCount,
           detailErrors,
-          transcriptErrors
+          transcriptErrors,
+          coverage
         };
         syncState.markCompleted(id, result);
         return result;
@@ -158,6 +198,25 @@ function createDouyinAutoSync(options = {}) {
     }
   }
 
+  async function syncAll() {
+    const jobs = syncState.listEnabled ? syncState.listEnabled() : [];
+    const items = [];
+    for (const job of jobs) {
+      try {
+        const result = await syncChannel(job.channelId);
+        items.push({ channelId: Number(job.channelId), result });
+      } catch (error) {
+        items.push({ channelId: Number(job.channelId), error: error.message || String(error) });
+      }
+    }
+    return {
+      attemptedCount: items.length,
+      succeededCount: items.filter(function(item) { return !item.error; }).length,
+      failedCount: items.filter(function(item) { return Boolean(item.error); }).length,
+      items
+    };
+  }
+
   function start() {
     if (interval) return;
     startupTimer = setTimeoutFn(function() { runDue().catch(error => log('Initial Douyin sync failed', error)); }, startupDelayMs);
@@ -171,7 +230,13 @@ function createDouyinAutoSync(options = {}) {
     interval = null;
   }
 
-  return { syncChannel, runDue, start, stop };
+  return { syncChannel, syncAll, runDue, start, stop };
 }
 
-module.exports = { createDouyinAutoSync, observationNeedsDetail, observationNeedsTranscription };
+module.exports = {
+  createDouyinAutoSync,
+  observationNeedsDetail,
+  observationNeedsTranscription,
+  ensureDouyinSyncJobs,
+  summarizeObservationCoverage
+};

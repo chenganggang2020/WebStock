@@ -95,4 +95,9 @@ function listDue(now = isoNow()) {
     ORDER BY datetime(next_run_at) ASC, channel_id ASC`).all(now).map(rowToJob);
 }
 
-module.exports = { ensureJob, getJob, updateSettings, markRunning, markCompleted, markFailed, listDue };
+function listEnabled() {
+  return db.prepare(`SELECT * FROM expert_sync_jobs WHERE enabled = 1
+    ORDER BY channel_id ASC`).all().map(rowToJob);
+}
+
+module.exports = { ensureJob, getJob, updateSettings, markRunning, markCompleted, markFailed, listDue, listEnabled };

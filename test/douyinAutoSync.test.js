@@ -1,7 +1,97 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const { createDouyinAutoSync } = require('../electron/douyinAutoSync');
+const {
+  createDouyinAutoSync,
+  ensureDouyinSyncJobs,
+  summarizeObservationCoverage
+} = require('../electron/douyinAutoSync');
+
+test('automatic sync initializes every enabled Douyin creator with a profile URL', () => {
+  const ensured = [];
+  const count = ensureDouyinSyncJobs({
+    listChannels() {
+      return [
+        { id: 1, enabled: true, platform: 'douyin', profileUrl: 'https://www.douyin.com/user/one' },
+        { id: 2, enabled: false, platform: 'douyin', profileUrl: 'https://www.douyin.com/user/two' },
+        { id: 3, enabled: true, platform: 'book', profileUrl: 'https://example.com/book' },
+        { id: 4, enabled: true, platform: 'douyin', profileUrl: '' },
+        { id: 5, enabled: true, platform: 'douyin', profileUrl: 'https://www.douyin.com/user/five' }
+      ];
+    }
+  }, {
+    ensureJob(id, settings) { ensured.push([id, settings]); }
+  }, { intervalMinutes: 10 });
+
+  assert.equal(count, 2);
+  assert.deepEqual(ensured, [
+    [1, { enabled: true, intervalMinutes: 10 }],
+    [5, { enabled: true, intervalMinutes: 10 }]
+  ]);
+});
+
+test('automatic sync summarizes transcript coverage and pending work', () => {
+  const summary = summarizeObservationCoverage([
+    { externalContentId: '1', mediaType: 'video', transcript: '完整逐字稿', mediaMetadata: { asr: { status: 'complete' } } },
+    { externalContentId: '2', mediaType: 'video', summary: '只有页面摘要', mediaMetadata: {} },
+    { externalContentId: '3', mediaType: 'video', summary: '转写失败', mediaMetadata: { asr: { status: 'error' } } },
+    { externalContentId: '', mediaType: 'article', summary: '第三方文章' }
+  ]);
+
+  assert.deepEqual(summary, {
+    videoCount: 3,
+    transcribedCount: 1,
+    pendingTranscriptionCount: 1,
+    failedTranscriptionCount: 1,
+    transcriptCoverage: 0.3333
+  });
+});
+
+test('automatic sync runs every enabled job without one failure blocking the queue', async () => {
+  const profiles = {
+    21: 'https://www.douyin.com/user/working',
+    22: 'https://www.douyin.com/user/login-expired'
+  };
+  const itemUrl = 'https://www.douyin.com/video/7000000000000000021';
+  const sync = createDouyinAutoSync({
+    sessionManager: {
+      async captureUrl(url) {
+        if (url === profiles[22]) return { loggedIn: false, profile: {}, items: [] };
+        if (url === profiles[21]) return {
+          pageType: 'profile', pageUrl: url, loggedIn: true,
+          profile: { displayName: '可采集作者', profileUrl: url },
+          items: [{ sourceUrl: itemUrl, contentId: '7000000000000000021', title: '新视频' }]
+        };
+        return {
+          pageType: 'video', pageUrl: itemUrl, loggedIn: true,
+          profile: { displayName: '可采集作者', profileUrl: profiles[21] },
+          items: [{ sourceUrl: itemUrl, contentId: '7000000000000000021', title: '新视频', summary: '已提取摘要' }]
+        };
+      }
+    },
+    channels: {
+      getChannel(id) { return { id, displayName: id === 21 ? '可采集作者' : '登录失效作者', platform: 'douyin', profileUrl: profiles[id] }; },
+      listObservations() { return []; }
+    },
+    sources: {
+      reanalyzeChannelObservations() { return { updatedCount: 0 }; },
+      verifyCapturedIdentity() { return { matched: true }; },
+      importCapturedPage() { return { addedCount: 1, updatedCount: 0, unchangedCount: 0, items: [] }; }
+    },
+    syncState: {
+      listEnabled() { return [{ channelId: 21 }, { channelId: 22 }]; },
+      markRunning() {}, markCompleted() {}, markFailed() {}
+    },
+    maxDetailsPerRun: 1
+  });
+
+  const result = await sync.syncAll();
+  assert.equal(result.attemptedCount, 2);
+  assert.equal(result.succeededCount, 1);
+  assert.equal(result.failedCount, 1);
+  assert.equal(result.items[1].channelId, 22);
+  assert.match(result.items[1].error, /登录/);
+});
 
 test('automatic sync discovers new videos, fills incomplete details and refreshes recent metrics', async () => {
   const calls = [];
