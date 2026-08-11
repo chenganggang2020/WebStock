@@ -502,6 +502,65 @@ test('desktop research library opens a persistent Douyin session and syncs the v
   await expect(page.locator('#expertChannelSelect')).not.toContainText('桌面抖音作者');
 });
 
+test('Douyin creator workbench shows coverage, searchable videos and transcript detail', async ({ page }) => {
+  const channelResponse = await page.request.post(baseURL + '/api/expert/channels', {
+    data: {
+      channelKey: 'playwright-douyin-workbench',
+      displayName: '工作台测试作者',
+      subjectType: 'creator',
+      platform: 'douyin',
+      profileUrl: 'https://www.douyin.com/user/playwright-workbench'
+    }
+  });
+  const channel = (await channelResponse.json()).data;
+  await page.request.post(baseURL + '/api/expert/channels/' + channel.id + '/observations', {
+    data: {
+      externalContentId: '7000000000000000101',
+      sourceUrl: 'https://www.douyin.com/video/7000000000000000101',
+      title: '已转写视频',
+      mediaType: 'video',
+      evidenceLevel: 'primary',
+      contentRole: 'transcript',
+      publishedAt: '2026-08-10T08:00:00.000Z',
+      transcript: '先进封装的订单兑现和国产设备进展需要持续核对。',
+      summary: '页面摘要：讨论先进封装。',
+      sectors: ['先进封装'],
+      mediaMetadata: { asr: { status: 'complete', model: 'small', computeType: 'int8', segments: [
+        { start: 0, end: 4.2, text: '先进封装的订单兑现和国产设备进展需要持续核对。' }
+      ] } }
+    }
+  });
+  await page.request.post(baseURL + '/api/expert/channels/' + channel.id + '/observations', {
+    data: {
+      externalContentId: '7000000000000000102',
+      sourceUrl: 'https://www.douyin.com/video/7000000000000000102',
+      title: '待处理视频',
+      mediaType: 'video',
+      evidenceLevel: 'primary',
+      contentRole: 'fact_summary',
+      publishedAt: '2026-08-11T08:00:00.000Z',
+      summary: '等待本地语音转写。',
+      sectors: ['半导体设备']
+    }
+  });
+
+  await page.goto(baseURL + '/', { waitUntil: 'domcontentloaded' });
+  await page.click('[data-main-view="aiResearch"]');
+  await page.selectOption('#expertChannelSelect', String(channel.id));
+
+  await expect(page.locator('#expertCreatorWorkbench')).toBeVisible();
+  await expect(page.locator('#expertCreatorWorkbench video')).toHaveCount(0);
+  await expect(page.locator('#expertCreatorStats')).toContainText('视频资料');
+  await expect(page.locator('#expertCreatorStats')).toContainText('50%');
+  await expect(page.locator('#expertCreatorVideoList .creator-video-row')).toHaveCount(2);
+  await page.getByRole('button', { name: /已转写视频/ }).click();
+  await expect(page.locator('#expertCreatorVideoDetail')).toContainText('先进封装的订单兑现');
+  await expect(page.locator('#expertCreatorVideoDetail')).toContainText('00:00–00:04');
+  await page.fill('#expertCreatorSearchInput', '待处理');
+  await expect(page.locator('#expertCreatorVideoList .creator-video-row')).toHaveCount(1);
+  await expect(page.locator('#expertCreatorVideoList')).toContainText('待处理视频');
+});
+
 test('main stock actions and workspace navigation do not throw', async ({ page }) => {
   const dialogResponses = [];
   const dialogMessages = [];

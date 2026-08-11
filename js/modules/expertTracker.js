@@ -4,7 +4,12 @@ let expertBacktests = [];
 let expertCurveCharts = [];
 let expertDouyinSyncState = null;
 let expertSyncStatusTimer = null;
+let expertSyncStatusPollActive = false;
 let expertTrackerBound = false;
+let expertSelectedVideoId = 0;
+let expertCreatorSearch = '';
+let expertCreatorStatus = 'all';
+let expertCreatorTopic = '';
 
 const MODEL_MR_DOUYIN_PROFILE_URL = 'https://www.douyin.com/user/MS4wLjABAAAAK713M9d8PGNb_WiMYf7yKhOI5y60H4uELJK2guDjJT0';
 
@@ -160,6 +165,7 @@ function expertRenderDouyinSyncState() {
   target.innerHTML = '<span class="douyin-sync-state ' + expertEscape(expertDouyinSyncState.status) + '">' +
     expertEscape(parts.join(' · ')) + '</span>' +
     (expertDouyinSyncState.lastError ? '<span class="error">' + expertEscape(expertDouyinSyncState.lastError) + '</span>' : '');
+  expertRenderCreatorWorkbench();
 }
 
 async function expertLoadDouyinSyncState() {
@@ -171,6 +177,25 @@ async function expertLoadDouyinSyncState() {
   }
   expertDouyinSyncState = await expertApi('/api/expert/channels/' + channel.id + '/sync');
   expertRenderDouyinSyncState();
+}
+
+async function expertPollDouyinSyncState() {
+  const channel = expertSelectedChannel();
+  if (!channel || channel.platform !== 'douyin' || expertSyncStatusPollActive) return;
+  expertSyncStatusPollActive = true;
+  const channelId = channel.id;
+  const previousCompletedAt = expertDouyinSyncState && expertDouyinSyncState.lastCompletedAt;
+  try {
+    await expertLoadDouyinSyncState();
+    const completedAt = expertDouyinSyncState && expertDouyinSyncState.lastCompletedAt;
+    if (!completedAt || completedAt === previousCompletedAt || expertSelectedChannelId() !== channelId) return;
+    expertObservations = await expertApi('/api/expert/channels/' + channelId + '/observations?limit=500');
+    expertBacktests = await expertApi('/api/expert/channels/' + channelId + '/backtests?limit=20');
+    expertRenderTimeline();
+    expertRenderBacktests();
+  } finally {
+    expertSyncStatusPollActive = false;
+  }
 }
 
 async function expertToggleDouyinAutoSync() {
@@ -255,11 +280,184 @@ function expertFormatOffset(value) {
   return String(minutes).padStart(2, '0') + ':' + String(remainder).padStart(2, '0');
 }
 
+function expertCreatorVideos() {
+  return expertObservations.filter(function(item) {
+    return item && (item.mediaType === 'video' || (item.externalContentId && expertDouyinVideoId(item.sourceUrl)));
+  });
+}
+
+function expertCreatorAsrStatus(item) {
+  const asr = item && item.mediaMetadata && item.mediaMetadata.asr ? item.mediaMetadata.asr : {};
+  if (asr.status === 'complete' && String(item.transcript || '').trim()) return 'complete';
+  if (asr.status === 'error') return 'error';
+  return 'pending';
+}
+
+function expertCreatorTopicCounts(videos) {
+  const ignored = new Set(['抖音登录会话同步', '身份已匹配', 'douyin']);
+  const counts = new Map();
+  videos.forEach(function(item) {
+    (item.sectors || []).concat(item.topics || []).forEach(function(topic) {
+      const value = String(topic || '').trim();
+      if (!value || ignored.has(value)) return;
+      counts.set(value, (counts.get(value) || 0) + 1);
+    });
+  });
+  return Array.from(counts.entries()).map(function(entry) {
+    return { topic: entry[0], count: entry[1] };
+  }).sort(function(a, b) { return b.count - a.count || a.topic.localeCompare(b.topic, 'zh-CN'); }).slice(0, 10);
+}
+
+function expertCreatorFilteredVideos(videos) {
+  const query = expertCreatorSearch.toLowerCase();
+  return videos.filter(function(item) {
+    if (expertCreatorStatus !== 'all' && expertCreatorAsrStatus(item) !== expertCreatorStatus) return false;
+    const topics = (item.sectors || []).concat(item.topics || []);
+    if (expertCreatorTopic && !topics.includes(expertCreatorTopic)) return false;
+    if (!query) return true;
+    const haystack = [item.title, item.transcript, item.summary, item.description]
+      .concat(item.stockCodes || [], topics).join('\n').toLowerCase();
+    return haystack.includes(query);
+  });
+}
+
+function expertCreatorMetricLine(item) {
+  const engagement = item.engagement || {};
+  return [
+    engagement.likes == null ? '' : '赞 ' + expertFormatMetric(engagement.likes),
+    engagement.comments == null ? '' : '评 ' + expertFormatMetric(engagement.comments),
+    engagement.favorites == null ? '' : '藏 ' + expertFormatMetric(engagement.favorites),
+    engagement.shares == null ? '' : '转 ' + expertFormatMetric(engagement.shares)
+  ].filter(Boolean);
+}
+
+function expertRenderCreatorDetail(item) {
+  const target = document.getElementById('expertCreatorVideoDetail');
+  if (!target) return;
+  if (!item) {
+    target.innerHTML = '<div class="empty-state compact">当前筛选条件下没有视频。</div>';
+    return;
+  }
+  const asr = item.mediaMetadata && item.mediaMetadata.asr ? item.mediaMetadata.asr : {};
+  const status = expertCreatorAsrStatus(item);
+  const statusLabel = status === 'complete' ? '逐字稿已完成' : status === 'error' ? '转写失败' : '等待转写';
+  const segments = status === 'complete' && Array.isArray(asr.segments) ? asr.segments : [];
+  const metrics = expertCreatorMetricLine(item);
+  const signal = item.signal || {};
+  const keyPoints = Array.isArray(signal.keyPoints) ? signal.keyPoints.slice(0, 6) : [];
+  const risks = Array.isArray(signal.riskFlags) ? signal.riskFlags.slice(0, 5) : [];
+  const tags = (item.stockCodes || []).concat(item.sectors || [], item.topics || [])
+    .filter(function(value, index, values) { return value && values.indexOf(value) === index; }).slice(0, 16);
+  const transcript = String(item.transcript || '').trim();
+  const fallback = String(item.description || item.content || '').trim();
+  target.innerHTML = '<header class="creator-detail-header">' +
+    '<div><span class="creator-asr-status ' + status + '">' + expertEscape(statusLabel) + '</span>' +
+      '<time>' + expertEscape(expertFormatTime(item.publishedAt || item.firstSeenAt)) + '</time></div>' +
+    '<h4>' + expertEscape(item.title || '未命名视频') + '</h4>' +
+    (metrics.length ? '<div class="creator-detail-metrics">' + metrics.map(function(metric) {
+      return '<span>' + expertEscape(metric) + '</span>';
+    }).join('') + '</div>' : '') +
+  '</header>' +
+  (tags.length ? '<div class="creator-detail-tags">' + tags.map(function(tag) {
+    return '<span>' + expertEscape(tag) + '</span>';
+  }).join('') + '</div>' : '') +
+  (transcript ? '<section class="creator-detail-section"><h5>ASR 原始逐字稿</h5><p>' + expertEscape(transcript) + '</p></section>' :
+    '<section class="creator-detail-section creator-detail-pending"><h5>逐字稿</h5><p>' +
+      expertEscape(status === 'error' ? (asr.message || '本地语音识别失败，等待下次重试。') : '已进入后台队列，等待本地语音识别。') + '</p></section>') +
+  (segments.length ? '<details class="expert-asr-segments" open><summary>带时间戳逐字稿 · ' + segments.length +
+    ' 段 · ' + expertEscape(asr.model || 'small') + ' / ' + expertEscape(asr.computeType || 'int8') + '</summary><ol>' +
+    segments.map(function(segment) {
+      return '<li><time>' + expertEscape(expertFormatOffset(segment.start)) + '–' +
+        expertEscape(expertFormatOffset(segment.end)) + '</time><span>' + expertEscape(segment.text) + '</span></li>';
+    }).join('') + '</ol></details>' : '') +
+  (item.summary ? '<section class="creator-detail-section creator-summary-section"><h5>抖音页面摘要</h5><p>' +
+    expertEscape(item.summary) + '</p></section>' : '') +
+  (!transcript && fallback && fallback !== item.summary ? '<section class="creator-detail-section"><h5>页面正文</h5><p>' +
+    expertEscape(fallback) + '</p></section>' : '') +
+  (keyPoints.length ? '<section class="creator-detail-section creator-signal-section"><h5>自动提取的投资信息</h5><ul>' +
+    keyPoints.map(function(point) { return '<li>' + expertEscape(point) + '</li>'; }).join('') + '</ul>' +
+    (risks.length ? '<p class="expert-risk-line">风险条件：' + expertEscape(risks.join('；')) + '</p>' : '') + '</section>' : '') +
+  '<footer class="creator-detail-actions">' +
+    (item.sourceUrl ? '<a href="' + expertEscape(item.sourceUrl) + '" target="_blank" rel="noopener">打开来源页面</a>' : '<span></span>') +
+    '<button class="small-btn danger expert-delete-observation" data-observation-id="' + item.id + '">删除资料</button>' +
+  '</footer>';
+}
+
+function expertRenderCreatorWorkbench() {
+  const target = document.getElementById('expertCreatorWorkbench');
+  const channel = expertSelectedChannel();
+  const visible = Boolean(target && channel && channel.platform === 'douyin');
+  if (!target) return false;
+  target.hidden = !visible;
+  if (!visible) return false;
+  const videos = expertCreatorVideos();
+  const completed = videos.filter(function(item) { return expertCreatorAsrStatus(item) === 'complete'; }).length;
+  const failed = videos.filter(function(item) { return expertCreatorAsrStatus(item) === 'error'; }).length;
+  const pending = Math.max(videos.length - completed - failed, 0);
+  const coverage = videos.length ? Math.round(completed / videos.length * 100) : 0;
+  const sync = expertDouyinSyncState || {};
+  const lastResult = sync.lastResult || {};
+  const stats = document.getElementById('expertCreatorStats');
+  stats.innerHTML = [
+    ['视频资料', videos.length, lastResult.workCount ? '主页作品 ' + Number(lastResult.workCount) : '已入库'],
+    ['转写覆盖率', coverage + '%', completed + ' 条完成'],
+    ['待处理队列', pending, failed ? failed + ' 条失败' : '后台串行处理'],
+    ['最近采集', sync.lastCompletedAt ? expertFormatTime(sync.lastCompletedAt) : '尚未完成', sync.enabled ? '每 ' + Number(sync.intervalMinutes || 10) + ' 分钟' : '已暂停'],
+    ['运行状态', sync.status === 'running' ? '采集中' : sync.status === 'error' ? '需检查' : sync.enabled ? '后台监控' : '未开启',
+      sync.nextRunAt ? '下次 ' + expertFormatTime(sync.nextRunAt) : '']
+  ].map(function(stat) {
+    return '<div class="creator-stat"><span>' + expertEscape(stat[0]) + '</span><strong>' + expertEscape(stat[1]) +
+      '</strong><small>' + expertEscape(stat[2]) + '</small></div>';
+  }).join('');
+  stats.style.setProperty('--creator-coverage', coverage + '%');
+
+  const topics = expertCreatorTopicCounts(videos);
+  const maxTopicCount = topics.length ? topics[0].count : 1;
+  document.getElementById('expertCreatorTopics').innerHTML = topics.length
+    ? '<button class="creator-topic-button' + (!expertCreatorTopic ? ' active' : '') + '" data-topic="">全部主题<span>' + videos.length + '</span></button>' +
+      topics.map(function(topic) {
+        return '<button class="creator-topic-button' + (expertCreatorTopic === topic.topic ? ' active' : '') + '" data-topic="' +
+          expertEscape(topic.topic) + '"><span class="creator-topic-bar" style="width:' +
+          Math.max(Math.round(topic.count / maxTopicCount * 100), 12) + '%"></span><strong>' + expertEscape(topic.topic) +
+          '</strong><em>' + topic.count + '</em></button>';
+      }).join('')
+    : '<span class="muted">尚未从逐字稿中提取出板块或主题。</span>';
+
+  const filtered = expertCreatorFilteredVideos(videos);
+  document.getElementById('expertCreatorVideoCount').textContent = filtered.length + ' / ' + videos.length + ' 条';
+  if (!filtered.some(function(item) { return item.id === expertSelectedVideoId; })) {
+    expertSelectedVideoId = filtered.length ? filtered[0].id : 0;
+  }
+  document.getElementById('expertCreatorVideoList').innerHTML = filtered.length ? filtered.map(function(item) {
+    const status = expertCreatorAsrStatus(item);
+    const statusLabel = status === 'complete' ? '已转写' : status === 'error' ? '失败' : '待转写';
+    const tags = (item.sectors || []).concat(item.topics || []).filter(Boolean).slice(0, 3);
+    const metrics = expertCreatorMetricLine(item).slice(0, 2);
+    return '<button class="creator-video-row' + (item.id === expertSelectedVideoId ? ' selected' : '') + '" data-video-id="' + item.id + '">' +
+      '<span class="creator-video-row-top"><time>' + expertEscape(expertFormatTime(item.publishedAt || item.firstSeenAt)) +
+        '</time><em class="creator-asr-status ' + status + '">' + statusLabel + '</em></span>' +
+      '<strong>' + expertEscape(item.title || '未命名视频') + '</strong>' +
+      '<span class="creator-video-row-meta">' + expertEscape(metrics.join(' · ') || '暂无互动数据') + '</span>' +
+      (tags.length ? '<span class="creator-video-row-tags">' + tags.map(function(tag) {
+        return '<i>' + expertEscape(tag) + '</i>';
+      }).join('') + '</span>' : '') +
+    '</button>';
+  }).join('') : '<div class="empty-state compact">没有符合筛选条件的视频。</div>';
+  expertRenderCreatorDetail(filtered.find(function(item) { return item.id === expertSelectedVideoId; }) || null);
+  return true;
+}
+
 function expertRenderTimeline() {
   const target = document.getElementById('expertTimeline');
   if (!target) return;
   expertCurveCharts.forEach(function(chart) { try { chart.dispose(); } catch (error) {} });
   expertCurveCharts = [];
+  const creatorWorkbenchVisible = expertRenderCreatorWorkbench();
+  target.hidden = creatorWorkbenchVisible;
+  if (creatorWorkbenchVisible) {
+    target.innerHTML = '';
+    return;
+  }
   if (!expertSelectedChannelId()) {
     target.innerHTML = '<div class="empty-state compact">请先建立或选择研究对象。</div>';
     return;
@@ -1007,6 +1205,12 @@ function bindExpertTracker() {
     expertLoadChannels().catch(function(error) { expertSetStatus(error.message, true); });
   });
   document.getElementById('expertChannelSelect').addEventListener('change', function() {
+    expertSelectedVideoId = 0;
+    expertCreatorSearch = '';
+    expertCreatorStatus = 'all';
+    expertCreatorTopic = '';
+    document.getElementById('expertCreatorSearchInput').value = '';
+    document.getElementById('expertCreatorStatusFilter').value = 'all';
     expertSyncChannelControls();
     expertLoadTimeline().catch(function(error) { expertSetStatus(error.message, true); });
   });
@@ -1025,12 +1229,33 @@ function bindExpertTracker() {
     const button = event.target.closest('.expert-delete-observation');
     if (button) expertDeleteObservation(Number(button.dataset.observationId));
   });
+  document.getElementById('expertCreatorSearchInput').addEventListener('input', function(event) {
+    expertCreatorSearch = event.target.value.trim();
+    expertRenderCreatorWorkbench();
+  });
+  document.getElementById('expertCreatorStatusFilter').addEventListener('change', function(event) {
+    expertCreatorStatus = event.target.value;
+    expertRenderCreatorWorkbench();
+  });
+  document.getElementById('expertCreatorWorkbench').addEventListener('click', function(event) {
+    const videoButton = event.target.closest('.creator-video-row');
+    if (videoButton) {
+      expertSelectedVideoId = Number(videoButton.dataset.videoId) || 0;
+      expertRenderCreatorWorkbench();
+      return;
+    }
+    const topicButton = event.target.closest('.creator-topic-button');
+    if (topicButton) {
+      expertCreatorTopic = topicButton.dataset.topic || '';
+      expertRenderCreatorWorkbench();
+      return;
+    }
+    const deleteButton = event.target.closest('.expert-delete-observation');
+    if (deleteButton) expertDeleteObservation(Number(deleteButton.dataset.observationId));
+  });
   if (!expertSyncStatusTimer) {
     expertSyncStatusTimer = setInterval(function() {
-      const channel = expertSelectedChannel();
-      if (channel && channel.platform === 'douyin') {
-        expertLoadDouyinSyncState().catch(function() {});
-      }
+      expertPollDouyinSyncState().catch(function() {});
     }, 15000);
   }
   expertLoadChannels().catch(function(error) { expertSetStatus(error.message, true); });

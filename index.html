@@ -598,6 +598,24 @@
           <span id="douyinDesktopSessionStatus" class="muted">等待检查登录状态</span>
           <div id="douyinAutoSyncSummary" class="douyin-auto-sync-summary"></div>
         </div>
+        <section id="expertCreatorWorkbench" class="creator-research-workbench" hidden>
+          <div id="expertCreatorStats" class="creator-stat-strip"></div>
+          <div class="creator-workbench-toolbar">
+            <input id="expertCreatorSearchInput" type="search" placeholder="搜索视频、逐字稿、股票或主题" autocomplete="off">
+            <select id="expertCreatorStatusFilter" aria-label="转写状态">
+              <option value="all">全部视频</option>
+              <option value="complete">已转写</option>
+              <option value="pending">待转写</option>
+              <option value="error">转写失败</option>
+            </select>
+            <span id="expertCreatorVideoCount" class="muted">0 条</span>
+          </div>
+          <div id="expertCreatorTopics" class="creator-topic-overview"></div>
+          <div class="creator-workbench-grid">
+            <div id="expertCreatorVideoList" class="creator-video-list" aria-label="创作者视频列表"></div>
+            <article id="expertCreatorVideoDetail" class="creator-video-detail"></article>
+          </div>
+        </section>
         <details id="expertSubjectEditor" class="expert-observation-editor">
           <summary>新增人物、书籍或分析方法</summary>
           <div class="expert-observation-grid">
