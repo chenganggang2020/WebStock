@@ -1712,7 +1712,7 @@ body.dark .md-body blockquote { background: rgba(99,102,241,0.12); }
 
 #positionsTable tbody tr,
 #watchlistTable tbody tr {
-  min-height: 68px;
+  min-height: 76px;
 }
 
 #positionsTable td,
@@ -1723,18 +1723,24 @@ body.dark .md-body blockquote { background: rgba(99,102,241,0.12); }
 
 .holding-name-cell {
   display: grid;
-  grid-template-columns: minmax(82px, max-content) 132px;
+  grid-template-columns: minmax(88px, max-content) 168px;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
 }
 
 .holding-name-cell > span {
   font-weight: 700;
 }
 
+.position-mini-chart,
 .holding-name-cell .stock-mini-chart {
-  width: 132px;
-  height: 46px;
+  width: 168px;
+  height: 52px;
+  display: block;
+}
+
+.position-mini-chart-placeholder text {
+  letter-spacing: 0;
 }
 
 .news-list {
@@ -2595,6 +2601,10 @@ body.dark .md-body blockquote { background: rgba(99,102,241,0.12); }
 .table-scroll {
   overflow-x: auto;
   padding: 12px 20px;
+}
+
+#portfolioView > .table-scroll {
+  flex-shrink: 0;
 }
 
 .data-table {

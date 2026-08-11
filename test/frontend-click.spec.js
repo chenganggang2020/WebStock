@@ -51,7 +51,15 @@ test.beforeEach(async ({ page }) => {
       });
     }
     if (url.includes('/api/minute')) {
-      return route.fulfill({ contentType: 'application/json', body: JSON.stringify([{ time: '2026-05-11 09:30:00', price: 11.28, volume: 10000, amount: 112800 }]) });
+      return route.fulfill({
+        contentType: 'application/json',
+        body: JSON.stringify([
+          { time: '2026-05-11 09:30:00', price: 11.30, volume: 10000, amount: 113000 },
+          { time: '2026-05-11 09:35:00', price: 11.24, volume: 8000, amount: 89920 },
+          { time: '2026-05-11 09:40:00', price: 11.31, volume: 12000, amount: 135720 },
+          { time: '2026-05-11 09:45:00', price: 11.28, volume: 9000, amount: 101520 }
+        ])
+      });
     }
     if (url.includes('/api/kline')) {
       return route.fulfill({ contentType: 'application/json', body: JSON.stringify([{ date: '2026-05-11', open: 11, close: 11.28, high: 11.4, low: 10.9, volume: 10000, amount: 112800 }]) });
@@ -587,6 +595,9 @@ test('portfolio accounts switch without mixing holdings or trades', async ({ pag
   await page.fill('#tradeQuantityInput', '100');
   await page.click('#tradeModalOk');
   await expect(page.locator('#positionsTbody')).toContainText('601999');
+  await expect(page.locator('#positionsTbody tr[data-code="601999"] .stock-mini-chart polyline')).toHaveCount(1);
+  await expect(page.locator('#positionsTbody tr[data-code="601999"] .stock-mini-chart')).not.toContainText('OHLC');
+  await expect(page.locator('#positionsTable').locator('..')).toHaveCSS('flex-shrink', '0');
 
   await page.selectOption('#portfolioAccountSelect', { label: '默认账户' });
   await expect(page.locator('#positionsTbody')).not.toContainText('601999');

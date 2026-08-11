@@ -51,6 +51,61 @@ function todayReferencePnlValue(pos) {
   return pos && pos.todayReferencePnl !== undefined && pos.todayReferencePnl !== null ? pos.todayReferencePnl : pos.todayPnl;
 }
 
+let positionMiniChartGeneration = 0;
+const positionMiniChartRequests = new Map();
+
+function positionMiniChartPlaceholder(label) {
+  return '<svg class="stock-mini-chart position-mini-chart-placeholder" viewBox="0 0 168 52" aria-label="' + portfolioEscape(label) + '">' +
+    '<line x1="6" y1="26" x2="162" y2="26" stroke="#d7dee8" stroke-width="1" stroke-dasharray="3 4"/>' +
+    '<text x="84" y="30" text-anchor="middle" fill="#94a3b8" font-size="9">' + portfolioEscape(label) + '</text>' +
+    '</svg>';
+}
+
+function fetchPositionMinuteSeries(code) {
+  const cached = window.State.minuteSeriesByCode && window.State.minuteSeriesByCode[code];
+  if (Array.isArray(cached) && cached.length >= 2) return Promise.resolve(cached);
+  if (positionMiniChartRequests.has(code)) return positionMiniChartRequests.get(code);
+  const request = window.ApiClient.fetchJsonData('/api/minute?code=' + encodeURIComponent(code))
+    .then(function(series) {
+      if (!Array.isArray(series) || series.length < 2) return [];
+      window.State.minuteSeriesByCode[code] = series.slice();
+      return series;
+    })
+    .catch(function(error) {
+      console.warn('分时缩略图加载失败 ' + code + ':', error.message || error);
+      return [];
+    })
+    .finally(function() { positionMiniChartRequests.delete(code); });
+  positionMiniChartRequests.set(code, request);
+  return request;
+}
+
+async function loadPositionMiniCharts(positions) {
+  const generation = ++positionMiniChartGeneration;
+  const accountId = activeAccountId();
+  const queue = (positions || []).slice();
+  async function worker() {
+    while (queue.length) {
+      const pos = queue.shift();
+      const series = await fetchPositionMinuteSeries(pos.code);
+      if (generation !== positionMiniChartGeneration || accountId !== activeAccountId()) return;
+      const holder = document.querySelector('#positionsTbody [data-mini-chart-code="' + pos.code + '"]');
+      if (!holder) continue;
+      if (!series.length || !window.StockList || !window.StockList.miniChart) {
+        holder.innerHTML = positionMiniChartPlaceholder('暂无分时');
+        continue;
+      }
+      const trendColor = Number(pos.todayChange) >= 0 ? 'var(--up)' : 'var(--down)';
+      holder.innerHTML = window.StockList.miniChart(
+        Object.assign({}, pos, { price: pos.currentPrice, change: pos.todayChange, minuteSeries: series }),
+        trendColor
+      );
+    }
+  }
+  const workerCount = Math.min(4, queue.length);
+  await Promise.all(Array.from({ length: workerCount }, worker));
+}
+
 function portfolioCsvCell(value) {
   const text = String(value == null ? '' : value);
   const safeText = /^[\t\r\n]/.test(text) || /^\s*[=+@]/.test(text) ? "'" + text : text;
@@ -310,13 +365,14 @@ function renderPositions() {
     const todayReferencePnl = todayReferencePnlValue(pos);
     const floatingPnl = pos.unrealizedPnl;
     const realizedPnl = pos.realizedPnl;
+    const minuteSeries = window.State.minuteSeriesByCode && window.State.minuteSeriesByCode[pos.code];
     const trendColor = Number(pos.todayChange) >= 0 ? 'var(--up)' : 'var(--down)';
-    const miniChart = window.StockList && window.StockList.miniChart
-      ? window.StockList.miniChart(Object.assign({}, pos, { price: pos.currentPrice, change: pos.todayChange }), trendColor)
-      : '';
+    const miniChart = Array.isArray(minuteSeries) && minuteSeries.length >= 2 && window.StockList && window.StockList.miniChart
+      ? window.StockList.miniChart(Object.assign({}, pos, { price: pos.currentPrice, change: pos.todayChange, minuteSeries: minuteSeries }), trendColor)
+      : positionMiniChartPlaceholder('加载分时...');
     return '<tr data-code="' + pos.code + '" tabindex="0" title="双击查看行情，右键打开持仓操作">' +
       '<td><span class="position-code">' + pos.code + '</span></td>' +
-      '<td><div class="holding-name-cell"><span>' + pos.name + '</span>' + miniChart + '</div></td>' +
+      '<td><div class="holding-name-cell"><span>' + pos.name + '</span><span class="position-mini-chart" data-mini-chart-code="' + pos.code + '">' + miniChart + '</span></div></td>' +
       '<td>' + pos.quantity + '</td>' +
       '<td>' + fmt(pos.avgCost, 3) + '</td>' +
       '<td>' + fmt(pos.currentPrice, 3) + '</td>' +
@@ -333,6 +389,7 @@ function renderPositions() {
   tbody.ondblclick = handlePositionDoubleClick;
   tbody.oncontextmenu = handlePositionContextMenu;
   tbody.onkeydown = handlePositionKeydown;
+  loadPositionMiniCharts(positions).catch(function(error) { console.warn(error.message || error); });
 }
 
 function renderClosedPositions() {

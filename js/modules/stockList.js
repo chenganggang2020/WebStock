@@ -176,22 +176,26 @@ function stockMiniChart(stock, color) {
 
   if (realPrices.length >= 2) {
     const sampled = realPrices.filter(function(value, index) {
-      const step = Math.max(1, Math.ceil(realPrices.length / 28));
+      const step = Math.max(1, Math.ceil(realPrices.length / 48));
       return index % step === 0 || index === realPrices.length - 1;
     });
     const base = Number.isFinite(previousClose) && previousClose > 0 ? previousClose : sampled[0];
     const min = Math.min.apply(null, sampled.concat([base]));
     const max = Math.max.apply(null, sampled.concat([base]));
     const span = Math.max(max - min, 0.01);
-    const yFor = function(value) { return 36 - ((value - min) / span) * 30; };
+    const yFor = function(value) { return 45 - ((value - min) / span) * 38; };
     const points = sampled.map(function(value, index) {
-      const x = 6 + index * (106 / Math.max(1, sampled.length - 1));
+      const x = 6 + index * (156 / Math.max(1, sampled.length - 1));
       return x.toFixed(1) + ',' + yFor(value).toFixed(1);
     }).join(' ');
     const trendColor = stockEscape(color || (sampled[sampled.length - 1] >= base ? 'var(--up)' : 'var(--down)'));
-    return '<svg class="stock-mini-chart" viewBox="0 0 118 42" aria-label="真实分时走势">' +
-      '<line x1="6" y1="' + yFor(base).toFixed(1) + '" x2="112" y2="' + yFor(base).toFixed(1) + '" stroke="#d7dee8" stroke-width="1" stroke-dasharray="3 4"/>' +
+    const lastX = 162;
+    const lastY = yFor(sampled[sampled.length - 1]).toFixed(1);
+    return '<svg class="stock-mini-chart" viewBox="0 0 168 52" aria-label="真实分时走势">' +
+      '<line x1="6" y1="' + yFor(base).toFixed(1) + '" x2="162" y2="' + yFor(base).toFixed(1) + '" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="3 4"/>' +
+      '<polygon points="6,47 ' + points + ' ' + lastX + ',47" fill="' + trendColor + '" opacity="0.08"/>' +
       '<polyline points="' + points + '" fill="none" stroke="' + trendColor + '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>' +
+      '<circle cx="' + lastX + '" cy="' + lastY + '" r="2.4" fill="' + trendColor + '"/>' +
       '</svg>';
   }
 
