@@ -575,6 +575,7 @@ test('portfolio accounts switch without mixing holdings or trades', async ({ pag
   await page.fill('#portfolioAccountCashInput', '12000');
   await page.click('#portfolioAccountModalOk');
   await expect(page.locator('#portfolioAccountSelect')).toContainText('Playwright 独立账户');
+  await expect(page.locator('#portfolioAccountSelect')).not.toContainText('**9901 **9901');
   await expect(page.locator('#summaryCashBalance')).toHaveText('12000.00');
 
   const isolatedAccountId = await page.locator('#portfolioAccountSelect').inputValue();

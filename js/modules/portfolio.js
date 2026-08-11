@@ -82,7 +82,7 @@ function renderAccountControls() {
   const accounts = window.State.portfolioAccounts || [];
   const activeId = activeAccountId();
   const options = accounts.map(function(account) {
-    const suffix = account.maskedNumber ? ' ' + account.maskedNumber : '';
+    const suffix = account.maskedNumber && !String(account.name || '').includes(account.maskedNumber) ? ' ' + account.maskedNumber : '';
     const detail = account.name && account.broker && !account.name.includes(account.broker) ? ' · ' + account.broker + suffix : suffix;
     return '<option value="' + account.id + '">' + portfolioEscape(account.name || account.broker || '账户') + portfolioEscape(detail) + '</option>';
   }).join('');
