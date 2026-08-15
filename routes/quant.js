@@ -31,11 +31,11 @@ router.get('/quant/datasets', function(req, res) {
 });
 
 router.get('/quant/results', function(req, res) {
-  try { ok(res, quant.listResults(req.query.limit)); } catch (error) { fail(res, error); }
+  try { ok(res, quant.listResults(req.query.limit, { verification: req.query.verification })); } catch (error) { fail(res, error); }
 });
 
 router.get('/quant/factor-labs', function(req, res) {
-  try { ok(res, quant.listFactorResults(req.query.limit)); } catch (error) { fail(res, error); }
+  try { ok(res, quant.listFactorResults(req.query.limit, { verification: req.query.verification })); } catch (error) { fail(res, error); }
 });
 
 router.get('/quant/jobs', function(req, res) {

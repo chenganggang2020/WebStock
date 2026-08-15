@@ -3,6 +3,7 @@ let expertObservations = [];
 let expertBacktests = [];
 let expertCurveCharts = [];
 let expertDouyinSyncState = null;
+let expertDouyinSyncRuns = [];
 let expertSyncStatusTimer = null;
 let expertSyncStatusPollActive = false;
 let expertTrackerBound = false;
@@ -10,6 +11,9 @@ let expertSelectedVideoId = 0;
 let expertCreatorSearch = '';
 let expertCreatorStatus = 'all';
 let expertCreatorTopic = '';
+let expertInitialLoadPromise = null;
+let expertAnalysisPacket = null;
+let expertAnalysisPacketRequestId = 0;
 
 const MODEL_MR_DOUYIN_PROFILE_URL = 'https://www.douyin.com/user/MS4wLjABAAAAK713M9d8PGNb_WiMYf7yKhOI5y60H4uELJK2guDjJT0';
 
@@ -109,14 +113,18 @@ function expertSyncChannelControls() {
   const importer = document.getElementById('expertDouyinImporter');
   const desktopControls = document.getElementById('douyinDesktopControls');
   const autoSyncPanel = document.getElementById('douyinAutoSyncPanel');
+  const taskButton = document.getElementById('openCreatorTasksBtn');
+  const packetCard = document.getElementById('expertAnalysisPacketCard');
   if (searchButton) searchButton.hidden = !isDouyin || hasDesktopSession;
   if (importer) importer.hidden = !isDouyin;
   if (desktopControls) desktopControls.hidden = !isDouyin || !hasDesktopSession;
   if (autoSyncPanel) autoSyncPanel.hidden = !isDouyin || !hasDesktopSession;
+  if (taskButton) taskButton.hidden = !isDouyin;
+  if (packetCard) packetCard.hidden = !isDouyin;
   if (isDouyin && hasDesktopSession) {
     expertRefreshDouyinSessionStatus();
-    expertLoadDouyinSyncState().catch(function(error) { expertSetDouyinSessionStatus(error.message, true); });
   }
+  expertRenderCreatorTaskPipeline();
 }
 
 function expertSetDouyinSessionStatus(message, isError) {
@@ -145,20 +153,29 @@ function expertRenderDouyinSyncState() {
   if (!expertDouyinSyncState) {
     toggle.checked = false;
     target.textContent = '尚未读取自动同步状态。';
+    expertRenderCreatorTaskPipeline();
+    expertRenderCreatorRunAudit();
     return;
   }
   toggle.checked = Boolean(expertDouyinSyncState.enabled);
+  const progress = expertDouyinSyncState.progress || {};
   const result = expertDouyinSyncState.lastResult || {};
+  const checkOnly = progress.checkOnly === true ||
+    (expertDouyinSyncState.status !== 'running' && result.checkOnly === true);
+  const updateCandidateCount = progress.updateCandidateCount == null
+    ? Number(result.updateCandidateCount || 0) : Number(progress.updateCandidateCount || 0);
   const statusLabel = expertDouyinSyncState.status === 'running' ? '正在采集'
     : expertDouyinSyncState.status === 'error' ? '上次失败' : expertDouyinSyncState.enabled ? '监控中' : '已暂停';
   const parts = [
     statusLabel,
     expertDouyinSyncState.lastCompletedAt ? '上次完成 ' + expertFormatTime(expertDouyinSyncState.lastCompletedAt) : '尚未完成自动同步',
     expertDouyinSyncState.nextRunAt ? '下次 ' + expertFormatTime(expertDouyinSyncState.nextRunAt) : '',
+    checkOnly ? '只读检查' : '',
+    checkOnly ? '更新候选 ' + updateCandidateCount + ' 条' : '',
     result.discoveredCount != null ? '发现 ' + Number(result.discoveredCount) + ' 条' : '',
     result.reanalyzedCount ? '重算历史 ' + Number(result.reanalyzedCount) + ' 条' : '',
-    result.detailedCount != null ? '提取详情 ' + Number(result.detailedCount) + ' 条' : '',
-    result.transcribedCount != null ? '语音转写 ' + Number(result.transcribedCount) + ' 条' : '',
+    !checkOnly && result.detailedCount != null ? '提取详情 ' + Number(result.detailedCount) + ' 条' : '',
+    !checkOnly && result.transcribedCount != null ? '语音转写 ' + Number(result.transcribedCount) + ' 条' : '',
     result.transcriptErrors && result.transcriptErrors.length ? '转写失败 ' + result.transcriptErrors.length + ' 条' : '',
     result.addedCount != null ? '新增 ' + Number(result.addedCount) + ' 条' : ''
   ].filter(Boolean);
@@ -166,16 +183,210 @@ function expertRenderDouyinSyncState() {
     expertEscape(parts.join(' · ')) + '</span>' +
     (expertDouyinSyncState.lastError ? '<span class="error">' + expertEscape(expertDouyinSyncState.lastError) + '</span>' : '');
   expertRenderCreatorWorkbench();
+  expertRenderCreatorTaskPipeline();
+  expertRenderCreatorRunAudit();
+}
+
+function expertPipelineStepState(index, activeIndex, failedIndex, completed) {
+  if (completed || index < activeIndex) return 'done';
+  if (index === failedIndex) return 'error';
+  if (index === activeIndex) return 'active';
+  return 'pending';
+}
+
+function expertRenderCreatorTaskPipeline() {
+  const target = document.getElementById('creatorTaskPipeline');
+  if (!target) return;
+  const channel = expertSelectedChannel();
+  const statusTarget = document.getElementById('creatorTaskStatus');
+  const timeTarget = document.getElementById('creatorTaskProgressTime');
+  if (statusTarget) statusTarget.textContent = channel && channel.platform === 'douyin'
+    ? channel.displayName + ' · ' + Number(channel.observationCount || 0) + ' 条资料'
+    : '选择一个抖音创作者';
+  if (!channel || channel.platform !== 'douyin') {
+    target.innerHTML = '<div class="empty-state compact">请先选择一个抖音创作者任务。</div>';
+    if (timeTarget) timeTarget.textContent = '尚未运行';
+    return;
+  }
+  const sync = expertDouyinSyncState || {};
+  const progress = sync.progress || {};
+  const result = sync.lastResult || {};
+  const latestRun = expertDouyinSyncRuns[0] || {};
+  const running = sync.status === 'running';
+  const checkOnly = progress.checkOnly === true || (!running && result.checkOnly === true);
+  const updateCandidateCount = progress.updateCandidateCount == null
+    ? Number(result.updateCandidateCount || 0) : Number(progress.updateCandidateCount || 0);
+  const stage = progress.stage || '';
+  const completed = stage === 'completed' || (!running && Boolean(sync.lastCompletedAt) && sync.status !== 'error');
+  const stageIndexes = { session: 0, processing: 2, saving: 4 };
+  const failedIndex = stage === 'failed' ? (stageIndexes[progress.failedStage] == null ? 0 : stageIndexes[progress.failedStage]) : -1;
+  const activeIndex = stage === 'saving' ? 4 : stage === 'processing' ? 2 : running ? 0 : completed ? 5 : failedIndex >= 0 ? failedIndex : 0;
+  const workCount = progress.workCount == null
+    ? (result.workCount == null ? latestRun.workCount : result.workCount) : progress.workCount;
+  const discovered = progress.discoveredCount == null
+    ? (result.discoveredCount == null ? latestRun.discoveredCount : result.discoveredCount) : progress.discoveredCount;
+  const detailTotal = progress.detailTotal == null
+    ? (result.candidateCount == null ? latestRun.candidateCount : result.candidateCount) : progress.detailTotal;
+  const detailed = progress.detailedCount == null
+    ? (result.detailedCount == null ? latestRun.detailedCount : result.detailedCount) : progress.detailedCount;
+  const detailErrors = progress.detailErrorCount == null
+    ? (Array.isArray(result.detailErrors) ? result.detailErrors.length : Number(latestRun.detailErrorCount || 0))
+    : Number(progress.detailErrorCount || 0);
+  const transcriptionAttempts = progress.transcriptionAttemptedCount == null
+    ? Number(result.transcriptionAttemptedCount == null ? latestRun.transcriptionAttemptedCount || 0 : result.transcriptionAttemptedCount)
+    : Number(progress.transcriptionAttemptedCount || 0);
+  const transcribed = progress.transcribedCount == null
+    ? (result.transcribedCount == null ? latestRun.transcribedCount : result.transcribedCount) : progress.transcribedCount;
+  const mediaMissing = progress.mediaMissingCount == null
+    ? Number(result.mediaMissingCount == null ? latestRun.mediaMissingCount || 0 : result.mediaMissingCount)
+    : Number(progress.mediaMissingCount || 0);
+  const transcriptErrors = progress.transcriptErrorCount == null
+    ? (Array.isArray(result.transcriptErrors) ? result.transcriptErrors.length : Number(latestRun.transcriptErrorCount || 0))
+    : Number(progress.transcriptErrorCount || 0);
+  const steps = [
+    ['会话检查', running && activeIndex === 0 ? '正在核对登录状态' : '使用本机持久登录会话'],
+    ['主页发现', discovered == null ? '等待读取作品列表' :
+      '主页总数 ' + Number(workCount || 0) + ' · 本轮加载 ' + Number(discovered) + ' 条' +
+      (checkOnly ? ' · 更新候选 ' + updateCandidateCount + ' 条' : '')],
+    ['详情采集', checkOnly ? '本轮仅检查，未执行' : detailTotal == null ? '等待采集详情' :
+      '成功 ' + Number(detailed || 0) + ' / 尝试 ' + Number(detailTotal || 0) + (detailErrors ? ' · 失败 ' + detailErrors : '')],
+    ['本地转写', checkOnly ? '本轮仅检查，未执行' : transcribed == null ? '等待本地 ASR' :
+      '完成 ' + Number(transcribed || 0) + ' / 尝试 ' + transcriptionAttempts +
+      (mediaMissing ? ' · 缺媒体 ' + mediaMissing : '') + (transcriptErrors ? ' · 失败 ' + transcriptErrors : '')],
+    ['保存入库', checkOnly && completed ? '检查结果已记录' : completed ? '本轮结果已保存' :
+      stage === 'saving' ? '正在写入研究库' : '等待前序步骤']
+  ];
+  target.innerHTML = '<div class="creator-pipeline-steps">' + steps.map(function(step, index) {
+    const state = expertPipelineStepState(index, activeIndex, failedIndex, completed);
+    return '<div class="creator-pipeline-step ' + state + '"><span>' + (index + 1) + '</span><div><strong>' +
+      expertEscape(step[0]) + '</strong><small>' + expertEscape(step[1]) + '</small></div></div>';
+  }).join('') + '</div><p class="creator-pipeline-message ' + (sync.status === 'error' ? 'error' : '') + '">' +
+    expertEscape(progress.message || (completed ? '本轮采集已完成' : sync.lastError || '等待下一次采集')) + '</p>';
+  if (timeTarget) {
+    timeTarget.textContent = running ? '开始于 ' + expertFormatTime(sync.lastStartedAt)
+      : sync.lastCompletedAt ? '完成于 ' + expertFormatTime(sync.lastCompletedAt)
+        : sync.nextRunAt ? '下次 ' + expertFormatTime(sync.nextRunAt) : '尚未运行';
+  }
+}
+
+function expertRunStatusLabel(status, type) {
+  const detailLabels = {
+    pending: '等待详情', running: '正在采详情', complete: '详情完成',
+    rejected: '身份不匹配', error: '详情失败'
+  };
+  const transcriptionLabels = {
+    not_ready: '尚未进入转写', waiting_media: '正在检查媒体', downloading: '正在下载媒体',
+    transcribing: '正在本地识别', complete: '转写完成', media_missing: '等待媒体地址',
+    deferred_limit: '本轮顺延', error: '转写失败', archive_pending: '等待归档回填',
+    archiving: '正在归档旧视频', archive_complete: '旧视频归档完成',
+    archive_missing: '回填缺媒体地址', archive_error: '旧视频归档失败'
+  };
+  return (type === 'detail' ? detailLabels : transcriptionLabels)[status] || status || '状态未知';
+}
+
+function expertFormatMediaBytes(value) {
+  const bytes = Number(value || 0);
+  if (!bytes) return '';
+  return bytes >= 1048576 ? (bytes / 1048576).toFixed(1) + ' MB' : Math.round(bytes / 1024) + ' KB';
+}
+
+function expertRenderCreatorRunAudit() {
+  const target = document.getElementById('creatorTaskRunHistory');
+  const count = document.getElementById('creatorTaskRunCount');
+  if (!target || !count) return;
+  const channel = expertSelectedChannel();
+  if (!channel || channel.platform !== 'douyin') {
+    count.textContent = '尚未选择任务';
+    target.innerHTML = '<div class="empty-state compact">选择抖音创作者后查看后台运行明细。</div>';
+    return;
+  }
+  const runs = Array.isArray(expertDouyinSyncRuns) ? expertDouyinSyncRuns : [];
+  count.textContent = runs.length ? '最近 ' + runs.length + ' 次运行' : '尚无运行记录';
+  if (!runs.length) {
+    target.innerHTML = '<div class="empty-state compact">新版本完成一次采集后，这里会显示每条视频的详情采集、媒体下载和本地转写状态。</div>';
+    return;
+  }
+  const triggerLabels = { manual: '手动运行', scheduled: '定时运行', startup: '启动补采', archive: '完整清单扫描' };
+  const runLabels = { running: '运行中', completed: '已完成', error: '失败' };
+  target.innerHTML = runs.map(function(run, index) {
+    const items = Array.isArray(run.items) ? run.items : [];
+    const runResult = run.result && typeof run.result === 'object' ? run.result : {};
+    const runQueue = runResult.archiveQueue || {};
+    const newlyArchived = runQueue.before && runQueue.after
+      ? Math.max(Number(runQueue.after.archivedCount || 0) - Number(runQueue.before.archivedCount || 0), 0)
+      : Number(runResult.archivedCount || 0);
+    const totals = [
+      '主页总作品 ' + Number(run.workCount || 0),
+      '本轮页面加载 ' + Number(run.discoveredCount || 0),
+      '详情 ' + Number(run.detailedCount || 0) + ' / ' + Number(run.candidateCount || 0),
+      '转写 ' + Number(run.transcribedCount || 0) + ' / 尝试 ' + Number(run.transcriptionAttemptedCount || 0),
+      newlyArchived ? '新增永久归档记录 ' + newlyArchived : '',
+      Array.isArray(runResult.archiveErrors) && runResult.archiveErrors.length
+        ? '归档未完成 ' + runResult.archiveErrors.length : '',
+      run.mediaMissingCount ? '缺媒体 ' + Number(run.mediaMissingCount) : '',
+      run.detailErrorCount ? '详情失败 ' + Number(run.detailErrorCount) : '',
+      run.transcriptErrorCount ? '转写失败 ' + Number(run.transcriptErrorCount) : ''
+    ].filter(Boolean);
+    return '<details class="creator-task-run"' + (index === 0 ? ' open' : '') + '><summary>' +
+      '<span><strong>' + expertEscape(triggerLabels[run.trigger] || run.trigger) + '</strong><time>' +
+        expertEscape(expertFormatTime(run.startedAt)) + '</time></span>' +
+      '<em class="creator-run-status ' + expertEscape(run.status) + '">' +
+        expertEscape(runLabels[run.status] || run.status) + '</em></summary>' +
+      '<div class="creator-run-totals">' + totals.map(function(total) {
+        return '<span>' + expertEscape(total) + '</span>';
+      }).join('') + '</div>' +
+      (run.error ? '<p class="creator-run-error">' + expertEscape(run.error) + '</p>' : '') +
+      (items.length ? '<div class="creator-run-items">' + items.map(function(item) {
+        const media = expertFormatMediaBytes(item.mediaBytes);
+        const timing = item.elapsedSeconds ? Number(item.elapsedSeconds).toFixed(1) + ' 秒' : '';
+        return '<article class="creator-run-item"><div><strong>' + expertEscape(item.title || '抖音视频 ' + item.contentId) +
+          '</strong><small>' + expertEscape(item.contentId) + '</small></div>' +
+          '<span class="creator-run-chip detail ' + expertEscape(item.detailStatus) + '">' +
+            expertEscape(expertRunStatusLabel(item.detailStatus, 'detail')) + '</span>' +
+          '<span class="creator-run-chip transcription ' + expertEscape(item.transcriptionStatus) + '">' +
+            expertEscape(expertRunStatusLabel(item.transcriptionStatus, 'transcription')) + '</span>' +
+          '<p>' + expertEscape(item.message || '暂无阶段说明') +
+            (media || timing ? '<small>' + expertEscape([media, timing].filter(Boolean).join(' · ')) + '</small>' : '') + '</p></article>';
+      }).join('') + '</div>' : '<div class="empty-state compact">本轮没有需要打开详情页的视频。</div>') + '</details>';
+  }).join('');
+}
+
+async function expertLoadNetworkRoute() {
+  const target = document.getElementById('creatorTaskNetworkRoute');
+  if (!target) return;
+  if (!window.webstockDesktop || typeof window.webstockDesktop.getDouyinNetworkRoute !== 'function') {
+    target.className = 'creator-network-route unknown';
+    target.innerHTML = '<span class="creator-route-dot"></span><div><small>抖音流量路径</small><strong>仅桌面程序可检查</strong></div>';
+    return;
+  }
+  try {
+    const route = await window.webstockDesktop.getDouyinNetworkRoute();
+    const throughFastVpn = route.mode === 'proxy' && route.endpoint === '127.0.0.1:7891';
+    const label = throughFastVpn ? '快车 / 系统代理' : route.label || '路径未知';
+    target.className = 'creator-network-route ' + expertEscape(route.mode || 'unknown');
+    target.innerHTML = '<span class="creator-route-dot"></span><div><small>抖音流量路径</small><strong>' +
+      expertEscape(label) + (route.endpoint ? ' · ' + expertEscape(route.endpoint) : '') + '</strong></div>';
+  } catch (error) {
+    target.className = 'creator-network-route unknown';
+    target.innerHTML = '<span class="creator-route-dot"></span><div><small>抖音流量路径</small><strong>' +
+      expertEscape(error.message || '检查失败') + '</strong></div>';
+  }
 }
 
 async function expertLoadDouyinSyncState() {
   const channel = expertSelectedChannel();
   if (!channel || channel.platform !== 'douyin') {
     expertDouyinSyncState = null;
+    expertDouyinSyncRuns = [];
     expertRenderDouyinSyncState();
     return;
   }
-  expertDouyinSyncState = await expertApi('/api/expert/channels/' + channel.id + '/sync');
+  const response = await Promise.all([
+    expertApi('/api/expert/channels/' + channel.id + '/sync'),
+    expertApi('/api/expert/channels/' + channel.id + '/sync/runs?limit=6')
+  ]);
+  expertDouyinSyncState = response[0];
+  expertDouyinSyncRuns = response[1] || [];
   expertRenderDouyinSyncState();
 }
 
@@ -224,14 +435,23 @@ async function expertRunDouyinAutoSync() {
   }
   const button = document.getElementById('runDouyinSyncNowBtn');
   button.disabled = true;
-  expertSetDouyinSessionStatus('正在后台检查主页并提取新增视频详情...');
+  expertSetDouyinSessionStatus('正在主动采集：检查主页，并对新增或变化作品执行详情、下载和转写...');
+  expertDouyinSyncState = Object.assign({}, expertDouyinSyncState || {}, {
+    status: 'running',
+    lastStartedAt: new Date().toISOString(),
+    progress: { stage: 'session', message: '正在检查登录会话' }
+  });
+  expertRenderDouyinSyncState();
+  let progressTimer = null;
   try {
-    const result = await window.webstockDesktop.syncDouyinChannel(channel.id);
+    const syncPromise = window.webstockDesktop.syncDouyinChannel(channel.id);
+    progressTimer = setInterval(function() { expertLoadDouyinSyncState().catch(function() {}); }, 1500);
+    const result = await syncPromise;
     await expertLoadChannels();
     document.getElementById('expertChannelSelect').value = String(channel.id);
     await expertLoadTimeline();
     await expertLoadDouyinSyncState();
-    expertSetDouyinSessionStatus('同步完成：发现 ' + result.discoveredCount + ' 条，重算历史 ' +
+    expertSetDouyinSessionStatus('主动采集完成：发现 ' + result.discoveredCount + ' 条，重算历史 ' +
       Number(result.reanalyzedCount || 0) + ' 条，提取详情 ' +
       result.detailedCount + ' 条，语音转写 ' + Number(result.transcribedCount || 0) +
       ' 条，新增 ' + result.addedCount + ' 条，更新 ' + result.updatedCount + ' 条。');
@@ -239,7 +459,184 @@ async function expertRunDouyinAutoSync() {
     await expertLoadDouyinSyncState().catch(function() {});
     expertSetDouyinSessionStatus(error.message, true);
   } finally {
+    if (progressTimer) clearInterval(progressTimer);
     button.disabled = false;
+  }
+}
+
+async function expertRunDouyinArchiveScan() {
+  const channel = expertSelectedChannel();
+  if (!channel || channel.platform !== 'douyin') return;
+  if (!window.webstockDesktop || typeof window.webstockDesktop.archiveDouyinChannel !== 'function') {
+    return alert('完整作品清单扫描只在 WebStock Windows 桌面程序中运行。');
+  }
+  const button = document.getElementById('runDouyinArchiveScanBtn');
+  button.disabled = true;
+  expertSetDouyinSessionStatus('正在滚动主页，建立全部公开可见作品清单；详情和媒体将按队列继续处理...');
+  expertDouyinSyncState = Object.assign({}, expertDouyinSyncState || {}, {
+    status: 'running',
+    lastStartedAt: new Date().toISOString(),
+    progress: { stage: 'session', message: '正在扫描公开可见作品清单' }
+  });
+  expertRenderDouyinSyncState();
+  let progressTimer = null;
+  try {
+    const archivePromise = window.webstockDesktop.archiveDouyinChannel(channel.id);
+    progressTimer = setInterval(function() { expertLoadDouyinSyncState().catch(function() {}); }, 1500);
+    const result = await archivePromise;
+    await expertLoadChannels();
+    document.getElementById('expertChannelSelect').value = String(channel.id);
+    await expertLoadTimeline();
+    await expertLoadDouyinSyncState();
+    const archive = result.archive || {};
+    const archiveQueue = result.archiveQueue || {};
+    const queueBefore = archiveQueue.before || null;
+    const queueAfter = archiveQueue.after || null;
+    const archiveErrors = Array.isArray(result.archiveErrors) ? result.archiveErrors : [];
+    const detailErrors = Array.isArray(result.detailErrors) ? result.detailErrors : [];
+    const newlyArchived = queueBefore && queueAfter
+      ? Math.max(Number(queueAfter.archivedCount || 0) - Number(queueBefore.archivedCount || 0), 0)
+      : Number(result.archivedCount || 0);
+    expertSetDouyinSessionStatus('公开可见清单扫描结束：本地清单发现 ' + Number(result.discoveredCount || 0) +
+      ' 条，本次新建 ' + Number(result.discoveryAddedCount || 0) + ' 条；已处理详情 ' +
+      Number(result.detailedCount || 0) + ' 条；本轮新增永久归档记录 ' + newlyArchived +
+      ' 条，未完成 ' + archiveErrors.length + ' 条' +
+      (detailErrors.length ? '；详情失败 ' + detailErrors.length + ' 条' : '') +
+      (archiveErrors.length || detailErrors.length ? '（请展开后台采集明细）' : '') +
+      (queueBefore && queueAfter ? '；队列处理前待完成 ' + Number(queueBefore.pendingCount || 0) +
+        ' 条、已完成 ' + Number(queueBefore.completedCount || 0) + ' 条；处理后待完成 ' +
+        Number(queueAfter.pendingCount || 0) + ' 条、已完成 ' + Number(queueAfter.completedCount || 0) + ' 条' : '') +
+      '。剩余记录由增量队列继续处理。' +
+      (archive.complete ? ' 已覆盖主页报告的作品数。'
+        : archive.stoppedReason === 'scroll_limit' ? ' 已达到本次滚动上限，可再次点击继续扫描。'
+          : ' 页面已连续无新增，但尚未覆盖主页报告总数，可能受公开可见范围或页面加载限制。'),
+      archiveErrors.length > 0 || detailErrors.length > 0);
+  } catch (error) {
+    await expertLoadDouyinSyncState().catch(function() {});
+    expertSetDouyinSessionStatus(error.message, true);
+  } finally {
+    if (progressTimer) clearInterval(progressTimer);
+    button.disabled = false;
+  }
+}
+
+function expertUpdateAnalysisPacketControls() {
+  const mode = document.getElementById('expertAnalysisPacketMode').value;
+  document.getElementById('expertAnalysisPacketLimitField').hidden = mode !== 'recent';
+  document.getElementById('expertAnalysisPacketFromField').hidden = mode !== 'date';
+  document.getElementById('expertAnalysisPacketToField').hidden = mode !== 'date';
+}
+
+function expertResetAnalysisPacket() {
+  expertAnalysisPacketRequestId += 1;
+  expertAnalysisPacket = null;
+  const output = document.getElementById('expertAnalysisPacketOutput');
+  const generateButton = document.getElementById('generateExpertAnalysisPacketBtn');
+  const copyButton = document.getElementById('copyExpertAnalysisPacketBtn');
+  const status = document.getElementById('expertAnalysisPacketStatus');
+  const evidence = document.getElementById('expertAnalysisPacketEvidenceSummary');
+  const nextStep = document.getElementById('expertAnalysisPacketNextStep');
+  if (output) {
+    output.value = '';
+    output.hidden = true;
+  }
+  if (generateButton) generateButton.disabled = false;
+  if (copyButton) copyButton.disabled = true;
+  if (evidence) {
+    evidence.textContent = '';
+    evidence.hidden = true;
+  }
+  if (nextStep) {
+    nextStep.textContent = '';
+    nextStep.hidden = true;
+  }
+  if (status) {
+    status.textContent = '尚未生成';
+    status.classList.remove('error');
+  }
+}
+
+async function expertGenerateAnalysisPacket() {
+  const channel = expertSelectedChannel();
+  if (!channel || channel.platform !== 'douyin') return;
+  const channelId = Number(channel.id);
+  const button = document.getElementById('generateExpertAnalysisPacketBtn');
+  const status = document.getElementById('expertAnalysisPacketStatus');
+  const mode = document.getElementById('expertAnalysisPacketMode').value;
+  const purpose = document.getElementById('expertAnalysisPacketPurpose');
+  const body = { mode, purpose: purpose ? purpose.value : 'overview' };
+  if (mode === 'recent') body.limit = Math.min(Math.max(Number(document.getElementById('expertAnalysisPacketLimit').value) || 10, 1), 1000);
+  if (mode === 'date') {
+    body.from = document.getElementById('expertAnalysisPacketFrom').value;
+    body.to = document.getElementById('expertAnalysisPacketTo').value;
+  }
+  expertResetAnalysisPacket();
+  const requestId = expertAnalysisPacketRequestId;
+  button.disabled = true;
+  status.textContent = '正在整理逐字稿和来源证据...';
+  status.classList.remove('error');
+  try {
+    const packet = await expertApi('/api/expert/channels/' + channel.id + '/analysis-packet', {
+      method: 'POST', body
+    });
+    const selected = expertSelectedChannel();
+    if (requestId !== expertAnalysisPacketRequestId || !selected || Number(selected.id) !== channelId) return;
+    expertAnalysisPacket = Object.assign({}, packet, { channelId, request: body });
+    const output = document.getElementById('expertAnalysisPacketOutput');
+    output.value = expertAnalysisPacket.markdown;
+    output.hidden = false;
+    document.getElementById('copyExpertAnalysisPacketBtn').disabled = false;
+    const evidence = expertAnalysisPacket.evidenceSummary || {};
+    const evidenceNode = document.getElementById('expertAnalysisPacketEvidenceSummary');
+    evidenceNode.innerHTML = '<strong>文字证据概览</strong>' +
+      '<span class="good">完整逐字稿 ' + Number(evidence.asrCount || 0) + '</span>' +
+      '<span class="warn">页面文字 ' + Number(evidence.visibleCount || 0) + '</span>' +
+      '<span class="muted">无文字 ' + Number(evidence.missingCount || 0) + '</span>';
+    evidenceNode.hidden = false;
+    const nextStep = document.getElementById('expertAnalysisPacketNextStep');
+    nextStep.textContent = expertAnalysisPacket.recommendedAction || '检查材料后复制给 AI。';
+    nextStep.hidden = false;
+    status.textContent = Number(expertAnalysisPacket.itemCount || 0) + ' 条 · ' +
+      Number(expertAnalysisPacket.characterCount || 0).toLocaleString('zh-CN') + ' 字符' +
+      (expertAnalysisPacket.warnings && expertAnalysisPacket.warnings.length
+        ? ' · ' + expertAnalysisPacket.warnings.join(' ') : ' · 全部为可核对文本');
+    status.classList.remove('error');
+  } catch (error) {
+    if (requestId !== expertAnalysisPacketRequestId) return;
+    expertResetAnalysisPacket();
+    button.disabled = false;
+    status.textContent = error.message;
+    status.classList.add('error');
+  } finally {
+    if (requestId === expertAnalysisPacketRequestId) button.disabled = false;
+  }
+}
+
+async function expertCopyAnalysisPacket() {
+  if (!expertAnalysisPacket || !expertAnalysisPacket.markdown) return;
+  const status = document.getElementById('expertAnalysisPacketStatus');
+  const channel = expertSelectedChannel();
+  if (!channel || Number(channel.id) !== Number(expertAnalysisPacket.channelId)) {
+    expertResetAnalysisPacket();
+    status.textContent = '研究对象已经切换，请重新整理分析材料。';
+    status.classList.add('error');
+    return;
+  }
+  try {
+    if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+      await navigator.clipboard.writeText(expertAnalysisPacket.markdown);
+    } else {
+      const output = document.getElementById('expertAnalysisPacketOutput');
+      output.hidden = false;
+      output.select();
+      if (!document.execCommand('copy')) throw new Error('复制命令未被浏览器允许');
+    }
+    status.textContent = '已复制 ' + expertAnalysisPacket.itemCount + ' 条资料、' +
+      Number(expertAnalysisPacket.characterCount || 0).toLocaleString('zh-CN') + ' 字符，可直接粘贴给 AI。';
+    status.classList.remove('error');
+  } catch (error) {
+    status.textContent = '自动复制失败，请在下方文本框中全选复制：' + error.message;
+    status.classList.add('error');
   }
 }
 
@@ -255,6 +652,18 @@ function expertRenderChannelOptions() {
   }).join('');
   if (expertChannels.some(function(channel) { return String(channel.id) === previous; })) select.value = previous;
   else if (expertChannels.length) select.value = String(expertChannels[0].id);
+  const taskSelect = document.getElementById('creatorTaskChannelSelect');
+  if (taskSelect) {
+    const taskPrevious = taskSelect.value;
+    const douyinChannels = expertChannels.filter(function(channel) { return channel.platform === 'douyin'; });
+    taskSelect.innerHTML = '<option value="">选择抖音创作者</option>' + douyinChannels.map(function(channel) {
+      return '<option value="' + channel.id + '">' + expertEscape(channel.displayName) +
+        ' · ' + Number(channel.observationCount || 0) + ' 条视频资料</option>';
+    }).join('');
+    if (douyinChannels.some(function(channel) { return String(channel.id) === taskPrevious; })) taskSelect.value = taskPrevious;
+    else if (douyinChannels.some(function(channel) { return String(channel.id) === select.value; })) taskSelect.value = select.value;
+    else if (douyinChannels.length) taskSelect.value = String(douyinChannels[0].id);
+  }
   expertSyncChannelControls();
 }
 
@@ -286,11 +695,61 @@ function expertCreatorVideos() {
   });
 }
 
+function expertCreatorLatestRunItem(item) {
+  const contentId = String(item && item.externalContentId || '');
+  if (!contentId) return null;
+  for (const run of expertDouyinSyncRuns) {
+    const match = (run.items || []).find(function(runItem) {
+      return String(runItem.contentId || '') === contentId;
+    });
+    if (match) return match;
+  }
+  return null;
+}
+
 function expertCreatorAsrStatus(item) {
   const asr = item && item.mediaMetadata && item.mediaMetadata.asr ? item.mediaMetadata.asr : {};
+  const runItem = expertCreatorLatestRunItem(item) || {};
   if (asr.status === 'complete' && String(item.transcript || '').trim()) return 'complete';
-  if (asr.status === 'error') return 'error';
-  return 'pending';
+  if (asr.status === 'no_speech' || runItem.transcriptionStatus === 'no_speech') return 'no_speech';
+  if (asr.status === 'error' || runItem.transcriptionStatus === 'error' ||
+      ['error', 'rejected'].includes(runItem.detailStatus)) return 'error';
+  if (asr.status === 'media_missing' || runItem.transcriptionStatus === 'media_missing') return 'media_missing';
+  if (runItem.transcriptionStatus === 'complete') return 'processing';
+  if (['downloading', 'transcribing', 'waiting_media'].includes(runItem.transcriptionStatus)) return 'processing';
+  if (runItem.transcriptionStatus === 'deferred_limit') return 'deferred';
+  if (!item.externalContentId || !expertDouyinVideoId(item.sourceUrl)) return 'manual';
+  if (!runItem.detailStatus && !(item.mediaMetadata && item.mediaMetadata.detailCapturedAt)) return 'detail_pending';
+  return 'unverified';
+}
+
+function expertCreatorAsrStatusLabel(status, longLabel) {
+  const labels = {
+    complete: longLabel ? '逐字稿已完成' : '已转写',
+    no_speech: longLabel ? '视频已归档，未检测到可识别语音' : '无口语',
+    processing: longLabel ? '正在下载 / 本地识别' : '处理中',
+    media_missing: longLabel ? '等待可下载媒体地址' : '等待媒体',
+    deferred: longLabel ? '本轮转写顺延' : '已顺延',
+    detail_pending: longLabel ? '等待采集视频详情' : '待采详情',
+    unverified: longLabel ? '转写条件待核验' : '待核验',
+    manual: longLabel ? '手工录入的视频资料' : '手工资料',
+    error: longLabel ? '采集 / 转写失败' : '失败'
+  };
+  return labels[status] || (longLabel ? '转写条件待核验' : '待核验');
+}
+
+function expertCreatorStatusMessage(item, status) {
+  const asr = item && item.mediaMetadata && item.mediaMetadata.asr ? item.mediaMetadata.asr : {};
+  const runItem = expertCreatorLatestRunItem(item) || {};
+  if (status === 'no_speech') return asr.message || '视频已经永久保存，本地识别未检测到可转写的口语；页面文字会作为明确标注的降级资料。';
+  if (status === 'error') return asr.message || runItem.message || '详情采集或本地语音识别失败，等待下次重试。';
+  if (status === 'media_missing') return '尚未取得可下载媒体地址；' +
+    (asr.message || runItem.message || '本轮没有下载视频，也没有启动本地转写。');
+  if (status === 'processing') return runItem.message || '正在下载临时媒体或执行本地语音识别。';
+  if (status === 'deferred') return runItem.message || '本轮转写额度已满，任务已顺延到下一轮。';
+  if (status === 'detail_pending') return runItem.message || '尚未完成详情页采集，因此还没有进入媒体检查。';
+  if (status === 'manual') return '这是手工录入或非抖音直链视频，不属于主页自动采集队列。';
+  return '当前转写条件尚未核验。';
 }
 
 function expertCreatorTopicCounts(videos) {
@@ -340,7 +799,7 @@ function expertRenderCreatorDetail(item) {
   }
   const asr = item.mediaMetadata && item.mediaMetadata.asr ? item.mediaMetadata.asr : {};
   const status = expertCreatorAsrStatus(item);
-  const statusLabel = status === 'complete' ? '逐字稿已完成' : status === 'error' ? '转写失败' : '等待转写';
+  const statusLabel = expertCreatorAsrStatusLabel(status, true);
   const evidenceLabel = EXPERT_EVIDENCE_LABELS[item.evidenceLevel] || item.evidenceLevel || '来源待核验';
   const segments = status === 'complete' && Array.isArray(asr.segments) ? asr.segments : [];
   const metrics = expertCreatorMetricLine(item);
@@ -365,7 +824,7 @@ function expertRenderCreatorDetail(item) {
   }).join('') + '</div>' : '') +
   (transcript ? '<section class="creator-detail-section"><h5>ASR 原始逐字稿</h5><p>' + expertEscape(transcript) + '</p></section>' :
     '<section class="creator-detail-section creator-detail-pending"><h5>逐字稿</h5><p>' +
-      expertEscape(status === 'error' ? (asr.message || '本地语音识别失败，等待下次重试。') : '已进入后台队列，等待本地语音识别。') + '</p></section>') +
+      expertEscape(expertCreatorStatusMessage(item, status)) + '</p></section>') +
   (segments.length ? '<details class="expert-asr-segments" open><summary>带时间戳逐字稿 · ' + segments.length +
     ' 段 · ' + expertEscape(asr.model || 'small') + ' / ' + expertEscape(asr.computeType || 'int8') + '</summary><ol>' +
     segments.map(function(segment) {
@@ -381,7 +840,7 @@ function expertRenderCreatorDetail(item) {
     (risks.length ? '<p class="expert-risk-line">风险条件：' + expertEscape(risks.join('；')) + '</p>' : '') + '</section>' : '') +
   '<footer class="creator-detail-actions">' +
     (item.sourceUrl ? '<a href="' + expertEscape(item.sourceUrl) + '" target="_blank" rel="noopener">打开来源页面</a>' : '<span></span>') +
-    '<button class="small-btn danger expert-delete-observation" data-observation-id="' + item.id + '">删除资料</button>' +
+    '<button class="small-btn danger expert-delete-observation" data-observation-id="' + item.id + '">移除索引（保留本地视频）</button>' +
   '</footer>';
 }
 
@@ -393,20 +852,41 @@ function expertRenderCreatorWorkbench() {
   target.hidden = !visible;
   if (!visible) return false;
   const videos = expertCreatorVideos();
-  const completed = videos.filter(function(item) { return expertCreatorAsrStatus(item) === 'complete'; }).length;
-  const failed = videos.filter(function(item) { return expertCreatorAsrStatus(item) === 'error'; }).length;
-  const pending = Math.max(videos.length - completed - failed, 0);
-  const coverage = videos.length ? Math.round(completed / videos.length * 100) : 0;
+  const directVideos = videos.filter(function(item) {
+    return Boolean(item.externalContentId && expertDouyinVideoId(item.sourceUrl) &&
+      (!item.evidenceLevel || item.evidenceLevel === 'primary'));
+  });
+  const completed = directVideos.filter(function(item) { return expertCreatorAsrStatus(item) === 'complete'; }).length;
+  const failed = directVideos.filter(function(item) { return expertCreatorAsrStatus(item) === 'error'; }).length;
+  const mediaMissing = directVideos.filter(function(item) { return expertCreatorAsrStatus(item) === 'media_missing'; }).length;
+  const detailCaptured = directVideos.filter(function(item) {
+    const runItem = expertCreatorLatestRunItem(item);
+    return Boolean((item.mediaMetadata && item.mediaMetadata.detailCapturedAt) ||
+      (runItem && runItem.detailStatus === 'complete'));
+  }).length;
+  const permanentVideoFiles = videos.filter(function(item) {
+    const metadata = item.mediaMetadata && typeof item.mediaMetadata === 'object' ? item.mediaMetadata : {};
+    const archive = metadata.archive && typeof metadata.archive === 'object' ? metadata.archive : {};
+    const asr = metadata.asr && typeof metadata.asr === 'object' ? metadata.asr : {};
+    return Boolean(String(item.localAssetPath || archive.localAssetPath || asr.localAssetPath || '').trim());
+  }).length;
+  const coverage = directVideos.length ? Math.round(completed / directVideos.length * 100) : 0;
   const sync = expertDouyinSyncState || {};
   const lastResult = sync.lastResult || {};
+  const latestRun = expertDouyinSyncRuns[0] || {};
+  const workCount = Number(latestRun.id ? latestRun.workCount || 0 : lastResult.workCount || 0);
+  const discoveredCount = Number(latestRun.id ? latestRun.discoveredCount || 0 : lastResult.discoveredCount || 0);
   const stats = document.getElementById('expertCreatorStats');
   stats.innerHTML = [
-    ['视频资料', videos.length, lastResult.workCount ? '主页作品 ' + Number(lastResult.workCount) : '已入库'],
-    ['转写覆盖率', coverage + '%', completed + ' 条完成'],
-    ['待处理队列', pending, failed ? failed + ' 条失败' : '后台串行处理'],
+    ['主页总作品', workCount || '--', '抖音主页公开计数'],
+    ['本轮页面加载', discoveredCount || '--', '本轮实际读取到的卡片'],
+    ['本地抖音作品', directVideos.length, videos.length > directVideos.length
+      ? '另有 ' + (videos.length - directVideos.length) + ' 条手工资料' : '已保存直链'],
+    ['永久视频文件', permanentVideoFiles, permanentVideoFiles + ' 条已归档'],
+    ['详情已采集', detailCaptured + ' / ' + directVideos.length,
+      (latestRun.detailErrorCount || failed) ? Number(latestRun.detailErrorCount || failed) + ' 条采集失败' : '可核对详情状态'],
+    ['转写覆盖率', coverage + '%', completed + ' 条完成' + (mediaMissing ? ' · ' + mediaMissing + ' 条缺媒体' : '')],
     ['最近采集', sync.lastCompletedAt ? expertFormatTime(sync.lastCompletedAt) : '尚未完成', sync.enabled ? '每 ' + Number(sync.intervalMinutes || 10) + ' 分钟' : '已暂停'],
-    ['运行状态', sync.status === 'running' ? '采集中' : sync.status === 'error' ? '需检查' : sync.enabled ? '后台监控' : '未开启',
-      sync.nextRunAt ? '下次 ' + expertFormatTime(sync.nextRunAt) : '']
   ].map(function(stat) {
     return '<div class="creator-stat"><span>' + expertEscape(stat[0]) + '</span><strong>' + expertEscape(stat[1]) +
       '</strong><small>' + expertEscape(stat[2]) + '</small></div>';
@@ -432,7 +912,7 @@ function expertRenderCreatorWorkbench() {
   }
   document.getElementById('expertCreatorVideoList').innerHTML = filtered.length ? filtered.map(function(item) {
     const status = expertCreatorAsrStatus(item);
-    const statusLabel = status === 'complete' ? '已转写' : status === 'error' ? '失败' : '待转写';
+    const statusLabel = expertCreatorAsrStatusLabel(status, false);
     const tags = (item.sectors || []).concat(item.topics || []).filter(Boolean).slice(0, 3);
     const metrics = expertCreatorMetricLine(item).slice(0, 2);
     return '<button class="creator-video-row' + (item.id === expertSelectedVideoId ? ' selected' : '') + '" data-video-id="' + item.id + '">' +
@@ -537,7 +1017,7 @@ function expertRenderTimeline() {
       }).join('') + '</div>' : '') +
       '<div class="expert-row-actions">' +
         (item.sourceUrl ? '<a href="' + expertEscape(item.sourceUrl) + '" target="_blank" rel="noopener">来源证据</a>' : '<span></span>') +
-        '<button class="small-btn danger expert-delete-observation" data-observation-id="' + item.id + '">删除资料</button>' +
+        '<button class="small-btn danger expert-delete-observation" data-observation-id="' + item.id + '">移除索引（保留本地文件）</button>' +
       '</div>' +
     '</article>';
   }).join('');
@@ -588,6 +1068,38 @@ async function expertLoadChannels() {
   expertChannels = await expertApi('/api/expert/channels');
   expertRenderChannelOptions();
   await expertLoadTimeline();
+}
+
+function expertResetCreatorFilters() {
+  expertSelectedVideoId = 0;
+  expertCreatorSearch = '';
+  expertCreatorStatus = 'all';
+  expertCreatorTopic = '';
+  document.getElementById('expertCreatorSearchInput').value = '';
+  document.getElementById('expertCreatorStatusFilter').value = 'all';
+}
+
+async function expertActivateChannel(channelId) {
+  const value = String(channelId || '');
+  document.getElementById('expertChannelSelect').value = value;
+  const taskSelect = document.getElementById('creatorTaskChannelSelect');
+  const channel = expertChannels.find(function(item) { return String(item.id) === value; });
+  if (taskSelect && channel && channel.platform === 'douyin') taskSelect.value = value;
+  expertResetCreatorFilters();
+  expertResetAnalysisPacket();
+  await expertLoadTimeline();
+  if (channel && channel.platform === 'douyin') await expertLoadDouyinSyncState();
+}
+
+async function expertShowCreatorTasks() {
+  if (expertInitialLoadPromise) await expertInitialLoadPromise;
+  else if (!expertChannels.length) await expertLoadChannels();
+  const taskSelect = document.getElementById('creatorTaskChannelSelect');
+  const current = expertSelectedChannel();
+  const channelId = current && current.platform === 'douyin' ? current.id : Number(taskSelect.value) || 0;
+  if (channelId) await expertActivateChannel(channelId);
+  else expertRenderCreatorTaskPipeline();
+  await expertLoadNetworkRoute();
 }
 
 async function expertLoadTimeline() {
@@ -660,14 +1172,14 @@ async function expertDeleteObservation(observationId) {
   const channelId = expertSelectedChannelId();
   if (!channelId || !observationId) return;
   const observation = expertObservations.find(function(item) { return item.id === observationId; });
-  if (!confirm('删除资料“' + (observation ? observation.title : observationId) + '”？')) return;
+  if (!confirm('从研究索引中移除“' + (observation ? observation.title : observationId) + '”？已归档的本地视频文件不会删除。')) return;
   try {
     await expertApi('/api/expert/channels/' + channelId + '/observations/' + observationId, { method: 'DELETE' });
     await expertLoadChannels();
     document.getElementById('expertChannelSelect').value = String(channelId);
     await expertLoadTimeline();
     if (window.AIResearch && typeof window.AIResearch.reload === 'function') await window.AIResearch.reload();
-    expertSetStatus('资料及其知识索引已删除。');
+    expertSetStatus('研究索引已移除；已归档的本地视频文件仍永久保留。');
   } catch (error) {
     expertSetStatus(error.message, true);
   }
@@ -1206,27 +1718,36 @@ function bindExpertTracker() {
   document.getElementById('refreshExpertTimelineBtn').addEventListener('click', function() {
     expertLoadChannels().catch(function(error) { expertSetStatus(error.message, true); });
   });
-  document.getElementById('expertChannelSelect').addEventListener('change', function() {
-    expertSelectedVideoId = 0;
-    expertCreatorSearch = '';
-    expertCreatorStatus = 'all';
-    expertCreatorTopic = '';
-    document.getElementById('expertCreatorSearchInput').value = '';
-    document.getElementById('expertCreatorStatusFilter').value = 'all';
-    expertSyncChannelControls();
-    expertLoadTimeline().catch(function(error) { expertSetStatus(error.message, true); });
+  document.getElementById('expertChannelSelect').addEventListener('change', function(event) {
+    expertActivateChannel(event.target.value).catch(function(error) { expertSetStatus(error.message, true); });
+  });
+  document.getElementById('creatorTaskChannelSelect').addEventListener('change', function(event) {
+    expertActivateChannel(event.target.value).catch(function(error) { expertSetStatus(error.message, true); });
   });
   document.getElementById('expertEvidenceLevelSelect').addEventListener('change', expertSyncEvidenceDefaults);
   document.getElementById('saveExpertObservationBtn').addEventListener('click', expertSaveObservation);
   document.getElementById('analyzeExpertIntentBtn').addEventListener('click', expertAnalyzeIntent);
   document.getElementById('discoverExpertUpdatesBtn').addEventListener('click', expertDiscoverUpdates);
   document.getElementById('openDouyinSearchBtn').addEventListener('click', expertOpenDouyinSearch);
+  document.getElementById('openCreatorTasksBtn').addEventListener('click', function() { window.switchMainView('creatorTasks'); });
   document.getElementById('openDouyinSessionBtn').addEventListener('click', expertOpenDouyinSession);
   document.getElementById('syncDouyinSessionBtn').addEventListener('click', expertSyncDouyinSession);
   document.getElementById('runDouyinSyncNowBtn').addEventListener('click', expertRunDouyinAutoSync);
+  document.getElementById('runDouyinArchiveScanBtn').addEventListener('click', expertRunDouyinArchiveScan);
   document.getElementById('douyinAutoSyncToggle').addEventListener('change', expertToggleDouyinAutoSync);
   document.getElementById('importDouyinLinksBtn').addEventListener('click', expertImportDouyinLinks);
   document.getElementById('backtestExpertSignalsBtn').addEventListener('click', expertBacktestSignals);
+  document.getElementById('refreshCreatorTasksBtn').addEventListener('click', function() {
+    expertLoadChannels().then(expertLoadNetworkRoute).catch(function(error) { expertSetStatus(error.message, true); });
+  });
+  document.getElementById('expertAnalysisPacketMode').addEventListener('change', expertUpdateAnalysisPacketControls);
+  ['expertAnalysisPacketPurpose', 'expertAnalysisPacketLimit', 'expertAnalysisPacketFrom', 'expertAnalysisPacketTo'].forEach(function(id) {
+    document.getElementById(id).addEventListener('change', expertResetAnalysisPacket);
+  });
+  document.getElementById('expertAnalysisPacketMode').addEventListener('change', expertResetAnalysisPacket);
+  document.getElementById('generateExpertAnalysisPacketBtn').addEventListener('click', expertGenerateAnalysisPacket);
+  document.getElementById('copyExpertAnalysisPacketBtn').addEventListener('click', expertCopyAnalysisPacket);
+  expertUpdateAnalysisPacketControls();
   document.getElementById('expertTimeline').addEventListener('click', function(event) {
     const button = event.target.closest('.expert-delete-observation');
     if (button) expertDeleteObservation(Number(button.dataset.observationId));
@@ -1260,10 +1781,14 @@ function bindExpertTracker() {
       expertPollDouyinSyncState().catch(function() {});
     }, 15000);
   }
-  expertLoadChannels().catch(function(error) { expertSetStatus(error.message, true); });
+  expertInitialLoadPromise = expertLoadChannels().catch(function(error) {
+    expertSetStatus(error.message, true);
+    return null;
+  }).finally(function() { expertInitialLoadPromise = null; });
 }
 
 window.ExpertTracker = {
   bind: bindExpertTracker,
-  reload: expertLoadChannels
+  reload: expertLoadChannels,
+  showCreatorTasks: expertShowCreatorTasks
 };

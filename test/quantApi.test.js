@@ -175,6 +175,57 @@ test('research suite API refuses to start without the isolated runtime', async t
   assert.match(response.json.error, /Python|runtime/i);
 });
 
+test('quant result APIs keep summary listing separate from explicit full verification', async t => {
+  const originalListResults = quant.listResults;
+  const originalListFactorResults = quant.listFactorResults;
+  const calls = [];
+  quant.listResults = function(limit, options) {
+    calls.push({ kind: 'result', limit, verification: options && options.verification });
+    const full = options && options.verification === 'full';
+    return [{ verification: {
+      status: full ? 'hash_verified' : 'metadata_valid',
+      scope: full ? 'full' : 'metadata',
+      hashesVerified: !!full,
+      checkedAt: '2026-08-12T12:00:00.000Z'
+    } }];
+  };
+  quant.listFactorResults = function(limit, options) {
+    calls.push({ kind: 'factor', limit, verification: options && options.verification });
+    return [{ verification: {
+      status: 'hash_verified',
+      scope: 'full',
+      hashesVerified: true,
+      checkedAt: '2026-08-12T12:00:00.000Z'
+    } }];
+  };
+  t.after(() => {
+    quant.listResults = originalListResults;
+    quant.listFactorResults = originalListFactorResults;
+  });
+
+  const server = app.listen(0);
+  t.after(() => server.close());
+  const summary = await requestJson(server, '/api/quant/results?limit=7');
+  const full = await requestJson(server, '/api/quant/results?limit=3&verification=full');
+  const factorFull = await requestJson(server, '/api/quant/factor-labs?limit=5&verification=full');
+
+  assert.deepEqual(summary.json.data[0].verification, {
+    status: 'metadata_valid', scope: 'metadata', hashesVerified: false, checkedAt: '2026-08-12T12:00:00.000Z'
+  });
+  assert.deepEqual(full.json.data[0].verification, {
+    status: 'hash_verified', scope: 'full', hashesVerified: true, checkedAt: '2026-08-12T12:00:00.000Z'
+  });
+  assert.deepEqual(factorFull.json.data[0].verification, {
+    status: 'hash_verified', scope: 'full', hashesVerified: true, checkedAt: '2026-08-12T12:00:00.000Z'
+  });
+
+  assert.deepEqual(calls, [
+    { kind: 'result', limit: '7', verification: undefined },
+    { kind: 'result', limit: '3', verification: 'full' },
+    { kind: 'factor', limit: '5', verification: 'full' }
+  ]);
+});
+
 test.after(() => {
   require('../db').close();
   fs.rmSync(root, { recursive: true, force: true });

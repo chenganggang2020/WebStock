@@ -27,6 +27,7 @@ function bindButtons() {
   if (window.Settings) window.Settings.bind();
   if (window.HotMarket) window.HotMarket.bind();
   if (window.AIResearch) window.AIResearch.bind();
+  if (window.CapitalFlow) window.CapitalFlow.bind();
 
   const indSelect = document.getElementById('indicatorSelect');
   if (indSelect) {
@@ -56,6 +57,7 @@ function bindButtons() {
       window.PortfolioCharts.renderPnlRankChart(State.positions);
       window.PortfolioCharts.resizePortfolioCharts();
     }
+    if (State.currentMainView === 'capitalFlow' && window.CapitalFlow) window.CapitalFlow.rerender();
   });
   document.getElementById('clearBtn').addEventListener('click', Search.clearSearch);
   const refreshDashboardBtn = document.getElementById('refreshDashboardBtn');
@@ -156,14 +158,6 @@ function bindButtons() {
   document.getElementById('maModalOk').addEventListener('click', KlineChart.applyMASettings);
   document.getElementById('maModalOverlay').addEventListener('click', function(e) {
     if (e.target === this) KlineChart.closeMASettings();
-  });
-
-  document.getElementById('viewSwitchBtn').addEventListener('click', function() {
-    if (State.currentView === 'realtime') {
-      RealtimeChart.showKlineView();
-    } else {
-      RealtimeChart.showRealtimeView();
-    }
   });
 
   document.getElementById('analysisBtn').addEventListener('click', function() {
@@ -269,6 +263,10 @@ function bindButtons() {
   if (newsTypeFilter) newsTypeFilter.addEventListener('change', function() { window.News.load().catch(function(error) { alert(error.message); }); });
   const newsSourceFilter = document.getElementById('newsSourceFilter');
   if (newsSourceFilter) newsSourceFilter.addEventListener('change', function() { window.News.load().catch(function(error) { alert(error.message); }); });
+  ['newsDiscoveryTimeFilter', 'newsDiscoverySort', 'newsDiscoveryImageFilter'].forEach(function(id) {
+    const control = document.getElementById(id);
+    if (control) control.addEventListener('change', function() { window.News.load().catch(function(error) { alert(error.message); }); });
+  });
   const newsKeywordInput = document.getElementById('newsKeywordInput');
   if (newsKeywordInput) {
     newsKeywordInput.addEventListener('keydown', function(event) {
@@ -409,6 +407,10 @@ function switchMainView(view, options) {
       window.AIResearch.ensureLoaded().catch(function(error) { alert(error.message); });
     }
   }
+  if (view === 'creatorTasks' && window.ExpertTracker) {
+    window.ExpertTracker.bind();
+    window.ExpertTracker.showCreatorTasks().catch(function(error) { alert(error.message); });
+  }
   if (view === 'market' && window.StockList && State.currentStock && !State.currentRawData.length) {
     window.StockList.selectStock(State.currentStock).catch(function(error) { console.warn(error.message); });
   }
@@ -426,6 +428,25 @@ function switchMainView(view, options) {
   }).catch(function(error) { alert(error.message); });
   if (view === 'dashboard' && window.Dashboard) window.Dashboard.load().catch(function(error) { console.warn(error.message); });
   if (view === 'settings' && window.Settings) window.Settings.load().catch(function(error) { alert(error.message); });
+  if (view === 'capitalFlow' && window.CapitalFlow) {
+    const capitalFlowCode = document.getElementById('capitalFlowCode');
+    if (capitalFlowCode && State.currentStock && State.currentStock.code) capitalFlowCode.value = State.currentStock.code;
+    window.CapitalFlow.ensureLoaded().then(function() { window.CapitalFlow.resize(); }).catch(function(error) {
+      const errorBox = document.getElementById('capitalFlowError');
+      if (errorBox) {
+        errorBox.hidden = false;
+        errorBox.textContent = error.message || String(error);
+      }
+    });
+  }
+  if (window.RealtimeChart && typeof window.RealtimeChart.syncRefreshSchedule === 'function') {
+    window.RealtimeChart.syncRefreshSchedule({ immediate: view === 'market' }).catch(function(error) {
+      console.warn(error && error.message ? error.message : error);
+    });
+  }
+  if (window.LiveRefresh && typeof window.LiveRefresh.sync === 'function') {
+    window.LiveRefresh.sync({ immediate: false });
+  }
 }
 
 window.switchMainView = switchMainView;
@@ -435,6 +456,20 @@ window.addEventListener('popstate', function(event) {
   if (!event.state || !event.state.mainView) return;
   switchMainView(event.state.mainView, { history: false });
 });
+
+let chartResizeTimer = null;
+function resizeMarketCharts() {
+  clearTimeout(chartResizeTimer);
+  chartResizeTimer = setTimeout(function() {
+    ['klineChart', 'timeChart', 'volumeChart'].forEach(function(key) {
+      const chart = window.State && window.State[key];
+      if (chart && typeof chart.resize === 'function') chart.resize();
+    });
+    if (window.State && window.State.currentMainView === 'capitalFlow' && window.CapitalFlow) window.CapitalFlow.resize();
+  }, 60);
+}
+window.addEventListener('resize', resizeMarketCharts);
+window.addEventListener('orientationchange', resizeMarketCharts);
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function() {
@@ -449,14 +484,18 @@ document.querySelectorAll('.period-btn').forEach(function(btn) {
     const State = window.State;
     const KlineChart = window.KlineChart;
     const period = this.getAttribute('data-period');
-    if (period === State.currentPeriod) return;
+    if (period === State.currentPeriod &&
+        ((period === 'minute' && State.currentView === 'realtime') ||
+         (period !== 'minute' && State.currentView === 'kline'))) return;
 
     document.querySelectorAll('.period-btn').forEach(function(b) { b.classList.remove('active'); });
     this.classList.add('active');
 
     State.currentPeriod = period;
-    if (State.currentStock) {
-      KlineChart.loadKlineData(State.currentStock.code, period);
+    if (period === 'minute') {
+      RealtimeChart.showRealtimeView();
+    } else {
+      RealtimeChart.showKlineView(period);
     }
   });
 });
@@ -467,6 +506,10 @@ async function init() {
 
   // Bind navigation before the first network wait so early user clicks are never dropped.
   bindMainNavigation();
+  if (window.NetworkHealth) window.NetworkHealth.start();
+  if (window.News && window.News.loadSidebarNews) {
+    window.News.loadSidebarNews().catch(function(error) { console.warn(error.message); });
+  }
   State.allStocks = await window.ApiClient.fetchJsonData('/api/stocklist');
   State.filteredStocks = State.allStocks.slice(0, State.PAGE_SIZE);
   if (window.Watchlist) await window.Watchlist.loadWatchlist({ skipQuotes: true });
@@ -485,13 +528,7 @@ async function init() {
   }
   if (window.HotMarket) window.HotMarket.load({ silent: true, fast: true }).catch(function(error) { console.warn(error.message); });
   StockList.setupInfiniteScroll();
-  setInterval(function() {
-    const searchInput = document.getElementById('searchInput');
-    const tableWrap = document.querySelector('.stock-table-wrap');
-    const shouldRefreshList = Boolean(searchInput && searchInput.value.trim()) ||
-      Boolean(tableWrap && getComputedStyle(tableWrap).display !== 'none');
-    if (shouldRefreshList) StockList.refreshQuotes(State.filteredStocks).catch(function(error) { console.warn(error.message); });
-  }, 15000);
+  if (window.LiveRefresh) window.LiveRefresh.sync({ immediate: false });
 
   const pingAn = State.allStocks.find(function(s) { return s.code === '000001'; });
   if (pingAn) {

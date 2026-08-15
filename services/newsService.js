@@ -15,16 +15,61 @@ function nowIso() {
   return new Date().toISOString();
 }
 
+const EXPLICIT_IMAGE_FIELDS = [
+  'imageUrl', 'image_url', 'thumbnailUrl', 'thumbnail_url', 'thumbnail',
+  'thumb', 'img', 'wap_thumb', 'coverUrl', 'cover_url'
+];
+
+function explicitImageField(item) {
+  const declaredField = String(item.imageSourceField || '').trim();
+  if (EXPLICIT_IMAGE_FIELDS.includes(declaredField) && item.imageUrl) {
+    return { value: item.imageUrl, sourceField: declaredField };
+  }
+  for (const sourceField of EXPLICIT_IMAGE_FIELDS) {
+    if (!Object.prototype.hasOwnProperty.call(item, sourceField)) continue;
+    const value = String(item[sourceField] == null ? '' : item[sourceField]).trim();
+    if (value) return { value, sourceField };
+  }
+  return null;
+}
+
 function normalizeNews(item) {
+  item = item || {};
+  const source = item.source || 'WebStock';
+  const relatedStocks = Array.isArray(item.relatedStocks) ? item.relatedStocks : [];
+  const relatedSectors = Array.isArray(item.relatedSectors) ? item.relatedSectors : [];
+  const evidenceKind = item.evidenceKind || (source === 'WebStock Fallback' ? 'local-fallback' : 'provider-item');
+  const defaultAssociationProvenance = evidenceKind === 'local-fallback' ? 'local-fallback' : 'upstream-field';
+  const image = explicitImageField(item);
+  const providedTime = item.time !== undefined && item.time !== null && String(item.time).trim();
   return {
     title: String(item.title || '').trim(),
-    source: item.source || 'WebStock',
+    source,
     time: item.time || nowIso(),
+    timeProvenance: item.timeProvenance || (providedTime ? 'upstream-field' : 'generated-at-normalization'),
     summary: item.summary || '',
     link: item.link || '#',
     type: item.type || 'market',
-    relatedStocks: Array.isArray(item.relatedStocks) ? item.relatedStocks : [],
-    relatedSectors: Array.isArray(item.relatedSectors) ? item.relatedSectors : []
+    relatedStocks,
+    relatedSectors,
+    associationProvenance: {
+      relatedStocks: item.associationProvenance && item.associationProvenance.relatedStocks
+        ? item.associationProvenance.relatedStocks : defaultAssociationProvenance,
+      relatedSectors: item.associationProvenance && item.associationProvenance.relatedSectors
+        ? item.associationProvenance.relatedSectors : defaultAssociationProvenance
+    },
+    evidenceKind,
+    provider: item.provider || source,
+    sourcePriority: item.sourcePriority && typeof item.sourcePriority === 'object'
+      ? {
+          value: item.sourcePriority.value,
+          field: item.sourcePriority.field || null,
+          provenance: item.sourcePriority.provenance || null
+        }
+      : null,
+    imageProvider: image ? (item.imageProvider || item.provider || source) : null,
+    imageUrl: image ? image.value : null,
+    imageSourceField: image ? image.sourceField : null
   };
 }
 
@@ -46,11 +91,14 @@ function dedupeNews(items) {
   return deduped;
 }
 
-function setDefaultSource(items, sourceName) {
+function setProviderMetadata(items, sourceName) {
   return (items || []).map(item => {
     if (!item || typeof item !== 'object') return item;
-    if (item.source) return item;
-    return Object.assign({}, item, { source: sourceName || 'WebStock' });
+    return Object.assign({}, item, {
+      source: item.source || sourceName || 'WebStock',
+      provider: item.provider || sourceName || item.source || 'WebStock',
+      imageProvider: item.imageProvider || (explicitImageField(item) ? (sourceName || item.source || 'WebStock') : null)
+    });
   });
 }
 
@@ -307,15 +355,31 @@ function createSinaFinanceProvider(options = {}) {
           relatedStocks.push(filters.code);
         }
         const relatedSectors = filters.sector ? [filters.sector] : keywords.slice(0, 4);
+        const rawTime = item.ctime || item.mtime;
+        const rawSeconds = Number(rawTime);
         return normalizeNews({
           title: item.title || item.stitle || '',
           source: 'Sina Finance',
-          time: sinaTimeToIso(item.ctime || item.mtime),
+          time: sinaTimeToIso(rawTime),
+          timeProvenance: Number.isFinite(rawSeconds) && rawSeconds > 0
+            ? 'upstream-field' : 'generated-at-normalization',
           summary: item.intro || item.wapsummary || item.stitle || keywords.join('、'),
           link: item.url || '#',
           type: filters.type || 'market',
           relatedStocks,
-          relatedSectors
+          relatedSectors,
+          associationProvenance: {
+            relatedStocks: relatedStocks.length ? 'derived-text-match' : 'upstream-field',
+            relatedSectors: filters.sector ? 'request-context' : 'upstream-keywords'
+          },
+          imageUrl: item.imageUrl,
+          image_url: item.image_url,
+          thumbnailUrl: item.thumbnailUrl,
+          thumbnail_url: item.thumbnail_url,
+          thumbnail: item.thumbnail,
+          thumb: item.thumb,
+          img: item.img,
+          wap_thumb: item.wap_thumb
         });
       });
     }
@@ -353,7 +417,7 @@ function listNewsWithMeta(filters = {}) {
   const providerStatuses = [];
   for (const provider of providers) {
     try {
-      const providerData = applyNewsFilters(dedupeNews(setDefaultSource(provider.list(filters) || [], provider.name).map(normalizeNews)), filters);
+      const providerData = applyNewsFilters(dedupeNews(setProviderMetadata(provider.list(filters) || [], provider.name).map(normalizeNews)), filters);
       providerStatuses.push({ name: provider.name, ok: true, count: providerData.length });
       if (providerData.length) {
         data = providerData;
@@ -402,7 +466,7 @@ async function listNewsWithMetaAsync(filters = {}) {
   const providerStatuses = [];
   for (const provider of asyncProviders) {
     try {
-      const providerData = applyNewsFilters(dedupeNews(setDefaultSource(await provider.list(filters), provider.name).map(normalizeNews)), filters);
+      const providerData = applyNewsFilters(dedupeNews(setProviderMetadata(await provider.list(filters), provider.name).map(normalizeNews)), filters);
       providerStatuses.push({ name: provider.name, ok: true, count: providerData.length });
       if (providerData.length) {
         const meta = {
@@ -413,7 +477,7 @@ async function listNewsWithMetaAsync(filters = {}) {
           itemCount: providerData.length,
           sources: getItemSourceList(providerData),
           providers: providerStatuses,
-          degraded: false
+          degraded: providerStatuses.some(status => !status.ok)
         };
         cache.set(key, { ts: Date.now(), items: providerData, meta });
         return { items: providerData, meta };

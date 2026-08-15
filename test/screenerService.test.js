@@ -113,3 +113,48 @@ test('smart screener reports data coverage and never treats missing quotes as ze
   assert.equal(result.coverage.quoteCount, 0);
   assert.equal(result.coverage.technicalCount, 0);
 });
+
+test('technical strategies exclude stocks without technical data and report code quote technical coverage separately', () => {
+  const result = screener.runScreener({
+    strategy: 'breakout',
+    scope: 'all',
+    demand: '先进封装趋势观察',
+    limit: 50,
+    marketSnapshot: [
+      { code: '688362', price: 25.2, change: 2.1, amount: 900000000 },
+      { code: '600584', price: 58.3, change: 1.8, amount: 2400000000 }
+    ],
+    klineSnapshot: [
+      { code: '688362', data: risingKline(20, 0.04) }
+    ]
+  });
+
+  assert.equal(result.coverage.technicalRequired, true);
+  assert.equal(result.coverage.codeCount, result.coverage.universeCount);
+  assert.equal(result.coverage.codeRate, 100);
+  assert.equal(result.coverage.quoteCount, 2);
+  assert.equal(result.coverage.technicalCount, 1);
+  assert.equal(result.coverage.candidatePoolCount, 1);
+  assert.equal(result.coverage.excludedForMissingTechnicalCount, result.coverage.universeCount - 1);
+  assert.deepEqual(result.candidates.map(item => item.code), ['688362']);
+  assert.equal(result.candidates[0].dataCoverage.code, true);
+});
+
+test('non-technical strategies keep candidates with missing technical data visible for manual review', () => {
+  const result = screener.runScreener({
+    strategy: 'sector-leader',
+    scope: 'leaders',
+    demand: '先进封装观察',
+    limit: 50,
+    marketSnapshot: [],
+    klineSnapshot: []
+  });
+
+  assert.equal(result.coverage.technicalRequired, false);
+  assert.equal(result.coverage.candidatePoolCount, result.coverage.universeCount);
+  assert.ok(result.candidates.length > 0);
+  assert.equal(result.candidates.every(item => item.dataCoverage.technical === false), true);
+  assert.equal(result.candidates.every(item => item.leaderCandidate && item.leaderCandidate.isConfirmedLeader === false), true);
+  assert.equal(result.candidates.some(item => item.factorTags.includes('板块龙头')), false);
+  assert.equal(result.candidates.some(item => item.factorTags.includes('人工观察名单')), true);
+});

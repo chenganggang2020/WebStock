@@ -127,6 +127,56 @@ function downloadMediaFile(mediaUrl, target, options = {}) {
   return request(mediaUrl, 0);
 }
 
+function cleanupStaleTempFiles(tempRoot, options = {}) {
+  const maxAgeMs = Math.max(Number(options.maxAgeMs) || 6 * 60 * 60 * 1000, 60 * 1000);
+  const nowMs = Number(options.nowMs) || Date.now();
+  let scannedCount = 0;
+  let removedCount = 0;
+  let entries = [];
+  try { entries = fs.readdirSync(tempRoot, { withFileTypes: true }); } catch (error) { return { scannedCount, removedCount }; }
+  entries.forEach(function(entry) {
+    if (!entry.isFile() || !/^[0-9A-Za-z_-]+-[a-f0-9]{12}\.mp4\.part$/i.test(entry.name)) return;
+    scannedCount += 1;
+    const filePath = path.join(tempRoot, entry.name);
+    try {
+      const stat = fs.statSync(filePath);
+      if (nowMs - stat.mtimeMs < maxAgeMs) return;
+      fs.rmSync(filePath, { force: true });
+      removedCount += 1;
+    } catch (error) {}
+  });
+  return { scannedCount, removedCount };
+}
+
+function inspectArchivedMedia(mediaPath, contentType) {
+  const stat = fs.statSync(mediaPath);
+  if (!stat.isFile() || stat.size <= 0) throw new Error('本地媒体归档无效，请人工检查：' + mediaPath);
+  return new Promise(function(resolve, reject) {
+    const hash = crypto.createHash('sha256');
+    const input = fs.createReadStream(mediaPath);
+    input.on('data', function(chunk) { hash.update(chunk); });
+    input.on('error', reject);
+    input.on('end', function() {
+      resolve({
+        sha256: hash.digest('hex'),
+        bytes: stat.size,
+        contentType: String(contentType || 'video/mp4'),
+        localAssetPath: mediaPath
+      });
+    });
+  });
+}
+
+function buildTranscriptionEnvironment(baseEnvironment = process.env) {
+  return Object.assign({}, baseEnvironment, {
+    PYTHONUTF8: '1',
+    OMP_NUM_THREADS: '2',
+    MKL_NUM_THREADS: '1',
+    OPENBLAS_NUM_THREADS: '1',
+    NUMEXPR_NUM_THREADS: '1'
+  });
+}
+
 function runPythonTranscription(input, options = {}) {
   const timeoutMs = Math.max(Number(options.timeoutMs) || 15 * 60 * 1000, 1000);
   return new Promise(function(resolve, reject) {
@@ -139,7 +189,7 @@ function runPythonTranscription(input, options = {}) {
     if (input.prompt) args.push('--prompt', String(input.prompt).slice(0, 1000));
     const child = childProcess.spawn(input.pythonPath, args, {
       windowsHide: true,
-      env: Object.assign({}, process.env, { PYTHONUTF8: '1' })
+      env: buildTranscriptionEnvironment()
     });
     let stdout = '';
     let stderr = '';
@@ -172,9 +222,14 @@ function normalizeResult(raw, download) {
     };
   }).filter(function(segment) { return segment.text && segment.end >= segment.start; }).slice(0, 10000);
   const transcript = String(source.transcript || segments.map(function(item) { return item.text; }).join('')).trim().slice(0, 800000);
-  if (!transcript) throw new Error('本地语音识别没有提取到可用文字。');
+  const mediaEvidence = {
+    localAssetPath: String(download.localAssetPath || ''),
+    sha256: String(download.sha256 || '').toLowerCase(),
+    bytes: Math.max(Number(download.bytes) || 0, 0),
+    mimeType: String(download.contentType || '').slice(0, 120)
+  };
   return {
-    status: 'complete',
+    status: transcript ? 'complete' : 'no_speech',
     engine: String(source.engine || 'faster-whisper').slice(0, 80),
     engineVersion: String(source.engineVersion || '').slice(0, 80),
     model: String(source.model || 'small').slice(0, 80),
@@ -186,48 +241,136 @@ function normalizeResult(raw, download) {
     elapsedSeconds: Math.max(Number(source.elapsedSeconds) || 0, 0),
     transcript,
     segments,
-    mediaSha256: String(download.sha256 || '').toLowerCase(),
-    mediaBytes: Math.max(Number(download.bytes) || 0, 0),
-    mediaContentType: String(download.contentType || '').slice(0, 120),
+    localAssetPath: mediaEvidence.localAssetPath,
+    sha256: mediaEvidence.sha256,
+    bytes: mediaEvidence.bytes,
+    mimeType: mediaEvidence.mimeType,
+    mediaMetadata: mediaEvidence,
+    mediaSha256: mediaEvidence.sha256,
+    mediaBytes: mediaEvidence.bytes,
+    mediaContentType: mediaEvidence.mimeType,
     transcribedAt: new Date().toISOString()
   };
 }
 
 function createDouyinTranscriptService(options = {}) {
-  const tempRoot = path.resolve(options.tempRoot || path.join(path.dirname(workspacePath()), 'asr-temp'));
+  const archiveRoot = path.resolve(options.archiveRoot || options.tempRoot || path.join(path.dirname(workspacePath()), 'media-library', 'douyin'));
   const modelRoot = path.resolve(options.modelRoot || path.join(path.dirname(workspacePath()), 'asr-models'));
   const downloadMedia = options.downloadMedia || downloadMediaFile;
   const runPython = options.runPython || runPythonTranscription;
+  const cleanup = cleanupStaleTempFiles(archiveRoot, { maxAgeMs: options.staleTempMaxAgeMs });
 
-  async function transcribe(input = {}) {
+  function report(input, progress) {
+    if (typeof input.onProgress !== 'function') return;
+    try { input.onProgress(progress); } catch (error) {}
+  }
+
+  async function archive(input = {}) {
     const mediaUrl = String(input.mediaUrl || '');
-    if (!isAllowedDouyinMediaUrl(mediaUrl)) throw new Error('视频媒体地址不属于允许的抖音 CDN。');
-    fs.mkdirSync(tempRoot, { recursive: true });
-    fs.mkdirSync(modelRoot, { recursive: true });
-    const contentId = String(input.contentId || '').replace(/[^0-9A-Za-z_-]/g, '').slice(0, 80) || 'media';
-    const mediaPath = path.join(tempRoot, contentId + '-' + crypto.randomBytes(6).toString('hex') + '.mp4');
+    const mediaUrls = [mediaUrl].concat(Array.isArray(input.mediaUrls) ? input.mediaUrls : [])
+      .map(function(value) { return String(value || ''); })
+      .filter(function(value, index, values) { return value && values.indexOf(value) === index; });
+    fs.mkdirSync(archiveRoot, { recursive: true });
+    const contentId = String(input.contentId || '').replace(/[^0-9A-Za-z_-]/g, '').slice(0, 80);
+    if (!contentId) throw new Error('永久媒体归档缺少作品 ID。');
+    const rawExpectedSha256 = String(input.expectedSha256 || '').trim().toLowerCase();
+    if (rawExpectedSha256 && !/^[a-f0-9]{64}$/.test(rawExpectedSha256)) {
+      throw new Error('历史媒体 SHA-256 格式无效，不能执行可核验回填。');
+    }
+    const mediaPath = path.join(archiveRoot, contentId + '.mp4');
+    const partPath = path.join(archiveRoot, contentId + '-' + crypto.randomBytes(6).toString('hex') + '.mp4.part');
     try {
-      const download = await downloadMedia(mediaUrl, mediaPath, options);
-      const raw = await runPython({
-        pythonPath: resolvePython(options.pythonPath),
-        mediaPath,
-        modelRoot,
-        model: options.model || 'small',
-        prompt: String(input.prompt || '').slice(0, 1000)
-      }, options);
-      return normalizeResult(raw, download);
+      let download;
+      let reusedArchive = false;
+      if (fs.existsSync(mediaPath)) {
+        reusedArchive = true;
+        download = await inspectArchivedMedia(mediaPath, 'video/mp4');
+      } else {
+        const allowedMediaUrls = mediaUrls.filter(isAllowedDouyinMediaUrl);
+        if (!allowedMediaUrls.length) throw new Error('视频媒体地址不属于允许的抖音 CDN。');
+        let lastDownloadError = null;
+        for (let index = 0; index < allowedMediaUrls.length && !download; index += 1) {
+          try {
+            report(input, {
+              stage: 'downloading',
+              message: allowedMediaUrls.length > 1
+                ? '正在下载视频媒体（候选 ' + (index + 1) + ' / ' + allowedMediaUrls.length + '）'
+                : '正在下载视频媒体'
+            });
+            const downloaded = await downloadMedia(allowedMediaUrls[index], partPath, options);
+            const inspectedPart = await inspectArchivedMedia(partPath, downloaded.contentType);
+            if (rawExpectedSha256 && inspectedPart.sha256 !== rawExpectedSha256) {
+              throw new Error('重新下载的视频与历史 SHA-256 不一致，未写入永久归档。');
+            }
+            if (fs.existsSync(mediaPath)) {
+              fs.rmSync(partPath, { force: true });
+              download = await inspectArchivedMedia(mediaPath, downloaded.contentType);
+            } else {
+              fs.renameSync(partPath, mediaPath);
+              download = Object.assign({}, inspectedPart, { localAssetPath: mediaPath });
+            }
+          } catch (error) {
+            lastDownloadError = error;
+            try { fs.rmSync(partPath, { force: true }); } catch (_) {}
+          }
+        }
+        if (!download) throw lastDownloadError || new Error('视频媒体下载失败。');
+      }
+      if (rawExpectedSha256 && download.sha256 !== rawExpectedSha256) {
+        throw new Error('本地归档与历史 SHA-256 不一致，请人工检查现有文件。');
+      }
+      const archiveEvidence = {
+        localAssetPath: download.localAssetPath,
+        mediaSha256: download.sha256,
+        mediaBytes: download.bytes,
+        mediaContentType: download.contentType,
+        archivedAt: new Date().toISOString()
+      };
+      if (typeof input.onArchived === 'function') await input.onArchived(archiveEvidence);
+      report(input, {
+        stage: 'archived', message: reusedArchive ? '已复用永久本地媒体归档' : '媒体已永久归档',
+        mediaBytes: download.bytes
+      });
+      return archiveEvidence;
     } finally {
-      try { fs.rmSync(mediaPath, { force: true }); } catch (_) {}
+      try { fs.rmSync(partPath, { force: true }); } catch (_) {}
     }
   }
 
-  return { transcribe };
+  async function transcribe(input = {}) {
+    const archiveEvidence = await archive(input);
+    fs.mkdirSync(modelRoot, { recursive: true });
+    report(input, { stage: 'transcribing', message: '媒体归档完成，正在本地识别', mediaBytes: archiveEvidence.mediaBytes });
+    const download = {
+      localAssetPath: archiveEvidence.localAssetPath,
+      sha256: archiveEvidence.mediaSha256,
+      bytes: archiveEvidence.mediaBytes,
+      contentType: archiveEvidence.mediaContentType
+    };
+    const raw = await runPython({
+      pythonPath: resolvePython(options.pythonPath),
+      mediaPath: archiveEvidence.localAssetPath,
+      modelRoot,
+      model: options.model || 'small',
+      prompt: String(input.prompt || '').slice(0, 1000)
+    }, options);
+    const result = normalizeResult(raw, download);
+    report(input, {
+      stage: 'complete', message: '本地语音识别完成', mediaBytes: result.mediaBytes,
+      elapsedSeconds: result.elapsedSeconds
+    });
+    return result;
+  }
+
+  return { archive, transcribe, cleanup };
 }
 
 module.exports = {
   createDouyinTranscriptService,
   isAllowedDouyinMediaUrl,
+  cleanupStaleTempFiles,
   downloadMediaFile,
+  buildTranscriptionEnvironment,
   runPythonTranscription,
   normalizeResult
 };

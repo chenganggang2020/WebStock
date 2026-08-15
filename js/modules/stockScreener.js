@@ -6,11 +6,12 @@ let activeDetailItem = null;
 let activeDetailNotes = {};
 let activeDetailStatusFilter = 'all';
 let activeDetailFilteredCodes = [];
+let screenerRunSequence = 0;
 const STRATEGY_HINTS = {
   stable: 'Stable watchlist: prioritizes lower volatility, tracked names, and portfolio context.',
   breakout: 'Trend breakout: looks for price strength, volume context, and confirmation risk.',
   pullback: 'Pullback watch: starts from tracked names near technical reset zones, not a buy signal.',
-  'sector-leader': 'Sector leader: favors configured leaders and sector context for follow-up research.',
+  'sector-leader': '人工观察名单：按人工维护候选与板块上下文排序，角色标签未经系统核验。',
   'short-strong': 'Short-term strength: emphasizes recent momentum and liquidity; risk can rise quickly.',
   'portfolio-risk': 'Portfolio risk: scans current holdings for drawdown, weak daily moves, and concentration.'
 };
@@ -130,19 +131,28 @@ function renderStrategyHint() {
 }
 
 async function run() {
+  const requestId = ++screenerRunSequence;
   const box = document.getElementById('screenerResults');
   if (box) box.innerHTML = '<div class="loading">正在运行本地因子筛选...</div>';
-  lastResult = await screenerApi('/api/screener/run', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(collectInput())
-  });
-  resetResultFilters();
-  activeSavedTaskId = null;
-  activeSavedAIResult = '';
-  renderScreenerResults(lastResult);
-  await loadHistory().catch(function() {});
-  return lastResult;
+  try {
+    const result = await screenerApi('/api/screener/run', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(collectInput())
+    });
+    if (requestId !== screenerRunSequence) return result;
+    lastResult = result;
+    resetResultFilters();
+    activeSavedTaskId = null;
+    activeSavedAIResult = '';
+    renderScreenerResults(lastResult);
+    await loadHistory().catch(function() {});
+    return lastResult;
+  } catch (error) {
+    if (requestId !== screenerRunSequence) return null;
+    renderScreenerMessage('本次筛选失败：' + (error.message || String(error)));
+    throw error;
+  }
 }
 
 async function loadHistory() {
@@ -331,20 +341,50 @@ function renderParsedDemand(parsed) {
 
 function renderCoverage(coverage) {
   if (!coverage) return '';
+  const universeCount = Number(coverage.universeCount) || 0;
   const metrics = [
-    ['股票范围', coverage.universeCount, 100],
-    ['实时行情', coverage.quoteCount, coverage.quoteRate],
+    ['代码覆盖', coverage.codeCount == null ? universeCount : coverage.codeCount, coverage.codeRate == null ? (universeCount ? 100 : 0) : coverage.codeRate],
+    ['行情数据', coverage.quoteCount, coverage.quoteRate],
     ['技术数据', coverage.technicalCount, coverage.technicalRate],
     ['主营资料', coverage.profileCount, coverage.profileRate]
   ];
-  return '<div class="screener-coverage" title="' + screenerEscapeHtml((coverage.limitations || []).join(' ')) + '">' +
+  const exclusion = coverage.technicalRequired
+    ? '<span class="screener-technical-exclusion" data-technical-exclusion><strong>缺技术数据已排除</strong> ' + screenerEscapeHtml(coverage.excludedForMissingTechnicalCount || 0) + '</span>'
+    : '';
+  return '<div class="screener-coverage" data-screener-coverage title="' + screenerEscapeHtml((coverage.limitations || []).join(' ')) + '">' +
     metrics.map(function(metric) {
       return '<span><strong>' + screenerEscapeHtml(metric[0]) + '</strong> ' +
         screenerEscapeHtml(metric[1] == null ? 0 : metric[1]) +
-        (metric[0] === '股票范围' ? '' : ' (' + screenerEscapeHtml(Number(metric[2] || 0).toFixed(2)) + '%)') +
+        ' (' + screenerEscapeHtml(Number(metric[2] || 0).toFixed(2)) + '%)' +
         '</span>';
     }).join('') +
+    exclusion +
     '</div>';
+}
+
+function renderCandidateCard(item) {
+  const model = window.ScreenerCandidateModel && window.ScreenerCandidateModel.toCandidateCard
+    ? window.ScreenerCandidateModel.toCandidateCard(item)
+    : null;
+  if (!model) return '';
+  const coverage = model.coverage.map(function(entry) {
+    return '<span class="candidate-coverage-pill ' + (entry.available ? 'available' : 'missing') + '" data-coverage-key="' + screenerEscapeHtml(entry.key) + '">' +
+      screenerEscapeHtml(entry.label) + ' · ' + (entry.available ? '有' : '缺') + '</span>';
+  }).join('');
+  const list = function(items, emptyText) {
+    if (!items.length) return '<span class="muted">' + screenerEscapeHtml(emptyText) + '</span>';
+    return '<ul>' + items.map(function(text) { return '<li>' + screenerEscapeHtml(text) + '</li>'; }).join('') + '</ul>';
+  };
+  const score = model.score.value == null ? '未评分' : model.score.value;
+  return '<article class="screener-candidate-card" data-screener-candidate-card data-code="' + screenerEscapeHtml(model.identity.code) + '" tabindex="0">' +
+    '<header><div><strong>' + screenerEscapeHtml(model.identity.name) + '</strong><span>' + screenerEscapeHtml(model.identity.code) + (model.identity.marketLabel ? ' · ' + screenerEscapeHtml(model.identity.marketLabel) : '') + '</span></div>' +
+    '<div class="candidate-score"><small>' + screenerEscapeHtml(model.score.label) + '</small><strong>' + screenerEscapeHtml(score) + '</strong></div></header>' +
+    (model.leaderContext ? '<p class="candidate-unverified">' + screenerEscapeHtml(model.leaderContext.label) + '</p>' : '') +
+    '<div class="candidate-coverage-row" aria-label="候选数据覆盖">' + coverage + '</div>' +
+    '<div class="candidate-factor-row">' + renderFactorTags(item.factorTags) + renderFactorBreakdown(item.factorBreakdown) + '</div>' +
+    '<div class="candidate-evidence-grid"><section><h4>入选理由</h4>' + list(model.reasons, '未提供理由') + '</section><section><h4>风险与缺口</h4>' + list(model.risks, '未提供风险') + '</section></div>' +
+    '<footer><span>' + screenerEscapeHtml(model.strategy || '本地候选') + '</span><span>观察价 ' + screenerEscapeHtml(item.observePrice == null ? '--' : item.observePrice) + '</span></footer>' +
+    '</article>';
 }
 
 function renderCompareResult(result) {
@@ -518,7 +558,10 @@ async function saveCurrent() {
 }
 
 function csvCell(value) {
-  return '"' + String(value == null ? '' : value).replace(/"/g, '""') + '"';
+  const raw = String(value == null ? '' : value);
+  const negativeNumberText = typeof value === 'string' && /^\s*-\d+(?:\.\d+)?(?:e[+-]?\d+)?\s*$/i.test(raw);
+  const safe = typeof value === 'string' && !negativeNumberText && /^\s*[=+\-@]/.test(raw) ? "'" + raw : raw;
+  return '"' + safe.replace(/"/g, '""') + '"';
 }
 
 function buildCandidatesCsv(result) {
@@ -633,32 +676,20 @@ function renderFilteredScreenerResults(result) {
   if (!box) return;
   const allCandidates = (result && Array.isArray(result.candidates)) ? result.candidates : [];
   if (!allCandidates.length) {
-    box.innerHTML = renderCoverage(result && result.coverage) + '<div class="empty-state">No screener candidates. Adjust the strategy or scope and run again.</div>';
+    box.innerHTML = renderCoverage(result && result.coverage) +
+      '<div class="empty-state">暂无合格候选。技术策略会默认排除缺少技术数据的股票。</div>' +
+      '<div class="disclaimer">' + screenerEscapeHtml((result && result.disclaimer) || '本地筛选结果仅供研究，不构成投资建议。') + '</div>';
     return;
   }
   const candidates = filterResultCandidates(allCandidates);
-  const summary = renderCoverage(result.coverage) + '<div class="screener-result-summary">Showing ' + candidates.length + ' of ' + allCandidates.length + ' candidates after local filters.</div>' + renderParsedDemand(result.parsedDemand);
+  const summary = renderCoverage(result.coverage) + '<div class="screener-result-summary">当前显示 ' + candidates.length + ' / ' + allCandidates.length + ' 个本地研究候选。</div>' + renderParsedDemand(result.parsedDemand);
   if (!candidates.length) {
     box.innerHTML = summary + '<div class="empty-state compact">No candidates match current result filters.</div>' +
       '<div class="disclaimer">' + screenerEscapeHtml(result.disclaimer || '') + '</div>';
     return;
   }
   box.innerHTML = summary +
-    '<table class="data-table screener-table"><thead><tr><th>Code</th><th>Name</th><th>Score</th><th>Strategy</th><th>Context</th><th>Factors</th><th>Contributions</th><th>Reasons</th><th>Risks</th><th>Observe</th></tr></thead><tbody>' +
-    candidates.map(function(item) {
-      return '<tr data-code="' + screenerEscapeHtml(item.code) + '" tabindex="0">' +
-        '<td>' + screenerEscapeHtml(item.code) + '</td>' +
-        '<td>' + screenerEscapeHtml(item.name) + '</td>' +
-        '<td><span class="score-pill">' + screenerEscapeHtml(item.score) + '</span></td>' +
-        '<td>' + screenerEscapeHtml(item.strategy) + '</td>' +
-        '<td>' + renderCandidateContext(item) + '</td>' +
-        '<td>' + renderFactorTags(item.factorTags) + '</td>' +
-        '<td>' + renderFactorBreakdown(item.factorBreakdown) + '</td>' +
-        '<td>' + renderTextList(item.reasons) + '</td>' +
-        '<td>' + renderTextList(item.risks) + '</td>' +
-        '<td>' + screenerEscapeHtml(item.observePrice) + '</td>' +
-        '</tr>';
-    }).join('') + '</tbody></table>' +
+    '<div class="screener-candidate-grid">' + candidates.map(renderCandidateCard).join('') + '</div>' +
     '<div class="disclaimer">' + screenerEscapeHtml(result.disclaimer || '') + '</div>' +
     (activeSavedAIResult ? '<section class="saved-ai-result"><h3>Saved AI explanation</h3><pre>' + screenerEscapeHtml(activeSavedAIResult) + '</pre></section>' : '');
   bindScreenerActions(box);
@@ -686,7 +717,7 @@ function bindScreenerActions(box) {
 
   box.onclick = async function(event) {
     const btn = event.target.closest('[data-action]');
-    const row = event.target.closest('tr[data-code]');
+    const row = event.target.closest('[data-screener-candidate-card][data-code], tr[data-code]');
     if (!btn && row) {
       await openCandidate(row);
       return;
@@ -718,14 +749,14 @@ function bindScreenerActions(box) {
   };
 
   box.oncontextmenu = function(event) {
-    const row = event.target.closest('tr[data-code]');
+    const row = event.target.closest('[data-screener-candidate-card][data-code], tr[data-code]');
     if (!row || !window.StockList || !window.StockList.showContextMenu) return;
     window.StockList.showContextMenu(event, screenerStockByCode(row.getAttribute('data-code')));
   };
 
   box.onkeydown = async function(event) {
     if (event.key !== 'Enter' && event.key !== ' ') return;
-    const row = event.target.closest('tr[data-code]');
+    const row = event.target.closest('[data-screener-candidate-card][data-code], tr[data-code]');
     if (!row) return;
     event.preventDefault();
     await openCandidate(row);
@@ -802,5 +833,7 @@ window.StockScreener = {
   compareLatestSavedResults,
   compareSelectedSavedResults,
   showSavedTaskDetail,
-  renderSavedTaskDetail
+  renderSavedTaskDetail,
+  renderCoverage,
+  renderCandidateCard
 };

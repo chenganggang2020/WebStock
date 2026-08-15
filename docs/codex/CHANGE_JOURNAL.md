@@ -1,5 +1,96 @@
 # Change Journal
 
+## 2026-08-11 - Permanent Douyin Archive, Incremental Planning And AI Packets
+
+### Decision
+
+- Treat the local database, transcript and completed media archive as durable research evidence. A remote deletion or unavailable page changes only remote availability; it never cascades into local deletion.
+- Establish a complete public-visible work index first, persist every discovered batch, then use stable material fingerprints, age-based refresh and exponential retry backoff for incremental detail collection.
+- Generate clean AI handoff packets by recent count, date range or all records, with exact ASR text preferred and page-visible text explicitly labeled as a non-transcript fallback.
+
+### Implementation
+
+- Added resumable profile scrolling with per-batch import, persistent scan checkpoints, a 400-scroll safety ceiling and fair detail scheduling for new, stale, retry and transcription-pending records.
+- Added permanent `WebStockData/media-library/douyin/<contentId>.mp4` archives with atomic `.part` downloads, SHA-256/size/MIME evidence and local reuse when the remote media URL is gone. Startup cleanup now removes only stale `.part` files.
+- Read the original Douyin detail response through Electron's debugger before navigation completes; media candidates remain in memory only and are filtered by content ID, HTTPS CDN host and historical evidence before download.
+- Bound ordinary scheduled archive recovery to two exact-size mirrors. Explicit complete scans may try up to twelve exact mirrors plus twenty-four de-duplicated renditions, but every file still requires the historical SHA-256 before atomic publication.
+- Persist archive evidence before ASR starts, so a later recognition failure cannot orphan a completed local video.
+- Added a dedicated AI packet panel and API for recent/date/all selection. Packets exclude signed media URLs, local paths and generated investment conclusions, and never silently truncate.
+
+### Evidence
+
+- Independent final review found no Blocking or Important issues after original-response timing, candidate truncation and scheduled-traffic corrections.
+- Node regression: 202/202 passed; browser regression: 10/10 passed; quant regression: 29/29 passed.
+- Live historical backfill recovered 14/14 MP4 files (103,087,385 bytes). Every file matches the prior size and SHA-256; 14/14 transcripts and ASR objects remained byte-for-byte unchanged, with zero completed-file deletion and zero `.part` residue.
+- The live observation rows and sync results contain zero signed media URLs. The before/after transcript-plus-ASR digest is `8B6357A6D6F0CADDFEC42DD3011858E664152CD66259C2A91E1A06B54D96ED65`.
+- Isolated final portable smoke returned HTTP 200 and exposed the packaged network-route, pipeline, run-history, complete-scan and AI-packet controls.
+- Final installer: 128,362,966 bytes, SHA-256 `4A9D6B663492856F4A719A7932A38C7831FC266FCDC3435CF2C22514E5F6CA03`.
+- Final portable EXE: 116,308,957 bytes, SHA-256 `FADCF8B2180DA0D61A6836697D269911D439AF80934F1E784412D2CE659FD1D1`.
+- The verified post-backfill database snapshot is `dist/rollback/20260811-after-verified-archive-backfill/webstock.db`, SHA-256 `572F564BADDE9AA911CEAF8E55DDB9A911B4093FF11F0393B3F46A23C69DDCE8`.
+
+### Remaining Boundary
+
+- “Complete” means all works visible to the current authenticated public profile session and DOM; the application does not bypass login, CAPTCHA, private visibility or platform risk controls.
+- The all-record AI packet fails explicitly above 5,000 records or 25 MB and asks for a time split; it never silently omits records.
+- The authenticated public profile reported 368 works but stabilized at 56 currently visible cards during the live scan. The 14 known historical downloads are fully recovered; the remaining public-work baseline still advances incrementally and does not claim full 368-item coverage.
+
+## 2026-08-11 - Truthful Douyin Run Audit And Transcription States
+
+### Decision
+
+- Separate `主页总作品`, `本轮页面加载` and `本地抖音作品`; none of these counts may stand in for another.
+- Do not call an item `待转写` unless the local ASR path has actually been reached. Distinguish detail pending, media inspection, download, transcription, media missing, per-run deferral, failure and unverified legacy state.
+- Persist bounded UI history for collection runs and per-video stages without persisting signed media URLs or downloaded video files.
+
+### Implementation
+
+- Added `expert_sync_runs` and `expert_sync_run_items`, a recent-runs API, batched history loading and expandable per-video audit rows.
+- Added download/transcription progress callbacks, explicit `media_missing` observation metadata and managed startup cleanup for ASR temporary files older than six hours.
+- Revised the collection pipeline and video filters so missing or legacy evidence is not presented as a real transcription queue.
+
+### Evidence
+
+- Node regression: 163/163 passed; browser regression: 10/10 passed; quant regression: 29/29 passed.
+- Official npm registry audit reported 0 known vulnerabilities.
+- Frozen portable smoke returned HTTP 200, exposed the run-history API, created both audit tables, and contained the expected sync/UI/schema modules with no tests, database, `.venv`, quant workspace or ASR temporary files in `app.asar`.
+- The isolated smoke left the formal portable database byte-identical. The restarted final portable returned HTTP 200 and removed one stale 4.8 MB managed ASR temporary file.
+- Final installer: 128,350,692 bytes, SHA-256 `A6498C37BBA76CFCE49EAAC2CBCFEB7E029D24743C15733CD1ED2A1ACD819FCE`.
+- Final portable EXE: 116,301,537 bytes, SHA-256 `5DAF65EC961D2AC40C78C016177A90A9209475E4CDF62BD2DEF0276A7D2B705A`.
+- Previous binaries are recoverable from `dist/rollback/20260811-184000-before-run-audit`.
+
+### Remaining Boundary
+
+- Existing historical observations without ASR metadata or a run audit are labeled `转写条件待核验`; detailed audit rows begin with the next collection run and are not retroactively invented.
+
+## 2026-08-11 - Dedicated Collection Tasks And Visible Network Route
+
+### Decision
+
+- Keep general people, books and methods management in AI Research, but move Douyin collection controls and video review into a dedicated `采集任务` view.
+- Persist the current collection stage separately from the last completed result so an active run can show real progress without overwriting its prior evidence summary.
+- Report the route resolved by Electron's persistent Douyin session. This distinguishes proxy from direct traffic; WebStock does not override the proxy application's own per-domain routing rules.
+
+### Implementation
+
+- Added a fixed-height, split video list/detail workbench with compact rows, filters and narrow-screen fallbacks.
+- Added the five-stage flow `会话检查 -> 主页发现 -> 详情采集 -> 本地转写 -> 保存入库` and live progress polling while a manual run is active.
+- Added `expert_sync_jobs.progress_json`, the `webstock:douyin-network-route` desktop bridge and an Electron proxy-route inspector.
+
+### Evidence
+
+- Node regression: 160/160 passed.
+- Browser regression: 10/10 passed, including 1300 x 800 non-overlap assertions and the existing 390 px dark-mode flow.
+- Quant regression: 29/29 passed.
+- Final portable smoke returned HTTP 200, loaded 28 video rows from the existing portable data, resolved `快车 / 系统代理 · 127.0.0.1:7891`, and had no document-level horizontal overflow.
+- Final installer SHA-256: `1C7232183EC23F5BAB4FC332C0E8F7E49C795766D0D3B534BF6E5A911CA2E19B`.
+- Final portable SHA-256: `BFEC2A24A5D96D6089DCF6E8B9A6A0CE650CB1A6F05F001100145815C1F69CD2`.
+- Visual artifacts: `output/playwright/creator-tasks-source.png` and `output/playwright/creator-tasks-final-portable.png`.
+- Rollback copies of the prior binaries are under `dist/rollback/20260811-162632-before-collection-ui`.
+
+### Remaining Boundary
+
+- A resolved local proxy such as `127.0.0.1:7891` proves that Electron sends the request to that proxy. Whether the proxy then selects a remote node or `DIRECT` remains controlled by the proxy application's active rules.
+
 ## 2026-08-09 23:30 - Packaged Android Host And LAN Safety
 
 ### Decision
@@ -176,3 +267,28 @@ Remaining boundaries:
 - Public current-universe data still supports workflow evidence only; no model or factor is approved as profitable without licensed or terms-verified point-in-time data.
 - Android requires the Windows host on the same trusted network. OAuth authentication remains in the system browser by provider design.
 - No broker connection or automatic real order submission is present.
+
+## 2026-08-13 13:45 - iPhone PWA, Private HTTPS And Web Push Release
+
+Status: iPhone companion flow delivered as a read-only installable PWA; the Windows host remains the only data authority
+
+Change direction:
+- Add a dedicated `mobile.html` shell with account switching, holdings, research counts, explicit source time and A-share red/green semantics.
+- Cache only bounded mobile assets and the latest validated snapshot. Offline display remains visibly labeled and never turns missing or stale data into live values.
+- Use Tailscale Serve on private HTTPS port 8443 plus the existing pairing-token-to-secure-cookie boundary. Do not use Funnel or expose a public port.
+- Add an in-app official Tailscale login handoff. The program accepts only `login.tailscale.com` one-time URLs and never handles user credentials.
+- Add generic Web Push for material aggregate changes and research additions. Lock-screen text excludes account names, stock codes, holdings and amounts.
+
+Verification:
+- Node regression initially passed 439/439. After the final login and Serve-approval handoff, focused iPhone/Tailscale/push tests passed 12/12; the full run passed 440/441 and the single existing search-index concurrency failure passed immediately in isolation.
+- Edge iPhone 13 emulation loaded two accounts online, installed and controlled the service worker, then reloaded offline with the same two-account IndexedDB snapshot and no unexpected console errors.
+- Final portable package launched on an isolated port and returned a healthy database status. Its `app.asar` contains the mobile shell, service worker v7 and official login IPC route.
+- Final unpacked executable reports WebStock 1.1.0.0 and exposes the black/teal atom icon. The NSIS installer archive test completed without integrity errors.
+- The final packages were rebuilt with the Electron 39 native-module ABI, then the portable EXE passed an isolated real launch and the NSIS archive passed a complete integrity test.
+- Final installer SHA-256: `9D65578CDB5F9A372F3AFAD34EB9E09999CE57B7E6DEE94D04B95CEC92263BB8`.
+- Final portable SHA-256: `EAEA5DAD6C7A5C439589F10E21A79D6566847264F12EC26577E465AB52F97C61`.
+- A fresh npm vulnerability audit could not be obtained because the official registry TLS connection closed during the request; this is recorded as unavailable rather than passed.
+
+Operational boundary:
+- iPhone live access and push require the Windows host and Tailscale service to remain online. Offline mode is a read-only last snapshot, not a standalone data collector.
+- The current Windows machine has official Tailscale 1.102.2 installed, authenticated and serving WebStock privately at `https://cgg.tailc71c66.ts.net:8443`; the full token-bearing pairing URL is kept out of source and was copied to the local clipboard.

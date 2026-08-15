@@ -1,5 +1,4 @@
 const express = require('express');
-const axios = require('axios');
 const iconv = require('iconv-lite');
 const router = express.Router();
 
@@ -7,6 +6,7 @@ const portfolio = require('../services/portfolioService');
 const { isValidApiKey, getAIConfig, callAIModel } = require('./ai');
 const { toSinaSymbol } = require('../utils/market');
 const { appendOneClickOutputInstructions } = require('../services/handoffFormat');
+const marketData = require('../services/marketDataService');
 
 function ok(res, data) {
   res.json({ success: true, data });
@@ -20,10 +20,9 @@ async function fetchQuotesSafe(codes) {
   if (!codes.length) return {};
   try {
     const sinaCodes = codes.map(toSinaSymbol).join(',');
-    const resp = await axios.get('https://hq.sinajs.cn/list=' + sinaCodes, {
+    const resp = await marketData.get('quote:' + sinaCodes, 'https://hq.sinajs.cn/list=' + sinaCodes, {
       headers: { Referer: 'https://finance.sina.com.cn' },
-      responseType: 'arraybuffer',
-      timeout: 6000
+      responseType: 'arraybuffer'
     });
     const rawData = iconv.decode(Buffer.from(resp.data), 'gbk');
     const map = {};
@@ -44,7 +43,8 @@ async function fetchQuotesSafe(codes) {
         amount: parseFloat(fields[9]) || 0,
         tradeDate: fields[30] || '',
         tradeTime: fields[31] || '',
-        change: prevClose ? Number(((price - prevClose) / prevClose * 100).toFixed(2)) : 0
+        change: prevClose ? Number(((price - prevClose) / prevClose * 100).toFixed(2)) : 0,
+        quoteStatus: 'live'
       };
     });
     return map;
@@ -268,7 +268,13 @@ router.post('/recalculate', async function (req, res) {
       latestSnapshot: portfolio.getLatestSnapshot(accountId),
       positions,
       summary: portfolio.getSummary(positions, { accountId }),
-      allocation: portfolio.getAllocation(positions)
+      allocation: portfolio.getAllocation(positions),
+      marketData: {
+        source: 'sina-quote',
+        observedAt: positions.map(function(position) {
+          return [position.quoteDate, position.quoteTime].filter(Boolean).join(' ');
+        }).filter(Boolean).sort().pop() || null
+      }
     });
   } catch (error) {
     fail(res, error);

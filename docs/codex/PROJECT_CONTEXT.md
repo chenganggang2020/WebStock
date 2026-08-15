@@ -20,6 +20,7 @@ The AI research direction is defined in `docs/ai-research/AI_PLATFORM_DESIGN.md`
 - Portable package: `npm run dist:win:portable`
 - Android companion APK: `npm run dist:android`
 - Android host mode: Windows `设置 -> 手机连接（安卓）`; `npm run start:android` is the source-development fallback
+- iPhone companion: Windows `设置 -> 苹果手机网页 App`; detailed setup is in `docs/ios-companion.md`
 
 ## Architecture Map
 
@@ -35,6 +36,7 @@ The AI research direction is defined in `docs/ai-research/AI_PLATFORM_DESIGN.md`
 | Paper portfolio | `services/paperPortfolioService.js`, `services/quoteService.js`, `routes/researchDecision.js` | Constraint-capped weights, lot-rounded simulated entries, valuation/PnL snapshots and draft/active/archived states | No broker connection or real orders |
 | Frontend | `index.html`, `js/modules/`, `css/styles.css` | Vanilla JS desktop UI | Views are switched by `switchMainView` |
 | Android companion | `android/`, `electron/lanServerController.js`, `services/lanAccessService.js`, `services/lanHostService.js` | Native WebView client for the same Windows data source | Windows Settings opt-in, private-LAN URL-to-cookie pairing; no second database |
+| iPhone companion | `mobile.html`, `js/mobileApp.js`, `services/tailscaleAccessService.js`, `services/mobilePushService.js`, `routes/mobile.js` | Installable read-only PWA, offline snapshot, private HTTPS access and generic Web Push | Tailscale Serve only; no Funnel, public port, broker action or second database |
 | Tests | `test/` | Node unit/API and Playwright flows | Tests use isolated temporary SQLite files |
 
 ## Core Flows
@@ -73,6 +75,7 @@ The AI research direction is defined in `docs/ai-research/AI_PLATFORM_DESIGN.md`
 - Qlib + LightGBM, a same-contract MASTER reimplementation and the local factor gate are connected as exploratory research runtimes. Windows x64 can install or repair the pinned runtime from the AI Research view. AlphaAgent, RD-Agent(Q), TradingAgents and FinRL-X remain planned; valid model claims still require licensed or terms-verified point-in-time data.
 - Real brokerage execution remains out of scope.
 - Android is a companion to a running Windows host, not a standalone phone-side data server. Embedded OAuth remains unsupported; authentication links open in the system browser.
+- iPhone is a Safari-installed PWA backed by the same running Windows host. Tailscale login opens in the official browser flow, and offline data is explicitly labeled as a saved snapshot.
 
 ## Verification Notes
 

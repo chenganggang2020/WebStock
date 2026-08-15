@@ -4,6 +4,9 @@ const routes = require('./routes');
 const { requireLanPairing, resolveSafeListenHost } = require('./services/lanAccessService');
 
 const { getAIEnabled, getAIConfig } = require('./routes/ai');
+const database = require('./db');
+const { latestCacheTimestamp } = require('./routes/cache');
+const packageInfo = require('./package.json');
 
 const app = express();
 
@@ -43,6 +46,33 @@ app.use(express.urlencoded({ extended: true }));
 
 app.get(['/', '/index.html'], function (req, res) {
   res.sendFile(path.join(__dirname, 'index.html'));
+});
+
+app.get('/mobile.html', function (req, res) {
+  res.sendFile(path.join(__dirname, 'mobile.html'));
+});
+
+app.get('/api/health', function(req, res) {
+  try {
+    database.prepare('SELECT 1 AS ok').get();
+    const lastMarketTimestamp = latestCacheTimestamp();
+    res.json({
+      success: true,
+      data: {
+        status: 'ok',
+        database: 'ok',
+        version: packageInfo.version,
+        uptimeSeconds: Math.floor(process.uptime()),
+        checkedAt: new Date().toISOString(),
+        lastMarketDataAt: lastMarketTimestamp ? new Date(lastMarketTimestamp).toISOString() : null
+      }
+    });
+  } catch (error) {
+    res.status(503).json({
+      success: false,
+      error: 'Local database health check failed'
+    });
+  }
 });
 
 ['manifest.webmanifest', 'sw.js', 'WebStock.png'].forEach(function (file) {

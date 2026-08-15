@@ -21,6 +21,7 @@ try {
   };
   ensureColumn('expert_channels', 'subject_type', "TEXT NOT NULL DEFAULT 'creator'");
   ensureColumn('expert_channels', 'description', "TEXT DEFAULT ''");
+  ensureColumn('expert_sync_jobs', 'progress_json', "TEXT DEFAULT '{}'");
   ensureColumn('expert_observations', 'published_time_precision', "TEXT NOT NULL DEFAULT 'unknown'");
   ensureColumn('expert_observations', 'media_type', "TEXT NOT NULL DEFAULT 'text'");
   ensureColumn('expert_observations', 'archive_status', "TEXT NOT NULL DEFAULT 'linked'");

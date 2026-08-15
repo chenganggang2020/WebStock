@@ -672,6 +672,63 @@ async function refreshPortfolio() {
   await loadPortfolio();
 }
 
+async function refreshLivePortfolio() {
+  try {
+    const result = await portfolioApi('/recalculate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ accountId: activeAccountId() })
+    });
+    window.State.positions = result.positions || [];
+    window.State.portfolioSummary = result.summary || {};
+    window.State.portfolioAllocation = result.allocation || [];
+    renderSummary();
+    renderPositions();
+    if (window.Dashboard) window.Dashboard.refreshCards();
+    if (window.updateSidebarWorkspace) window.updateSidebarWorkspace();
+    return {
+      ok: true,
+      observedAt: result.marketData && result.marketData.observedAt || null,
+      source: result.marketData && result.marketData.source || 'sina-quote'
+    };
+  } catch (error) {
+    console.warn(error.message || error);
+    return { ok: false, error };
+  }
+}
+
+function applyQuoteSnapshot(quotes, meta) {
+  const State = window.State;
+  const model = window.QuoteSnapshotClientModel;
+  if (!model || !Array.isArray(State.positions)) return { ok: false, count: 0 };
+  State.positions = model.applyPositionQuotes(State.positions, quotes);
+  State.portfolioSummary = model.summarizePortfolio(State.portfolioSummary, State.positions);
+  State.portfolioAllocation = model.allocation(State.positions);
+  const accountIndex = (State.portfolioAccounts || []).findIndex(function(account) {
+    return Number(account.id) === activeAccountId();
+  });
+  if (accountIndex >= 0) {
+    State.portfolioAccounts[accountIndex] = Object.assign({}, State.portfolioAccounts[accountIndex], {
+      summary: State.portfolioSummary
+    });
+  }
+  renderSummary();
+  renderPositions();
+  renderAccountControls();
+  if (window.PortfolioCharts) {
+    window.PortfolioCharts.renderAllocationChart(State.portfolioAllocation);
+    window.PortfolioCharts.renderPnlRankChart(State.positions);
+  }
+  if (window.Dashboard) window.Dashboard.refreshCards();
+  if (window.updateSidebarWorkspace) window.updateSidebarWorkspace();
+  return {
+    ok: true,
+    count: Array.isArray(quotes) ? quotes.length : 0,
+    observedAt: meta && meta.fetchedAt || null,
+    stale: !!(meta && meta.stale)
+  };
+}
+
 function selectPositionStock(code) {
   const stock = stockLookup(code);
   if (stock && window.StockList) {
@@ -777,6 +834,8 @@ window.Portfolio = {
   openBuyTradeByCode,
   openSellTradeByCode,
   refreshPortfolio,
+  refreshLivePortfolio,
+  applyQuoteSnapshot,
   selectPositionStock,
   viewTrades,
   runAIAnalysis,

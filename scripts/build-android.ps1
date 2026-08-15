@@ -69,7 +69,7 @@ try {
 $ApkSource = Join-Path $AndroidRoot "app\build\outputs\apk\release\app-release.apk"
 if (-not (Test-Path -LiteralPath $ApkSource)) { throw "Release APK was not produced" }
 $OutputRoot = Join-Path $ProjectRoot "dist\android"
-$ApkOutput = Join-Path $OutputRoot "WebStock-Android-Companion-1.0.0.apk"
+$ApkOutput = Join-Path $OutputRoot "WebStock-Android-Companion-1.1.0.apk"
 New-Item -ItemType Directory -Force -Path $OutputRoot | Out-Null
 Copy-Item -LiteralPath $ApkSource -Destination $ApkOutput -Force
 

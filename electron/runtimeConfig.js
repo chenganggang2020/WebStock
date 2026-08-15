@@ -10,19 +10,22 @@ function normalizePort(value) {
 function resolveRuntimeConfig(options = {}) {
   const portableExecutableDir = String(options.portableExecutableDir || '').trim();
   const defaultUserDataDir = String(options.defaultUserDataDir || '').trim();
+  const linkedDataDir = String(options.linkedDataDir || '').trim();
   if (!defaultUserDataDir) throw new Error('Electron user data directory is required');
 
   const portable = Boolean(portableExecutableDir);
   const userDataDir = portable
     ? path.join(portableExecutableDir, 'WebStockData')
     : defaultUserDataDir;
+  const dataDir = portable ? userDataDir : (linkedDataDir || userDataDir);
   return {
     portable,
     userDataDir,
-    dbPath: path.join(userDataDir, 'webstock.db'),
+    dataDir,
+    dbPath: path.join(dataDir, 'webstock.db'),
     legacyDbPath: portable ? path.join(defaultUserDataDir, 'webstock.db') : null,
-    level2ConfigPath: path.join(userDataDir, 'level2-config.json'),
-    quantWorkspacePath: path.join(userDataDir, 'quant-workspace'),
+    level2ConfigPath: path.join(dataDir, 'level2-config.json'),
+    quantWorkspacePath: path.join(dataDir, 'quant-workspace'),
     port: normalizePort(options.port)
   };
 }

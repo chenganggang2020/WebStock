@@ -17,6 +17,9 @@ const level2Router = require('./level2');
 const aiResearchRouter = require('./aiResearch');
 const quantRouter = require('./quant');
 const researchDecisionRouter = require('./researchDecision');
+const chartCoachRouter = require('./chartCoach');
+const capitalFlowRouter = require('./capitalFlow');
+const mobileRouter = require('./mobile');
 
 router.use('/api', stocksRouter);
 router.use('/api', marketRouter);
@@ -33,6 +36,9 @@ router.use('/api', level2Router);
 router.use('/api', aiResearchRouter);
 router.use('/api', quantRouter);
 router.use('/api', researchDecisionRouter);
+router.use('/api', chartCoachRouter);
+router.use('/api', capitalFlowRouter);
+router.use('/api', mobileRouter);
 router.use('/api/portfolio', portfolioRouter);
 
 module.exports = router;

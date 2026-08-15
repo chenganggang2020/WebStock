@@ -50,6 +50,37 @@ async function load(limit) {
   return window.State.recentStocks;
 }
 
+async function refreshQuotes() {
+  const items = window.State.recentStocks || [];
+  if (!items.length) return { ok: true, count: 0 };
+  try {
+    const quotes = await window.ApiClient.fetchJsonData('/api/quote?codes=' + items.map(function(item) { return item.code; }).join(','));
+    const quoteMap = {};
+    (Array.isArray(quotes) ? quotes : []).forEach(function(quote) { quoteMap[quote.code] = quote; });
+    window.State.recentStocks = items.map(function(item) {
+      const quote = quoteMap[item.code];
+      const usable = quote && quote.quoteStatus !== 'unavailable' && Number(quote.price) > 0;
+      return usable ? Object.assign({}, item, {
+        lastPrice: quote.price,
+        lastChange: quote.change,
+        quoteStatus: quote.quoteStatus || 'live'
+      }) : Object.assign({}, item, { quoteStatus: quote ? 'unavailable' : item.quoteStatus || 'stale' });
+    });
+    renderRecentStocks();
+    renderRecentDashboard();
+    const usableQuotes = (Array.isArray(quotes) ? quotes : []).filter(function(quote) {
+      return quote && quote.quoteStatus !== 'unavailable' && Number(quote.price) > 0;
+    });
+    const observedAt = usableQuotes.map(function(quote) {
+      return [quote.tradeDate, quote.tradeTime].filter(Boolean).join(' ');
+    }).filter(Boolean).sort().pop();
+    return { ok: usableQuotes.length > 0, count: usableQuotes.length, observedAt };
+  } catch (error) {
+    console.warn(error.message || error);
+    return { ok: false, error };
+  }
+}
+
 async function record(stock) {
   if (!stock || !stock.code) return;
   await recentApi('', {
@@ -201,6 +232,7 @@ function exportRecentCsv() {
 
 window.RecentStocks = {
   load,
+  refreshQuotes,
   record,
   remove,
   clear,

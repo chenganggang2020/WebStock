@@ -63,6 +63,32 @@ test('knowledge sources are chunked, deduplicated and searchable in Chinese', ()
   assert.ok(byStock.items.some(item => item.sourceId === source.id));
 });
 
+test('knowledge chunk evidence ids remain unique for source keys with the same readable prefix', () => {
+  const first = knowledge.createSource({
+    sourceKey: 'expert-shared-prefix-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+    sourceType: 'video', title: 'first same-prefix source',
+    content: 'first source content is intentionally long enough to create a searchable knowledge chunk.'
+  });
+  const second = knowledge.createSource({
+    sourceKey: 'expert-shared-prefix-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+    sourceType: 'video', title: 'second same-prefix source',
+    content: 'second source content is different and intentionally long enough to create another knowledge chunk.'
+  });
+
+  assert.notEqual(first.id, second.id);
+  assert.ok(first.chunkCount >= 1);
+  assert.ok(second.chunkCount >= 1);
+  const firstEvidence = knowledge.search({ query: 'first intentionally searchable', limit: 10 }).items
+    .find(function(item) { return item.sourceId === first.id; });
+  const secondEvidence = knowledge.search({ query: 'second intentionally searchable', limit: 10 }).items
+    .find(function(item) { return item.sourceId === second.id; });
+  assert.ok(firstEvidence);
+  assert.ok(secondEvidence);
+  assert.match(firstEvidence.evidenceId, new RegExp('^K' + Buffer.from(first.sourceKey, 'utf8').toString('hex') + '-\\d+$'));
+  assert.match(secondEvidence.evidenceId, new RegExp('^K' + Buffer.from(second.sourceKey, 'utf8').toString('hex') + '-\\d+$'));
+  assert.notEqual(firstEvidence.evidenceId, secondEvidence.evidenceId);
+});
+
 test('knowledge analysis prompt is grounded in stable evidence blocks', () => {
   const context = knowledge.buildAnalysisContext({
     question: '根据张三的框架，光模块公司应该重点验证什么？',

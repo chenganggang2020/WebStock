@@ -25,6 +25,11 @@ const {
 
 const jobs = new Map();
 const children = new Map();
+const resultSummaryCaches = {
+  runs: new Map(),
+  'factor-runs': new Map()
+};
+const manifestSummaryCache = new Map();
 let runtimeCache = null;
 let runtimeInstallInfoCache = null;
 
@@ -260,6 +265,91 @@ async function linkExistingRuntime(input = {}) {
 
 function readJson(filePath) {
   return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+}
+
+function fileIdentity(filePath) {
+  try {
+    const stat = fs.statSync(filePath);
+    return { exists: true, size: stat.size, mtimeMs: stat.mtimeMs };
+  } catch (error) {
+    if (error && error.code === 'ENOENT') return { exists: false, size: 0, mtimeMs: 0 };
+    throw error;
+  }
+}
+
+function sameFileIdentity(left, right) {
+  return !!left && !!right && left.exists === right.exists &&
+    left.size === right.size && left.mtimeMs === right.mtimeMs;
+}
+
+function readManifestSummary(manifestPath) {
+  const identity = fileIdentity(manifestPath);
+  if (!identity.exists) throw new Error('Dataset manifest is missing.');
+  const cached = manifestSummaryCache.get(manifestPath);
+  if (cached && sameFileIdentity(cached.identity, identity)) {
+    if (cached.error) throw new Error(cached.error);
+    return cached;
+  }
+  try {
+    const manifest = validateDatasetManifest(readJson(manifestPath));
+    if (manifestSha256(manifest) !== manifest.manifestSha256.toLowerCase()) {
+      throw new Error('Dataset manifest SHA256 does not match its content.');
+    }
+    const entry = { identity, manifest, error: '' };
+    manifestSummaryCache.set(manifestPath, entry);
+    return entry;
+  } catch (error) {
+    manifestSummaryCache.set(manifestPath, { identity, manifest: null, error: error.message });
+    throw error;
+  }
+}
+
+function summaryCacheIsCurrent(cached) {
+  if (!cached || !sameFileIdentity(cached.resultIdentity, fileIdentity(cached.resultPath))) return false;
+  if (!sameFileIdentity(cached.manifestIdentity, fileIdentity(cached.manifestPath))) return false;
+  return cached.artifactIdentities.every(artifact =>
+    sameFileIdentity(artifact.identity, fileIdentity(artifact.path)));
+}
+
+function verifyStoredResultSummary(resultPath, kind) {
+  const workspace = ensureWorkspace();
+  const runsRoot = path.join(workspace, kind);
+  const datasetsRoot = path.join(workspace, 'datasets');
+  const resolvedResultPath = path.resolve(resultPath);
+  if (!isInside(runsRoot, resolvedResultPath)) throw new Error('Result file is outside the quant run directory.');
+
+  const cache = resultSummaryCaches[kind];
+  const cached = cache.get(resolvedResultPath);
+  if (summaryCacheIsCurrent(cached)) return cached.verified;
+
+  const resultIdentity = fileIdentity(resolvedResultPath);
+  if (!resultIdentity.exists) throw new Error('Result file is missing.');
+  const result = readJson(resolvedResultPath);
+  const datasetId = String(result.dataManifest && result.dataManifest.datasetId || '');
+  const manifestPath = path.resolve(datasetsRoot, datasetId, 'manifest.json');
+  if (!isInside(datasetsRoot, manifestPath)) throw new Error('Result dataset path is invalid.');
+  const manifestEntry = readManifestSummary(manifestPath);
+  const validator = kind === 'factor-runs' ? validateFactorLabResult : validateQuantResult;
+  validator(result, manifestEntry.manifest);
+
+  const runRoot = path.dirname(resolvedResultPath);
+  const artifactIdentities = result.artifacts.map(artifact => {
+    const target = path.resolve(runRoot, artifact.path);
+    if (!isInside(runRoot, target)) throw new Error('Result artifact is outside the current run directory.');
+    const identity = fileIdentity(target);
+    if (!identity.exists) throw new Error('Result artifact is missing: ' + artifact.path);
+    return { path: target, identity };
+  });
+  const verified = { manifest: manifestEntry.manifest, result, manifestPath, resultPath: resolvedResultPath };
+  cache.set(resolvedResultPath, {
+    resultPath: resolvedResultPath,
+    resultIdentity,
+    manifestPath,
+    manifestIdentity: manifestEntry.identity,
+    artifactIdentities,
+    verified
+  });
+  return verified;
 }
 
 function verifyManifest(manifestPath, options = {}) {
@@ -1086,37 +1176,68 @@ function listDatasets(limit = 50) {
   }).sort((a, b) => String(b.manifest && b.manifest.createdAt || '').localeCompare(String(a.manifest && a.manifest.createdAt || ''))).slice(0, Math.min(Math.max(Number(limit) || 50, 1), 200));
 }
 
-function listResults(limit = 30) {
-  const dir = path.join(ensureWorkspace(), 'runs');
-  const manifestCache = new Map();
-  return fs.readdirSync(dir, { withFileTypes: true }).filter(entry => entry.isDirectory()).map(entry => {
-    const resultPath = path.join(dir, entry.name, 'result.json');
+function listStoredResults(kind, limit, options = {}) {
+  const dir = path.join(ensureWorkspace(), kind);
+  const maxItems = Math.min(Math.max(Number(limit) || 30, 1), 100);
+  const fullVerification = options.verification === 'full';
+  const manifestCache = fullVerification ? new Map() : null;
+  const candidates = fs.readdirSync(dir, { withFileTypes: true })
+    .filter(entry => entry.isDirectory())
+    .map(entry => {
+      const resultPath = path.join(dir, entry.name, 'result.json');
+      const resultIdentity = fileIdentity(resultPath);
+      const identity = resultIdentity.exists ? resultIdentity : fileIdentity(path.dirname(resultPath));
+      return { resultPath, identity };
+    })
+    .sort((a, b) => b.identity.mtimeMs - a.identity.mtimeMs)
+    .slice(0, maxItems);
+
+  return candidates.map(candidate => {
+    const checkedAt = new Date().toISOString();
+    const scope = fullVerification ? 'full' : 'metadata';
     try {
-      const verified = verifyStoredResult(resultPath, { verifyHashes: false, manifestCache });
-      const createdAt = verified.result.createdAt || fs.statSync(resultPath).mtime.toISOString();
-      return { resultPath, result: verified.result, createdAt, valid: true, error: '' };
+      const verified = fullVerification
+        ? (kind === 'factor-runs'
+          ? verifyStoredFactorResult(candidate.resultPath, { manifestCache })
+          : verifyStoredResult(candidate.resultPath, { manifestCache }))
+        : verifyStoredResultSummary(candidate.resultPath, kind);
+      return {
+        resultPath: candidate.resultPath,
+        result: verified.result,
+        createdAt: verified.result.createdAt || new Date(candidate.identity.mtimeMs).toISOString(),
+        valid: true,
+        error: '',
+        verification: {
+          status: fullVerification ? 'hash_verified' : 'metadata_valid',
+          scope,
+          hashesVerified: fullVerification,
+          checkedAt
+        }
+      };
     } catch (error) {
-      const timestampTarget = fs.existsSync(resultPath) ? resultPath : path.dirname(resultPath);
-      return { resultPath, result: null, createdAt: fs.statSync(timestampTarget).mtime.toISOString(), valid: false, error: error.message };
+      return {
+        resultPath: candidate.resultPath,
+        result: null,
+        createdAt: new Date(candidate.identity.mtimeMs).toISOString(),
+        valid: false,
+        error: error.message,
+        verification: {
+          status: fullVerification ? 'hash_failed' : 'metadata_invalid',
+          scope,
+          hashesVerified: false,
+          checkedAt
+        }
+      };
     }
-  }).sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || ''))).slice(0, Math.min(Math.max(Number(limit) || 30, 1), 100));
+  });
 }
 
-function listFactorResults(limit = 30) {
-  const dir = path.join(ensureWorkspace(), 'factor-runs');
-  const manifestCache = new Map();
-  return fs.readdirSync(dir, { withFileTypes: true }).filter(entry => entry.isDirectory()).map(entry => {
-    const resultPath = path.join(dir, entry.name, 'result.json');
-    try {
-      const verified = verifyStoredFactorResult(resultPath, { verifyHashes: false, manifestCache });
-      const createdAt = verified.result.createdAt || fs.statSync(resultPath).mtime.toISOString();
-      return { resultPath, result: verified.result, createdAt, valid: true, error: '' };
-    } catch (error) {
-      const timestampTarget = fs.existsSync(resultPath) ? resultPath : path.dirname(resultPath);
-      return { resultPath, result: null, createdAt: fs.statSync(timestampTarget).mtime.toISOString(), valid: false, error: error.message };
-    }
-  }).sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')))
-    .slice(0, Math.min(Math.max(Number(limit) || 30, 1), 100));
+function listResults(limit = 30, options = {}) {
+  return listStoredResults('runs', limit, options);
+}
+
+function listFactorResults(limit = 30, options = {}) {
+  return listStoredResults('factor-runs', limit, options);
 }
 
 loadPersistedJobs();

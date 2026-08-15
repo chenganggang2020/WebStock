@@ -50,7 +50,7 @@ function hotBoards() {
 
 function hotMetric(board) {
   const amount = Math.max(0, Number(board.amount) || 0) / 100000000;
-  const flow = Math.abs(Number(board.netInflow) || 0) / 100000000;
+  const flow = Math.abs(Number(board.mainNetInflow) || 0) / 100000000;
   const change = Math.abs(Number(board.dailyChangePct) || 0);
   const heat = Math.max(0, Number(board.heatScore) || 0);
   return Math.max(1, change * 14 + Math.log10(amount + 1) * 12 + Math.log10(flow + 1) * 8 + heat);
@@ -82,9 +82,9 @@ function hotSyncSearchMode() {
   const panel = document.getElementById('hotSidebarPanel');
   if (!wrap || !panel) return;
   const searching = Boolean(input && input.value.trim());
-  const hasHot = Boolean(hotMarketOverview && hotBoards().length);
-  wrap.classList.toggle('hot-hidden-default', hasHot && !searching);
-  panel.style.display = hasHot && !searching ? '' : 'none';
+  const hasSidebarNews = panel.dataset.sidebarNewsReady === '1' || panel.dataset.sidebarNewsLoading === '1';
+  wrap.classList.toggle('hot-hidden-default', hasSidebarNews && !searching);
+  panel.style.display = hasSidebarNews && !searching ? '' : 'none';
 }
 
 function renderHotStatus(target, text, isError) {
@@ -96,7 +96,6 @@ function renderHotStatus(target, text, isError) {
 async function hotLoad(options) {
   options = options || {};
   if (!options.silent) {
-    renderHotStatus('hotSidebarPanel', '正在刷新热点板块...');
     renderHotStatus('hotMarketBoard', '正在刷新热点板块...');
   }
   const params = new URLSearchParams();
@@ -209,26 +208,7 @@ async function runThemeSearch(query) {
 }
 
 function renderHotSidebar() {
-  const panel = document.getElementById('hotSidebarPanel');
-  if (!panel) return;
-  const boards = hotBoards();
-  if (!boards.length) {
-    panel.innerHTML = '<div class="empty-state compact">暂无热点板块数据。</div>';
-    hotSyncSearchMode();
-    return;
-  }
-  const selected = boards[Math.min(selectedHotBoardIndex, boards.length - 1)] || boards[0];
-  const stocks = (selected.stocks && selected.stocks.length ? selected.stocks : hotMarketOverview.hotStocks || []).slice(0, 8);
-  panel.innerHTML = '<div class="hot-sidebar-head">' +
-    '<div><strong>今日热点</strong><span>' + hotEscape(hotMarketOverview.tradeDate || '') + '</span></div>' +
-    '<button class="small-btn" data-hot-action="refresh">刷新</button>' +
-    '</div>' +
-    (hotSectorFocused
-      ? '<div class="hot-sidebar-section"><button class="small-btn" data-hot-action="clearFocus">返回全部热点</button></div>'
-      : '<div class="hot-sidebar-section"><div class="hot-sidebar-title">板块热力图</div>' + renderHotHeatmap(boards, 6) + '</div>') +
-    '<div class="hot-sidebar-section"><div class="hot-sidebar-title">' + hotEscape(selected.name) + ' 核心股</div>' +
-    '<div class="hot-stock-lines">' + stocks.map(renderHotStockLine).join('') + '</div></div>';
-  bindHotContainer(panel);
+  if (window.News && window.News.renderSidebarNews) window.News.renderSidebarNews();
   hotSyncSearchMode();
 }
 

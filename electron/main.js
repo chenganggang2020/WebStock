@@ -1,28 +1,47 @@
 const path = require('path');
 const fs = require('fs');
 const net = require('net');
-const { app, BrowserWindow, Menu, dialog, shell, ipcMain, Tray } = require('electron');
-const { migrateLegacyDatabase } = require('./dataMigration');
+const { app, BrowserWindow, Menu, dialog, shell, ipcMain, Tray, session } = require('electron');
+const {
+  migrateLegacyDatabase,
+  readRegisteredDataDirectory,
+  registerPortableDataDirectory
+} = require('./dataMigration');
 const { resolveRuntimeConfig } = require('./runtimeConfig');
 const { createLanServerController } = require('./lanServerController');
 const { createDouyinSessionManager } = require('./douyinSessionManager');
 const { createDouyinAutoSync, ensureDouyinSyncJobs } = require('./douyinAutoSync');
 const { createBackgroundMode } = require('./backgroundMode');
 const { createDouyinTranscriptService } = require('../services/douyinTranscriptService');
+const { inspectNetworkRoute } = require('./networkRoute');
+const { loadMainWindow } = require('./mainWindowLoader');
 const { readLanEnabled } = require('../services/lanHostService');
+const { ensurePairingToken } = require('../services/lanHostService');
+const {
+  DOWNLOAD_URL: TAILSCALE_DOWNLOAD_URL,
+  readTailscaleEnabled,
+  createTailscaleAccessService
+} = require('../services/tailscaleAccessService');
 
 let mainWindow = null;
 let serverController = null;
 let douyinSessionManager = null;
 let douyinAutoSync = null;
 let backgroundMode = null;
+let tailscaleAccess = null;
+let mobilePushService = null;
 let servicesStopped = false;
 
 app.setName('WebStock');
 
+const defaultUserDataDir = app.getPath('userData');
+const linkedDataDir = process.env.PORTABLE_EXECUTABLE_DIR
+  ? '' : readRegisteredDataDirectory(defaultUserDataDir);
+
 const runtimeConfig = resolveRuntimeConfig({
   portableExecutableDir: process.env.PORTABLE_EXECUTABLE_DIR,
-  defaultUserDataDir: app.getPath('userData'),
+  defaultUserDataDir,
+  linkedDataDir,
   port: process.env.PORT
 });
 fs.mkdirSync(runtimeConfig.userDataDir, { recursive: true });
@@ -53,6 +72,9 @@ function configureEnvironment() {
   process.env.WEBSTOCK_LEVEL2_CONFIG_PATH = process.env.WEBSTOCK_LEVEL2_CONFIG_PATH || runtimeConfig.level2ConfigPath;
   process.env.WEBSTOCK_QUANT_WORKSPACE = process.env.WEBSTOCK_QUANT_WORKSPACE || runtimeConfig.quantWorkspacePath;
   process.env.WEBSTOCK_SKIP_FUND_REFRESH = process.env.WEBSTOCK_SKIP_FUND_REFRESH || '1';
+  if (readTailscaleEnabled(runtimeConfig.userDataDir)) {
+    process.env.WEBSTOCK_LAN_TOKEN = ensurePairingToken(runtimeConfig.userDataDir);
+  }
 }
 
 function isChatGptHandoffUrl(url) {
@@ -116,6 +138,7 @@ function createWindow(url) {
     minWidth: 1100,
     minHeight: 720,
     title: 'WebStock',
+    show: process.env.WEBSTOCK_BUILD_SMOKE_TEST !== '1',
     icon: appIcon,
     backgroundColor: '#ffffff',
     webPreferences: {
@@ -130,7 +153,9 @@ function createWindow(url) {
     openInternalWindow(details.url);
     return { action: 'deny' };
   });
-  mainWindow.loadURL(url);
+  loadMainWindow(mainWindow, url, { log }).catch(function(error) {
+    log('Unexpected main window startup navigation failure', error);
+  });
   if (backgroundMode) mainWindow.on('close', backgroundMode.handleWindowClose);
   mainWindow.on('closed', function() {
     mainWindow = null;
@@ -161,6 +186,14 @@ async function startServer() {
     targetDbPath: process.env.WEBSTOCK_DB_PATH || runtimeConfig.dbPath
   });
   if (migration.migrated) log('Migrated installed WebStock database to portable data directory');
+  if (runtimeConfig.portable && process.env.WEBSTOCK_BUILD_SMOKE_TEST !== '1') {
+    const registration = registerPortableDataDirectory({
+      userDataDir: defaultUserDataDir,
+      dataDir: runtimeConfig.dataDir
+    });
+    if (registration.registered) log('Registered shared WebStock data directory: ' + registration.dataDir);
+  }
+  log('Using WebStock database: ' + (process.env.WEBSTOCK_DB_PATH || runtimeConfig.dbPath));
   configureEnvironment();
   log('Starting local WebStock server');
   const expressApp = require('../server');
@@ -175,6 +208,10 @@ async function startServer() {
     log
   });
   await serverController.start(readLanEnabled(runtimeConfig.userDataDir));
+  tailscaleAccess = createTailscaleAccessService({
+    userDataDir: runtimeConfig.userDataDir,
+    appPort: port
+  });
   return 'http://127.0.0.1:' + port + '/';
 }
 
@@ -199,6 +236,7 @@ async function stopBackgroundServices() {
   if (servicesStopped) return;
   servicesStopped = true;
   if (douyinAutoSync) douyinAutoSync.stop();
+  if (mobilePushService) mobilePushService.stop();
   if (douyinSessionManager) douyinSessionManager.dispose();
   if (serverController) await serverController.stop();
 }
@@ -228,7 +266,53 @@ ipcMain.handle('webstock:lan-access-status', function() {
 
 ipcMain.handle('webstock:set-lan-access', async function(_event, enabled) {
   if (!serverController) throw new Error('WebStock local server is not ready');
-  return serverController.setEnabled(enabled === true);
+  const result = await serverController.setEnabled(enabled === true);
+  if (!enabled && readTailscaleEnabled(runtimeConfig.userDataDir)) {
+    process.env.WEBSTOCK_LAN_TOKEN = ensurePairingToken(runtimeConfig.userDataDir);
+  }
+  return result;
+});
+
+ipcMain.handle('webstock:ios-access-status', async function(event) {
+  assertMainWindowSender(event);
+  return tailscaleAccess
+    ? tailscaleAccess.status()
+    : { installed: false, connected: false, enabled: false, pairingUrl: '', downloadUrl: TAILSCALE_DOWNLOAD_URL };
+});
+
+ipcMain.handle('webstock:set-ios-access', async function(event, enabled) {
+  assertMainWindowSender(event);
+  if (!tailscaleAccess) throw new Error('WebStock local server is not ready');
+  if (enabled) {
+    process.env.WEBSTOCK_LAN_TOKEN = ensurePairingToken(runtimeConfig.userDataDir);
+    try {
+      return await tailscaleAccess.enable();
+    } catch (error) {
+      if (!error.approvalUrl) throw error;
+      await shell.openExternal(error.approvalUrl);
+      return {
+        ...(await tailscaleAccess.status()),
+        approvalRequired: true,
+        approvalOpened: true
+      };
+    }
+  }
+  const result = await tailscaleAccess.disable();
+  if (!serverController || !serverController.status().enabled) delete process.env.WEBSTOCK_LAN_TOKEN;
+  return result;
+});
+
+ipcMain.handle('webstock:open-tailscale-download', function(event) {
+  assertMainWindowSender(event);
+  return shell.openExternal(TAILSCALE_DOWNLOAD_URL);
+});
+
+ipcMain.handle('webstock:begin-tailscale-login', async function(event) {
+  assertMainWindowSender(event);
+  if (!tailscaleAccess) throw new Error('WebStock local server is not ready');
+  const result = await tailscaleAccess.beginLogin();
+  if (result.loginUrl) await shell.openExternal(result.loginUrl);
+  return result;
 });
 
 ipcMain.handle('webstock:select-quant-python', async function() {
@@ -250,6 +334,11 @@ ipcMain.handle('webstock:douyin-session-status', function(event) {
   return getDouyinSessionManager().status();
 });
 
+ipcMain.handle('webstock:douyin-network-route', async function(event) {
+  assertMainWindowSender(event);
+  return inspectNetworkRoute(session.fromPartition('persist:webstock-douyin'), 'https://www.douyin.com/');
+});
+
 ipcMain.handle('webstock:collect-douyin-page', async function(event) {
   assertMainWindowSender(event);
   return getDouyinSessionManager().collect();
@@ -258,7 +347,17 @@ ipcMain.handle('webstock:collect-douyin-page', async function(event) {
 ipcMain.handle('webstock:sync-douyin-channel', async function(event, channelId) {
   assertMainWindowSender(event);
   if (!douyinAutoSync) throw new Error('抖音自动同步服务尚未启动');
-  return douyinAutoSync.syncChannel(Number(channelId));
+  return douyinAutoSync.syncChannel(Number(channelId), { trigger: 'manual' });
+});
+
+ipcMain.handle('webstock:archive-douyin-channel', async function(event, channelId) {
+  assertMainWindowSender(event);
+  if (!douyinAutoSync) throw new Error('抖音自动同步服务尚未启动');
+  return douyinAutoSync.syncChannel(Number(channelId), {
+    trigger: 'archive',
+    mode: 'archive',
+    archiveOptions: { maxScrolls: 80, stableRounds: 3 }
+  });
 });
 
 const gotLock = app.requestSingleInstanceLock();
@@ -273,8 +372,12 @@ if (!gotLock) {
     Menu.setApplicationMenu(null);
     log('Electron app ready');
     const url = await startServer();
-    startDouyinAutoSync();
-    createBackgroundController();
+    if (process.env.WEBSTOCK_BUILD_SMOKE_TEST !== '1') {
+      mobilePushService = require('../services/mobilePushService').getMobilePushService();
+      mobilePushService.start();
+      startDouyinAutoSync();
+      createBackgroundController();
+    }
     createWindow(url);
   }).catch(function(error) {
     log('WebStock startup failed', error);

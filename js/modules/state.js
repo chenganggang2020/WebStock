@@ -4,7 +4,7 @@ let searchResults = [];
 let currentStock = null;
 let currentRawData = [];
 let currentIndicator = 'ma';
-let currentPeriod = 'day';
+let currentPeriod = 'minute';
 let currentView = 'realtime';
 let klineChart = null;
 let timeChart = null;
@@ -24,6 +24,8 @@ let portfolioAccounts = [];
 let activePortfolioAccountId = 1;
 let klineSnapshots = {};
 let minuteSeriesByCode = {};
+let currentMinuteMeta = null;
+let currentKlineMeta = null;
 let screenerReviewSummary = [];
 let marketSentiment = null;
 
@@ -79,6 +81,10 @@ const State = {
   set klineSnapshots(val) { klineSnapshots = val || {}; },
   get minuteSeriesByCode() { return minuteSeriesByCode; },
   set minuteSeriesByCode(val) { minuteSeriesByCode = val || {}; },
+  get currentMinuteMeta() { return currentMinuteMeta; },
+  set currentMinuteMeta(val) { currentMinuteMeta = val || null; },
+  get currentKlineMeta() { return currentKlineMeta; },
+  set currentKlineMeta(val) { currentKlineMeta = val || null; },
   get screenerReviewSummary() { return screenerReviewSummary; },
   set screenerReviewSummary(val) { screenerReviewSummary = Array.isArray(val) ? val : []; },
   get marketSentiment() { return marketSentiment; },

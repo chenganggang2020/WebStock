@@ -21,6 +21,7 @@ const appEntries = [
   'ai-config.json',
   'funds.json',
   'index.html',
+  'mobile.html',
   'manifest.webmanifest',
   'package.json',
   'package-lock.json',

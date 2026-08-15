@@ -12,10 +12,14 @@ playwright-report/
 dist/
 release/
 release-*/
+output/
 data/*.db
 data/*.db-*
 data/level2-config.json
 quant/.venv/
+quant/asr-models/
+quant/asr-temp/
+quant/media-library/
 quant/workspace/
 quant/**/__pycache__/
 quant/**/*.pyc

@@ -4,11 +4,13 @@ const portfolio = require('./portfolioService');
 const userService = require('./userService');
 const sectors = require('./sectorService');
 const themeService = require('./themeService');
+const sectorLeaderCandidateModel = require('./sectorLeaderCandidateModel');
 const stockProfile = require('./stockProfileService');
 const { appendOneClickOutputInstructions } = require('./handoffFormat');
 const db = require('../db');
 
 const DISCLAIMER = '仅供研究和学习，不构成投资建议；市场有风险，决策需自行验证。';
+const TECHNICAL_REQUIRED_STRATEGIES = new Set(['breakout', 'pullback', 'short-strong']);
 
 function loadStocks() {
   const file = path.join(__dirname, '..', 'stocks.json');
@@ -265,6 +267,7 @@ function getUniverse(scope, input = {}) {
       note: item.note || '',
       demandMatch: matchCandidateDemand(Object.assign({}, decorated, profile, leader || {}, { code }), parsedDemand),
       dataCoverage: {
+        code: /^\d{6}$/.test(code),
         quote: quoteAvailable,
         technical: hasTechnicalData(technical),
         profile: Boolean(profile.industry || profile.businessSummary || profile.businessScope || (profile.mainBusinessItems || []).length)
@@ -428,7 +431,7 @@ function scoreCandidate(stock, strategy, demand, parsedDemand) {
 
   if (stock.isLeader) {
     score += strategy === 'sector-leader' || lowerDemand.includes('龙头') ? 28 : 12;
-    reasons.push(`属于${stock.sectorName || '板块'}${stock.leaderRole || '观察股'}`);
+    reasons.push(`命中${stock.sectorName || '板块'}人工观察名单：${stock.leaderRole || '观察候选'}（未核验）`);
   }
   if (demandMatch.themeNames && demandMatch.themeNames.length) {
     score += 24;
@@ -602,7 +605,7 @@ function scoreCandidate(stock, strategy, demand, parsedDemand) {
   (demandMatch.themeNames || []).forEach(function(name) { factorTags.push(name); });
   if (demandMatch.businessKeywords && demandMatch.businessKeywords.length) factorTags.push('主营匹配');
   if (demandMatch.marketRequested && !demandMatch.marketMatched) factorTags.push('范围不匹配');
-  if (stock.isLeader) factorTags.push('板块龙头');
+  if (stock.isLeader) factorTags.push('人工观察名单');
   if (stock.inWatchlist) factorTags.push('自选');
   if (stock.inPortfolio) factorTags.push('持仓');
   if (stock.inRecent) factorTags.push('最近查看');
@@ -621,6 +624,16 @@ function scoreCandidate(stock, strategy, demand, parsedDemand) {
     if (stock.technical.macd) factorTags.push('MACD');
   }
 
+  const leaderCandidate = stock.isLeader ? sectorLeaderCandidateModel.buildSectorWatchCandidate({
+    code: stock.code,
+    name: stock.name,
+    sectorName: stock.sectorName,
+    role: stock.leaderRole,
+    note: stock.note,
+    price: stock.price,
+    change: stock.change,
+    amount: stock.amount
+  }) : null;
   return {
     code: stock.code,
     name: stock.name,
@@ -643,13 +656,15 @@ function scoreCandidate(stock, strategy, demand, parsedDemand) {
     businessSummary: stock.businessSummary || '',
     demandMatch,
     dataCoverage,
+    leaderCandidate,
     inWatchlist: stock.inWatchlist,
     inPortfolio: stock.inPortfolio
   };
 }
 
-function summarizeCoverage(universe) {
+function summarizeCoverage(universe, options = {}) {
   const universeCount = universe.length;
+  const codeCount = universe.filter(stock => stock.dataCoverage && stock.dataCoverage.code).length;
   const quoteCount = universe.filter(stock => stock.dataCoverage && stock.dataCoverage.quote).length;
   const technicalCount = universe.filter(stock => stock.dataCoverage && stock.dataCoverage.technical).length;
   const profileCount = universe.filter(stock => stock.dataCoverage && stock.dataCoverage.profile).length;
@@ -658,12 +673,18 @@ function summarizeCoverage(universe) {
   };
   return {
     universeCount,
+    codeCount,
+    codeRate: rate(codeCount),
     quoteCount,
     quoteRate: rate(quoteCount),
     technicalCount,
     technicalRate: rate(technicalCount),
     profileCount,
     profileRate: rate(profileCount),
+    technicalRequired: Boolean(options.technicalRequired),
+    candidatePoolCount: Number.isFinite(Number(options.candidatePoolCount)) ? Number(options.candidatePoolCount) : universeCount,
+    excludedForMissingTechnicalCount: Number.isFinite(Number(options.excludedForMissingTechnicalCount))
+      ? Number(options.excludedForMissingTechnicalCount) : 0,
     limitations: [
       '全市场范围表示股票代码库覆盖，不等于每只股票都有实时行情。',
       '缺失的行情、技术或主营资料不会按 0 值参与评分。'
@@ -678,11 +699,19 @@ function runScreener(input = {}) {
   const promptStyle = input.promptStyle || 'sector-chain';
   const parsedDemand = parseScreenerDemand(input);
   const universe = getUniverse(scope, Object.assign({}, input, { parsedDemand }));
-  const candidates = universe
+  const technicalRequired = TECHNICAL_REQUIRED_STRATEGIES.has(strategy);
+  const candidatePool = technicalRequired
+    ? universe.filter(stock => stock.dataCoverage && stock.dataCoverage.technical)
+    : universe;
+  const candidates = candidatePool
     .map(stock => scoreCandidate(stock, strategy, demand, parsedDemand))
     .sort((a, b) => b.score - a.score)
     .slice(0, Math.min(Number(input.limit) || 20, 50));
-  const coverage = summarizeCoverage(universe);
+  const coverage = summarizeCoverage(universe, {
+    technicalRequired,
+    candidatePoolCount: candidatePool.length,
+    excludedForMissingTechnicalCount: universe.length - candidatePool.length
+  });
 
   const prompt = buildSmartPrompt({ strategy, demand, scope, promptStyle, candidates, parsedDemand, coverage });
   return {

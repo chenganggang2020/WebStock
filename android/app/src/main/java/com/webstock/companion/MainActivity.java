@@ -1,12 +1,17 @@
 package com.webstock.companion;
 
-import android.app.Activity;
+import android.Manifest;
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Color;
+import android.net.ConnectivityManager;
+import android.net.Network;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Build;
+import android.os.Handler;
+import android.os.Looper;
 import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.View;
@@ -22,23 +27,67 @@ import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
+import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import java.net.URI;
+import androidx.activity.ComponentActivity;
+import androidx.activity.OnBackPressedCallback;
 
-public final class MainActivity extends Activity {
+import java.net.URI;
+import java.util.Locale;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
+public final class MainActivity extends ComponentActivity {
     private static final String PREFS = "webstock_companion";
     private static final String PREF_SERVER = "server_url";
     private static final String PREF_PAIRING_TOKEN = "pairing_token";
 
     private WebView webView;
+    private WebView offlineView;
     private LinearLayout connectionPanel;
     private EditText serverInput;
     private TextView connectionStatus;
     private ProgressBar progress;
     private String serverUrl = "";
     private boolean connectionFailed;
+    private boolean showingOfflineSnapshot;
+    private final ExecutorService snapshotExecutor = Executors.newSingleThreadExecutor();
+    private final ReconnectPolicy reconnectPolicy = new ReconnectPolicy();
+    private final Handler reconnectHandler = new Handler(Looper.getMainLooper());
+    private ConnectivityManager connectivityManager;
+    private Network activeNetwork;
+    private boolean networkCallbackRegistered;
+    private final Runnable reconnectRunnable = () -> {
+        if (!reconnectPolicy.consumeReconnect()) return;
+        if (!connectionFailed || serverUrl.isEmpty() ||
+            (!showingOfflineSnapshot && connectionPanel.getVisibility() != View.VISIBLE)) {
+            reconnectPolicy.onManualAttempt();
+            return;
+        }
+        loadServer(serverUrl, false);
+    };
+    private final ConnectivityManager.NetworkCallback networkCallback = new ConnectivityManager.NetworkCallback() {
+        @Override
+        public void onAvailable(Network network) {
+            reconnectHandler.post(() -> {
+                activeNetwork = network;
+                scheduleReconnect(reconnectPolicy.onNetworkAvailable());
+            });
+        }
+
+        @Override
+        public void onLost(Network network) {
+            reconnectHandler.post(() -> {
+                if (network.equals(activeNetwork)) {
+                    activeNetwork = null;
+                    reconnectPolicy.onNetworkUnavailable();
+                    reconnectHandler.removeCallbacks(reconnectRunnable);
+                }
+            });
+        }
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -47,8 +96,10 @@ public final class MainActivity extends Activity {
         getWindow().setNavigationBarColor(Color.rgb(17, 25, 35));
         setContentView(buildContent());
         configureWebView();
+        configureBackNavigation();
 
         SharedPreferences preferences = getSharedPreferences(PREFS, MODE_PRIVATE);
+        if (BackgroundSyncScheduler.isEnabled(this)) BackgroundSyncScheduler.setEnabled(this, true);
         String saved = preferences.getString(PREF_SERVER, "");
         if (saved == null || saved.isEmpty()) showConnection("");
         else connect(saved);
@@ -77,7 +128,8 @@ public final class MainActivity extends Activity {
 
         Button reload = toolbarButton("↻", getString(R.string.reload));
         reload.setOnClickListener(view -> {
-            if (webView.getUrl() == null) connect(serverUrl);
+            resetReconnectAttempts();
+            if (showingOfflineSnapshot || webView.getUrl() == null) connect(serverUrl);
             else webView.reload();
         });
         toolbar.addView(reload);
@@ -90,8 +142,21 @@ public final class MainActivity extends Activity {
         progress.setMax(100);
         shell.addView(progress, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(2)));
 
+        FrameLayout content = new FrameLayout(this);
+        shell.addView(content, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1));
+
         webView = new WebView(this);
-        shell.addView(webView, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1));
+        content.addView(webView, new FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
+
+        offlineView = new WebView(this);
+        offlineView.getSettings().setJavaScriptEnabled(false);
+        offlineView.getSettings().setAllowFileAccess(false);
+        offlineView.getSettings().setAllowContentAccess(false);
+        offlineView.setBackgroundColor(Color.rgb(243, 245, 248));
+        offlineView.setVisibility(View.GONE);
+        content.addView(offlineView, new FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
 
         connectionPanel = buildConnectionPanel();
         FrameLayout.LayoutParams panelParams = new FrameLayout.LayoutParams(
@@ -161,6 +226,29 @@ public final class MainActivity extends Activity {
         connectionStatus.setPadding(0, dp(10), 0, 0);
         panel.addView(connectionStatus);
 
+        Switch backgroundSync = new Switch(this);
+        backgroundSync.setText("每 15 分钟后台更新并通知");
+        backgroundSync.setTextColor(Color.rgb(48, 64, 86));
+        backgroundSync.setChecked(BackgroundSyncScheduler.isEnabled(this));
+        backgroundSync.setPadding(0, dp(12), 0, 0);
+        panel.addView(backgroundSync);
+
+        TextView backgroundHelp = new TextView(this);
+        backgroundHelp.setText("仅在有网络且 Windows 主机可访问时同步。Android 省电模式可能延后执行。通知不显示持仓名称或金额。");
+        backgroundHelp.setTextColor(Color.rgb(96, 112, 134));
+        backgroundHelp.setTextSize(12);
+        backgroundHelp.setPadding(0, dp(4), 0, 0);
+        panel.addView(backgroundHelp);
+
+        backgroundSync.setOnCheckedChangeListener((button, enabled) -> {
+            BackgroundSyncScheduler.setEnabled(this, enabled);
+            if (enabled && Build.VERSION.SDK_INT >= 33 &&
+                checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                requestPermissions(new String[] { Manifest.permission.POST_NOTIFICATIONS }, 1001);
+            }
+            Toast.makeText(this, enabled ? "后台更新已开启" : "后台更新已关闭", Toast.LENGTH_SHORT).show();
+        });
+
         View.OnClickListener connectAction = view -> connect(serverInput.getText().toString());
         connect.setOnClickListener(connectAction);
         serverInput.setOnEditorActionListener((view, actionId, event) -> {
@@ -184,7 +272,7 @@ public final class MainActivity extends Activity {
         settings.setJavaScriptCanOpenWindowsAutomatically(true);
         settings.setSupportMultipleWindows(true);
         settings.setMediaPlaybackRequiresUserGesture(true);
-        settings.setUserAgentString(settings.getUserAgentString() + " WebStockAndroid/1.0.0");
+        settings.setUserAgentString(settings.getUserAgentString() + " WebStockAndroid/1.1.0");
         CookieManager.getInstance().setAcceptCookie(true);
         CookieManager.getInstance().setAcceptThirdPartyCookies(webView, false);
 
@@ -239,7 +327,13 @@ public final class MainActivity extends Activity {
             public void onPageFinished(WebView view, String url) {
                 progress.setVisibility(View.GONE);
                 if (!connectionFailed && url != null && isServerNavigation(Uri.parse(url))) {
+                    reconnectPolicy.onConnectionSucceeded();
+                    reconnectHandler.removeCallbacks(reconnectRunnable);
                     connectionPanel.setVisibility(View.GONE);
+                    showingOfflineSnapshot = false;
+                    offlineView.setVisibility(View.GONE);
+                    webView.setVisibility(View.VISIBLE);
+                    saveLatestSnapshot();
                 }
             }
 
@@ -247,7 +341,11 @@ public final class MainActivity extends Activity {
             public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
                 if (request.isForMainFrame()) {
                     connectionFailed = true;
-                    showConnection("无法连接 Windows WebStock，请检查地址、防火墙和局域网。");
+                    if (!showCachedSnapshot("Windows 主机暂时离线，正在显示最近一次快照。")) {
+                        showConnection("无法连接 Windows WebStock，请检查地址、防火墙、局域网或 Tailscale。当前尚无离线快照。");
+                    }
+                    scheduleReconnect(reconnectPolicy.onConnectionFailed(
+                        !serverUrl.isEmpty(), true));
                 }
             }
 
@@ -255,6 +353,8 @@ public final class MainActivity extends Activity {
             public void onReceivedHttpError(WebView view, WebResourceRequest request, android.webkit.WebResourceResponse response) {
                 if (request.isForMainFrame() && response.getStatusCode() == 401) {
                     connectionFailed = true;
+                    reconnectPolicy.onNonRetryableFailure();
+                    reconnectHandler.removeCallbacks(reconnectRunnable);
                     getSharedPreferences(PREFS, MODE_PRIVATE).edit().remove(PREF_PAIRING_TOKEN).apply();
                     showConnection("配对信息已失效，请重新输入 Windows 端显示的完整配对地址。");
                 }
@@ -263,7 +363,12 @@ public final class MainActivity extends Activity {
     }
 
     private void connect(String input) {
+        loadServer(input, true);
+    }
+
+    private void loadServer(String input, boolean resetRetries) {
         try {
+            if (resetRetries) resetReconnectAttempts();
             SharedPreferences preferences = getSharedPreferences(PREFS, MODE_PRIVATE);
             String normalized = ServerAddress.normalize(input);
             String sanitized = ServerAddress.withoutPairingToken(normalized);
@@ -282,12 +387,26 @@ public final class MainActivity extends Activity {
             serverInput.setText(serverUrl);
             connectionStatus.setText("");
             connectionPanel.setVisibility(View.GONE);
+            showingOfflineSnapshot = false;
+            offlineView.setVisibility(View.GONE);
             webView.setVisibility(View.VISIBLE);
             progress.setVisibility(View.VISIBLE);
             webView.loadUrl(ServerAddress.withPairingToken(serverUrl, token));
         } catch (IllegalArgumentException error) {
+            reconnectPolicy.onNonRetryableFailure();
+            reconnectHandler.removeCallbacks(reconnectRunnable);
             showConnection(error.getMessage());
         }
+    }
+
+    private void resetReconnectAttempts() {
+        reconnectPolicy.onManualAttempt();
+        reconnectHandler.removeCallbacks(reconnectRunnable);
+    }
+
+    private void scheduleReconnect(long delayMs) {
+        if (delayMs == ReconnectPolicy.NO_RECONNECT) return;
+        reconnectHandler.postDelayed(reconnectRunnable, delayMs);
     }
 
     private void showConnection(String message) {
@@ -295,6 +414,32 @@ public final class MainActivity extends Activity {
         connectionStatus.setText(message == null ? "" : message);
         connectionPanel.setVisibility(View.VISIBLE);
         serverInput.requestFocus();
+    }
+
+    private boolean showCachedSnapshot(String reason) {
+        String snapshot = MobileSnapshotStore.read(getFilesDir());
+        if (snapshot.isEmpty()) return false;
+        showingOfflineSnapshot = true;
+        connectionPanel.setVisibility(View.GONE);
+        webView.setVisibility(View.GONE);
+        offlineView.setVisibility(View.VISIBLE);
+        offlineView.loadDataWithBaseURL(null, MobileSnapshotHtml.render(snapshot, reason), "text/html", "UTF-8", null);
+        return true;
+    }
+
+    private void saveLatestSnapshot() {
+        SharedPreferences preferences = getSharedPreferences(PREFS, MODE_PRIVATE);
+        String savedServer = preferences.getString(PREF_SERVER, "");
+        String savedToken = preferences.getString(PREF_PAIRING_TOKEN, "");
+        if (savedServer == null || savedServer.isEmpty()) return;
+        snapshotExecutor.execute(() -> {
+            try {
+                String snapshot = MobileSnapshotClient.fetch(savedServer, savedToken);
+                MobileSnapshotStore.write(getFilesDir(), snapshot);
+            } catch (Exception ignored) {
+                // The complete online page remains usable if the optional cache refresh fails.
+            }
+        });
     }
 
     private boolean isServerNavigation(Uri uri) {
@@ -320,7 +465,7 @@ public final class MainActivity extends Activity {
     }
 
     private boolean isExternalAuth(Uri uri) {
-        String host = uri == null || uri.getHost() == null ? "" : uri.getHost().toLowerCase();
+        String host = uri == null || uri.getHost() == null ? "" : uri.getHost().toLowerCase(Locale.ROOT);
         return host.equals("chatgpt.com") || host.endsWith(".chatgpt.com") ||
             host.equals("openai.com") || host.endsWith(".openai.com") ||
             host.equals("accounts.google.com");
@@ -332,14 +477,46 @@ public final class MainActivity extends Activity {
         else if ("http".equalsIgnoreCase(uri.getScheme()) || "https".equalsIgnoreCase(uri.getScheme())) webView.loadUrl(uri.toString());
     }
 
+    private void configureBackNavigation() {
+        getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                if (connectionPanel.getVisibility() == View.VISIBLE) {
+                    connectionPanel.setVisibility(View.GONE);
+                    return;
+                }
+                if (!showingOfflineSnapshot && webView.canGoBack()) {
+                    webView.goBack();
+                    return;
+                }
+                setEnabled(false);
+                getOnBackPressedDispatcher().onBackPressed();
+                setEnabled(true);
+            }
+        });
+    }
+
     @Override
-    public void onBackPressed() {
-        if (connectionPanel.getVisibility() == View.VISIBLE) {
-            connectionPanel.setVisibility(View.GONE);
-            return;
+    protected void onStart() {
+        super.onStart();
+        reconnectPolicy.onStart();
+        connectivityManager = getSystemService(ConnectivityManager.class);
+        if (connectivityManager != null && !networkCallbackRegistered) {
+            connectivityManager.registerDefaultNetworkCallback(networkCallback);
+            networkCallbackRegistered = true;
         }
-        if (webView.canGoBack()) webView.goBack();
-        else super.onBackPressed();
+    }
+
+    @Override
+    protected void onStop() {
+        if (connectivityManager != null && networkCallbackRegistered) {
+            connectivityManager.unregisterNetworkCallback(networkCallback);
+            networkCallbackRegistered = false;
+        }
+        activeNetwork = null;
+        reconnectPolicy.onStop();
+        reconnectHandler.removeCallbacksAndMessages(null);
+        super.onStop();
     }
 
     @Override
@@ -348,6 +525,11 @@ public final class MainActivity extends Activity {
             webView.stopLoading();
             webView.destroy();
         }
+        if (offlineView != null) {
+            offlineView.stopLoading();
+            offlineView.destroy();
+        }
+        snapshotExecutor.shutdownNow();
         super.onDestroy();
     }
 

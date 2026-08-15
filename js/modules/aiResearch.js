@@ -1,6 +1,7 @@
 let aiResearchSources = [];
 let aiResearchModels = [];
 let aiResearchRuns = [];
+let aiResearchGptPickImports = [];
 let aiResearchEditingSourceId = null;
 let aiResearchLoaded = false;
 let aiResearchLoading = null;
@@ -130,6 +131,21 @@ function quantNumber(value, digits) {
 function quantMetricClass(value) {
   const number = Number(value);
   return number > 0 ? 'pnl-up' : number < 0 ? 'pnl-down' : '';
+}
+
+function quantVerificationText(entry) {
+  const verification = entry && entry.verification;
+  if (!verification) return '结果文件校验状态未提供';
+  const checkedAt = verification.checkedAt ? ' · 检查于 ' + aiResearchDate(verification.checkedAt) : '';
+  if (verification.status === 'hash_verified' && verification.hashesVerified === true) {
+    return '结果文件：完整内容哈希校验通过' + checkedAt;
+  }
+  if (verification.status === 'metadata_valid' && verification.hashesVerified === false) {
+    return '结果文件：结果契约、数据清单自身哈希与结果制品存在性校验通过；未读取数据集文件，也未重算内容哈希' + checkedAt;
+  }
+  if (verification.status === 'hash_failed') return '结果文件：完整内容哈希校验失败' + checkedAt;
+  if (verification.status === 'metadata_invalid') return '结果文件：元数据校验失败' + checkedAt;
+  return '结果文件校验：' + String(verification.status || '未知') + checkedAt;
 }
 
 function aiResearchRenderQuantRuntime() {
@@ -274,7 +290,10 @@ function aiResearchRenderQuantResult() {
     });
   }) || selectedEntries[0] || quantResults.find(function(item) { return item.valid && item.result; });
   if (!entry) {
-    target.innerHTML = '<div class="empty-state compact">尚无通过契约校验的量化结果。</div>';
+    const invalidEntry = quantResults.find(function(item) { return item && item.valid === false; });
+    target.innerHTML = '<div class="empty-state compact">尚无通过契约校验的量化结果。' +
+      (invalidEntry ? '<div class="muted">' + aiResearchEscape(quantVerificationText(invalidEntry) + (invalidEntry.error ? '：' + invalidEntry.error : '')) + '</div>' : '') +
+      '</div>';
     return;
   }
   const result = entry.result;
@@ -309,7 +328,8 @@ function aiResearchRenderQuantResult() {
       '<span class="model-status ' + (result.validationStatus === 'validated' ? 'available' : 'planned') + '">' +
       aiResearchEscape(result.validationStatus === 'validated' ? '已验证' : '探索性') + '</span></div>' +
       '<div class="muted">截止 ' + aiResearchEscape(result.asOf) + ' · ' + result.folds.length + ' 个滚动窗口 · ' +
-      aiResearchEscape(result.dataManifest.datasetId) + '</div></div>' +
+      aiResearchEscape(result.dataManifest.datasetId) + '</div>' +
+      '<div class="muted quant-verification-note">' + aiResearchEscape(quantVerificationText(entry)) + '</div></div>' +
     '<div class="quant-coverage-line"><span>成功 <strong>' + aiResearchEscape(coverage.succeeded == null ? '--' : coverage.succeeded) + '</strong> 只</span>' +
       '<span>失败 <strong>' + aiResearchEscape(coverage.failed == null ? '--' : coverage.failed) + '</strong> 只</span>' +
       '<span>样本 <strong>' + aiResearchEscape(coverage.rows == null ? '--' : coverage.rows) + '</strong> 行</span>' +
@@ -352,8 +372,11 @@ function aiResearchRenderFactorLab() {
     return item.valid && item.result && (!datasetId || item.result.dataManifest.datasetId === datasetId);
   }) || quantFactorResults.find(function(item) { return item.valid && item.result; });
   if (!entry) {
+    const invalidEntry = quantFactorResults.find(function(item) { return item && item.valid === false; });
     target.innerHTML = '<div class="panel-title-row"><h3>因子样本外体检</h3><span class="muted">选择数据集后运行，不会修改模型结果</span></div>' +
-      '<div class="empty-state compact">尚无通过契约校验的因子实验。</div>';
+      '<div class="empty-state compact">尚无通过契约校验的因子实验。' +
+        (invalidEntry ? '<div class="muted">' + aiResearchEscape(quantVerificationText(invalidEntry) + (invalidEntry.error ? '：' + invalidEntry.error : '')) + '</div>' : '') +
+      '</div>';
     return;
   }
   const result = entry.result;
@@ -365,6 +388,7 @@ function aiResearchRenderFactorLab() {
   const watchCount = factors.filter(function(factor) { return factor.admission === 'watch'; }).length;
   target.innerHTML = '<div class="panel-title-row"><h3>因子样本外体检</h3><span class="muted">' +
       aiResearchEscape(result.dataManifest.datasetId) + ' · 截止 ' + aiResearchEscape(result.asOf) + ' · ' + result.folds.length + ' 个滚动窗口</span></div>' +
+    '<div class="muted quant-verification-note">' + aiResearchEscape(quantVerificationText(entry)) + '</div>' +
     '<div class="factor-lab-summary"><span>候选 <strong>' + candidateCount + '</strong></span><span>观察 <strong>' + watchCount + '</strong></span>' +
       '<span>复合 Rank IC <strong class="' + quantMetricClass(metrics.rankIc) + '">' + aiResearchEscape(quantNumber(metrics.rankIc, 3)) + '</strong></span>' +
       '<span>复合年化 <strong class="' + quantMetricClass(metrics.annualizedReturn) + '">' + aiResearchEscape(quantPercent(metrics.annualizedReturn)) + '</strong></span>' +
@@ -893,6 +917,40 @@ function aiResearchRenderRuns() {
   }).join('');
 }
 
+function aiResearchRenderGptPickImports() {
+  const target = document.getElementById('gptPickImportList');
+  const summary = document.getElementById('gptPickImportSummary');
+  if (!target || !summary) return;
+  const items = Array.isArray(aiResearchGptPickImports) ? aiResearchGptPickImports : [];
+  const candidateTotal = items.reduce(function(total, item) {
+    return total + Number(item && item.candidateCount || 0);
+  }, 0);
+  summary.textContent = items.length ? items.length + ' 次导入 · ' + candidateTotal + ' 只候选' : '尚无记录';
+  if (!items.length) {
+    target.innerHTML = '<div class="empty-state compact">尚未导入 ChatGPT 选股材料。</div>';
+    return;
+  }
+  target.innerHTML = items.map(function(item, itemIndex) {
+    const candidates = Array.isArray(item.candidates) ? item.candidates : [];
+    const warnings = Array.isArray(item.warnings) ? item.warnings : [];
+    return '<details class="gpt-pick-import-row"' + (itemIndex === 0 ? ' open' : '') + '>' +
+      '<summary><span><strong>' + aiResearchEscape(item.title || 'ChatGPT 手动选股') + '</strong>' +
+        '<small>' + aiResearchEscape(aiResearchDate(item.importedAt)) + ' · ' + candidates.length + ' 只 · 手动导入，不自动交易</small></span></summary>' +
+      (item.analysis ? '<p class="gpt-pick-overall"><b>总体分析：</b>' + aiResearchEscape(item.analysis) + '</p>' : '') +
+      '<div class="gpt-pick-candidate-grid">' + candidates.map(function(candidate) {
+        return '<article class="gpt-pick-candidate" data-gpt-pick-code="' + aiResearchEscape(candidate.code) + '">' +
+          '<div class="gpt-pick-code"><strong>' + aiResearchEscape(candidate.code) + '</strong><span>' + aiResearchEscape(candidate.name || '名称未提供') + '</span></div>' +
+          '<p><b>入选理由</b>' + aiResearchEscape(candidate.reason || '未提供') + '</p>' +
+          '<p><b>风险</b>' + aiResearchEscape(candidate.risk || '未提供') + '</p>' +
+          (candidate.originalAnalysis ? '<p><b>GPT 原分析</b>' + aiResearchEscape(candidate.originalAnalysis) + '</p>' : '') +
+        '</article>';
+      }).join('') + '</div>' +
+      (warnings.length ? '<div class="gpt-pick-warnings">信息缺口：' + aiResearchEscape(warnings.slice(0, 8).join('；')) + '</div>' : '') +
+      '<div class="muted gpt-pick-boundary">来源：ChatGPT 对话手动粘贴 · 未由 WebStock 验证 · 仅作研究材料</div>' +
+    '</details>';
+  }).join('');
+}
+
 async function aiResearchLoadModels() {
   aiResearchModels = await aiResearchApi('/api/ai-models');
   aiResearchRenderModels();
@@ -910,10 +968,50 @@ async function aiResearchLoadRuns() {
   aiResearchRenderRuns();
 }
 
+async function aiResearchLoadGptPickImports() {
+  const result = await aiResearchApi('/api/research-picks?limit=20');
+  aiResearchGptPickImports = result && Array.isArray(result.items) ? result.items : [];
+  aiResearchRenderGptPickImports();
+  return aiResearchGptPickImports;
+}
+
+async function aiResearchImportGptPicks() {
+  const button = document.getElementById('importGptPicksBtn');
+  const content = document.getElementById('gptPickImportText').value;
+  const title = document.getElementById('gptPickImportTitle').value.trim();
+  const analysis = document.getElementById('gptPickOverallAnalysis').value.trim();
+  if (!content.trim()) {
+    aiResearchSetStatus('gptPickImportStatus', '请先粘贴 ChatGPT 的候选与原分析。', true);
+    return;
+  }
+  button.disabled = true;
+  aiResearchSetStatus('gptPickImportStatus', '正在识别并保存…');
+  try {
+    const imported = await aiResearchApi('/api/research-picks/import', {
+      method: 'POST',
+      body: { title, content, analysis },
+      timeoutMs: 30000
+    });
+    await aiResearchLoadGptPickImports();
+    document.getElementById('gptPickImportText').value = '';
+    document.getElementById('gptPickImportTitle').value = '';
+    document.getElementById('gptPickOverallAnalysis').value = '';
+    const warningText = imported.warnings && imported.warnings.length ? '，有 ' + imported.warnings.length + ' 项信息缺口' : '';
+    aiResearchSetStatus('gptPickImportStatus', '已导入 ' + imported.candidateCount + ' 只候选' + warningText + '。');
+  } catch (error) {
+    aiResearchSetStatus('gptPickImportStatus', error.message, true);
+  } finally {
+    button.disabled = false;
+  }
+}
+
 function aiResearchEnsureLoaded(force) {
   if (aiResearchLoading) return aiResearchLoading;
   if (aiResearchLoaded && !force) return Promise.resolve();
-  aiResearchLoading = Promise.all([aiResearchLoadModels(), aiResearchLoadSources(), aiResearchLoadRuns(), aiResearchLoadQuant(), aiResearchLoadPaperPortfolios()])
+  aiResearchLoading = aiResearchLoadModels()
+    .then(function() {
+      return Promise.all([aiResearchLoadSources(), aiResearchLoadRuns(), aiResearchLoadGptPickImports(), aiResearchLoadQuant(), aiResearchLoadPaperPortfolios()]);
+    })
     .then(function() { aiResearchLoaded = true; })
     .finally(function() { aiResearchLoading = null; });
   return aiResearchLoading;
@@ -924,6 +1022,13 @@ function aiResearchBind() {
   aiResearchBound = true;
   document.getElementById('refreshAiResearchBtn').addEventListener('click', function() {
     aiResearchEnsureLoaded(true).catch(function(error) { alert(error.message); });
+  });
+  document.getElementById('importGptPicksBtn').addEventListener('click', aiResearchImportGptPicks);
+  document.getElementById('clearGptPicksBtn').addEventListener('click', function() {
+    document.getElementById('gptPickImportText').value = '';
+    document.getElementById('gptPickImportTitle').value = '';
+    document.getElementById('gptPickOverallAnalysis').value = '';
+    aiResearchSetStatus('gptPickImportStatus', '输入已清空，已保存记录不受影响。');
   });
   document.getElementById('buildDecisionPacketBtn').addEventListener('click', aiResearchBuildDecisionPacket);
   document.getElementById('analyzeDecisionPacketBtn').addEventListener('click', aiResearchAnalyzeDecisionPacket);

@@ -36,16 +36,26 @@ function tokenMatches(expected, provided) {
   return left.length >= 20 && left.length === right.length && crypto.timingSafeEqual(left, right);
 }
 
+function isTailscaleServeRequest(req) {
+  if (!req || typeof req.get !== 'function') return false;
+  return Boolean(
+    req.get('tailscale-user-login') ||
+    req.get('tailscale-user-name') ||
+    req.get('tailscale-user-profile-pic')
+  );
+}
+
 function requireLanPairing(req, res, next) {
   const expected = String(process.env.WEBSTOCK_LAN_TOKEN || '');
-  if (!expected || isLoopbackAddress(req.socket && req.socket.remoteAddress)) return next();
+  const tailscaleServe = isTailscaleServeRequest(req);
+  if (!expected || (isLoopbackAddress(req.socket && req.socket.remoteAddress) && !tailscaleServe)) return next();
 
   const queryToken = String(req.query && req.query.pair || '');
   const cookieToken = cookieValue(req.get('cookie'), 'webstock_lan_token');
   if (tokenMatches(expected, queryToken)) {
     res.setHeader('Cache-Control', 'no-store');
     res.setHeader('Referrer-Policy', 'no-referrer');
-    res.setHeader('Set-Cookie', 'webstock_lan_token=' + encodeURIComponent(expected) + '; Path=/; HttpOnly; SameSite=Strict; Max-Age=31536000');
+    res.setHeader('Set-Cookie', 'webstock_lan_token=' + encodeURIComponent(expected) + '; Path=/; HttpOnly; SameSite=Strict; Max-Age=31536000' + (tailscaleServe ? '; Secure' : ''));
     if (['GET', 'HEAD'].includes(req.method) && queryToken) return res.redirect(302, req.path || '/');
     return next();
   }
@@ -63,5 +73,6 @@ module.exports = {
   resolveSafeListenHost,
   cookieValue,
   tokenMatches,
+  isTailscaleServeRequest,
   requireLanPairing
 };

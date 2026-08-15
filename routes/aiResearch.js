@@ -6,6 +6,8 @@ const modelRegistry = require('../services/modelRegistryService');
 const expertChannels = require('../services/expertChannelService');
 const douyinSources = require('../services/douyinSourceService');
 const douyinSyncState = require('../services/douyinSyncStateService');
+const { buildAnalysisPacket } = require('../services/expertAnalysisPacketService');
+const gptPickImports = require('../services/gptPickImportService');
 const { isValidApiKey, getAIConfig, callAIModel } = require('./ai');
 
 function ok(res, data) {
@@ -18,6 +20,38 @@ function fail(res, error, status) {
 
 router.get('/ai-models', function(req, res) {
   ok(res, modelRegistry.listModels());
+});
+
+router.get('/research-picks/latest', function(req, res) {
+  try {
+    ok(res, gptPickImports.getLatestManualPickImport());
+  } catch (error) {
+    fail(res, error);
+  }
+});
+
+router.get('/research-picks/stock/:code', function(req, res) {
+  try {
+    ok(res, gptPickImports.listManualPickCandidateHistory(req.params.code, req.query || {}));
+  } catch (error) {
+    fail(res, error);
+  }
+});
+
+router.get('/research-picks', function(req, res) {
+  try {
+    ok(res, gptPickImports.listManualPickImports(req.query || {}));
+  } catch (error) {
+    fail(res, error);
+  }
+});
+
+router.post('/research-picks/import', function(req, res) {
+  try {
+    ok(res, gptPickImports.importManualPicks(req.body || {}));
+  } catch (error) {
+    fail(res, error);
+  }
 });
 
 router.get('/knowledge/sources', function(req, res) {
@@ -100,6 +134,16 @@ router.get('/expert/channels/:id/observations', function(req, res) {
   }
 });
 
+router.post('/expert/channels/:id/analysis-packet', function(req, res) {
+  try {
+    const channel = expertChannels.getChannel(Number(req.params.id));
+    ok(res, buildAnalysisPacket(channel,
+      expertChannels.listAnalysisObservations(channel.id, req.body || {}), req.body || {}));
+  } catch (error) {
+    fail(res, error, /不存在/.test(error.message) ? 404 : 400);
+  }
+});
+
 router.post('/expert/channels/:id/observations', function(req, res) {
   try {
     ok(res, expertChannels.recordObservation(Number(req.params.id), req.body || {}));
@@ -127,6 +171,19 @@ router.post('/expert/channels/:id/douyin-links', function(req, res) {
 router.post('/expert/channels/:id/douyin-capture', function(req, res) {
   try {
     ok(res, douyinSources.importCapturedPage(Number(req.params.id), req.body || {}));
+  } catch (error) {
+    fail(res, error, /不存在/.test(error.message) ? 404 : 400);
+  }
+});
+
+router.get('/expert/channels/:id/sync/runs', function(req, res) {
+  try {
+    const channelId = Number(req.params.id);
+    expertChannels.getChannel(channelId);
+    ok(res, douyinSyncState.listRuns(channelId, {
+      limit: req.query.limit,
+      includeItems: true
+    }));
   } catch (error) {
     fail(res, error, /不存在/.test(error.message) ? 404 : 400);
   }

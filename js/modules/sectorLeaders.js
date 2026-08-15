@@ -5,6 +5,15 @@ function sectorApi(path, options) {
   return window.apiFetch(path, options);
 }
 
+function sectorEscapeHtml(value) {
+  return String(value == null ? '' : value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 function sectorFmt(value, digits) {
   const n = Number(value);
   return Number.isFinite(n) ? n.toFixed(digits === undefined ? 2 : digits) : '--';
@@ -64,7 +73,7 @@ async function loadDashboardSummary() {
     if (window.updateSidebarWorkspace) window.updateSidebarWorkspace();
   } catch (error) {
     const box = document.getElementById('dashboardSectorList');
-    if (box) box.innerHTML = '<div class="empty-state compact">板块龙头加载失败：' + error.message + '</div>';
+    if (box) box.innerHTML = '<div class="empty-state compact">板块龙头加载失败：' + sectorEscapeHtml(error.message) + '</div>';
   }
 }
 
@@ -79,11 +88,20 @@ function sortedLeaders(leaders) {
 }
 
 function renderLeaderRow(item) {
+  item = Object.assign({}, item, {
+    id: sectorEscapeHtml(item.id),
+    code: sectorEscapeHtml(item.code),
+    name: sectorEscapeHtml(item.name),
+    role: sectorEscapeHtml(item.role),
+    strength: sectorEscapeHtml(item.strength),
+    note: sectorEscapeHtml(item.note),
+    reason: sectorEscapeHtml(item.reason)
+  });
   const hot = Number(item.change) >= 3 ? ' hot' : Number(item.change) <= -3 ? ' risk' : '';
-  return '<tr class="' + hot + '">' +
+  return '<tr class="' + hot + '" data-sector-watch-candidate data-review-status="unverified">' +
     '<td>' + item.code + '</td>' +
     '<td>' + item.name + '</td>' +
-    '<td>' + item.role + '</td>' +
+    '<td>' + (item.role || '观察候选') + '（人工标注，未核验）</td>' +
     '<td>' + sectorFmt(item.price) + '</td>' +
     '<td class="' + sectorPnlClass(item.change) + '">' + (Number.isFinite(Number(item.change)) ? (Number(item.change) >= 0 ? '+' : '') + sectorFmt(item.change) + '%' : '--') + '</td>' +
     '<td>' + sectorFmt(Number(item.amount) / 100000000) + '亿</td>' +
@@ -111,7 +129,13 @@ function renderCards() {
     return;
   }
   const visibleSectors = sectors.map(function(sector) {
-    return Object.assign({}, sector, { leaders: sortedLeaders(sector.leaders || [], sector.name) });
+    return Object.assign({}, sector, {
+      id: sectorEscapeHtml(sector.id),
+      name: sectorEscapeHtml(sector.name),
+      description: sectorEscapeHtml(sector.description),
+      status: sectorEscapeHtml(sector.status),
+      leaders: sortedLeaders(sector.leaders || [], sector.name)
+    });
   }).filter(function(sector) {
     return !sectorKeywordFilterValue() || sector.leaders.length || String(sector.name || '').toLowerCase().includes(sectorKeywordFilterValue());
   });
@@ -123,13 +147,13 @@ function renderCards() {
     return '<section class="sector-card">' +
       '<header><div><h3>' + sector.name + '</h3><p>' + (sector.description || '') + '</p></div><span class="status-pill">' + sector.status + '</span></header>' +
       '<div class="sector-actions">' +
-      '<button class="small-btn" data-action="addLeader" data-sector-id="' + sector.id + '">添加龙头</button>' +
+      '<button class="small-btn" data-action="addLeader" data-sector-id="' + sector.id + '">添加观察候选</button>' +
       '<button class="small-btn" data-action="editSector" data-sector-id="' + sector.id + '">编辑板块</button>' +
       '<button class="small-btn" data-action="sectorNews" data-sector-name="' + sector.name + '">资讯</button>' +
-      '</div>' +
+      '</div><div class="sector-table-scroll">' +
       '<table class="data-table compact"><thead><tr><th>代码</th><th>名称</th><th>角色</th><th>价</th><th>涨跌</th><th>额</th><th>强弱</th><th>备注</th><th>操作</th></tr></thead><tbody>' +
       sector.leaders.map(renderLeaderRow).join('') +
-      '</tbody></table>' +
+      '</tbody></table></div>' +
       '</section>';
   }).join('') + '</div>';
   bindActions(box);
@@ -143,16 +167,17 @@ function renderOverview(items, title) {
     box.innerHTML = '<div class="empty-state">暂无数据。</div>';
     return;
   }
-  box.innerHTML = '<section class="sector-card"><header><h3>' + title + '</h3></header><table class="data-table compact"><thead><tr><th>板块</th><th>代码</th><th>名称</th><th>角色</th><th>价</th><th>涨跌</th><th>额</th><th>强弱</th><th>备注</th><th>操作</th></tr></thead><tbody>' +
+  box.innerHTML = '<section class="sector-card"><header><h3>' + sectorEscapeHtml(title) + '</h3></header><div class="sector-table-scroll"><table class="data-table compact"><thead><tr><th>板块</th><th>代码</th><th>名称</th><th>角色</th><th>价</th><th>涨跌</th><th>额</th><th>强弱</th><th>备注</th><th>操作</th></tr></thead><tbody>' +
     filteredItems.map(function(item) {
-      return renderLeaderRow(item).replace('<tr', '<tr data-sector="' + (item.sectorName || '') + '"').replace('<td>' + item.code + '</td>', '<td>' + (item.sectorName || '') + '</td><td>' + item.code + '</td>');
+      const code = sectorEscapeHtml(item.code);
+      return renderLeaderRow(item).replace('<tr', '<tr data-sector="' + sectorEscapeHtml(item.sectorName || '') + '"').replace('<td>' + code + '</td>', '<td>' + sectorEscapeHtml(item.sectorName || '') + '</td><td>' + code + '</td>');
     }).join('') +
-    '</tbody></table></section>';
+    '</tbody></table></div></section>';
   bindActions(box);
 }
 
 function renderSectorDashboard() {
-  if (sectorMode === 'overview') renderOverview((sectorDashboard && sectorDashboard.overview) || [], '全部板块龙头涨跌排行');
+  if (sectorMode === 'overview') renderOverview((sectorDashboard && sectorDashboard.overview) || [], '人工观察候选涨跌总览（未核验）');
   else if (sectorMode === 'risk') renderOverview((sectorDashboard && sectorDashboard.risks) || [], '风险模式：跌幅较大或强弱偏弱');
   else renderCards();
 }
@@ -198,19 +223,19 @@ async function showLeaderHistory(code) {
   if (!snapshots.length) {
     box.innerHTML = '<section class="sector-card"><header><h3>Leader history</h3></header><div class="empty-state compact">No snapshots recorded yet.</div><button class="small-btn" data-action="backToSectors">Back</button></section>';
   } else {
-    box.innerHTML = '<section class="sector-card"><header><h3>Leader history ' + code + '</h3><button class="small-btn" data-action="backToSectors">Back</button></header>' +
-      '<table class="data-table compact"><thead><tr><th>Time</th><th>Sector</th><th>Name</th><th>Price</th><th>Change</th><th>Amount</th></tr></thead><tbody>' +
+    box.innerHTML = '<section class="sector-card"><header><h3>Leader history ' + sectorEscapeHtml(code) + '</h3><button class="small-btn" data-action="backToSectors">Back</button></header>' +
+      '<div class="sector-table-scroll"><table class="data-table compact"><thead><tr><th>Time</th><th>Sector</th><th>Name</th><th>Price</th><th>Change</th><th>Amount</th></tr></thead><tbody>' +
       snapshots.map(function(item) {
         return '<tr>' +
-          '<td>' + item.capturedAt + '</td>' +
-          '<td>' + (item.sectorName || '') + '</td>' +
-          '<td>' + item.name + '</td>' +
+          '<td>' + sectorEscapeHtml(item.capturedAt) + '</td>' +
+          '<td>' + sectorEscapeHtml(item.sectorName || '') + '</td>' +
+          '<td>' + sectorEscapeHtml(item.name) + '</td>' +
           '<td>' + sectorFmt(item.price) + '</td>' +
           '<td class="' + sectorPnlClass(item.change) + '">' + (Number.isFinite(Number(item.change)) ? (Number(item.change) >= 0 ? '+' : '') + sectorFmt(item.change) + '%' : '--') + '</td>' +
           '<td>' + sectorFmt(Number(item.amount) / 100000000) + '亿</td>' +
           '</tr>';
       }).join('') +
-      '</tbody></table></section>';
+      '</tbody></table></div></section>';
   }
   bindActions(box);
 }
@@ -224,20 +249,20 @@ async function showTrends() {
     return;
   }
   box.innerHTML = '<section class="sector-card"><header><h3>Leader trends</h3></header>' +
-    '<table class="data-table compact"><thead><tr><th>Sector</th><th>Code</th><th>Name</th><th>Latest</th><th>Previous</th><th>Delta</th><th>Samples</th><th>Updated</th></tr></thead><tbody>' +
+    '<div class="sector-table-scroll"><table class="data-table compact"><thead><tr><th>Sector</th><th>Code</th><th>Name</th><th>Latest</th><th>Previous</th><th>Delta</th><th>Samples</th><th>Updated</th></tr></thead><tbody>' +
     trends.slice(0, 50).map(function(item) {
       return '<tr>' +
-        '<td>' + (item.sectorName || '') + '</td>' +
-        '<td>' + item.code + '</td>' +
-        '<td>' + item.name + '</td>' +
+        '<td>' + sectorEscapeHtml(item.sectorName || '') + '</td>' +
+        '<td>' + sectorEscapeHtml(item.code) + '</td>' +
+        '<td>' + sectorEscapeHtml(item.name) + '</td>' +
         '<td class="' + sectorPnlClass(item.latestChange) + '">' + (Number.isFinite(Number(item.latestChange)) ? sectorFmt(item.latestChange) + '%' : '--') + '</td>' +
         '<td class="' + sectorPnlClass(item.previousChange) + '">' + (Number.isFinite(Number(item.previousChange)) ? sectorFmt(item.previousChange) + '%' : '--') + '</td>' +
         '<td class="' + sectorPnlClass(item.changeDelta) + '">' + (Number.isFinite(Number(item.changeDelta)) ? (Number(item.changeDelta) >= 0 ? '+' : '') + sectorFmt(item.changeDelta) + 'pct' : '--') + '</td>' +
-        '<td>' + item.samples + '</td>' +
-        '<td>' + (item.latestAt || '') + '</td>' +
+        '<td>' + sectorEscapeHtml(item.samples) + '</td>' +
+        '<td>' + sectorEscapeHtml(item.latestAt || '') + '</td>' +
         '</tr>';
     }).join('') +
-    '</tbody></table></section>';
+    '</tbody></table></div></section>';
 }
 
 async function pruneSnapshots() {
@@ -250,7 +275,9 @@ async function pruneSnapshots() {
 }
 
 function sectorCsvCell(value) {
-  return '"' + String(value == null ? '' : value).replace(/"/g, '""') + '"';
+  let text = String(value == null ? '' : value);
+  if (typeof value !== 'number' && /^[\u0000-\u0020]*[=+\-@]/.test(text)) text = "'" + text;
+  return '"' + text.replace(/"/g, '""') + '"';
 }
 
 function downloadSectorCsv(filename, rows) {
@@ -460,7 +487,10 @@ function renderDashboardSummary() {
     box.innerHTML = '<div class="empty-state compact">暂无板块龙头数据。</div>';
     return;
   }
-  box.innerHTML = '<table class="mini-table"><tbody>' + items.map(item => '<tr><td>' + item.sectorName + '</td><td>' + item.code + '</td><td>' + item.name + '</td><td class="' + sectorPnlClass(item.change) + '">' + sectorFmt(item.change) + '%</td><td><button class="small-btn" data-action="view" data-code="' + item.code + '">View</button></td></tr>').join('') + '</tbody></table>';
+  box.innerHTML = '<table class="mini-table"><tbody>' + items.map(function(item) {
+    const code = sectorEscapeHtml(item.code);
+    return '<tr><td>' + sectorEscapeHtml(item.sectorName) + '</td><td>' + code + '</td><td>' + sectorEscapeHtml(item.name) + '</td><td class="' + sectorPnlClass(item.change) + '">' + sectorFmt(item.change) + '%</td><td><button class="small-btn" data-action="view" data-code="' + code + '">View</button></td></tr>';
+  }).join('') + '</tbody></table>';
   box.onclick = async function(event) {
     const btn = event.target.closest('[data-action]');
     if (!btn) return;
@@ -488,5 +518,7 @@ window.SectorLeaders = {
   deleteLeader,
   runAIAnalysis,
   renderDashboardSummary,
-  getDashboard: function() { return sectorDashboard; }
+  getDashboard: function() { return sectorDashboard; },
+  renderCandidateRow: renderLeaderRow,
+  serializeCsvCell: sectorCsvCell
 };

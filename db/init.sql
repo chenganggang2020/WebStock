@@ -67,6 +67,29 @@ CREATE TABLE IF NOT EXISTS portfolio_snapshots (
   FOREIGN KEY (account_id) REFERENCES portfolio_accounts(id) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS market_quote_bars_30s (
+  code TEXT NOT NULL,
+  trading_date TEXT NOT NULL,
+  bar_time TEXT NOT NULL,
+  open REAL NOT NULL,
+  high REAL NOT NULL,
+  low REAL NOT NULL,
+  close REAL NOT NULL,
+  volume REAL,
+  amount REAL,
+  observed_count INTEGER NOT NULL DEFAULT 1,
+  last_cumulative_volume REAL,
+  last_cumulative_amount REAL,
+  provider_last_at TEXT NOT NULL,
+  source TEXT NOT NULL DEFAULT 'sina-public-quote',
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (code, bar_time)
+);
+
+CREATE INDEX IF NOT EXISTS idx_market_quote_bars_30s_date
+  ON market_quote_bars_30s(code, trading_date, bar_time);
+
 CREATE TABLE IF NOT EXISTS recent_stocks (
   code TEXT PRIMARY KEY,
   name TEXT NOT NULL,
@@ -255,11 +278,62 @@ CREATE TABLE IF NOT EXISTS expert_sync_jobs (
   last_completed_at TEXT DEFAULT '',
   next_run_at TEXT DEFAULT '',
   last_error TEXT DEFAULT '',
+  progress_json TEXT DEFAULT '{}',
   last_result_json TEXT DEFAULT '{}',
   run_count INTEGER NOT NULL DEFAULT 0,
   updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (channel_id) REFERENCES expert_channels(id) ON DELETE CASCADE
 );
+
+CREATE TABLE IF NOT EXISTS expert_sync_runs (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  channel_id INTEGER NOT NULL,
+  trigger TEXT NOT NULL DEFAULT 'scheduled',
+  status TEXT NOT NULL DEFAULT 'running',
+  started_at TEXT NOT NULL,
+  completed_at TEXT DEFAULT '',
+  work_count INTEGER NOT NULL DEFAULT 0,
+  discovered_count INTEGER NOT NULL DEFAULT 0,
+  candidate_count INTEGER NOT NULL DEFAULT 0,
+  detailed_count INTEGER NOT NULL DEFAULT 0,
+  detail_error_count INTEGER NOT NULL DEFAULT 0,
+  transcription_attempted_count INTEGER NOT NULL DEFAULT 0,
+  transcribed_count INTEGER NOT NULL DEFAULT 0,
+  media_missing_count INTEGER NOT NULL DEFAULT 0,
+  transcript_error_count INTEGER NOT NULL DEFAULT 0,
+  added_count INTEGER NOT NULL DEFAULT 0,
+  updated_count INTEGER NOT NULL DEFAULT 0,
+  unchanged_count INTEGER NOT NULL DEFAULT 0,
+  message TEXT DEFAULT '',
+  error TEXT DEFAULT '',
+  result_json TEXT DEFAULT '{}',
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (channel_id) REFERENCES expert_channels(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_expert_sync_runs_channel_started
+  ON expert_sync_runs(channel_id, started_at DESC, id DESC);
+
+CREATE TABLE IF NOT EXISTS expert_sync_run_items (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  run_id INTEGER NOT NULL,
+  content_id TEXT NOT NULL,
+  source_url TEXT DEFAULT '',
+  title TEXT DEFAULT '',
+  detail_status TEXT NOT NULL DEFAULT 'pending',
+  transcription_status TEXT NOT NULL DEFAULT 'not_ready',
+  message TEXT DEFAULT '',
+  media_bytes INTEGER NOT NULL DEFAULT 0,
+  elapsed_seconds REAL NOT NULL DEFAULT 0,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (run_id) REFERENCES expert_sync_runs(id) ON DELETE CASCADE,
+  UNIQUE (run_id, content_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_expert_sync_run_items_run
+  ON expert_sync_run_items(run_id, id);
 
 CREATE TABLE IF NOT EXISTS expert_observations (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -411,6 +485,21 @@ CREATE TABLE IF NOT EXISTS paper_portfolio_snapshots (
   warnings_json TEXT NOT NULL DEFAULT '[]',
   created_at TEXT DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (portfolio_id) REFERENCES paper_portfolios(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS mobile_push_subscriptions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    endpoint TEXT NOT NULL UNIQUE,
+    subscription_json TEXT NOT NULL,
+    user_agent TEXT DEFAULT '',
+    created_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS mobile_push_state (
+    id INTEGER PRIMARY KEY CHECK (id = 1),
+    snapshot_json TEXT NOT NULL DEFAULT '{}',
+    updated_at TEXT DEFAULT (datetime('now'))
 );
 
 CREATE INDEX IF NOT EXISTS idx_watchlist_group ON watchlist(group_name);

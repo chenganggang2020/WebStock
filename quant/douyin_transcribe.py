@@ -1,4 +1,5 @@
 import argparse
+import gc
 import importlib.metadata
 import json
 import time
@@ -15,42 +16,59 @@ def main():
     args = parser.parse_args()
 
     started = time.perf_counter()
-    model = WhisperModel(
-        args.model,
-        device="cpu",
-        compute_type="int8",
-        download_root=args.model_root,
-    )
-    segments_iter, info = model.transcribe(
-        args.media,
-        language="zh",
-        beam_size=5,
-        vad_filter=True,
-        initial_prompt=args.prompt[:1000] or None,
-    )
-    segments = []
-    for segment in segments_iter:
-        text = str(segment.text or "").strip()
-        if text:
-            segments.append({
-                "start": round(float(segment.start), 3),
-                "end": round(float(segment.end), 3),
-                "text": text,
-            })
+    model = None
+    segments_iter = None
+    try:
+        model = WhisperModel(
+            args.model,
+            device="cpu",
+            compute_type="int8",
+            download_root=args.model_root,
+            cpu_threads=2,
+            num_workers=1,
+        )
+        segments_iter, info = model.transcribe(
+            args.media,
+            language="zh",
+            beam_size=5,
+            vad_filter=True,
+            initial_prompt=args.prompt[:1000] or None,
+        )
+        segments = []
+        for segment in segments_iter:
+            text = str(segment.text or "").strip()
+            if text:
+                segments.append({
+                    "start": round(float(segment.start), 3),
+                    "end": round(float(segment.end), 3),
+                    "text": text,
+                })
 
-    result = {
-        "engine": "faster-whisper",
-        "engineVersion": importlib.metadata.version("faster-whisper"),
-        "model": args.model,
-        "device": "cpu",
-        "computeType": "int8",
-        "language": str(info.language or ""),
-        "languageProbability": round(float(info.language_probability or 0), 6),
-        "durationSeconds": round(float(info.duration or 0), 3),
-        "elapsedSeconds": round(time.perf_counter() - started, 3),
-        "transcript": "".join(item["text"] for item in segments),
-        "segments": segments,
-    }
+        result = {
+            "engine": "faster-whisper",
+            "engineVersion": importlib.metadata.version("faster-whisper"),
+            "model": args.model,
+            "device": "cpu",
+            "computeType": "int8",
+            "language": str(info.language or ""),
+            "languageProbability": round(float(info.language_probability or 0), 6),
+            "durationSeconds": round(float(info.duration or 0), 3),
+            "elapsedSeconds": round(time.perf_counter() - started, 3),
+            "transcript": "".join(item["text"] for item in segments),
+            "segments": segments,
+        }
+    finally:
+        close_segments = getattr(segments_iter, "close", None)
+        if callable(close_segments):
+            close_segments()
+        backend = getattr(model, "model", None)
+        unload_model = getattr(backend, "unload_model", None)
+        if callable(unload_model):
+            unload_model()
+        segments_iter = None
+        model = None
+        gc.collect()
+
     print(json.dumps(result, ensure_ascii=False))
 
 

@@ -175,12 +175,14 @@ function renderWatchlist() {
       ? window.StockList.miniChart(item, trendColor)
       : '';
     const alertStatus = watchlistAlertStatus(item);
-    const quoteStatus = item.quoteStatus === 'stale'
+    const quoteStatus = item.quoteStatus === 'unavailable'
+      ? '<span class="status-danger">行情不可用</span>'
+      : item.quoteStatus === 'stale'
       ? '<span class="status-warn">行情保留</span>'
       : '<span class="status-ok">正常</span>';
     return '<tr>' +
       '<td><button class="link-btn" data-action="view" data-code="' + item.code + '">' + item.code + '</button></td>' +
-      '<td><div class="holding-name-cell"><span>' + item.name + '</span>' + miniChart + '</div></td>' +
+      '<td><div class="holding-name-cell"><span>' + item.name + '</span><span data-mini-chart-code="' + item.code + '">' + miniChart + '</span></div></td>' +
       '<td>' + money(item.price) + '</td>' +
       '<td class="' + colorClass + '">' + (Number.isFinite(change) ? (change >= 0 ? '+' : '') + change.toFixed(2) + '%' : '--') + '</td>' +
       '<td>' + (item.groupName || '默认分组') + '</td>' +
@@ -197,6 +199,9 @@ function renderWatchlist() {
       '</tr>';
   }).join('');
   tbody.onclick = handleWatchlistClick;
+  if (window.StockList && window.StockList.observeMinuteRows) {
+    window.StockList.observeMinuteRows(tbody);
+  }
 }
 
 async function handleWatchlistClick(event) {
@@ -217,21 +222,51 @@ async function handleWatchlistClick(event) {
 
 async function refreshWatchlistQuotes() {
   const State = window.State;
-  if (!State.watchlist.length) return;
+  if (!State.watchlist.length) return { ok: true, count: 0 };
   try {
     const quotes = await window.ApiClient.fetchJsonData('/api/quote?codes=' + State.watchlist.map(item => item.code).join(','));
     const map = {};
     if (Array.isArray(quotes)) quotes.forEach(q => { map[q.code] = q; });
-    State.watchlist = State.watchlist.map(item => Object.assign({}, item, map[item.code] || {}, { quoteStatus: map[item.code] ? 'ok' : 'stale' }));
+    State.watchlist = State.watchlist.map(function(item) {
+      const quote = map[item.code];
+      const usable = quote && quote.quoteStatus !== 'unavailable' && Number(quote.price) > 0;
+      return Object.assign({}, item, usable ? quote : {}, {
+        quoteStatus: usable ? quote.quoteStatus || 'live' : quote ? 'unavailable' : 'stale'
+      });
+    });
     renderWatchlist();
     if (window.Dashboard) window.Dashboard.refreshCards();
     if (window.updateSidebarWorkspace) window.updateSidebarWorkspace();
+    const usableQuotes = (Array.isArray(quotes) ? quotes : []).filter(function(quote) {
+      return quote && quote.quoteStatus !== 'unavailable' && Number(quote.price) > 0;
+    });
+    const observedAt = usableQuotes.map(function(quote) {
+      return [quote.tradeDate, quote.tradeTime].filter(Boolean).join(' ');
+    }).filter(Boolean).sort().pop();
+    return { ok: usableQuotes.length > 0, count: usableQuotes.length, observedAt };
   } catch (error) {
     console.error(error);
     State.watchlist = State.watchlist.map(item => Object.assign({}, item, { quoteStatus: 'stale' }));
     renderWatchlist();
     if (window.updateSidebarWorkspace) window.updateSidebarWorkspace();
+    return { ok: false, error };
   }
+}
+
+function applyQuoteSnapshot(quotes, meta) {
+  const State = window.State;
+  const model = window.QuoteSnapshotClientModel;
+  if (!model || !Array.isArray(State.watchlist)) return { ok: false, count: 0 };
+  State.watchlist = model.applyWatchlistQuotes(State.watchlist, quotes);
+  renderWatchlist();
+  if (window.Dashboard) window.Dashboard.refreshCards();
+  if (window.updateSidebarWorkspace) window.updateSidebarWorkspace();
+  return {
+    ok: true,
+    count: Array.isArray(quotes) ? quotes.length : 0,
+    observedAt: meta && meta.fetchedAt || null,
+    stale: !!(meta && meta.stale)
+  };
 }
 
 function exportVisibleWatchlistCsv() {
@@ -314,6 +349,7 @@ window.Watchlist = {
   editWatchlistItem,
   renderWatchlist,
   refreshWatchlistQuotes,
+  applyQuoteSnapshot,
   exportVisibleWatchlistCsv,
   bulkSetVisibleGroup,
   selectStock,

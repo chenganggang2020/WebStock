@@ -6,6 +6,7 @@ const os = require('node:os');
 const path = require('node:path');
 
 const level2 = require('../services/level2Service');
+const { aggregateAuthorizedTrades } = require('../services/capitalFlow');
 
 function withEnv(values, fn) {
   const oldEnv = {};
@@ -151,6 +152,29 @@ test('Level-2 normalizers accept common depth and tick trade shapes', () => {
   assert.equal(trades[0].amount, 600000);
   assert.equal(trades[0].side, 'buy');
   assert.equal(trades[1].side, 'sell');
+});
+
+test('Level-2 trades preserve missing amounts as unknown through capital-flow aggregation', () => {
+  const trades = level2.normalizeTrades([
+    { time: '09:30:01', price: 10.25, side: 'buy' },
+    { time: '09:30:02', price: 10.25, volume: 0, amount: 0, side: 'sell' }
+  ], { config: { volumeUnit: 'share' } });
+
+  assert.equal(trades[0].volume, null);
+  assert.equal(trades[0].amount, null);
+  assert.equal(trades[1].volume, 0);
+  assert.equal(trades[1].amount, 0);
+
+  const flow = aggregateAuthorizedTrades(trades, {
+    code: '000001',
+    provider: 'test-gateway',
+    fetchedAt: '2026-08-12T01:30:03.000Z',
+    authorizationVerified: true,
+    entitlementVerified: true
+  });
+
+  assert.equal(flow.points[0].inflowAmount, null);
+  assert.equal(flow.points[0].netAmount, null);
 });
 
 test('free Eastmoney money-flow rows normalize to simulated large-order fields', () => {

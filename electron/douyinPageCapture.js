@@ -1,4 +1,4 @@
-const MAX_ITEMS = 200;
+const MAX_ITEMS = 1000;
 
 function cleanText(value, maxLength = 1000) {
   return String(value == null ? '' : value).replace(/\s+/g, ' ').trim().slice(0, maxLength);
@@ -39,6 +39,141 @@ function parseDouyinItemUrl(value) {
     contentId,
     mediaType
   };
+}
+
+function extractDouyinMediaCandidates(payload = {}, contentId) {
+  const targetId = String(contentId || '').trim();
+  if (!/^\d{12,24}$/.test(targetId)) return [];
+
+  const mediaHostSuffixes = [
+    'douyinvod.com',
+    'zjcdn.com',
+    'bytecdn.cn',
+    'douyin.com',
+    'amemv.com',
+    'snssdk.com'
+  ];
+
+  function approvedMediaUrl(value) {
+    try {
+      const parsed = new URL(String(value || ''));
+      const host = parsed.hostname.toLowerCase();
+      if (parsed.protocol !== 'https:') return '';
+      if (!mediaHostSuffixes.some(function(suffix) {
+        return host === suffix || host.endsWith('.' + suffix);
+      })) return '';
+      return parsed.href;
+    } catch (error) {
+      return '';
+    }
+  }
+
+  function awemeId(value) {
+    if (!value || typeof value !== 'object') return '';
+    return String(value.aweme_id || value.aweme_id_str || value.group_id || value.group_id_str || '').trim();
+  }
+
+  function bytes(value, fallback, lastFallback) {
+    const choices = [value, fallback, lastFallback];
+    for (const choice of choices) {
+      if (choice == null || choice === '') continue;
+      const number = Number(choice);
+      if (Number.isFinite(number) && number >= 0) return Math.round(number);
+    }
+    return 0;
+  }
+
+  function quality(value, fallback) {
+    const text = String(value == null || value === '' ? fallback || '' : value).trim();
+    return text.slice(0, 160);
+  }
+
+  const awemeDetails = [];
+  function appendDetail(value) {
+    if (value && typeof value === 'object' && awemeId(value) === targetId) awemeDetails.push(value);
+  }
+  appendDetail(payload && payload.aweme_detail);
+  appendDetail(payload && payload.data && payload.data.aweme_detail);
+  ['aweme_list', 'item_list'].forEach(function(key) {
+    (Array.isArray(payload && payload[key]) ? payload[key] : []).forEach(appendDetail);
+    (Array.isArray(payload && payload.data && payload.data[key]) ? payload.data[key] : []).forEach(appendDetail);
+  });
+
+  const result = [];
+  const seen = new Set();
+  function appendAddress(address, source, qualityLabel, fallbackBytes, videoBytes) {
+    if (!address || typeof address !== 'object') return;
+    const urls = Array.isArray(address.url_list) ? address.url_list
+      : typeof address.url === 'string' ? [address.url] : [];
+    urls.forEach(function(value) {
+      const url = approvedMediaUrl(value);
+      if (!url || seen.has(url)) return;
+      seen.add(url);
+      result.push({
+        url,
+        bytes: bytes(address.data_size, fallbackBytes, videoBytes),
+        source,
+        quality: quality(address.gear_name || address.quality_type, qualityLabel)
+      });
+    });
+  }
+
+  awemeDetails.forEach(function(detail) {
+    const video = detail.video && typeof detail.video === 'object' ? detail.video : {};
+    (Array.isArray(video.bit_rate) ? video.bit_rate : []).forEach(function(rendition) {
+      if (!rendition || typeof rendition !== 'object') return;
+      const qualityLabel = rendition.gear_name || rendition.quality_type || rendition.bit_rate || video.ratio || 'bit_rate';
+      appendAddress(rendition.play_addr_h264, 'bit_rate', qualityLabel, rendition.data_size, video.data_size);
+      appendAddress(rendition.play_addr, 'bit_rate', qualityLabel, rendition.data_size, video.data_size);
+    });
+    appendAddress(video.play_addr_h264, 'play_addr_h264', video.ratio || 'h264', null, video.data_size);
+    appendAddress(video.play_addr, 'play_addr', video.ratio || 'default', null, video.data_size);
+    appendAddress(video.download_addr, 'download_addr', video.ratio || 'download', null, video.data_size);
+  });
+  return result;
+}
+
+function buildDouyinMediaProbeScript(contentId) {
+  const targetId = String(contentId || '').trim();
+  if (!/^\d{12,24}$/.test(targetId)) return 'Promise.resolve([])';
+  return '(async function(extract, targetId) {' +
+    'if (typeof performance === "undefined" || typeof performance.getEntriesByType !== "function" || typeof fetch !== "function") return [];' +
+    'const detailUrls = [];' +
+    'const seenRequests = new Set();' +
+    'for (let poll = 0; poll < 20 && !detailUrls.length; poll += 1) {' +
+      'const entries = performance.getEntriesByType("resource") || [];' +
+      'for (const entry of entries) {' +
+        'const value = String(entry && entry.name || "");' +
+        'let parsed;' +
+        'try { parsed = new URL(value); } catch (error) { continue; }' +
+        'const host = parsed.hostname.toLowerCase();' +
+        'if (parsed.protocol !== "https:" || !(host === "douyin.com" || host.endsWith(".douyin.com"))) continue;' +
+        'if (!/^\\/aweme\\/v1\\/web\\/aweme\\/detail\\/?$/.test(parsed.pathname)) continue;' +
+        'if (String(parsed.searchParams.get("aweme_id") || "") !== targetId) continue;' +
+        'if (seenRequests.has(value)) continue;' +
+        'seenRequests.add(value);' +
+        'detailUrls.push(value);' +
+      '}' +
+      'if (!detailUrls.length && poll < 19 && typeof setTimeout === "function") {' +
+        'await new Promise(function(resolve) { setTimeout(resolve, 500); });' +
+      '}' +
+    '}' +
+    'const candidates = [];' +
+    'const seenMedia = new Set();' +
+    'for (const url of detailUrls) {' +
+      'try {' +
+        'const response = await fetch(url, { credentials: "include" });' +
+        'if (!response || response.ok === false || typeof response.json !== "function") continue;' +
+        'const extracted = extract(await response.json(), targetId);' +
+        'for (const candidate of extracted) {' +
+          'if (!candidate || seenMedia.has(candidate.url)) continue;' +
+          'seenMedia.add(candidate.url);' +
+          'candidates.push(candidate);' +
+        '}' +
+      '} catch (error) {}' +
+    '}' +
+    'return candidates;' +
+  '})(' + extractDouyinMediaCandidates.toString() + ',' + JSON.stringify(targetId) + ')';
 }
 
 function parseVisibleWorkCount(value) {
@@ -361,7 +496,7 @@ function douyinVisiblePageSnapshot(parseWorkCount, parseMetricCount, inferLogged
     loadError: /服务异常[，,]?\s*重新刷新拉取数据/.test(bodyText),
     capturedAt: new Date().toISOString(),
     profile: { displayName, profileUrl, douyinId: idMatch ? idMatch[1] : '', workCount },
-    items: Array.from(itemsById.values()).slice(0, 200)
+    items: Array.from(itemsById.values()).slice(0, 1000)
   };
 }
 
@@ -374,6 +509,8 @@ function buildDouyinPageSnapshotScript() {
 module.exports = {
   isAllowedDouyinUrl,
   parseDouyinItemUrl,
+  extractDouyinMediaCandidates,
+  buildDouyinMediaProbeScript,
   parseVisibleWorkCount,
   parseVisibleMetricCount,
   inferVisibleLoggedIn,

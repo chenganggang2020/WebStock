@@ -52,6 +52,27 @@ function buildPairingUrls(addresses, port, token) {
   ));
 }
 
+function connectionKind(address) {
+  const parts = String(address || '').split('.').map(Number);
+  return parts.length === 4 && parts[0] === 100 && parts[1] >= 64 && parts[1] <= 127
+    ? 'tailscale' : 'lan';
+}
+
+function buildPairingOptions(addresses, port, token) {
+  return addresses.map(function(address) {
+    const kind = connectionKind(address);
+    return {
+      address,
+      kind,
+      label: kind === 'tailscale' ? 'Tailscale 远程' : '局域网',
+      url: 'http://' + address + ':' + port + '/?pair=' + encodeURIComponent(token)
+    };
+  }).sort(function(left, right) {
+    if (left.kind === right.kind) return left.address.localeCompare(right.address);
+    return left.kind === 'tailscale' ? -1 : 1;
+  });
+}
+
 module.exports = {
   TOKEN_FILE,
   SETTINGS_FILE,
@@ -59,5 +80,7 @@ module.exports = {
   readLanEnabled,
   writeLanEnabled,
   localIPv4Addresses,
-  buildPairingUrls
+  buildPairingUrls,
+  connectionKind,
+  buildPairingOptions
 };

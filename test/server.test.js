@@ -4,6 +4,7 @@ const http = require('node:http');
 const os = require('node:os');
 const path = require('node:path');
 const axios = require('axios');
+const { minuteCache, klineCache } = require('../routes/cache');
 
 process.env.OPENAI_API_KEY = 'sk-proj-serversecretabcdefghijklmnopqrstuvwxyz1234567890';
 process.env.OPENAI_MODEL = 'gpt-5-mini';
@@ -56,6 +57,29 @@ test('/ai-status returns public OpenAI status without leaking the key', async (t
   assert.equal(result.json.hasApiKey, true);
   assert.equal(result.body.includes(process.env.OPENAI_API_KEY), false);
   assert.equal(result.body.includes('sk-proj-serversecret'), false);
+});
+
+test('/api/health checks only local runtime and database state', async (t) => {
+  const originalGet = axios.get;
+  let externalRequests = 0;
+  axios.get = async function() {
+    externalRequests += 1;
+    throw new Error('health must not reach an external provider');
+  };
+  t.after(function() { axios.get = originalGet; });
+  const server = app.listen(0);
+  t.after(() => server.close());
+
+  const result = await requestJson(server, '/api/health');
+
+  assert.equal(result.statusCode, 200);
+  assert.equal(result.json.success, true);
+  assert.equal(result.json.data.status, 'ok');
+  assert.equal(result.json.data.database, 'ok');
+  assert.equal(typeof result.json.data.version, 'string');
+  assert.equal(typeof result.json.data.uptimeSeconds, 'number');
+  assert.equal(Object.prototype.hasOwnProperty.call(result.json.data, 'lastMarketDataAt'), true);
+  assert.equal(externalRequests, 0);
 });
 
 test('/api/level2/status returns public provider status without leaking the key', async (t) => {
@@ -128,6 +152,8 @@ test('server only serves public application assets and does not enable cross-ori
   t.after(() => server.close());
 
   const home = await requestRaw(server, '/');
+  const mobile = await requestRaw(server, '/mobile.html');
+  const manifest = await requestRaw(server, '/manifest.webmanifest');
   const source = await requestRaw(server, '/server.js');
   const database = await requestRaw(server, '/data/webstock.db');
   const crossOrigin = await requestRaw(server, {
@@ -136,6 +162,9 @@ test('server only serves public application assets and does not enable cross-ori
   });
 
   assert.equal(home.statusCode, 200);
+  assert.equal(mobile.statusCode, 200);
+  assert.match(mobile.body, /apple-mobile-web-app-capable/);
+  assert.equal(manifest.statusCode, 200);
   assert.equal(source.statusCode, 404);
   assert.equal(database.statusCode, 404);
   assert.equal(crossOrigin.headers['access-control-allow-origin'], undefined);
@@ -176,4 +205,162 @@ test('/api/minute returns an explicit unavailable result instead of generated pr
   assert.deepEqual(result.json.data, []);
   assert.equal(result.json.meta.dataSource, 'unavailable');
   assert.equal(result.json.meta.synthetic, false);
+});
+
+test('/api/minute declares the five-minute fallback sampling contract', async (t) => {
+  minuteCache.clear();
+  const today = new Date();
+  const date = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
+  const originalGet = axios.get;
+  axios.get = async function() {
+    return { data: [
+      { day: date + ' 09:35:00', close: '10.00', volume: '100', amount: '1000' },
+      { day: date + ' 09:40:00', close: '10.10', volume: '120', amount: '1212' }
+    ] };
+  };
+  t.after(function() {
+    axios.get = originalGet;
+    minuteCache.clear();
+  });
+
+  const server = app.listen(0);
+  t.after(() => server.close());
+  const result = await requestJson(server, '/api/minute?code=002565');
+
+  assert.equal(result.statusCode, 200);
+  assert.equal(result.json.data.length, 2);
+  assert.deepEqual(result.json.meta.sampling, {
+    intervalSeconds: 300,
+    intervalMinutes: 5,
+    label: '5分钟公开行情',
+    timestampMeaning: 'bar-label',
+    observedPoints: 2,
+    expectedFullDayPoints: 48
+  });
+  assert.equal(result.json.meta.fallbackFrom, 'public-1m');
+});
+
+test('/api/minute prefers one-minute public bars when the primary source is available', async (t) => {
+  minuteCache.clear();
+  const originalGet = axios.get;
+  axios.get = async function(url) {
+    assert.match(url, /appstock\/app\/minute\/query/);
+    return { data: {
+      code: 0,
+      data: { sz000001: { data: {
+        date: '20260814',
+        data: ['0930 11.22 2852 3199944.00', '0931 11.21 19938 22344016.00']
+      } } }
+    } };
+  };
+  t.after(function() {
+    axios.get = originalGet;
+    minuteCache.clear();
+  });
+
+  const server = app.listen(0);
+  t.after(() => server.close());
+  const result = await requestJson(server, '/api/minute?code=000001');
+
+  assert.equal(result.statusCode, 200);
+  assert.equal(result.json.meta.dataSource, 'tencent-1m');
+  assert.equal(result.json.meta.sampling.intervalSeconds, 60);
+  assert.equal(result.json.meta.sampling.observedPoints, 2);
+  assert.equal(result.json.data[0].volume, 285200);
+});
+
+test('/api/minute returns expired last-good data as stale when the provider request fails', async (t) => {
+  minuteCache.clear();
+  minuteCache.set('000001', {
+    ts: Date.now() - 120000,
+    data: [{ time: '2026-08-11 15:00:00', price: 10.25, volume: 100 }],
+    meta: { dataSource: 'sina-5m', synthetic: false, stale: false, tradingDate: '2026-08-11' }
+  });
+  t.after(function() { minuteCache.clear(); });
+
+  const originalGet = axios.get;
+  axios.get = async function() {
+    const error = new Error('request rejected');
+    error.response = { status: 400 };
+    throw error;
+  };
+  t.after(function() { axios.get = originalGet; });
+
+  const server = app.listen(0);
+  t.after(() => server.close());
+  const result = await requestJson(server, '/api/minute?code=000001');
+
+  assert.equal(result.statusCode, 200);
+  assert.equal(result.json.data[0].price, 10.25);
+  assert.equal(result.json.meta.dataSource, 'cache');
+  assert.equal(result.json.meta.stale, true);
+  assert.equal(result.json.meta.reason, 'provider-request-failed');
+  assert.match(result.json.meta.fetchedAt, /^\d{4}-\d{2}-\d{2}T/);
+});
+
+test('/api/kline returns an expired cache with explicit stale provenance when refresh fails', async (t) => {
+  klineCache.clear();
+  klineCache.set('000001_day', {
+    ts: Date.now() - 31 * 60 * 1000,
+    data: [{ date: '2026-08-11', open: 10, close: 10.25, high: 10.4, low: 9.9, volume: 1000 }]
+  });
+  t.after(function() { klineCache.clear(); });
+
+  const originalGet = axios.get;
+  axios.get = async function() {
+    const error = new Error('request rejected');
+    error.response = { status: 400 };
+    throw error;
+  };
+  t.after(function() { axios.get = originalGet; });
+
+  const server = app.listen(0);
+  t.after(() => server.close());
+  const result = await requestJson(server, '/api/kline?code=000001&period=day');
+
+  assert.equal(result.statusCode, 200);
+  assert.equal(result.json.data[0].close, 10.25);
+  assert.equal(result.json.meta.dataSource, 'cache');
+  assert.equal(result.json.meta.stale, true);
+  assert.equal(result.json.meta.reason, 'provider-request-failed');
+  assert.match(result.json.meta.fetchedAt, /^\d{4}-\d{2}-\d{2}T/);
+});
+
+test('/api/kline treats an empty provider payload as unavailable without a cache', async (t) => {
+  klineCache.clear();
+  t.after(function() { klineCache.clear(); });
+
+  const originalGet = axios.get;
+  axios.get = async function() { return { data: [] }; };
+  t.after(function() { axios.get = originalGet; });
+
+  const server = app.listen(0);
+  t.after(() => server.close());
+  const result = await requestJson(server, '/api/kline?code=000001&period=day');
+
+  assert.equal(result.statusCode, 200);
+  assert.deepEqual(result.json.data, []);
+  assert.equal(result.json.meta.dataSource, 'unavailable');
+  assert.equal(result.json.meta.stale, false);
+  assert.equal(result.json.meta.reason, 'provider-returned-empty-data');
+});
+
+test('/api/quote uses the resilient read timeout and marks an empty provider response unavailable', async (t) => {
+  const originalGet = axios.get;
+  let requestConfig;
+  axios.get = async function(url, config) {
+    requestConfig = config;
+    return { data: Buffer.from('') };
+  };
+  t.after(function() { axios.get = originalGet; });
+
+  const server = app.listen(0);
+  t.after(() => server.close());
+  const result = await requestJson(server, '/api/quote?codes=000001');
+
+  assert.equal(result.statusCode, 200);
+  assert.equal(requestConfig.timeout, 10000);
+  assert.equal(result.json.data.length, 1);
+  assert.equal(result.json.data[0].code, '000001');
+  assert.equal(result.json.data[0].quoteStatus, 'unavailable');
 });

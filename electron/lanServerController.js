@@ -2,7 +2,8 @@ const {
   ensurePairingToken,
   writeLanEnabled,
   localIPv4Addresses,
-  buildPairingUrls
+  buildPairingUrls,
+  buildPairingOptions
 } = require('../services/lanHostService');
 
 function createLanServerController(options) {
@@ -69,13 +70,15 @@ function createLanServerController(options) {
     const addresses = enabled
       ? localIPv4Addresses(networkInterfaces ? networkInterfaces() : undefined)
       : [];
+    const pairingOptions = enabled ? buildPairingOptions(addresses, port, token) : [];
     return {
       supported: true,
       enabled,
       host: host || '',
       port,
       addresses,
-      pairingUrls: enabled ? buildPairingUrls(addresses, port, token) : []
+      pairingUrls: enabled ? buildPairingUrls(addresses, port, token) : [],
+      pairingOptions
     };
   }
 

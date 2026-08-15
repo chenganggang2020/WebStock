@@ -1,6 +1,7 @@
 const expertChannels = require('./expertChannelService');
 const { normalizeDouyinPageSnapshot } = require('../electron/douyinPageCapture');
 const { analyzeInvestmentText } = require('./investmentSignalService');
+const { materialFingerprint } = require('./douyinSyncPlanningService');
 
 const URL_PATTERN = /https?:\/\/[^\s<>"']+/gi;
 const TRAILING_PUNCTUATION = /[)\]}>，。；;！？!?、]+$/u;
@@ -194,6 +195,7 @@ function normalizedPublishedAt(value, fallback) {
 
 function comparableObservation(item) {
   return JSON.stringify({
+    materialFingerprint: materialFingerprint(item),
     sourceUrl: item.sourceUrl || '',
     title: item.title || '',
     author: item.author || '',
@@ -201,12 +203,7 @@ function comparableObservation(item) {
     evidenceLevel: item.evidenceLevel || '',
     availabilityStatus: item.availabilityStatus || '',
     contentRole: item.contentRole || '',
-    content: item.content || '',
-    description: item.description || '',
-    transcript: item.transcript || '',
     summary: item.summary || '',
-    engagement: item.engagement || {},
-    mediaMetadata: item.mediaMetadata || {},
     signal: item.signal || {},
     stockCodes: item.stockCodes || [],
     sectors: item.sectors || [],
@@ -272,6 +269,9 @@ function capturedObservationInput(channel, capture, identity, item, existing) {
     captureSchemaVersion: CURRENT_CAPTURE_SCHEMA,
     playCountExplicit
   });
+  if (matched && (capture.pageType === 'video' || capture.pageType === 'note')) {
+    delete mediaMetadata.remote;
+  }
   if (item.coverUrl) mediaMetadata.coverUrl = item.coverUrl;
   if (Number(item.durationSeconds) > 0) mediaMetadata.durationSeconds = Number(item.durationSeconds);
   if (capture.pageType === 'video' || capture.pageType === 'note') mediaMetadata.detailCapturedAt = capture.capturedAt;
@@ -307,8 +307,9 @@ function capturedObservationInput(channel, capture, identity, item, existing) {
     mediaMetadata,
     signal,
     mediaType: item.mediaType,
-    archiveStatus: 'linked',
+    archiveStatus: existing && existing.archiveStatus === 'downloaded' ? 'downloaded' : 'linked',
     rightsBasis: 'quotation_only',
+    localAssetPath: existing && existing.localAssetPath || '',
     summary,
     topics: enrichedTopics,
     stance: replaceAutomaticSignal ? signal.stance
@@ -374,17 +375,15 @@ function reanalyzeChannelObservations(channelId) {
   return { scannedCount, updatedCount };
 }
 
-function importCapturedPage(channelId, input = {}) {
+function planCapturedPage(channelId, input = {}) {
   const channel = expertChannels.getChannel(channelId);
   if (channel.platform !== 'douyin') throw new Error('只有抖音创作者频道可以同步抖音页面');
   const capture = normalizeDouyinPageSnapshot(input.capture || input);
   const identity = captureIdentity(channel, capture);
-  const items = [];
   let addedCount = 0;
   let updatedCount = 0;
   let unchangedCount = 0;
-
-  capture.items.forEach(item => {
+  const entries = capture.items.map(item => {
     const existing = expertChannels.findObservationByIdentity(channel.id, {
       externalContentId: item.contentId,
       sourceUrl: item.sourceUrl
@@ -392,25 +391,59 @@ function importCapturedPage(channelId, input = {}) {
     const observationInput = capturedObservationInput(channel, capture, identity, item, existing);
     if (existing && comparableObservation(existing) === comparableObservation(observationInput)) {
       unchangedCount += 1;
-      items.push(existing);
-      return;
+      return { changeType: 'unchanged', existing, observationInput };
     }
-    const saved = expertChannels.recordObservation(channel.id, observationInput);
     if (existing) updatedCount += 1;
     else addedCount += 1;
-    items.push(saved);
+    return { changeType: existing ? 'updated' : 'added', existing, observationInput };
   });
-
   return {
-    pageUrl: capture.pageUrl,
-    pageType: capture.pageType,
-    loggedIn: capture.loggedIn,
-    identityMatched: identity.matched,
-    identityMatchType: identity.matchType,
-    capturedCount: capture.items.length,
+    channel,
+    capture,
+    identity,
+    entries,
     addedCount,
     updatedCount,
-    unchangedCount,
+    unchangedCount
+  };
+}
+
+function inspectCapturedPage(channelId, input = {}) {
+  const plan = planCapturedPage(channelId, input);
+  const items = plan.entries.map(function(entry) {
+    return Object.assign({}, entry.observationInput, { changeType: entry.changeType });
+  });
+  return {
+    pageUrl: plan.capture.pageUrl,
+    pageType: plan.capture.pageType,
+    loggedIn: plan.capture.loggedIn,
+    identityMatched: plan.identity.matched,
+    identityMatchType: plan.identity.matchType,
+    capturedCount: plan.capture.items.length,
+    addedCount: plan.addedCount,
+    updatedCount: plan.updatedCount,
+    unchangedCount: plan.unchangedCount,
+    items,
+    candidates: items.filter(function(item) { return item.changeType !== 'unchanged'; })
+  };
+}
+
+function importCapturedPage(channelId, input = {}) {
+  const plan = planCapturedPage(channelId, input);
+  const items = plan.entries.map(function(entry) {
+    if (entry.changeType === 'unchanged') return entry.existing;
+    return expertChannels.recordObservation(plan.channel.id, entry.observationInput);
+  });
+  return {
+    pageUrl: plan.capture.pageUrl,
+    pageType: plan.capture.pageType,
+    loggedIn: plan.capture.loggedIn,
+    identityMatched: plan.identity.matched,
+    identityMatchType: plan.identity.matchType,
+    capturedCount: plan.capture.items.length,
+    addedCount: plan.addedCount,
+    updatedCount: plan.updatedCount,
+    unchangedCount: plan.unchangedCount,
     items
   };
 }
@@ -436,6 +469,7 @@ function sanitizedAsrMetadata(result = {}) {
     mediaSha256: String(result.mediaSha256 || '').toLowerCase().slice(0, 64),
     mediaBytes: Math.max(Number(result.mediaBytes) || 0, 0),
     mediaContentType: String(result.mediaContentType || '').slice(0, 120),
+    localAssetPath: String(result.localAssetPath || result.mediaMetadata && result.mediaMetadata.localAssetPath || '').slice(0, 2000),
     transcribedAt: String(result.transcribedAt || new Date().toISOString()),
     segments: (Array.isArray(result.segments) ? result.segments : []).map(function(segment) {
       return {
@@ -447,6 +481,36 @@ function sanitizedAsrMetadata(result = {}) {
   };
 }
 
+function sanitizedArchiveMetadata(result = {}) {
+  const verificationMode = ['historical_sha256', 'current_content_id']
+    .includes(String(result.verificationMode || '')) ? String(result.verificationMode) : '';
+  return {
+    status: 'complete',
+    localAssetPath: String(result.localAssetPath || result.mediaMetadata && result.mediaMetadata.localAssetPath || '').slice(0, 2000),
+    mediaSha256: String(result.mediaSha256 || result.sha256 || '').toLowerCase().slice(0, 64),
+    mediaBytes: Math.max(Number(result.mediaBytes == null ? result.bytes : result.mediaBytes) || 0, 0),
+    mediaContentType: String(result.mediaContentType || result.mimeType || '').slice(0, 120),
+    archivedAt: String(result.archivedAt || new Date().toISOString()),
+    verificationMode
+  };
+}
+
+function applyMediaArchive(channelId, contentId, result = {}) {
+  const existing = expertChannels.findObservationByIdentity(channelId, { externalContentId: contentId });
+  if (!existing || existing.evidenceLevel !== 'primary') throw new Error('找不到身份已核验的抖音视频记录。');
+  const archive = sanitizedArchiveMetadata(result);
+  if (!archive.localAssetPath || !/^[a-f0-9]{64}$/.test(archive.mediaSha256) || !archive.mediaBytes) {
+    throw new Error('本地媒体归档证据不完整。');
+  }
+  return expertChannels.recordObservation(channelId, {
+    externalKey: existing.externalKey,
+    archiveStatus: 'downloaded',
+    localAssetPath: archive.localAssetPath,
+    mediaMetadata: Object.assign({}, existing.mediaMetadata || {}, { archive }),
+    lastSeenAt: existing.lastSeenAt
+  });
+}
+
 function applyTranscription(channelId, contentId, result = {}) {
   const channel = expertChannels.getChannel(channelId);
   const existing = expertChannels.findObservationByIdentity(channel.id, { externalContentId: contentId });
@@ -454,6 +518,10 @@ function applyTranscription(channelId, contentId, result = {}) {
   const transcript = String(result.transcript || '').trim();
   if (!transcript) throw new Error('语音识别结果为空。');
   const asr = sanitizedAsrMetadata(result);
+  const previousArchive = existing.mediaMetadata && existing.mediaMetadata.archive || {};
+  const preservesHistoricalVerification = previousArchive.verificationMode === 'historical_sha256' &&
+    previousArchive.mediaSha256 === asr.mediaSha256 &&
+    Number(previousArchive.mediaBytes || 0) === Number(asr.mediaBytes || 0);
   const signal = analyzeInvestmentText({
     title: existing.title,
     description: existing.description,
@@ -467,7 +535,19 @@ function applyTranscription(channelId, contentId, result = {}) {
     contentRole: 'transcript',
     content: transcript,
     transcript,
-    mediaMetadata: Object.assign({}, existing.mediaMetadata || {}, { asr }),
+    mediaMetadata: Object.assign({}, existing.mediaMetadata || {}, {
+      asr,
+      archive: asr.localAssetPath ? sanitizedArchiveMetadata({
+        localAssetPath: asr.localAssetPath,
+        mediaSha256: asr.mediaSha256,
+        mediaBytes: asr.mediaBytes,
+        mediaContentType: asr.mediaContentType,
+        archivedAt: preservesHistoricalVerification ? previousArchive.archivedAt : asr.transcribedAt,
+        verificationMode: preservesHistoricalVerification ? 'historical_sha256' : 'current_content_id'
+      }) : previousArchive
+    }),
+    archiveStatus: asr.localAssetPath ? 'downloaded' : existing.archiveStatus,
+    localAssetPath: asr.localAssetPath || existing.localAssetPath,
     signal,
     stockCodes: signal.stockCodes,
     sectors: signal.sectors,
@@ -476,6 +556,34 @@ function applyTranscription(channelId, contentId, result = {}) {
     horizon: signal.horizon,
     confidence: Math.max(Number(existing.confidence) || 0, 0.92),
     analysisNotes: generatedAnalysisNotes(signal),
+    lastSeenAt: asr.transcribedAt
+  });
+}
+
+function applyNoSpeechResult(channelId, contentId, result = {}) {
+  const existing = expertChannels.findObservationByIdentity(channelId, { externalContentId: contentId });
+  if (!existing || existing.evidenceLevel !== 'primary') throw new Error('找不到身份已核验的抖音视频记录。');
+  const asr = Object.assign({}, sanitizedAsrMetadata(result), {
+    status: 'no_speech',
+    message: '本地语音识别未检测到可转写的口语；视频已永久归档。'
+  });
+  const archive = sanitizedArchiveMetadata({
+    localAssetPath: asr.localAssetPath,
+    mediaSha256: asr.mediaSha256,
+    mediaBytes: asr.mediaBytes,
+    mediaContentType: asr.mediaContentType,
+    archivedAt: asr.transcribedAt,
+    verificationMode: 'current_content_id'
+  });
+  if (!archive.localAssetPath || !/^[a-f0-9]{64}$/.test(archive.mediaSha256) || !archive.mediaBytes) {
+    throw new Error('无口语视频的本地归档证据不完整。');
+  }
+  return expertChannels.recordObservation(channelId, {
+    externalKey: existing.externalKey,
+    transcript: '',
+    mediaMetadata: Object.assign({}, existing.mediaMetadata || {}, { asr, archive }),
+    archiveStatus: 'downloaded',
+    localAssetPath: archive.localAssetPath,
     lastSeenAt: asr.transcribedAt
   });
 }
@@ -495,14 +603,54 @@ function recordTranscriptionError(channelId, contentId, error) {
   });
 }
 
+function recordTranscriptionUnavailable(channelId, contentId, message) {
+  const existing = expertChannels.findObservationByIdentity(channelId, { externalContentId: contentId });
+  if (!existing || existing.evidenceLevel !== 'primary') return null;
+  return expertChannels.recordObservation(channelId, {
+    externalKey: existing.externalKey,
+    mediaMetadata: Object.assign({}, existing.mediaMetadata || {}, {
+      asr: {
+        status: 'media_missing',
+        message: String(message || '详情页未提供可下载的 HTTPS 媒体地址').slice(0, 500),
+        checkedAt: new Date().toISOString()
+      }
+    })
+  });
+}
+
+function recordRemoteUnavailable(channelId, contentId, error, failureCount, options = {}) {
+  const existing = expertChannels.findObservationByIdentity(channelId, { externalContentId: contentId });
+  if (!existing) return null;
+  const checkedAt = new Date().toISOString();
+  const remoteStatus = options.reason === 'identity_rejected' ? 'identity_rejected' : 'unavailable';
+  return expertChannels.recordObservation(channelId, {
+    externalKey: existing.externalKey,
+    availabilityStatus: 'unavailable',
+    mediaMetadata: Object.assign({}, existing.mediaMetadata || {}, {
+      remote: {
+        status: remoteStatus,
+        checkedAt,
+        consecutiveFailures: Math.max(Number(failureCount) || 1, 1),
+        message: String(error && error.message || error || '远端详情暂不可用').slice(0, 500)
+      }
+    }),
+    lastSeenAt: existing.lastSeenAt
+  });
+}
+
 module.exports = {
   normalizeDouyinLink,
   extractDouyinShareLinks,
   douyinPlayerUrl,
   importDouyinLinks,
+  inspectCapturedPage,
   importCapturedPage,
   verifyCapturedIdentity,
   reanalyzeChannelObservations,
+  applyMediaArchive,
   applyTranscription,
+  applyNoSpeechResult,
+  recordRemoteUnavailable,
+  recordTranscriptionUnavailable,
   recordTranscriptionError
 };

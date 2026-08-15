@@ -15,8 +15,6 @@
 </head>
 
 <body>
-  <!-- 视图切换按钮 - 固定在右上角 -->
-  <button id="viewSwitchBtn" class="view-switch-btn" title="切换视图">历史K线</button>
   <div class="sidebar">
     <div class="search-box">
       <input id="searchInput" type="text" placeholder="代码/名称/行业/主营/板块" autocomplete="off">
@@ -38,6 +36,9 @@
       <button id="sidebarAiResearchBtn" class="sidebar-workspace-btn" data-main-view="aiResearch">
         <span>AI研究</span><strong id="sidebarKnowledgeCount">0</strong>
       </button>
+      <button id="sidebarCreatorTasksBtn" class="sidebar-workspace-btn" data-main-view="creatorTasks">
+        <span>采集任务</span><strong>视频</strong>
+      </button>
       <button id="sidebarSectorsBtn" class="sidebar-workspace-btn" data-main-view="sectors">
         <span>板块热股</span><strong id="sidebarSectorCount">0</strong>
       </button>
@@ -45,7 +46,7 @@
         <span>AI记录</span><strong id="sidebarAiHistoryCount">0</strong>
       </button>
     </nav>
-    <div id="hotSidebarPanel" class="hot-sidebar-panel" aria-live="polite"></div>
+    <aside id="hotSidebarPanel" class="hot-sidebar-panel sidebar-news-panel" aria-label="重点资讯" aria-live="polite"></aside>
     <div class="stock-table-wrap">
       <table class="stock-table">
         <thead>
@@ -72,12 +73,20 @@
       <button class="main-tab" data-main-view="recent">最近查看</button>
       <button class="main-tab" data-main-view="news">资讯</button>
       <button class="main-tab" data-main-view="sectors">板块龙头</button>
+      <button class="main-tab" data-main-view="capitalFlow">资金动量</button>
       <button class="main-tab" data-main-view="screener">智能选股</button>
       <button class="main-tab" data-main-view="aiResearch">AI研究</button>
+      <button class="main-tab" data-main-view="creatorTasks">采集任务</button>
       <button class="main-tab" data-main-view="aiHistory">AI记录</button>
       <button class="main-tab" data-main-view="trades">交易记录</button>
       <button class="main-tab" data-main-view="stats">统计</button>
       <button class="main-tab" data-main-view="settings">设置</button>
+    </div>
+    <div id="networkHealthStatus" class="network-health-status state-checking" role="status" aria-live="polite">
+      <span class="network-health-dot" aria-hidden="true"></span>
+      <strong id="networkHealthState">检测中</strong>
+      <span id="networkHealthMode">等待本地服务响应</span>
+      <time id="networkHealthCheckedAt">最后检测 --</time>
     </div>
 
     <div id="dashboardView" class="main-view active">
@@ -136,6 +145,7 @@
       <div class="chart-header">
         <h2 id="chartTitle">请选择股票</h2>
         <span class="price-info" id="priceInfo"></span>
+        <span id="chartRealtimeStatus" class="chart-realtime-status" data-state="idle" aria-live="polite">1分钟公开行情 · 等待选择股票</span>
         <div class="indicator-btns" id="indicatorBtns">
           <select class="ind-select" id="indicatorSelect">
             <option value="ma" selected>均线</option>
@@ -147,17 +157,26 @@
             <option value="vwap">VWAP</option>
             <option value="atr">ATR</option>
           </select>
-          <div class="period-toggle" id="periodToggle" style="display:none;">
-            <button class="period-btn active" data-period="day">日线</button>
+          <div class="period-toggle" id="periodToggle">
+            <button class="period-btn active" data-period="minute">分时</button>
+            <button class="period-btn" data-period="day">日线</button>
             <button class="period-btn" data-period="week">周线</button>
             <button class="period-btn" data-period="month">月线</button>
           </div>
           <button class="ma-set-btn" id="maSettingsBtn" aria-label="设置均线周期" title="设置均线周期">⚙️</button>
+          <button class="chart-coach-trigger" id="chartCoachBtn" aria-pressed="false" title="把当前可见K线的确定性证据标到图上">显示图上提示</button>
           <button class="analysis-btn" id="analysisBtn" title="生成个股AI分析报告">🤖 AI分析</button>
         </div>
       </div>
+      <section id="decisionGuideStrip" class="decision-guide-strip" data-state="idle" aria-live="polite" hidden></section>
+      <section id="chartCoachEvidenceStrip" class="chart-coach-evidence-strip" aria-live="polite" hidden></section>
       <div id="realtimeView" class="main-content">
         <div class="realtime-left">
+          <div id="realtimeResolutionToggle" class="realtime-resolution-toggle" role="group" aria-label="分时数据粒度">
+            <button type="button" class="active" data-resolution="1m" aria-pressed="true">1分钟公开行情</button>
+            <button type="button" data-resolution="30s" aria-pressed="false">本地30秒快照</button>
+            <span class="realtime-resolution-note">30秒曲线由公开报价在本机聚合，不是交易所逐笔。</span>
+          </div>
           <div class="sub-chart-container" id="timeChartContainer">
             <div class="loading">加载分时数据...</div>
           </div>
@@ -307,7 +326,7 @@
 
     <div id="recentView" class="main-view" style="display:none;">
       <div class="section-header">
-        <h2>最近查看</h2>
+        <div class="section-title-live"><h2>最近查看</h2><span id="recentLiveStatus" class="live-refresh-status">新浪行情快照 · 等待刷新</span></div>
         <div class="section-actions">
           <select id="recentSortSelect">
             <option value="last_viewed">最近查看</option>
@@ -354,6 +373,19 @@
           <select id="newsSourceFilter">
             <option value="">全部来源</option>
           </select>
+          <select id="newsDiscoveryTimeFilter" class="news-discovery-filter" aria-label="资讯时间范围">
+            <option value="1h">1 小时</option>
+            <option value="today">今日</option>
+            <option value="3d">3 天</option>
+            <option value="7d" selected>7 天</option>
+          </select>
+          <select id="newsDiscoverySort" class="news-discovery-filter" aria-label="资讯排序">
+            <option value="latest">最新优先</option>
+            <option value="relevance">与你相关</option>
+          </select>
+          <label class="news-discovery-image-toggle">
+            <input id="newsDiscoveryImageFilter" type="checkbox"> 仅有图
+          </label>
           <input id="newsKeywordInput" placeholder="代码/板块">
           <button id="refreshNewsBtn">刷新</button>
         </div>
@@ -364,7 +396,7 @@
 
     <div id="sectorsView" class="main-view" style="display:none;">
       <div class="section-header">
-        <h2>板块龙头控制面板</h2>
+        <h2>板块人工观察候选</h2>
         <div class="section-actions">
           <select id="sectorSortSelect">
             <option value="change">按涨跌幅</option>
@@ -379,7 +411,7 @@
             <option value="补涨龙头">补涨龙头</option>
             <option value="观察股">观察股</option>
           </select>
-          <input id="sectorKeywordFilter" placeholder="搜索板块/龙头/备注">
+          <input id="sectorKeywordFilter" placeholder="搜索板块/候选/备注">
           <button id="addSectorBtn">添加板块</button>
           <button id="refreshSectorsBtn">刷新</button>
           <button id="sectorTrendBtn">Trend</button>
@@ -405,6 +437,85 @@
       <div id="sectorDashboard"></div>
     </div>
 
+    <div id="capitalFlowView" class="main-view capital-flow-view" style="display:none;">
+      <div class="capital-flow-shell">
+        <header class="capital-flow-header">
+          <div class="capital-flow-heading">
+            <span class="capital-flow-eyebrow">CAPITAL FLOW MOMENTUM</span>
+            <h2>资金动量</h2>
+            <p>查看累计净额、净额变化量、速度与加速度。三类来源严格分开，不自动换源。</p>
+          </div>
+          <div class="capital-flow-controls" aria-label="资金动量查询条件">
+            <label>
+              <span>范围</span>
+              <select id="capitalFlowScope">
+                <option value="stock" selected>个股</option>
+                <option value="sector">板块</option>
+              </select>
+            </label>
+            <label>
+              <span>代码</span>
+              <input id="capitalFlowCode" value="000001" maxlength="32" autocomplete="off" aria-label="个股或板块代码">
+            </label>
+            <label>
+              <span>来源</span>
+              <select id="capitalFlowSource">
+                <option value="vendor-classified" selected>供应商分类口径</option>
+                <option value="authorized-level2">授权 Level-2 观察</option>
+                <option value="local-estimate">本地启发式估算</option>
+              </select>
+            </label>
+            <button id="capitalFlowRefreshBtn" type="button">刷新观测</button>
+          </div>
+        </header>
+
+        <div id="capitalFlowError" class="capital-flow-error" role="alert" hidden></div>
+
+        <section class="capital-flow-provenance" aria-label="资金流来源与时效">
+          <div class="capital-flow-source-card">
+            <span>当前来源</span>
+            <strong id="capitalFlowSourceTitle">尚未加载</strong>
+            <small id="capitalFlowSourceTier">来源等级：--</small>
+            <p id="capitalFlowSourceDetail">--</p>
+          </div>
+          <div class="capital-flow-freshness-card">
+            <span>数据状态</span>
+            <strong id="capitalFlowFreshness">不可用</strong>
+            <small id="capitalFlowObservedAt">观测时间：--</small>
+            <small id="capitalFlowCheckedAt">检查时间：--</small>
+            <small id="capitalFlowExpiresAt">过期时间：--</small>
+          </div>
+          <p id="capitalFlowTruthWarning" class="capital-flow-truth-warning">来源等级尚未加载；不得解释为交易所真值。</p>
+        </section>
+
+        <section class="capital-flow-metrics" aria-label="最新资金动量状态">
+          <article><span>四态判断</span><strong id="capitalFlowState">状态不足</strong></article>
+          <article><span>累计净额</span><strong id="capitalFlowNetAmount">--</strong></article>
+          <article><span>净流速度</span><strong id="capitalFlowSpeed">-- / 分钟</strong></article>
+          <article><span>净流加速度</span><strong id="capitalFlowAcceleration">-- / 分钟²</strong></article>
+        </section>
+
+        <section class="capital-flow-chart-card">
+          <div class="capital-flow-chart-heading">
+            <div>
+              <h3>盘中资金动量三联图</h3>
+              <p id="capitalFlowHistoryStatus">尚未形成盘中序列；不会补零或生成模拟曲线。</p>
+            </div>
+            <div class="capital-flow-panel-labels" aria-label="图表面板">
+              <span>① 累计净额</span><span>② 净额变化量</span><span>③ 速度 / 加速度</span>
+            </div>
+          </div>
+          <div id="capitalFlowChart" class="capital-flow-chart" role="img" aria-label="累计净额、净额变化量、速度和加速度图"></div>
+        </section>
+
+        <section class="capital-flow-boundaries">
+          <h3>口径与限制</h3>
+          <ul id="capitalFlowLimitations"><li>加载后显示所选来源的明确口径。</li></ul>
+          <p>首期仅手动刷新当前标的；本页面不启动定时采样，也不保存跨重启历史。</p>
+        </section>
+      </div>
+    </div>
+
     <div id="screenerView" class="main-view" style="display:none;">
       <div class="section-header">
         <h2>智能选股 / 候选观察清单</h2>
@@ -422,7 +533,7 @@
           <option value="stable">稳健观察</option>
           <option value="breakout">趋势突破</option>
           <option value="pullback">回调观察</option>
-          <option value="sector-leader">板块龙头</option>
+          <option value="sector-leader">人工观察名单</option>
           <option value="short-strong">短线强势</option>
           <option value="portfolio-risk">持仓风险排查</option>
         </select>
@@ -433,7 +544,7 @@
           <option value="watchlist">自选股</option>
           <option value="portfolio">持仓</option>
           <option value="recent">最近查看</option>
-          <option value="leaders">板块龙头</option>
+          <option value="leaders">人工观察名单</option>
         </select>
         <label>需求描述</label>
         <textarea id="screenerDemand" placeholder="例如：短线强势、回调到均线附近、低估值观察、自选股中筛选..."></textarea>
@@ -471,6 +582,42 @@
           <button id="refreshAiResearchBtn">刷新</button>
         </div>
       </div>
+      <section class="gpt-pick-import-band" aria-labelledby="gptPickImportHeading">
+        <div class="panel-title-row">
+          <div>
+            <h3 id="gptPickImportHeading">ChatGPT 每日选股导入</h3>
+            <p id="gptPickImportHint" class="muted">把 ChatGPT 对话中的最终 10–20 只候选和原分析粘贴到这里。不会读取 ChatGPT 账号历史，也不会自动交易或加入持仓。</p>
+          </div>
+          <span class="research-source-badge">手动导入 · 研究材料</span>
+        </div>
+        <div class="gpt-pick-import-grid">
+          <div class="gpt-pick-import-form">
+            <label>记录标题
+              <input id="gptPickImportTitle" maxlength="200" placeholder="例如：8月14日 ChatGPT 盘前候选">
+            </label>
+            <label>总体分析（可选）
+              <textarea id="gptPickOverallAnalysis" rows="2" maxlength="20000" placeholder="如果总体分析没有包含在粘贴正文中，可单独填写。"></textarea>
+            </label>
+            <label>候选与原分析
+              <textarea id="gptPickImportText" rows="9" maxlength="250000" placeholder="支持文本、Markdown 表格或 JSON。建议每只包含：6位代码、名称、入选理由、风险、原分析。"></textarea>
+            </label>
+            <div class="gpt-pick-import-actions">
+              <button id="importGptPicksBtn" class="primary" type="button">识别并保存到 AI 研究</button>
+              <button id="clearGptPicksBtn" type="button">清空输入</button>
+              <span id="gptPickImportStatus" class="muted" role="status" aria-live="polite"></span>
+            </div>
+          </div>
+          <div class="gpt-pick-import-history">
+            <div class="panel-title-row compact-title-row">
+              <h4>最近导入</h4>
+              <span id="gptPickImportSummary" class="muted">尚无记录</span>
+            </div>
+            <div id="gptPickImportList" class="gpt-pick-import-list">
+              <div class="empty-state compact">尚未导入 ChatGPT 选股材料。</div>
+            </div>
+          </div>
+        </div>
+      </section>
       <section class="quant-research-band">
         <div class="panel-title-row">
           <h3>可复现量化基线</h3>
@@ -581,41 +728,10 @@
           </select>
           <button id="discoverExpertUpdatesBtn" class="small-btn">查找新增公开线索</button>
           <button id="openDouyinSearchBtn" class="small-btn" hidden>打开抖音站内搜索</button>
-          <span id="douyinDesktopControls" class="douyin-desktop-controls" hidden>
-            <button id="openDouyinSessionBtn" class="small-btn">登录 / 检查账号</button>
-            <button id="syncDouyinSessionBtn" class="small-btn">采集当前页（诊断）</button>
-          </span>
+          <button id="openCreatorTasksBtn" class="small-btn primary" hidden>打开采集任务页</button>
           <button id="backtestExpertSignalsBtn" class="small-btn">回测已映射语录</button>
           <button id="deleteExpertChannelBtn" class="small-btn danger">删除研究对象</button>
         </div>
-        <div id="douyinAutoSyncPanel" class="douyin-auto-sync-panel" hidden>
-          <label class="douyin-sync-toggle">
-            <input id="douyinAutoSyncToggle" type="checkbox">
-            <span>自动收集</span>
-          </label>
-          <strong>每 10 分钟检查新视频</strong>
-          <button id="runDouyinSyncNowBtn" class="small-btn primary">立即同步数据</button>
-          <span id="douyinDesktopSessionStatus" class="muted">等待检查登录状态</span>
-          <div id="douyinAutoSyncSummary" class="douyin-auto-sync-summary"></div>
-        </div>
-        <section id="expertCreatorWorkbench" class="creator-research-workbench" hidden>
-          <div id="expertCreatorStats" class="creator-stat-strip"></div>
-          <div class="creator-workbench-toolbar">
-            <input id="expertCreatorSearchInput" type="search" placeholder="搜索视频、逐字稿、股票或主题" autocomplete="off">
-            <select id="expertCreatorStatusFilter" aria-label="转写状态">
-              <option value="all">全部视频</option>
-              <option value="complete">已转写</option>
-              <option value="pending">待转写</option>
-              <option value="error">转写失败</option>
-            </select>
-            <span id="expertCreatorVideoCount" class="muted">0 条</span>
-          </div>
-          <div id="expertCreatorTopics" class="creator-topic-overview"></div>
-          <div class="creator-workbench-grid">
-            <div id="expertCreatorVideoList" class="creator-video-list" aria-label="创作者视频列表"></div>
-            <article id="expertCreatorVideoDetail" class="creator-video-detail"></article>
-          </div>
-        </section>
         <details id="expertSubjectEditor" class="expert-observation-editor">
           <summary>新增人物、书籍或分析方法</summary>
           <div class="expert-observation-grid">
@@ -866,6 +982,139 @@
       </div>
     </div>
 
+    <div id="creatorTasksView" class="main-view" style="display:none;">
+      <div class="creator-task-page">
+        <header class="creator-task-hero">
+          <div>
+            <span class="creator-task-eyebrow">后台采集工作台</span>
+            <h2>采集任务与视频记录</h2>
+            <p>查看登录会话、采集流程、转写队列和每条视频的可核对记录。</p>
+          </div>
+          <div id="creatorTaskNetworkRoute" class="creator-network-route" aria-live="polite">
+            <span class="creator-route-dot"></span>
+            <div><small>抖音流量路径</small><strong>正在检查…</strong></div>
+          </div>
+        </header>
+
+        <section class="creator-task-control-card">
+          <div class="panel-title-row">
+            <h3>任务对象</h3>
+            <span id="creatorTaskStatus" class="muted">选择一个抖音创作者</span>
+          </div>
+          <div class="creator-task-toolbar">
+            <select id="creatorTaskChannelSelect" aria-label="采集任务对象">
+              <option value="">选择抖音创作者</option>
+            </select>
+            <span id="douyinDesktopControls" class="douyin-desktop-controls" hidden>
+              <button id="openDouyinSessionBtn" class="small-btn">登录 / 检查账号</button>
+              <button id="syncDouyinSessionBtn" class="small-btn">采集当前页（诊断）</button>
+            </span>
+            <button id="refreshCreatorTasksBtn" class="small-btn">刷新任务状态</button>
+          </div>
+          <div id="douyinAutoSyncPanel" class="douyin-auto-sync-panel" hidden>
+            <label class="douyin-sync-toggle">
+              <input id="douyinAutoSyncToggle" type="checkbox">
+              <span>自动只读检查</span>
+            </label>
+            <strong>每 10 分钟只读检查更新，不打开详情/下载/转写</strong>
+            <button id="runDouyinSyncNowBtn" class="small-btn primary" title="主动打开新增或实质变化作品的详情，下载媒体并执行本地转写">主动采集更新</button>
+            <button id="runDouyinArchiveScanBtn" class="small-btn" title="扫描全部公开可见作品，并对未完成记录下载媒体、执行本地转写">全量扫描、下载并转写</button>
+            <span id="douyinDesktopSessionStatus" class="muted">等待检查登录状态</span>
+            <div id="douyinAutoSyncSummary" class="douyin-auto-sync-summary"></div>
+          </div>
+        </section>
+
+        <section class="creator-task-progress-card">
+          <div class="panel-title-row">
+            <h3>本轮流程</h3>
+            <span id="creatorTaskProgressTime" class="muted">尚未运行</span>
+          </div>
+          <div id="creatorTaskPipeline" class="creator-task-pipeline" aria-live="polite"></div>
+        </section>
+
+        <section id="creatorTaskRunAudit" class="creator-task-audit-card">
+          <div class="panel-title-row">
+            <h3>后台采集明细</h3>
+            <span id="creatorTaskRunCount" class="muted">尚无运行记录</span>
+          </div>
+          <div id="creatorTaskRunHistory" class="creator-task-run-history" aria-live="polite"></div>
+        </section>
+
+        <section id="expertAnalysisPacketCard" class="creator-analysis-packet-card" hidden>
+          <div class="panel-title-row">
+            <div>
+              <h3>整理给 AI 的视频分析材料</h3>
+              <p>这里不会上传视频，也不会自动调用 AI；只把本地已经保存的逐字稿、页面文字、时间和公开来源整理成一份可复制材料。</p>
+            </div>
+            <span id="expertAnalysisPacketStatus" class="muted">尚未生成</span>
+          </div>
+          <div class="creator-packet-steps" aria-label="AI 分析材料使用步骤">
+            <span><b>1</b> 选择范围和分析目标</span>
+            <span><b>2</b> 检查文字证据质量</span>
+            <span><b>3</b> 复制到 ChatGPT / AI</span>
+          </div>
+          <div class="creator-packet-controls">
+            <label>筛选方式
+              <select id="expertAnalysisPacketMode">
+                <option value="recent">最近几条</option>
+                <option value="date">指定时间段</option>
+                <option value="all">全部已保存视频</option>
+              </select>
+            </label>
+            <label>分析目标
+              <select id="expertAnalysisPacketPurpose">
+                <option value="overview">核心观点与证据</option>
+                <option value="timeline">观点变化与时间线</option>
+                <option value="sectors">行业与股票线索</option>
+                <option value="risks">风险与矛盾核查</option>
+              </select>
+            </label>
+            <label id="expertAnalysisPacketLimitField">最近条数
+              <input id="expertAnalysisPacketLimit" type="number" min="1" max="1000" value="10">
+            </label>
+            <label id="expertAnalysisPacketFromField" hidden>开始日期
+              <input id="expertAnalysisPacketFrom" type="date">
+            </label>
+            <label id="expertAnalysisPacketToField" hidden>结束日期
+              <input id="expertAnalysisPacketTo" type="date">
+            </label>
+            <div class="creator-packet-actions">
+              <button id="generateExpertAnalysisPacketBtn" class="small-btn primary">整理分析材料</button>
+              <button id="copyExpertAnalysisPacketBtn" class="small-btn" disabled>复制给 AI</button>
+            </div>
+          </div>
+          <div id="expertAnalysisPacketEvidenceSummary" class="creator-packet-evidence" hidden aria-live="polite"></div>
+          <p id="expertAnalysisPacketNextStep" class="creator-packet-next-step" hidden></p>
+          <textarea id="expertAnalysisPacketOutput" class="creator-packet-output" readonly hidden aria-label="AI 分析资料包"></textarea>
+        </section>
+
+        <section id="expertCreatorWorkbench" class="creator-research-workbench" hidden>
+          <div id="expertCreatorStats" class="creator-stat-strip"></div>
+          <div class="creator-workbench-toolbar">
+            <input id="expertCreatorSearchInput" type="search" placeholder="搜索视频、逐字稿、股票或主题" autocomplete="off">
+            <select id="expertCreatorStatusFilter" aria-label="转写状态">
+              <option value="all">全部视频</option>
+              <option value="complete">已转写</option>
+              <option value="no_speech">视频已归档 / 无可识别口语</option>
+              <option value="processing">下载 / 识别中</option>
+              <option value="media_missing">等待媒体地址</option>
+              <option value="deferred">本轮顺延</option>
+              <option value="detail_pending">待采详情</option>
+              <option value="unverified">转写条件待核验</option>
+              <option value="manual">手工资料</option>
+              <option value="error">转写失败</option>
+            </select>
+            <span id="expertCreatorVideoCount" class="muted">0 条</span>
+          </div>
+          <div id="expertCreatorTopics" class="creator-topic-overview"></div>
+          <div class="creator-workbench-grid">
+            <div id="expertCreatorVideoList" class="creator-video-list" aria-label="创作者视频列表"></div>
+            <article id="expertCreatorVideoDetail" class="creator-video-detail"></article>
+          </div>
+        </section>
+      </div>
+    </div>
+
     <div id="settingsView" class="main-view" style="display:none;">
       <div class="section-header">
         <h2>设置</h2>
@@ -883,8 +1132,9 @@
           <div id="settingsAiStatus" class="settings-status">--</div>
         </section>
         <section id="desktopLanAccessCard" class="settings-card" style="display:none;">
-          <h3>手机连接（安卓）</h3>
-          <p>仅在同一私有局域网内开启。安卓端首次使用完整配对地址，验证后会保存登录状态。</p>
+          <h3>手机连接（安卓 / 局域网）</h3>
+          <p>同一网络请选择“局域网”；外出访问可在电脑和手机安装 Tailscale 后选择“Tailscale 远程”。不开放公网端口。安卓端首次使用完整配对地址，验证后会保存登录状态。</p>
+          <p><a href="https://tailscale.com/download" target="_blank" rel="noopener">打开 Tailscale 官方下载页</a></p>
           <div id="settingsLanAccessStatus" class="settings-status">--</div>
           <label id="lanPairingUrlField" class="settings-field stack" style="display:none;">配对地址
             <select id="lanPairingUrlSelect"></select>
@@ -895,6 +1145,22 @@
             <button id="copyLanPairingUrlBtn" class="small-btn" style="display:none;">复制配对地址</button>
           </div>
           <div id="settingsLanAccessResult" class="settings-status-detail"></div>
+        </section>
+        <section id="desktopIosAccessCard" class="settings-card" style="display:none;">
+          <h3>苹果手机网页 App</h3>
+          <p>通过 Tailscale 私网 HTTPS 连接 Windows 主机。启用后，把安装地址发送到 iPhone，并在 Safari 中添加到主屏幕。</p>
+          <div id="settingsIosAccessStatus" class="settings-status">--</div>
+          <label id="iosPairingUrlField" class="settings-field stack" style="display:none;">iPhone 安装地址
+            <input id="iosPairingUrlInput" type="text" readonly>
+          </label>
+          <div class="template-actions">
+            <button id="installTailscaleBtn" class="small-btn">安装 Tailscale</button>
+            <button id="loginTailscaleBtn" class="small-btn primary" style="display:none;">登录 Tailscale</button>
+            <button id="enableIosAccessBtn" class="small-btn primary">启用 iPhone HTTPS</button>
+            <button id="disableIosAccessBtn" class="small-btn danger" style="display:none;">关闭 iPhone HTTPS</button>
+            <button id="copyIosPairingUrlBtn" class="small-btn" style="display:none;">复制 iPhone 安装地址</button>
+          </div>
+          <div id="settingsIosAccessResult" class="settings-status-detail"></div>
         </section>
         <section class="settings-card wide">
           <h3>Level-2 接入</h3>
@@ -1016,7 +1282,7 @@
 
     <div id="watchlistView" class="main-view" style="display:none;">
       <div class="section-header">
-        <h2>我的自选股</h2>
+        <div class="section-title-live"><h2>我的自选股</h2><span id="watchlistLiveStatus" class="live-refresh-status">新浪行情快照 · 等待刷新</span></div>
         <div class="section-actions">
           <select id="watchlistGroupFilter">
             <option value="">全部分组</option>
@@ -1056,7 +1322,7 @@
 
     <div id="portfolioView" class="main-view" style="display:none;">
       <div class="section-header">
-        <h2>我的持仓</h2>
+        <div class="section-title-live"><h2>我的持仓</h2><span id="portfolioLiveStatus" class="live-refresh-status">新浪行情快照 · 等待刷新</span></div>
         <div class="section-actions">
           <select id="positionSortSelect">
             <option value="market_value">按市值</option>
@@ -1309,6 +1575,22 @@
 
   <div id="stockContextMenu" class="stock-context-menu" style="display:none;"></div>
 
+  <div id="chartCoachOverlay" class="chart-coach-overlay" style="display:none;">
+    <aside id="chartCoachPanel" class="chart-coach-panel" role="dialog" aria-modal="true" aria-labelledby="chartCoachTitle">
+      <header class="chart-coach-header">
+        <div>
+          <span class="chart-coach-eyebrow">图形教学分析器</span>
+          <h3 id="chartCoachTitle">帮我看懂图形</h3>
+        </div>
+        <button id="chartCoachCloseBtn" class="chart-coach-close" type="button" aria-label="关闭图形解释" title="关闭">×</button>
+      </header>
+      <div id="chartCoachBody" class="chart-coach-body" aria-live="polite">
+        <p class="chart-coach-empty">选择股票并加载K线后，可以解释当前可见截止日期以前的图形。</p>
+      </div>
+      <footer class="chart-coach-disclaimer">教学解释，不是买卖建议</footer>
+    </aside>
+  </div>
+
   <div id="newsDetailOverlay" class="modal-overlay" style="display:none;">
     <div class="modal news-detail-modal">
       <h3 id="newsDetailTitle">资讯详情</h3>
@@ -1325,10 +1607,15 @@
   <script src="js/modules/state.js"></script>
   <script src="js/modules/apiClient.js"></script>
   <script src="js/modules/time.js"></script>
+  <script src="js/modules/networkHealth.js"></script>
   <script src="js/modules/search.js"></script>
+  <script src="js/modules/chartTheme.js"></script>
   <script src="js/modules/stockList.js"></script>
   <script src="js/modules/indicators.js"></script>
   <script src="js/modules/klineChart.js"></script>
+  <script src="js/modules/chartCoach.js"></script>
+  <script src="js/modules/decisionGuide.js"></script>
+  <script src="js/modules/realtimeChartModel.js"></script>
   <script src="js/modules/realtimeChart.js"></script>
   <script src="js/modules/analysis.js"></script>
   <script src="js/modules/portfolioCharts.js"></script>
@@ -1338,15 +1625,19 @@
   <script src="js/modules/stockDetail.js"></script>
   <script src="js/modules/sectorLeaders.js"></script>
   <script src="js/modules/hotMarket.js"></script>
+  <script src="js/modules/screenerCandidateModel.js"></script>
   <script src="js/modules/stockScreener.js"></script>
   <script src="js/modules/aiResearch.js"></script>
   <script src="js/modules/aiAssistant.js"></script>
   <script src="js/modules/expertTracker.js"></script>
   <script src="js/modules/aiHistory.js"></script>
   <script src="js/modules/settings.js"></script>
+  <script src="js/modules/quoteSnapshotClientModel.js"></script>
   <script src="js/modules/watchlist.js"></script>
   <script src="js/modules/trades.js"></script>
   <script src="js/modules/portfolio.js"></script>
+  <script src="js/modules/capitalFlow.js"></script>
+  <script src="js/modules/liveRefresh.js"></script>
   <script src="js/app.js"></script>
 </body>
 

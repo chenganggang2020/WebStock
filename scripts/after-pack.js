@@ -3,6 +3,7 @@ const { rcedit } = require('rcedit');
 
 module.exports = async function applyWindowsResources(context) {
   if (context.electronPlatformName !== 'win32') return;
+  if (process.env.WEBSTOCK_SKIP_EXTRA_RCEDIT === '1') return;
 
   const appInfo = context.packager.appInfo;
   const executable = path.join(context.appOutDir, appInfo.productFilename + '.exe');

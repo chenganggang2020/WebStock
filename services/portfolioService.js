@@ -451,7 +451,10 @@ function calculatePositions(trades, quoteMap = {}) {
         todayReferencePnl: todayPnl,
         todayPnl,
         todayPnlDate: todayResult.date,
-        todayPnlMethod: 'transaction-adjusted'
+        todayPnlMethod: 'transaction-adjusted',
+        quoteDate: String(quote.tradeDate || quote.quoteDate || ''),
+        quoteTime: String(quote.tradeTime || quote.quoteTime || ''),
+        quoteStatus: quote.quoteStatus || (currentPrice === null ? 'unavailable' : 'live')
       };
     });
 }

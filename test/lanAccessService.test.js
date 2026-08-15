@@ -136,6 +136,33 @@ test('LAN pairing middleware accepts the protected pairing cookie', () => {
   }
 });
 
+test('Tailscale Serve requests still require pairing and receive a secure cookie', () => {
+  const previous = process.env.WEBSTOCK_LAN_TOKEN;
+  const token = 'e'.repeat(64);
+  process.env.WEBSTOCK_LAN_TOKEN = token;
+  try {
+    const response = fakeResponse();
+    const request = fakeRequest({
+      socket: { remoteAddress: '127.0.0.1' },
+      path: '/mobile.html',
+      query: { pair: token },
+      get(name) {
+        if (String(name).toLowerCase() === 'tailscale-user-login') return 'owner@example.com';
+        return name === 'cookie' ? '' : undefined;
+      }
+    });
+
+    lan.requireLanPairing(request, response, () => assert.fail('pairing request should redirect'));
+
+    assert.equal(response.statusCode, 302);
+    assert.equal(response.headers.Location, '/mobile.html');
+    assert.match(response.headers['Set-Cookie'], /; Secure$/);
+  } finally {
+    if (previous === undefined) delete process.env.WEBSTOCK_LAN_TOKEN;
+    else process.env.WEBSTOCK_LAN_TOKEN = previous;
+  }
+});
+
 function request(address, port, path, headers = {}) {
   return new Promise((resolve, reject) => {
     const outgoing = http.get({ host: address, port, path, headers }, response => {

@@ -184,10 +184,10 @@ function insertChunks(sourceId, sourceKey, content) {
     INSERT INTO knowledge_chunks (source_id, evidence_id, chunk_index, char_start, char_end, content)
     VALUES (?, ?, ?, ?, ?, ?)
   `);
-  const prefix = String(sourceKey).replace(/-/g, '').slice(0, 10);
+  const stableSourceKey = Buffer.from(String(sourceKey), 'utf8').toString('hex');
   const chunks = chunkContent(content);
   chunks.forEach(chunk => {
-    insert.run(sourceId, 'K' + prefix + '-' + (chunk.index + 1), chunk.index, chunk.charStart, chunk.charEnd, chunk.content);
+    insert.run(sourceId, 'K' + stableSourceKey + '-' + (chunk.index + 1), chunk.index, chunk.charStart, chunk.charEnd, chunk.content);
   });
   return chunks.length;
 }

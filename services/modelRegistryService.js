@@ -18,6 +18,18 @@ function researchModelStatus(runtime, result, requiredDependency) {
   return result && result.validationStatus === 'validated' ? 'available' : 'configured';
 }
 
+function resultVerificationNote(entry) {
+  const verification = entry && entry.verification;
+  if (!verification) return '';
+  if (verification.status === 'hash_verified' && verification.hashesVerified === true) {
+    return ' 结果文件已通过完整内容哈希校验。';
+  }
+  if (verification.status === 'metadata_valid' && verification.hashesVerified === false) {
+    return ' 首屏仅校验结果契约、数据清单自身哈希与结果制品存在性；未读取数据集文件，也未重算内容哈希。';
+  }
+  return ' 结果文件校验状态：' + String(verification.status || '未知') + '。';
+}
+
 function listModels() {
   const aiConfig = getAIConfig();
   const hasKey = isValidApiKey(aiConfig && aiConfig.apiKey);
@@ -66,7 +78,7 @@ function listModels() {
       capabilities: ['验证期定向', '样本外因子 IC', '重复度门禁', '复合因子对照'],
       requirements: ['带哈希的数据清单', '不少于一个完整滚动窗口', '交易成本参数'],
       note: latestFactorResult
-        ? '已有' + (latestFactorResult.validationStatus === 'validated' ? '已验证' : '探索性') + '运行：' + latestFactorResult.runId + '；没有通过门槛的因子不会升级为候选。'
+        ? '已有' + (latestFactorResult.validationStatus === 'validated' ? '已验证' : '探索性') + '运行：' + latestFactorResult.runId + '；没有通过门槛的因子不会升级为候选。' + resultVerificationNote(latestFactorEntry)
         : '尚无通过契约校验的因子实验。'
     },
     {
@@ -137,8 +149,8 @@ function listModels() {
       requirements: ['独立 Python 环境', '有时间戳的数据清单', '无前视切分'],
       note: quantRuntime.reason + (latestQuantResult
         ? ' 已有' + latestQuantStatus + '运行：' + latestQuantResult.runId + (latestQuantResult.validationStatus === 'validated'
-          ? '。'
-          : '；仅证明训练与回测链路可执行，尚未证明策略有效。')
+          ? '。' + resultVerificationNote(latestQuantEntry)
+          : '；仅证明训练与回测链路可执行，尚未证明策略有效。' + resultVerificationNote(latestQuantEntry))
         : quantRuntimeLocated
           ? ' 已找到运行环境，但尚无通过契约校验的运行结果。'
           : ' 尚未检测到运行环境或通过契约校验的运行结果。')
@@ -156,7 +168,7 @@ function listModels() {
       requirements: ['与基线一致的数据和标签', 'PyTorch 运行环境', '样本外对照'],
       note: '验证阶段保留全部特征有效股票，只在计算指标时过滤空标签。' + (latestMasterResult
         ? ' 已有' + (latestMasterResult.validationStatus === 'validated' ? '已验证' : '探索性') + '运行：' + latestMasterResult.runId +
-          (latestMasterResult.validationStatus === 'validated' ? '。' : '；当前结果只证明深度学习链路可执行，尚未证明策略有效。')
+          (latestMasterResult.validationStatus === 'validated' ? '。' : '；当前结果只证明深度学习链路可执行，尚未证明策略有效。') + resultVerificationNote(latestMasterEntry)
         : masterRuntimeLocated
           ? ' 已找到量化运行环境，但尚无通过契约校验的 MASTER 运行结果；首次训练前需完成 PyTorch 检测。'
           : ' 尚未检测到可运行 MASTER 的 PyTorch 环境。')

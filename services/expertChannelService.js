@@ -461,6 +461,41 @@ function listObservations(channelId, options = {}) {
     .all(params).map(rowToObservation);
 }
 
+function analysisBoundary(value, endOfDay) {
+  const raw = cleanText(value, 50);
+  if (!raw) return '';
+  const expanded = /^\d{4}-\d{2}-\d{2}$/.test(raw)
+    ? raw + (endOfDay ? 'T23:59:59.999+08:00' : 'T00:00:00.000+08:00') : raw;
+  const parsed = new Date(expanded);
+  if (Number.isNaN(parsed.getTime())) throw new Error('AI 数据包时间筛选值无效：' + raw);
+  return parsed.toISOString();
+}
+
+function listAnalysisObservations(channelId, options = {}) {
+  getChannel(channelId);
+  const mode = cleanText(options.mode, 20).toLowerCase() || 'recent';
+  if (!['recent', 'date', 'all'].includes(mode)) throw new Error('不支持的 AI 数据包筛选方式');
+  const conditions = ["channel_id = @channelId", "(media_type = 'video' OR source_url LIKE '%/video/%')"];
+  const params = { channelId: Number(channelId) };
+  if (mode === 'date') {
+    const from = analysisBoundary(options.from, false);
+    const to = analysisBoundary(options.to, true);
+    if (from && to && new Date(from).getTime() > new Date(to).getTime()) {
+      throw new Error('时间筛选的开始时间不能晚于结束时间。');
+    }
+    if (from) { conditions.push('datetime(published_at) >= datetime(@from)'); params.from = from; }
+    if (to) { conditions.push('datetime(published_at) <= datetime(@to)'); params.to = to; }
+  }
+  const maximum = 5000;
+  const requestedLimit = Math.max(Math.floor(Number(options.limit) || 10), 1);
+  if (mode === 'recent' && requestedLimit > 1000) throw new Error('最近数据包最多一次生成 1000 条，请改用时间段。');
+  params.limit = mode === 'recent' ? requestedLimit : maximum + 1;
+  const rows = db.prepare(`SELECT * FROM expert_observations WHERE ${conditions.join(' AND ')}
+    ORDER BY COALESCE(NULLIF(published_at, ''), first_seen_at) DESC, id DESC LIMIT @limit`).all(params);
+  if (rows.length > maximum) throw new Error('资料超过 5000 条，请使用时间段分批生成 AI 数据包。');
+  return rows.map(rowToObservation);
+}
+
 function findObservationByIdentity(channelId, input = {}) {
   getChannel(channelId);
   const externalContentId = cleanText(input.externalContentId, 160);
@@ -649,6 +684,7 @@ module.exports = {
   listChannels,
   recordObservation,
   listObservations,
+  listAnalysisObservations,
   findObservationByIdentity,
   listObservationMetrics,
   deleteObservation,

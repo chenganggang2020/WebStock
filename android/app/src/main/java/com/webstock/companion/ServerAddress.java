@@ -27,7 +27,7 @@ final class ServerAddress {
                 throw new IllegalArgumentException("请只输入主机和端口，不要带页面路径");
             }
             if (!isPrivateHost(host)) {
-                throw new IllegalArgumentException("只允许连接局域网或本机地址");
+                throw new IllegalArgumentException("只允许连接局域网、本机或 Tailscale 私有地址");
             }
             int port = uri.getPort();
             if (port < -1 || port == 0 || port > 65535) throw new IllegalArgumentException("端口号无效");

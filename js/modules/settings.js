@@ -54,6 +54,10 @@ function settingsRenderLanAccess(status) {
 
   const enabled = !!status.enabled;
   const urls = Array.isArray(status.pairingUrls) ? status.pairingUrls : [];
+  const pairingOptions = Array.isArray(status.pairingOptions) && status.pairingOptions.length
+    ? status.pairingOptions
+    : urls.map(function(url) { return { url, label: '局域网', kind: 'lan' }; });
+  const hasTailscale = pairingOptions.some(function(option) { return option.kind === 'tailscale'; });
   const target = document.getElementById('settingsLanAccessStatus');
   const enableButton = document.getElementById('enableLanAccessBtn');
   const disableButton = document.getElementById('disableLanAccessBtn');
@@ -69,14 +73,19 @@ function settingsRenderLanAccess(status) {
       '</div>',
       '<div class="settings-status-detail">',
       enabled
-        ? (urls.length ? '请选择当前电脑与手机共同可访问的地址。' : '未检测到可用的私有 IPv4 地址，请确认两台设备处于同一网络。')
+        ? (urls.length
+          ? (hasTailscale
+            ? '已检测到 Tailscale 远程地址；外出使用请选择该项，同一网络也可选局域网。'
+            : '目前只有局域网地址；外出访问需在电脑和手机开启 Tailscale。')
+          : '未检测到可用的私有 IPv4 地址，请检查网络或 Tailscale。')
         : '默认关闭；开启后仍需完整配对地址才能从其他设备访问。',
       '</div>'
     ].join('');
   }
   if (select) {
-    select.innerHTML = urls.map(function(url) {
-      return '<option value="' + settingsEscapeHtml(url) + '">' + settingsEscapeHtml(url) + '</option>';
+    select.innerHTML = pairingOptions.map(function(option) {
+      return '<option value="' + settingsEscapeHtml(option.url) + '">' +
+        settingsEscapeHtml(option.label + ' · ' + option.url.replace(/\?pair=.*/, '')) + '</option>';
     }).join('');
   }
   if (enableButton) enableButton.style.display = enabled ? 'none' : '';
@@ -95,6 +104,114 @@ async function settingsLoadLanAccess() {
   } catch (error) {
     settingsSetLanAccessResult('手机连接状态读取失败：' + error.message, true);
   }
+}
+
+function settingsSetIosAccessResult(message, isError) {
+  const target = document.getElementById('settingsIosAccessResult');
+  if (!target) return;
+  target.classList.toggle('error-text', !!isError);
+  target.textContent = message || '';
+}
+
+function settingsRenderIosAccess(status) {
+  const card = document.getElementById('desktopIosAccessCard');
+  if (!card) return;
+  const supported = !!(window.webstockDesktop && typeof window.webstockDesktop.getIosAccessStatus === 'function');
+  card.style.display = supported ? '' : 'none';
+  if (!supported) return;
+
+  const installed = !!(status && status.installed);
+  const connected = !!(status && status.connected);
+  const enabled = !!(status && status.enabled);
+  const target = document.getElementById('settingsIosAccessStatus');
+  const installButton = document.getElementById('installTailscaleBtn');
+  const loginButton = document.getElementById('loginTailscaleBtn');
+  const enableButton = document.getElementById('enableIosAccessBtn');
+  const disableButton = document.getElementById('disableIosAccessBtn');
+  const copyButton = document.getElementById('copyIosPairingUrlBtn');
+  const field = document.getElementById('iosPairingUrlField');
+  const input = document.getElementById('iosPairingUrlInput');
+
+  if (target) {
+    const badge = enabled ? '已启用' : (connected ? '已连接' : (installed ? '待登录' : '未安装'));
+    target.innerHTML = '<div class="settings-status-row"><span class="status-pill ' +
+      (enabled || connected ? 'good' : 'muted') + '">' + badge + '</span><span>' +
+      (enabled ? '私网 HTTPS 端口 ' + settingsEscapeHtml(status.httpsPort) : 'Tailscale 私网') + '</span></div>' +
+      '<div class="settings-status-detail">' +
+      (enabled ? '地址已就绪，可在 iPhone Safari 中完成首次配对并添加到主屏幕。' :
+        (connected ? '电脑已登录 Tailscale，点击启用即可生成 iPhone 安装地址。' :
+          (installed ? '请先从系统托盘登录 Tailscale，再刷新状态。' : '需要先安装 Tailscale。'))) + '</div>';
+  }
+  if (input) input.value = enabled ? String(status.pairingUrl || '') : '';
+  if (field) field.style.display = enabled && status.pairingUrl ? '' : 'none';
+  if (installButton) installButton.style.display = installed ? 'none' : '';
+  if (loginButton) loginButton.style.display = installed && !connected ? '' : 'none';
+  if (enableButton) enableButton.style.display = connected && !enabled ? '' : 'none';
+  if (disableButton) disableButton.style.display = enabled ? '' : 'none';
+  if (copyButton) copyButton.style.display = enabled && status.pairingUrl ? '' : 'none';
+}
+
+async function settingsLoadIosAccess() {
+  if (!window.webstockDesktop || typeof window.webstockDesktop.getIosAccessStatus !== 'function') {
+    settingsRenderIosAccess(null);
+    return;
+  }
+  try {
+    settingsRenderIosAccess(await window.webstockDesktop.getIosAccessStatus());
+  } catch (error) {
+    settingsSetIosAccessResult('iPhone 连接状态读取失败：' + error.message, true);
+  }
+}
+
+async function settingsSetIosAccess(enabled) {
+  settingsSetIosAccessResult(enabled ? '正在配置私网 HTTPS…' : '正在关闭 iPhone HTTPS…');
+  try {
+    const status = await window.webstockDesktop.setIosAccessEnabled(enabled === true);
+    settingsRenderIosAccess(status);
+    if (status && status.approvalRequired) {
+      settingsSetIosAccessResult('Tailscale 官方授权页已打开。允许 Serve 后，再点击一次“启用 iPhone HTTPS”。');
+      return;
+    }
+    settingsSetIosAccessResult(enabled ? 'iPhone 安装地址已生成。' : 'iPhone HTTPS 已关闭。');
+  } catch (error) {
+    settingsSetIosAccessResult(error.message, true);
+    await settingsLoadIosAccess();
+  }
+}
+
+async function settingsBeginTailscaleLogin() {
+  if (!window.webstockDesktop || typeof window.webstockDesktop.beginTailscaleLogin !== 'function') return;
+  settingsSetIosAccessResult('正在打开 Tailscale 官方登录页…');
+  try {
+    const result = await window.webstockDesktop.beginTailscaleLogin();
+    if (result && result.connected) {
+      settingsSetIosAccessResult('Tailscale 已登录，可以启用 iPhone HTTPS。');
+      await settingsLoadIosAccess();
+      return;
+    }
+    settingsSetIosAccessResult('官方登录页已打开。完成登录后回到这里，页面会自动刷新状态。');
+    let attempts = 0;
+    const poll = setInterval(async function() {
+      attempts += 1;
+      await settingsLoadIosAccess();
+      const status = await window.webstockDesktop.getIosAccessStatus().catch(function() { return null; });
+      if (status && status.connected || attempts >= 30) clearInterval(poll);
+    }, 2000);
+  } catch (error) {
+    settingsSetIosAccessResult(error.message, true);
+  }
+}
+
+async function settingsCopyIosPairingUrl() {
+  const input = document.getElementById('iosPairingUrlInput');
+  if (!input || !input.value) return;
+  try {
+    await navigator.clipboard.writeText(input.value);
+  } catch (_) {
+    input.select();
+    document.execCommand('copy');
+  }
+  settingsSetIosAccessResult('iPhone 安装地址已复制。');
 }
 
 async function settingsSetLanAccess(enabled) {
@@ -385,6 +502,7 @@ function settingsRenderSavedResults() {
 async function settingsLoad() {
   await settingsLoadAIStatus();
   await settingsLoadLanAccess();
+  await settingsLoadIosAccess();
   await settingsLoadLevel2Config();
   settingsRenderSavedResults();
   settingsRenderRiskSettings();
@@ -533,6 +651,23 @@ function settingsBind() {
   const copyLanPairingUrl = document.getElementById('copyLanPairingUrlBtn');
   if (copyLanPairingUrl) copyLanPairingUrl.addEventListener('click', settingsCopyLanPairingUrl);
 
+  const installTailscale = document.getElementById('installTailscaleBtn');
+  if (installTailscale) installTailscale.addEventListener('click', function() {
+    if (window.webstockDesktop) window.webstockDesktop.openTailscaleDownload();
+  });
+
+  const loginTailscale = document.getElementById('loginTailscaleBtn');
+  if (loginTailscale) loginTailscale.addEventListener('click', settingsBeginTailscaleLogin);
+
+  const enableIosAccess = document.getElementById('enableIosAccessBtn');
+  if (enableIosAccess) enableIosAccess.addEventListener('click', function() { settingsSetIosAccess(true); });
+
+  const disableIosAccess = document.getElementById('disableIosAccessBtn');
+  if (disableIosAccess) disableIosAccess.addEventListener('click', function() { settingsSetIosAccess(false); });
+
+  const copyIosPairingUrl = document.getElementById('copyIosPairingUrlBtn');
+  if (copyIosPairingUrl) copyIosPairingUrl.addEventListener('click', settingsCopyIosPairingUrl);
+
   const saveRisk = document.getElementById('saveRiskSettingsBtn');
   if (saveRisk) saveRisk.addEventListener('click', settingsSaveRiskSettings);
 
@@ -611,7 +746,9 @@ window.Settings = {
   importUserDataFromFile: settingsImportUserDataFromFile,
   loadLevel2Config: settingsLoadLevel2Config,
   loadLanAccess: settingsLoadLanAccess,
+  loadIosAccess: settingsLoadIosAccess,
   setLanAccess: settingsSetLanAccess,
+  setIosAccess: settingsSetIosAccess,
   saveLevel2Config: settingsSaveLevel2Config,
   testLevel2CurrentStock: settingsTestLevel2CurrentStock,
   testFreeFlowCurrentStock: settingsTestFreeFlowCurrentStock,

@@ -338,8 +338,11 @@ function normalizeTrades(payload, options = {}) {
   const multiplier = config.volumeUnit === 'lot' ? 100 : 1;
   return normalizeTradeRows(payload).map(function (item, index) {
     const price = toNumber(valueFrom(item, ['price', 'tradePrice', '成交价']));
-    const volume = toNumber(valueFrom(item, ['volume', 'vol', 'qty', 'quantity', 'tradeQty', '成交量']));
-    const amount = roundMoney(toNumber(valueFrom(item, ['amount', 'tradeAmount', '成交额']), price * volume * multiplier));
+    const volume = toNumber(valueFrom(item, ['volume', 'vol', 'qty', 'quantity', 'tradeQty', '成交量']), null);
+    const providedAmount = toNumber(valueFrom(item, ['amount', 'tradeAmount', '成交额']), null);
+    const amount = providedAmount !== null
+      ? roundMoney(providedAmount)
+      : (volume !== null ? roundMoney(price * volume * multiplier) : null);
     return {
       sequence: valueFrom(item, ['sequence', 'seq', 'id'], index + 1),
       time: valueFrom(item, ['time', 'tradeTime', 'datetime', '成交时间'], ''),

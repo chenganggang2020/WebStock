@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#f7f8fa">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="WebStock">
+  <meta name="format-detection" content="telephone=no">
+  <title>WebStock</title>
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/icons/webstock-192.png">
+  <link rel="apple-touch-icon" href="/icons/webstock-192.png">
+  <link rel="stylesheet" href="/css/mobile.css">
+</head>
+<body>
+  <header class="mobile-header">
+    <div class="brand-lockup">
+      <img src="/icons/webstock-192.png" alt="" width="36" height="36">
+      <div><strong>WebStock</strong><span>移动工作台</span></div>
+    </div>
+    <button id="refreshMobileBtn" class="icon-command" type="button" aria-label="刷新数据" title="刷新数据">刷新</button>
+  </header>
+
+  <section id="installBanner" class="install-banner" hidden>
+    <strong>添加到主屏幕</strong>
+    <span>Safari 中点“共享”，选择“添加到主屏幕”并打开“作为网页 App 打开”。</span>
+    <button id="dismissInstallBtn" type="button" aria-label="关闭安装提示">关闭</button>
+  </section>
+
+  <main>
+    <section class="mobile-status-band" aria-live="polite">
+      <span id="mobileConnectionDot" class="connection-dot"></span>
+      <strong id="mobileConnectionText">正在读取数据</strong>
+      <time id="mobileSnapshotTime"></time>
+    </section>
+
+    <div id="mobileSnapshotRoot" class="snapshot-root" aria-live="polite">
+      <div class="mobile-loading">正在加载最近快照…</div>
+    </div>
+
+    <section class="mobile-actions-band">
+      <button id="enablePushBtn" class="primary-command" type="button" hidden>开启重要变化通知</button>
+      <a class="secondary-command" href="/#dashboard">打开完整工作台</a>
+    </section>
+  </main>
+
+  <footer class="mobile-footer">只读移动端 · 数据来源和时间以页面标注为准</footer>
+
+  <script src="/js/modules/quoteSnapshotClientModel.js"></script>
+  <script src="/js/modules/mobileSnapshotView.js"></script>
+  <script src="/js/mobileApp.js"></script>
+</body>
+</html>

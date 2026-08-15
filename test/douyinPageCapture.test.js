@@ -1,5 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const vm = require('node:vm');
 
 const {
   isAllowedDouyinUrl,
@@ -9,7 +10,9 @@ const {
   inferVisibleLoggedIn,
   selectVisibleProfileCandidate,
   normalizeDouyinPageSnapshot,
-  buildDouyinPageSnapshotScript
+  buildDouyinPageSnapshotScript,
+  extractDouyinMediaCandidates,
+  buildDouyinMediaProbeScript
 } = require('../electron/douyinPageCapture');
 
 test('Douyin page capture accepts only HTTPS Douyin pages and canonicalizes public items', () => {
@@ -127,6 +130,27 @@ test('Douyin page snapshots are sanitized, deduplicated and bounded before leavi
   assert.equal(Object.prototype.hasOwnProperty.call(normalized.profile, 'ignoredSecret'), false);
 });
 
+test('profile snapshots preserve up to one thousand distinct public works', () => {
+  const items = Array.from({ length: 1005 }, function(_value, index) {
+    const contentId = (7800000000000000000n + BigInt(index)).toString();
+    return {
+      sourceUrl: `https://www.douyin.com/video/${contentId}`,
+      title: `作品 ${index + 1}`
+    };
+  });
+
+  const normalized = normalizeDouyinPageSnapshot({
+    pageType: 'profile',
+    pageUrl: 'https://www.douyin.com/user/archive-profile',
+    loggedIn: true,
+    profile: { displayName: '模型先生', profileUrl: 'https://www.douyin.com/user/archive-profile', workCount: 1005 },
+    items
+  });
+
+  assert.equal(normalized.items.length, 1000);
+  assert.match(buildDouyinPageSnapshotScript(), /slice\(0, 1000\)/);
+});
+
 test('detail snapshots expose only an ephemeral HTTPS media URL for local transcription', () => {
   const detail = normalizeDouyinPageSnapshot({
     pageType: 'video',
@@ -171,4 +195,201 @@ test('page snapshot script only reads visible DOM data, not browser credentials 
   assert.doesNotMatch(script, /localStorage/i);
   assert.doesNotMatch(script, /sessionStorage/i);
   assert.doesNotMatch(script, /engagement:\s*plays/);
+});
+
+test('Douyin media candidates require the requested content ID and approved HTTPS CDN hosts', () => {
+  const contentId = '7672552250465095409';
+  const candidates = extractDouyinMediaCandidates({
+    aweme_detail: {
+      aweme_id: contentId,
+      video: {
+        ratio: '1080p',
+        bit_rate: [{
+          gear_name: 'adapt_1080_1',
+          play_addr: {
+            data_size: 1200,
+            url_list: [
+              'https://v3-dy-o.zjcdn.com/video/high.mp4?token=one',
+              'https://v3-dy-o.zjcdn.com/video/high.mp4?token=one',
+              'http://v3-dy-o.zjcdn.com/video/insecure.mp4'
+            ]
+          }
+        }, {
+          quality_type: 14,
+          play_addr: {
+            data_size: '900',
+            url_list: ['https://media.douyinvod.com/video/second.mp4']
+          }
+        }],
+        play_addr_h264: {
+          data_size: 800,
+          url_list: [
+            'https://v3-dy-o.zjcdn.com/video/high.mp4?token=one',
+            'https://media.amemv.com/video/h264.mp4'
+          ]
+        },
+        play_addr: {
+          data_size: 700,
+          url_list: ['https://video.snssdk.com/video/default.mp4']
+        },
+        download_addr: {
+          data_size: 600,
+          url_list: [
+            'https://www.douyin.com/video/download.mp4',
+            'https://zjcdn.com.example.com/video/host-confusion.mp4'
+          ]
+        }
+      }
+    }
+  }, contentId);
+
+  assert.deepEqual(candidates, [
+    {
+      url: 'https://v3-dy-o.zjcdn.com/video/high.mp4?token=one',
+      bytes: 1200,
+      source: 'bit_rate',
+      quality: 'adapt_1080_1'
+    },
+    {
+      url: 'https://media.douyinvod.com/video/second.mp4',
+      bytes: 900,
+      source: 'bit_rate',
+      quality: '14'
+    },
+    {
+      url: 'https://media.amemv.com/video/h264.mp4',
+      bytes: 800,
+      source: 'play_addr_h264',
+      quality: '1080p'
+    },
+    {
+      url: 'https://video.snssdk.com/video/default.mp4',
+      bytes: 700,
+      source: 'play_addr',
+      quality: '1080p'
+    },
+    {
+      url: 'https://www.douyin.com/video/download.mp4',
+      bytes: 600,
+      source: 'download_addr',
+      quality: '1080p'
+    }
+  ]);
+  assert.deepEqual(extractDouyinMediaCandidates({
+    aweme_detail: {
+      aweme_id: '7672552250465095410',
+      video: { play_addr: { url_list: ['https://video.snssdk.com/video/wrong.mp4'] } }
+    }
+  }, contentId), []);
+  assert.deepEqual(extractDouyinMediaCandidates({
+    aweme_detail: {
+      aweme_id: contentId,
+      video: {
+        data_size: 456,
+        play_addr: { url_list: ['https://media.bytecdn.cn/video/fallback-size.mp4'] }
+      }
+    }
+  }, contentId), [{
+    url: 'https://media.bytecdn.cn/video/fallback-size.mp4',
+    bytes: 456,
+    source: 'play_addr',
+    quality: 'default'
+  }]);
+});
+
+test('media probe re-fetches the matching performance detail request with page credentials', async () => {
+  const contentId = '7672552250465095409';
+  const detailUrl = 'https://www.douyin.com/aweme/v1/web/aweme/detail/?aweme_id=' + contentId + '&aid=6383';
+  const fetchCalls = [];
+  const script = buildDouyinMediaProbeScript(contentId);
+  const result = await vm.runInNewContext(script, {
+    URL,
+    performance: {
+      getEntriesByType(type) {
+        assert.equal(type, 'resource');
+        return [
+          { name: 'https://www.douyin.com/aweme/v1/web/comment/list/?aweme_id=' + contentId },
+          { name: detailUrl },
+          { name: detailUrl },
+          { name: 'https://www.douyin.com/aweme/v1/web/aweme/detail/?aweme_id=7672552250465095410' },
+          { name: 'https://www.douyin.com.example.com/aweme/v1/web/aweme/detail/?aweme_id=' + contentId }
+        ];
+      }
+    },
+    async fetch(url, options) {
+      fetchCalls.push({ url, options });
+      return {
+        ok: true,
+        async json() {
+          return {
+            aweme_detail: {
+              aweme_id: contentId,
+              video: {
+                play_addr_h264: {
+                  data_size: 321,
+                  url_list: ['https://v3-dy-o.zjcdn.com/video/probed.mp4?token=fresh']
+                }
+              }
+            }
+          };
+        }
+      };
+    }
+  });
+
+  assert.deepEqual(JSON.parse(JSON.stringify(fetchCalls)), [{
+    url: detailUrl,
+    options: { credentials: 'include' }
+  }]);
+  assert.deepEqual(JSON.parse(JSON.stringify(result)), [{
+    url: 'https://v3-dy-o.zjcdn.com/video/probed.mp4?token=fresh',
+    bytes: 321,
+    source: 'play_addr_h264',
+    quality: 'h264'
+  }]);
+  assert.doesNotMatch(script, /cookie|localStorage|sessionStorage/i);
+});
+
+test('media probe waits locally for a delayed detail performance entry before fetching once', async () => {
+  const contentId = '7666704768191241445';
+  const detailUrl = 'https://www.douyin.com/aweme/v1/web/aweme/detail/?aweme_id=' + contentId + '&aid=6383';
+  let polls = 0;
+  const fetchCalls = [];
+  const result = await vm.runInNewContext(buildDouyinMediaProbeScript(contentId), {
+    URL,
+    setTimeout(callback) { callback(); return 1; },
+    performance: {
+      getEntriesByType() {
+        polls += 1;
+        return polls < 3 ? [] : [{ name: detailUrl }];
+      }
+    },
+    async fetch(url, options) {
+      fetchCalls.push({ url, options });
+      return {
+        ok: true,
+        async json() {
+          return {
+            aweme_detail: {
+              aweme_id: contentId,
+              video: {
+                bit_rate: [{
+                  gear_name: 'normal_720_0',
+                  play_addr: {
+                    data_size: 41854598,
+                    url_list: ['https://v5-dy-ov-experiment.zjcdn.com/video/delayed']
+                  }
+                }]
+              }
+            }
+          };
+        }
+      };
+    }
+  });
+
+  assert.equal(polls, 3);
+  assert.equal(fetchCalls.length, 1);
+  assert.equal(result[0].bytes, 41854598);
+  assert.equal(result[0].quality, 'normal_720_0');
 });

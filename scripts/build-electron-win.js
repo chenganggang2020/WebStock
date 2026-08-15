@@ -1,6 +1,11 @@
 const { spawnSync } = require('child_process');
+const fs = require('fs');
 const path = require('path');
-const { prepareOutputDir, keepOnlyRunnableExe } = require('./windowsBuildOutput');
+const {
+  prepareOutputDir,
+  keepOnlyRunnableExe,
+  promoteRunnableExe
+} = require('./windowsBuildOutput');
 
 const root = path.resolve(__dirname, '..');
 const pkg = require(path.join(root, 'package.json'));
@@ -47,10 +52,15 @@ function outputDirFromArgs() {
 }
 
 let buildError = null;
+let stagingDir = null;
 
 try {
   const outputDir = outputDirFromArgs();
-  prepareOutputDir(root, outputDir);
+  const stagedBuild = target === 'nsis' || target === 'portable';
+  stagingDir = stagedBuild
+    ? path.join(path.dirname(outputDir), '.' + path.basename(outputDir) + '-building')
+    : outputDir;
+  prepareOutputDir(root, stagingDir);
   prepareWindowsBuildEnvironment();
 
   const electronRebuild = nodeScript(path.join(root, 'node_modules', '@electron', 'rebuild', 'lib', 'cli.js'));
@@ -63,8 +73,23 @@ try {
   ]));
 
   const electronBuilder = nodeScript(path.join(root, 'node_modules', 'electron-builder', 'cli.js'));
-  run('Build Windows ' + target + ' package', electronBuilder[0], electronBuilder[1].concat(['--win', target], extraArgs));
-  if (target === 'nsis' || target === 'portable') keepOnlyRunnableExe(root, outputDir);
+  const builderArgs = extraArgs
+    .filter(arg => !arg.startsWith('--config.directories.output='))
+    .concat(['--config.directories.output=' + stagingDir]);
+  run('Build Windows ' + target + ' package', electronBuilder[0], electronBuilder[1].concat(['--win', target], builderArgs));
+  if (stagedBuild) {
+    keepOnlyRunnableExe(root, stagingDir);
+    if (target === 'portable') {
+      run('Verify Windows portable package', process.execPath, [
+        path.join(root, 'scripts', 'verify-portable-artifact.js'),
+        stagingDir
+      ]);
+    }
+    const artifact = promoteRunnableExe(root, stagingDir, outputDir);
+    console.log('Promoted completed package: ' + artifact);
+    fs.rmSync(stagingDir, { recursive: true, force: true });
+    stagingDir = null;
+  }
 } catch (error) {
   buildError = error;
 } finally {
