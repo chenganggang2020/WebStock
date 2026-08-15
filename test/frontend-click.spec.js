@@ -602,7 +602,7 @@ test('Douyin creator workbench shows coverage, searchable videos and transcript 
     }
   });
   const channel = (await channelResponse.json()).data;
-  await page.request.post(baseURL + '/api/expert/channels/' + channel.id + '/observations', {
+  const transcribedResponse = await page.request.post(baseURL + '/api/expert/channels/' + channel.id + '/observations', {
     data: {
       externalContentId: '7000000000000000101',
       sourceUrl: 'https://www.douyin.com/video/7000000000000000101',
@@ -621,6 +621,15 @@ test('Douyin creator workbench shows coverage, searchable videos and transcript 
         ] }
       }
     }
+  });
+  const transcribedObservation = (await transcribedResponse.json()).data;
+  require('../services/expertChannelService').recordObservationComments(channel.id, transcribedObservation.id, [{
+    commentId: 'workbench-question', authorName: '读者甲', text: '订单何时能验证？'
+  }, {
+    commentId: 'workbench-reply', parentCommentId: 'workbench-question', authorName: '工作台测试作者',
+    authorProfileUrl: channel.profileUrl, text: '先看后续公告。', isCreatorLabel: true
+  }], {
+    status: 'visible_partial', observedAt: '2026-08-15T08:00:00.000Z', message: '仅采集当前页面可见范围'
   });
   await page.request.post(baseURL + '/api/expert/channels/' + channel.id + '/observations', {
     data: {
@@ -780,6 +789,7 @@ test('Douyin creator workbench shows coverage, searchable videos and transcript 
   await expect(page.locator('#expertAnalysisPacketOutput')).toHaveValue(/本地 ASR 完整逐字稿/);
   await expect(page.locator('#expertAnalysisPacketOutput')).toHaveValue(/页面可见文本（非完整逐字稿）/);
   await expect(page.locator('#expertAnalysisPacketOutput')).toHaveValue(/程序提取标签（不是本人原话）/);
+  await expect(page.locator('#expertAnalysisPacketOutput')).toHaveValue(/创作者本人（主页链接一致）/);
   await expect(page.locator('#expertAnalysisPacketOutput')).not.toHaveValue(/token=/);
   await page.selectOption('#expertAnalysisPacketPurpose', 'timeline');
   await expect(page.locator('#copyExpertAnalysisPacketBtn')).toBeDisabled();
@@ -788,6 +798,8 @@ test('Douyin creator workbench shows coverage, searchable videos and transcript 
   await page.getByRole('button', { name: /已转写视频/ }).click();
   await expect(page.locator('#expertCreatorVideoDetail')).toContainText('先进封装的订单兑现');
   await expect(page.locator('#expertCreatorVideoDetail')).toContainText('00:00–00:04');
+  await expect(page.locator('#expertCreatorVideoDetail')).toContainText('作者本人 · 主页一致');
+  await expect(page.locator('#expertCreatorVideoDetail')).toContainText('回复 读者甲：订单何时能验证？');
   await page.fill('#expertCreatorSearchInput', '待处理');
   await expect(page.locator('#expertCreatorVideoList .creator-video-row')).toHaveCount(1);
   await expect(page.locator('#expertCreatorVideoList')).toContainText('待处理视频');
