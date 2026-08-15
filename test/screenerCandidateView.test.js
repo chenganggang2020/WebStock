@@ -63,8 +63,9 @@ function loadInteractiveView(runRequests, capture) {
   const window = {
     ScreenerCandidateModel: candidateModel,
     State: { allStocks: [], klineSnapshots: {}, watchlist: [], recentStocks: [], positions: [] },
-    apiFetch(path) {
+    apiFetch(path, options) {
       if (path === '/api/screener/run') {
+        capture.runRequest = JSON.parse(options.body);
         const request = deferred();
         runRequests.push(request);
         return request.promise;
@@ -95,7 +96,7 @@ function loadInteractiveView(runRequests, capture) {
     fs.readFileSync(path.join(__dirname, '..', 'js', 'modules', 'stockScreener.js'), 'utf8'),
     context
   );
-  return { view: window.StockScreener, resultsBox: elements.screenerResults };
+  return { view: window.StockScreener, resultsBox: elements.screenerResults, state: window.State };
 }
 
 test('candidate view renders four evidence coverage states and compact research card', () => {
@@ -187,6 +188,30 @@ test('screener keeps the newest run as the rendered and exported result', async 
   const csv = await capture.blob.text();
   assert.match(csv, /Newest result/);
   assert.doesNotMatch(csv, /Stale result/);
+});
+
+test('screener sends at most fifty technical snapshots and keeps the selected stock in that bound', async () => {
+  const requests = [];
+  const capture = {};
+  const loaded = loadInteractiveView(requests, capture);
+  for (let index = 1; index <= 55; index += 1) {
+    const code = String(index).padStart(6, '0');
+    loaded.state.klineSnapshots[code] = Array.from({ length: 5 }, function(_, row) {
+      return { close: 10 + row, volume: 1000 + row };
+    });
+  }
+  loaded.state.currentStock = { code: '999999' };
+  loaded.state.currentRawData = Array.from({ length: 5 }, function(_, row) {
+    return { close: 20 + row, volume: 2000 + row };
+  });
+  const running = loaded.view.run();
+  requests[0].resolve({ candidates: [], coverage: {}, disclaimer: 'research only' });
+  await running;
+
+  assert.equal(capture.runRequest.klineSnapshot.length, 50);
+  assert.equal(capture.runRequest.technicalSnapshotLimit, 50);
+  assert.equal(capture.runRequest.technicalSnapshotSentCount, 50);
+  assert.ok(capture.runRequest.klineSnapshot.some(function(item) { return item.code === '999999'; }));
 });
 
 test('screener CSV neutralizes formula-like text but preserves numeric negatives', async () => {

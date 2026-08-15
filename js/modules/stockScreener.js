@@ -48,6 +48,7 @@ function collectInput() {
     data: Array.isArray(snapshots[code]) ? snapshots[code].slice(-80) : []
   })).filter(item => item.data.length > 0);
   if (window.State.currentStock && Array.isArray(window.State.currentRawData) && !klineSnapshot.some(item => item.code === window.State.currentStock.code)) {
+    if (klineSnapshot.length >= technicalSnapshotLimit) klineSnapshot.pop();
     klineSnapshot.push({
       code: window.State.currentStock.code,
       data: window.State.currentRawData.slice(-80)
