@@ -790,6 +790,43 @@ function expertCreatorMetricLine(item) {
   ].filter(Boolean);
 }
 
+function expertDisplayTitle(item) {
+  const originalTitle = String(item && item.title || '').trim();
+  const generic = !originalTitle || /(?:于\d{8}发布的作品|抖音视频\s*\d+|^未命名视频$)/i.test(originalTitle);
+  if (!generic) return { text: originalTitle, sourceLabel: '来源标题', originalTitle };
+  const sourceText = String(item && (item.transcript || item.summary || item.description || item.content) || '')
+    .replace(/^\s*\[[^\]]{1,30}\]\s*/, '').replace(/\s+/g, ' ').trim();
+  const firstSentence = sourceText.split(/[。！？!?\n]/)[0].replace(/[，,；;：:]$/g, '').trim();
+  const extracted = firstSentence.slice(0, 36);
+  return {
+    text: extracted || originalTitle || '内容待提取',
+    sourceLabel: extracted ? '内容提取标题' : '来源标题待完善',
+    originalTitle
+  };
+}
+
+function expertCreatorVideoCard(item, selected, related) {
+  const status = expertCreatorAsrStatus(item);
+  const title = expertDisplayTitle(item);
+  const tags = (item.sectors || []).concat(item.topics || []).filter(Boolean).slice(0, 3);
+  const metrics = expertCreatorMetricLine(item).slice(0, 2);
+  const metadata = item.mediaMetadata && typeof item.mediaMetadata === 'object' ? item.mediaMetadata : {};
+  const coverUrl = /^https:\/\//i.test(String(metadata.coverUrl || '')) ? String(metadata.coverUrl) : '';
+  const cover = coverUrl
+    ? '<img class="creator-video-cover" src="' + expertEscape(coverUrl) + '" alt="" loading="lazy" referrerpolicy="no-referrer">'
+    : '<span class="creator-video-cover creator-video-cover-empty">视频</span>';
+  return '<button class="creator-video-row' + (selected ? ' selected' : '') + '" data-video-id="' + item.id +
+    '" data-video-source="' + (related ? 'related' : 'douyin') + '">' + cover + '<span class="creator-video-body">' +
+    '<span class="creator-video-row-top"><time>' + expertEscape(expertFormatTime(item.publishedAt || item.firstSeenAt)) +
+      '</time><em class="creator-asr-status ' + status + '">' + expertEscape(expertCreatorAsrStatusLabel(status, false)) + '</em></span>' +
+    '<strong>' + expertEscape(title.text) + '</strong>' +
+    '<span class="creator-title-source">' + expertEscape(title.sourceLabel) + '</span>' +
+    '<span class="creator-video-row-meta">' + expertEscape(metrics.join(' · ') || '暂无互动数据') + '</span>' +
+    (tags.length ? '<span class="creator-video-row-tags">' + tags.map(function(tag) {
+      return '<i>' + expertEscape(tag) + '</i>';
+    }).join('') + '</span>' : '') + '</span></button>';
+}
+
 function expertRenderCreatorDetail(item) {
   const target = document.getElementById('expertCreatorVideoDetail');
   if (!target) return;
@@ -810,15 +847,19 @@ function expertRenderCreatorDetail(item) {
     .filter(function(value, index, values) { return value && values.indexOf(value) === index; }).slice(0, 16);
   const transcript = String(item.transcript || '').trim();
   const fallback = String(item.description || item.content || '').trim();
+  const displayTitle = expertDisplayTitle(item);
   target.innerHTML = '<header class="creator-detail-header">' +
     '<div><span class="creator-asr-status ' + status + '">' + expertEscape(statusLabel) + '</span>' +
       '<span class="creator-evidence-label">' + expertEscape(evidenceLabel) + '</span>' +
       '<time>' + expertEscape(expertFormatTime(item.publishedAt || item.firstSeenAt)) + '</time></div>' +
-    '<h4>' + expertEscape(item.title || '未命名视频') + '</h4>' +
+    '<h4>' + expertEscape(displayTitle.text) + '</h4>' +
+    '<div class="creator-title-source">' + expertEscape(displayTitle.sourceLabel) + '</div>' +
     (metrics.length ? '<div class="creator-detail-metrics">' + metrics.map(function(metric) {
       return '<span>' + expertEscape(metric) + '</span>';
     }).join('') + '</div>' : '') +
   '</header>' +
+  (displayTitle.originalTitle && displayTitle.originalTitle !== displayTitle.text
+    ? '<section class="creator-detail-section"><h5>来源原始标题</h5><p>' + expertEscape(displayTitle.originalTitle) + '</p></section>' : '') +
   (tags.length ? '<div class="creator-detail-tags">' + tags.map(function(tag) {
     return '<span>' + expertEscape(tag) + '</span>';
   }).join('') + '</div>' : '') +
@@ -864,7 +905,7 @@ function expertRenderCreatorWorkbench() {
     return Boolean((item.mediaMetadata && item.mediaMetadata.detailCapturedAt) ||
       (runItem && runItem.detailStatus === 'complete'));
   }).length;
-  const permanentVideoFiles = videos.filter(function(item) {
+  const permanentVideoFiles = directVideos.filter(function(item) {
     const metadata = item.mediaMetadata && typeof item.mediaMetadata === 'object' ? item.mediaMetadata : {};
     const archive = metadata.archive && typeof metadata.archive === 'object' ? metadata.archive : {};
     const asr = metadata.asr && typeof metadata.asr === 'object' ? metadata.asr : {};
@@ -893,10 +934,10 @@ function expertRenderCreatorWorkbench() {
   }).join('');
   stats.style.setProperty('--creator-coverage', coverage + '%');
 
-  const topics = expertCreatorTopicCounts(videos);
+  const topics = expertCreatorTopicCounts(directVideos);
   const maxTopicCount = topics.length ? topics[0].count : 1;
   document.getElementById('expertCreatorTopics').innerHTML = topics.length
-    ? '<button class="creator-topic-button' + (!expertCreatorTopic ? ' active' : '') + '" data-topic="">全部主题<span>' + videos.length + '</span></button>' +
+    ? '<button class="creator-topic-button' + (!expertCreatorTopic ? ' active' : '') + '" data-topic="">全部主题<span>' + directVideos.length + '</span></button>' +
       topics.map(function(topic) {
         return '<button class="creator-topic-button' + (expertCreatorTopic === topic.topic ? ' active' : '') + '" data-topic="' +
           expertEscape(topic.topic) + '"><span class="creator-topic-bar" style="width:' +
@@ -906,25 +947,21 @@ function expertRenderCreatorWorkbench() {
     : '<span class="muted">尚未从逐字稿中提取出板块或主题。</span>';
 
   const filtered = expertCreatorFilteredVideos(videos);
-  document.getElementById('expertCreatorVideoCount').textContent = filtered.length + ' / ' + videos.length + ' 条';
+  const filteredDirect = filtered.filter(function(item) { return directVideos.includes(item); });
+  const filteredRelated = filtered.filter(function(item) { return !directVideos.includes(item); });
+  document.getElementById('expertCreatorVideoCount').textContent = filteredDirect.length + ' 条抖音作品' +
+    (filteredRelated.length ? ' · ' + filteredRelated.length + ' 条补充资料' : '');
   if (!filtered.some(function(item) { return item.id === expertSelectedVideoId; })) {
     expertSelectedVideoId = filtered.length ? filtered[0].id : 0;
   }
-  document.getElementById('expertCreatorVideoList').innerHTML = filtered.length ? filtered.map(function(item) {
-    const status = expertCreatorAsrStatus(item);
-    const statusLabel = expertCreatorAsrStatusLabel(status, false);
-    const tags = (item.sectors || []).concat(item.topics || []).filter(Boolean).slice(0, 3);
-    const metrics = expertCreatorMetricLine(item).slice(0, 2);
-    return '<button class="creator-video-row' + (item.id === expertSelectedVideoId ? ' selected' : '') + '" data-video-id="' + item.id + '">' +
-      '<span class="creator-video-row-top"><time>' + expertEscape(expertFormatTime(item.publishedAt || item.firstSeenAt)) +
-        '</time><em class="creator-asr-status ' + status + '">' + statusLabel + '</em></span>' +
-      '<strong>' + expertEscape(item.title || '未命名视频') + '</strong>' +
-      '<span class="creator-video-row-meta">' + expertEscape(metrics.join(' · ') || '暂无互动数据') + '</span>' +
-      (tags.length ? '<span class="creator-video-row-tags">' + tags.map(function(tag) {
-        return '<i>' + expertEscape(tag) + '</i>';
-      }).join('') + '</span>' : '') +
-    '</button>';
-  }).join('') : '<div class="empty-state compact">没有符合筛选条件的视频。</div>';
+  document.getElementById('expertCreatorVideoList').innerHTML = filtered.length
+    ? filteredDirect.map(function(item) {
+      return expertCreatorVideoCard(item, item.id === expertSelectedVideoId, false);
+    }).join('') + (filteredRelated.length ? '<details class="creator-related-materials" open><summary>补充资料（' +
+      filteredRelated.length + '）· 不进入抖音自动下载队列</summary>' + filteredRelated.map(function(item) {
+        return expertCreatorVideoCard(item, item.id === expertSelectedVideoId, true);
+      }).join('') + '</details>' : '')
+    : '<div class="empty-state compact">没有符合筛选条件的视频。</div>';
   expertRenderCreatorDetail(filtered.find(function(item) { return item.id === expertSelectedVideoId; }) || null);
   return true;
 }
