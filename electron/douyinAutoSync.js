@@ -43,6 +43,22 @@ function observationNeedsArchiveBackfill(observation) {
   return asr.status === 'complete' && Boolean(String(observation && observation.transcript || '').trim()) && !localAssetPath;
 }
 
+function isDouyinDetailCandidate(observation) {
+  const contentId = String(observation && (observation.externalContentId || observation.contentId) || '').trim();
+  const sourceUrl = String(observation && observation.sourceUrl || '').trim();
+  if (!/^\d{12,24}$/.test(contentId) || !sourceUrl) return false;
+  try {
+    const parsed = new URL(sourceUrl);
+    if (parsed.protocol !== 'https:' || (parsed.hostname !== 'douyin.com' && !parsed.hostname.endsWith('.douyin.com'))) {
+      return false;
+    }
+    const match = parsed.pathname.match(/\/(?:m\/)?(?:video|note)\/(\d{12,24})(?:\/|$)/i);
+    return Boolean(match && match[1] === contentId);
+  } catch (error) {
+    return false;
+  }
+}
+
 function planArchiveMediaUrls(mediaCandidates, historicalMediaBytes, options = {}) {
   const expectedBytes = Math.max(Math.floor(Number(historicalMediaBytes) || 0), 0);
   const deepRecovery = options.deepRecovery === true;
@@ -347,16 +363,17 @@ function createDouyinAutoSync(options = {}) {
         existing.forEach(function(observation) {
           if (!visibleByContentId.has(String(observation.externalContentId || ''))) planningObservations.push(observation);
         });
+        const directPlanningObservations = planningObservations.filter(isDouyinDetailCandidate);
         const planningState = typeof syncState.getPlanningState === 'function'
           ? syncState.getPlanningState(id) : {};
         const archivePlanningObservations = runOptions.mode === 'archive'
-          ? planningObservations.map(function(observation) {
+          ? directPlanningObservations.map(function(observation) {
             if (observation.mediaType || !/\/video\/\d{12,24}(?:\/|$)/i.test(String(observation.sourceUrl || ''))) {
               return observation;
             }
             return Object.assign({}, observation, { mediaType: 'video' });
           })
-          : planningObservations;
+          : directPlanningObservations;
         const archiveQueueBefore = runOptions.mode === 'archive'
           ? summarizeArchiveQueue(archivePlanningObservations) : null;
         const planned = runOptions.mode === 'archive'
@@ -789,6 +806,7 @@ module.exports = {
   createDouyinAutoSync,
   observationNeedsDetail,
   observationNeedsTranscription,
+  isDouyinDetailCandidate,
   ensureDouyinSyncJobs,
   summarizeObservationCoverage,
   planArchiveMediaUrls

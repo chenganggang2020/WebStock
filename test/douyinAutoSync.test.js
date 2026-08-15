@@ -4,10 +4,30 @@ const assert = require('node:assert/strict');
 const {
   createDouyinAutoSync,
   ensureDouyinSyncJobs,
+  isDouyinDetailCandidate,
   observationNeedsTranscription,
   summarizeObservationCoverage,
   planArchiveMediaUrls
 } = require('../electron/douyinAutoSync');
+
+test('detail queue accepts only direct Douyin works with matching numeric ids', () => {
+  assert.equal(isDouyinDetailCandidate({
+    externalContentId: '7674168772814676657',
+    sourceUrl: 'https://www.douyin.com/video/7674168772814676657'
+  }), true);
+  assert.equal(isDouyinDetailCandidate({
+    externalContentId: '7641362696420887025',
+    sourceUrl: 'https://jingxuan.douyin.com/m/video/7641362696420887025'
+  }), true);
+  assert.equal(isDouyinDetailCandidate({
+    externalContentId: 'douyin:22f8d0d09280a1025063c7cd13c9497b',
+    sourceUrl: 'https://xueqiu.com/9437762706/393709860/411211227'
+  }), false);
+  assert.equal(isDouyinDetailCandidate({
+    externalContentId: '7674168772814676657',
+    sourceUrl: 'https://www.douyin.com/video/7674045651054929894'
+  }), false);
+});
 
 test('completed ASR without a persisted transcript is still queued for transcription', () => {
   assert.equal(observationNeedsTranscription({
