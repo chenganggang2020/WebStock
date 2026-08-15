@@ -480,7 +480,7 @@ async function calcSinaBoardMonthStats(board) {
 
 function buildFallbackBoards() {
   const sectors = sectorService.listSectors();
-  return sectors.slice(0, 10).map(function(sector, index) {
+  return sectors.slice(0, 10).map(function(sector) {
     const stocks = sectorService.listLeaders(sector.id).slice(0, 8).map(function(leader) {
       return themeService.decorateStock({
         code: leader.code,
@@ -495,13 +495,13 @@ function buildFallbackBoards() {
     const board = {
       code: 'LOCAL' + sector.id,
       name: sector.name,
-      kind: 'local',
+      kind: 'local-watch',
       dailyChangePct: null,
       monthChangePct: null,
       amount: null,
       mainNetInflow: null,
-      heatScore: 10 - index,
-      sourceNote: '本地板块配置兜底',
+      heatScore: null,
+      sourceNote: '本地观察板块，不代表当前市场热点',
       stocks
     };
     return withRankReason(board, {
@@ -532,6 +532,9 @@ function decorateOverview(overview) {
     });
   });
   overview.boards = boards;
+  overview.localWatchBoards = (overview.localWatchBoards || []).map(function(board) {
+    return Object.assign({}, board, { stocks: (board.stocks || []).map(themeService.decorateStock) });
+  });
   overview.hotStocks = (overview.hotStocks || []).map(themeService.decorateStock);
   return overview;
 }
@@ -716,6 +719,8 @@ async function getOverview(options = {}) {
   const errors = [];
   let dayBoards = [];
   let hotStocks = [];
+  let localWatchBoards = [];
+  let marketStatus = 'available';
 
   try {
     const industry = await fetchBoardRank('industry', 10);
@@ -734,8 +739,9 @@ async function getOverview(options = {}) {
       sources.push('Sina industry rank');
     } catch (sinaError) {
       errors.push('Sina industry rank: ' + sinaError.message);
-      dayBoards = buildFallbackBoards();
-      sources.push('Local sector fallback');
+      localWatchBoards = buildFallbackBoards();
+      marketStatus = 'unavailable';
+      sources.push('Local sector watchlist');
     }
   }
 
@@ -788,6 +794,8 @@ async function getOverview(options = {}) {
     degraded: Boolean(errors.length || (newsResult.meta && newsResult.meta.degraded)),
     errors,
     sources,
+    marketStatus,
+    localWatchBoards,
     boards: {
       day: dayBoards,
       month: sortMonthBoards(dayBoards)

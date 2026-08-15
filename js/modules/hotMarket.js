@@ -93,6 +93,15 @@ function renderHotStatus(target, text, isError) {
   box.innerHTML = '<div class="empty-state compact ' + (isError ? 'error-state' : '') + '">' + hotEscape(text) + '</div>';
 }
 
+function hotUnavailableMessage(overview) {
+  const names = (overview && overview.localWatchBoards || []).map(function(board) {
+    return board && board.name;
+  }).filter(Boolean);
+  return '市场热点数据暂不可用。' + (names.length
+    ? '本地观察板块：' + names.join('、') + '；这些仅是关注清单，不代表当前市场热点。'
+    : '当前没有可验证的外部板块行情，请稍后刷新。');
+}
+
 async function hotLoad(options) {
   options = options || {};
   if (!options.silent) {
@@ -217,7 +226,10 @@ function renderHotBoard() {
   if (!box) return;
   const boards = hotBoards();
   if (!boards.length) {
-    box.innerHTML = '<div class="empty-state compact">暂无热点板块数据。</div>';
+    box.innerHTML = '<div class="hot-board-head"><div><h3>市场热点</h3><p>仅展示可验证的外部市场数据。</p></div>' +
+      '<div class="hot-board-actions"><button class="small-btn" data-hot-action="refresh">刷新数据</button></div></div>' +
+      '<div class="empty-state compact error-state">' + hotEscape(hotUnavailableMessage(hotMarketOverview)) + '</div>';
+    bindHotContainer(box);
     return;
   }
   const selected = boards[Math.min(selectedHotBoardIndex, boards.length - 1)] || boards[0];
