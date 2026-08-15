@@ -9,7 +9,7 @@ function loadHelpers() {
   const context = vm.createContext({
     window: {}, console, URL, setInterval() { return 1; }, clearInterval() {}
   });
-  vm.runInContext(source + '\nthis.helpers = { expertDisplayTitle, expertCreatorVideoCard };', context, {
+  vm.runInContext(source + '\nthis.helpers = { expertDisplayTitle, expertCreatorVideoCard, expertCreatorCommentsHtml, expertCommentCache };', context, {
     filename: 'expertTracker.js'
   });
   return context.helpers;
@@ -42,4 +42,23 @@ test('creator video cards render saved covers and identify the title source', ()
   assert.match(html, /cover\.jpeg/);
   assert.match(html, /来源标题/);
   assert.match(html, /data-video-source="douyin"/);
+});
+
+test('creator detail highlights verified replies without claiming complete comment coverage', () => {
+  const { expertCreatorCommentsHtml, expertCommentCache } = loadHelpers();
+  expertCommentCache.set(8, {
+    status: 'complete',
+    data: {
+      coverage: { status: 'visible_partial', message: '仅采集当前页面可见范围' },
+      comments: [{ commentId: 'q1', authorName: '读者', text: '怎么看？' }, {
+        commentId: 'r1', parentCommentId: 'q1', authorName: '模型先生', text: '先看分化。',
+        creatorStatus: 'verified'
+      }]
+    }
+  });
+  const html = expertCreatorCommentsHtml({ id: 8 });
+  assert.match(html, /仅采集时页面可见范围/);
+  assert.match(html, /作者本人 · 主页一致/);
+  assert.match(html, /回复 读者：怎么看？/);
+  assert.match(html, /先看分化/);
 });

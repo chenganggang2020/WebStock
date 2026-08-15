@@ -266,6 +266,38 @@ function normalizeEngagement(value) {
   return result;
 }
 
+function normalizeCommentProfileUrl(value) {
+  try {
+    const parsed = new URL(String(value || ''));
+    const match = parsed.pathname.match(/^\/user\/([^/]+)\/?$/i);
+    if (parsed.protocol !== 'https:' || !(parsed.hostname === 'douyin.com' || parsed.hostname.endsWith('.douyin.com')) || !match) {
+      return '';
+    }
+    return 'https://www.douyin.com/user/' + match[1];
+  } catch (error) {
+    return '';
+  }
+}
+
+function normalizeVisibleComments(value) {
+  return (Array.isArray(value) ? value : []).slice(0, 200).map(function(comment) {
+    const source = comment && typeof comment === 'object' ? comment : {};
+    const likes = Number(source.likes);
+    return {
+      commentId: cleanText(source.commentId, 200),
+      parentCommentId: cleanText(source.parentCommentId, 200),
+      replyToCommentId: cleanText(source.replyToCommentId, 200),
+      authorName: cleanText(source.authorName, 160),
+      authorPlatformId: cleanText(source.authorPlatformId, 200),
+      authorProfileUrl: normalizeCommentProfileUrl(source.authorProfileUrl),
+      text: cleanText(source.text, 10000),
+      publishedAt: cleanText(source.publishedAt, 80),
+      likes: Number.isFinite(likes) && likes >= 0 ? Math.round(likes) : null,
+      isCreatorLabel: source.isCreatorLabel === true
+    };
+  }).filter(function(comment) { return comment.commentId && comment.text; });
+}
+
 function normalizeDouyinPageSnapshot(raw = {}) {
   const pageTypes = new Set(['profile', 'video', 'note', 'search', 'other']);
   const pageUrl = normalizeVisibleUrl(raw.pageUrl);
@@ -279,6 +311,12 @@ function normalizeDouyinPageSnapshot(raw = {}) {
     douyinId: cleanText(profileInput.douyinId, 160),
     workCount: Math.min(Math.max(Math.trunc(Number(profileInput.workCount) || 0), 0), 100000000)
   };
+
+  let capturedAt = '';
+  try {
+    if (raw.capturedAt) capturedAt = new Date(raw.capturedAt).toISOString();
+  } catch (error) {}
+  if (!capturedAt) capturedAt = new Date().toISOString();
 
   const items = [];
   const seen = new Set();
@@ -303,18 +341,21 @@ function normalizeDouyinPageSnapshot(raw = {}) {
       coverUrl: normalizeHttpsUrl(source.coverUrl),
       durationSeconds: Math.min(Math.max(Number(source.durationSeconds) || 0, 0), 86400)
     };
+    normalizedItem.comments = normalizeVisibleComments(source.comments);
+    const coverage = source.commentCoverage && typeof source.commentCoverage === 'object' ? source.commentCoverage : {};
+    normalizedItem.commentCoverage = {
+      status: cleanText(coverage.status, 40) || (normalizedItem.comments.length ? 'visible_partial' : 'not_loaded'),
+      message: cleanText(coverage.message, 300) || (normalizedItem.comments.length
+        ? '仅采集当前页面可见范围，未证明评论分页完整。' : '当前详情快照没有读取到可见评论，不能据此断言没有评论。'),
+      observedAt: capturedAt,
+      visibleCount: normalizedItem.comments.length
+    };
     if ((raw.pageType === 'video' || raw.pageType === 'note') && source.contentId !== '') {
       normalizedItem.mediaUrl = normalizeHttpsUrl(source.mediaUrl);
     }
     items.push(normalizedItem);
     if (items.length >= MAX_ITEMS) break;
   }
-
-  let capturedAt = '';
-  try {
-    if (raw.capturedAt) capturedAt = new Date(raw.capturedAt).toISOString();
-  } catch (error) {}
-  if (!capturedAt) capturedAt = new Date().toISOString();
 
   return {
     pageType: pageTypes.has(String(raw.pageType)) ? String(raw.pageType) : 'other',
@@ -352,6 +393,15 @@ function douyinVisiblePageSnapshot(parseWorkCount, parseMetricCount, inferLogged
     for (const selector of selectors) {
       const element = document.querySelector(selector);
       const value = element && compact(element.getAttribute(attribute), limit);
+      if (value) return value;
+    }
+    return '';
+  }
+
+  function firstWithin(root, selectors, limit) {
+    for (const selector of selectors) {
+      const element = root && root.querySelector(selector);
+      const value = element && compact(element.textContent || element.getAttribute('content'), limit);
       if (value) return value;
     }
     return '';
@@ -469,6 +519,28 @@ function douyinVisiblePageSnapshot(parseWorkCount, parseMetricCount, inferLogged
       if (engagement[key] == null) delete engagement[key];
     });
     const durationRaw = firstAttribute(['meta[property="video:duration"]'], 'content', 30);
+    const commentNodes = Array.from(document.querySelectorAll(
+      '[data-e2e*="comment-item"], [data-comment-id], [class*="comment-item"]'
+    )).filter(visible).slice(0, 200);
+    const comments = commentNodes.map(function(node, index) {
+      const authorLink = node.querySelector('a[href*="/user/"]');
+      const authorName = firstWithin(node, ['[data-e2e*="comment-user"]', '[class*="author"]', 'a[href*="/user/"]'], 160);
+      const text = firstWithin(node, ['[data-e2e*="comment-content"]', '[class*="comment-content"]', '[class*="content"]'], 10000);
+      const commentId = compact(node.getAttribute('data-comment-id') || node.getAttribute('data-id'), 200) ||
+        compact('visible:' + currentItem.contentId + ':' + index + ':' + authorName + ':' + text.slice(0, 80), 200);
+      return {
+        commentId,
+        parentCommentId: compact(node.getAttribute('data-parent-comment-id'), 200),
+        replyToCommentId: compact(node.getAttribute('data-reply-to-comment-id'), 200),
+        authorName,
+        authorProfileUrl: authorLink ? absoluteUrl(authorLink.getAttribute('href')) : '',
+        authorPlatformId: compact(node.getAttribute('data-user-id') || node.getAttribute('data-sec-uid'), 200),
+        text,
+        publishedAt: firstWithin(node, ['time', '[class*="time"]'], 80),
+        likes: parseMetricCount(firstWithin(node, ['[data-e2e*="like"]', '[class*="like"]'], 80)),
+        isCreatorLabel: /(?:^|\s)(?:作者|创作者)(?:\s|$)/.test(compact(node.textContent, 1000))
+      };
+    }).filter(function(comment) { return comment.text; });
     itemsById.set(currentItem.contentId, Object.assign(currentItem, {
       title,
       author: displayName,
@@ -480,7 +552,14 @@ function douyinVisiblePageSnapshot(parseWorkCount, parseMetricCount, inferLogged
       engagement,
       coverUrl: firstAttribute(['meta[property="og:image"]'], 'content', 2000),
       durationSeconds: Number(durationRaw) || 0,
-      mediaUrl: compact(video && (video.currentSrc || video.src), 4000)
+      mediaUrl: compact(video && (video.currentSrc || video.src), 4000),
+      comments,
+      commentCoverage: {
+        status: comments.length ? 'visible_partial' : 'not_loaded',
+        message: comments.length
+          ? '仅采集当前页面可见范围，未自动展开全部分页。'
+          : '当前详情快照没有读取到可见评论，不能据此断言没有评论。'
+      }
     }));
   }
 
@@ -516,5 +595,6 @@ module.exports = {
   inferVisibleLoggedIn,
   selectVisibleProfileCandidate,
   normalizeDouyinPageSnapshot,
+  normalizeVisibleComments,
   buildDouyinPageSnapshotScript
 };

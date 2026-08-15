@@ -527,6 +527,128 @@ function listObservationMetrics(channelId, observationId, options = {}) {
     ORDER BY datetime(observed_at) DESC, id DESC LIMIT ?`).all(observation.id, limit);
 }
 
+function rowToComment(row) {
+  return {
+    id: Number(row.id),
+    observationId: Number(row.observation_id),
+    commentId: row.comment_id,
+    parentCommentId: row.parent_comment_id || '',
+    replyToCommentId: row.reply_to_comment_id || '',
+    authorName: row.author_name || '',
+    authorPlatformId: row.author_platform_id || '',
+    authorProfileUrl: row.author_profile_url || '',
+    text: row.comment_text,
+    publishedAt: row.published_at || '',
+    observedAt: row.observed_at,
+    likes: row.likes == null ? null : Number(row.likes),
+    visibilityStatus: row.visibility_status || 'observed',
+    creatorStatus: row.creator_status || 'none',
+    verificationMethod: row.verification_method || ''
+  };
+}
+
+function commentProfileUrl(value) {
+  try {
+    return normalizeUrl(value).replace(/\/$/, '');
+  } catch (error) {
+    return '';
+  }
+}
+
+function creatorVerification(channel, comment) {
+  const authorProfileUrl = commentProfileUrl(comment.authorProfileUrl);
+  const channelProfileUrl = commentProfileUrl(channel.profileUrl);
+  if (authorProfileUrl && channelProfileUrl && authorProfileUrl.toLowerCase() === channelProfileUrl.toLowerCase()) {
+    return { creatorStatus: 'verified', verificationMethod: 'profile_url', authorProfileUrl };
+  }
+  if (comment.isCreatorLabel === true) {
+    return { creatorStatus: 'platform_marked', verificationMethod: 'platform_label', authorProfileUrl };
+  }
+  if (cleanText(comment.authorName, 160) && cleanText(comment.authorName, 160) === channel.displayName) {
+    return { creatorStatus: 'suspected', verificationMethod: 'display_name', authorProfileUrl };
+  }
+  return { creatorStatus: 'none', verificationMethod: '', authorProfileUrl };
+}
+
+function listObservationComments(channelId, observationId, options = {}) {
+  getChannel(channelId);
+  const observation = db.prepare('SELECT id FROM expert_observations WHERE id = ? AND channel_id = ?')
+    .get(Number(observationId), Number(channelId));
+  if (!observation) throw new Error('观察记录不存在');
+  const limit = Math.min(Math.max(Number(options.limit) || 200, 1), 1000);
+  const comments = db.prepare(`SELECT * FROM expert_comments WHERE observation_id = ?
+    ORDER BY id ASC LIMIT ?`).all(observation.id, limit).map(rowToComment);
+  const capture = db.prepare(`SELECT status, message, observed_at AS observedAt,
+    visible_count AS visibleCount, complete FROM expert_comment_captures
+    WHERE observation_id = ? ORDER BY datetime(observed_at) DESC, id DESC LIMIT 1`).get(observation.id);
+  return {
+    comments,
+    coverage: capture ? Object.assign({}, capture, { complete: Boolean(capture.complete) }) : {
+      status: 'not_loaded',
+      message: '尚未读取到评论区可见范围，不能据此断言没有评论。',
+      observedAt: '',
+      visibleCount: 0,
+      complete: false
+    }
+  };
+}
+
+function recordObservationComments(channelId, observationId, inputComments, inputCoverage = {}) {
+  const channel = getChannel(channelId);
+  const observation = db.prepare('SELECT id FROM expert_observations WHERE id = ? AND channel_id = ?')
+    .get(Number(observationId), channel.id);
+  if (!observation) throw new Error('观察记录不存在');
+  const observedAt = safeIso(inputCoverage.observedAt, new Date().toISOString());
+  const comments = (Array.isArray(inputComments) ? inputComments : []).slice(0, 1000);
+  const upsert = db.prepare(`INSERT INTO expert_comments (
+    observation_id, comment_id, parent_comment_id, reply_to_comment_id,
+    author_name, author_platform_id, author_profile_url, comment_text,
+    published_at, observed_at, likes, visibility_status, creator_status, verification_method
+  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'observed', ?, ?)
+  ON CONFLICT(observation_id, comment_id) DO UPDATE SET
+    parent_comment_id = excluded.parent_comment_id,
+    reply_to_comment_id = excluded.reply_to_comment_id,
+    author_name = excluded.author_name,
+    author_platform_id = excluded.author_platform_id,
+    author_profile_url = excluded.author_profile_url,
+    comment_text = excluded.comment_text,
+    published_at = excluded.published_at,
+    observed_at = excluded.observed_at,
+    likes = excluded.likes,
+    visibility_status = excluded.visibility_status,
+    creator_status = excluded.creator_status,
+    verification_method = excluded.verification_method,
+    updated_at = CURRENT_TIMESTAMP`);
+  const save = db.transaction(function() {
+    comments.forEach(function(comment) {
+      const commentId = cleanText(comment && comment.commentId, 200);
+      const text = cleanText(comment && comment.text, 10000);
+      if (!commentId || !text) return;
+      const verification = creatorVerification(channel, comment || {});
+      let publishedAt = '';
+      try { publishedAt = safeIso(comment.publishedAt, ''); } catch (error) {
+        publishedAt = cleanText(comment.publishedAt, 80);
+      }
+      const likes = metricValue(comment.likes);
+      upsert.run(
+        observation.id, commentId, cleanText(comment.parentCommentId, 200),
+        cleanText(comment.replyToCommentId, 200), cleanText(comment.authorName, 160),
+        cleanText(comment.authorPlatformId, 200), verification.authorProfileUrl, text,
+        publishedAt, observedAt, likes, verification.creatorStatus, verification.verificationMethod
+      );
+    });
+    const status = cleanText(inputCoverage.status, 40) || (comments.length ? 'visible_partial' : 'not_loaded');
+    const message = cleanText(inputCoverage.message, 500) || (comments.length
+      ? '仅采集当前页面可见范围，未证明评论分页完整。'
+      : '当前详情快照没有读取到可见评论，不能据此断言没有评论。');
+    db.prepare(`INSERT INTO expert_comment_captures
+      (observation_id, status, message, observed_at, visible_count, complete)
+      VALUES (?, ?, ?, ?, ?, 0)`).run(observation.id, status, message, observedAt, comments.length);
+  });
+  save();
+  return listObservationComments(channel.id, observation.id, { limit: 1000 });
+}
+
 function deleteObservation(channelId, observationId) {
   const action = function() {
     getChannel(channelId);
@@ -687,6 +809,8 @@ module.exports = {
   listAnalysisObservations,
   findObservationByIdentity,
   listObservationMetrics,
+  recordObservationComments,
+  listObservationComments,
   deleteObservation,
   deleteChannel,
   buildIntentContext,

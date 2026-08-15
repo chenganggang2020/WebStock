@@ -310,6 +310,50 @@ test('Douyin desktop capture upgrades verified profile items and remains idempot
   assert.equal(metrics.json.data[1].likes, 12000);
 });
 
+test('Douyin detail capture exposes bounded public comments and verified creator replies', async t => {
+  const server = app.listen(0);
+  t.after(() => server.close());
+  const profileUrl = 'https://www.douyin.com/user/comment-api-creator';
+  const created = await requestJson(server, '/api/expert/channels', 'POST', {
+    channelKey: 'douyin-comment-capture-api', displayName: '模型先生', platform: 'douyin', profileUrl
+  });
+  const channelId = created.json.data.id;
+  const capture = await requestJson(server, '/api/expert/channels/' + channelId + '/douyin-capture', 'POST', {
+    pageType: 'video',
+    pageUrl: 'https://www.douyin.com/video/7999999999999999998',
+    capturedAt: '2026-08-15T09:00:00.000Z',
+    profile: { displayName: '模型先生', profileUrl },
+    items: [{
+      sourceUrl: 'https://www.douyin.com/video/7999999999999999998',
+      title: '评论 API 测试', author: '模型先生',
+      comments: [{ commentId: 'question-1', authorName: '读者甲', text: '怎么看分化？' }, {
+        commentId: 'reply-1', parentCommentId: 'question-1', authorName: '模型先生',
+        authorProfileUrl: profileUrl, text: '先看产业增量。', isCreatorLabel: true
+      }],
+      commentCoverage: { status: 'visible_partial', message: '仅当前页面可见范围' }
+    }]
+  });
+  assert.equal(capture.statusCode, 200);
+  const observation = capture.json.data.items[0];
+  const comments = await requestJson(server, '/api/expert/channels/' + channelId +
+    '/observations/' + observation.id + '/comments');
+  assert.equal(comments.statusCode, 200);
+  assert.equal(comments.json.data.coverage.complete, false);
+  assert.equal(comments.json.data.comments.length, 2);
+  assert.equal(comments.json.data.comments[1].creatorStatus, 'verified');
+
+  const packet = await requestJson(server, '/api/expert/channels/' + channelId + '/analysis-packet', 'POST', {
+    mode: 'recent', limit: 1
+  });
+  assert.equal(packet.statusCode, 200);
+  assert.match(packet.json.data.markdown, /公开评论（仅当前采集时页面可见范围）/);
+  assert.match(packet.json.data.markdown, /创作者本人（主页链接一致）/);
+  assert.match(packet.json.data.markdown, /先看产业增量/);
+  assert.deepEqual(packet.json.data.commentSummary, {
+    commentCount: 2, creatorReplyCount: 1, partialItemCount: 1
+  });
+});
+
 test('Douyin signal rule upgrades replace stale automatic stock matches without removing source topics', async t => {
   const server = app.listen(0);
   t.after(() => server.close());

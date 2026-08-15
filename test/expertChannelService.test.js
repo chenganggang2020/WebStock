@@ -155,6 +155,35 @@ test('research library supports books, curve evidence and explicit deletion', ()
   assert.throws(() => experts.getChannel(subject.id), /不存在/);
 });
 
+test('public comments preserve reply context and distinguish verified creator replies', () => {
+  const channel = experts.createChannel({
+    channelKey: 'comment-author-verification', displayName: '模型先生', platform: 'douyin',
+    profileUrl: 'https://www.douyin.com/user/model-mr'
+  });
+  const observation = experts.recordObservation(channel.id, {
+    externalContentId: '7999999999999999999',
+    sourceUrl: 'https://www.douyin.com/video/7999999999999999999',
+    title: '评论采集测试视频', mediaType: 'video'
+  });
+  const result = experts.recordObservationComments(channel.id, observation.id, [{
+    commentId: 'comment-1', authorName: '提问者', text: '反弹以后怎么看？', likes: 9
+  }, {
+    commentId: 'reply-1', parentCommentId: 'comment-1', authorName: '模型先生',
+    authorProfileUrl: channel.profileUrl, text: '先看分化。', isCreatorLabel: true
+  }], {
+    status: 'visible_partial', observedAt: '2026-08-15T08:00:00.000Z',
+    message: '仅采集当前页面可见范围'
+  });
+
+  assert.equal(result.coverage.status, 'visible_partial');
+  assert.equal(result.coverage.complete, false);
+  assert.equal(result.comments.length, 2);
+  assert.equal(result.comments[1].parentCommentId, 'comment-1');
+  assert.equal(result.comments[1].creatorStatus, 'verified');
+  assert.equal(result.comments[1].verificationMethod, 'profile_url');
+  experts.deleteChannel(channel.id);
+});
+
 test.after(() => {
   db.close();
   for (const suffix of ['', '-wal', '-shm']) {

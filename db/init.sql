@@ -398,6 +398,46 @@ CREATE TABLE IF NOT EXISTS expert_observation_metrics (
 CREATE INDEX IF NOT EXISTS idx_expert_observation_metrics_time
   ON expert_observation_metrics(observation_id, observed_at);
 
+CREATE TABLE IF NOT EXISTS expert_comments (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  observation_id INTEGER NOT NULL,
+  comment_id TEXT NOT NULL,
+  parent_comment_id TEXT DEFAULT '',
+  reply_to_comment_id TEXT DEFAULT '',
+  author_name TEXT DEFAULT '',
+  author_platform_id TEXT DEFAULT '',
+  author_profile_url TEXT DEFAULT '',
+  comment_text TEXT NOT NULL,
+  published_at TEXT DEFAULT '',
+  observed_at TEXT NOT NULL,
+  likes INTEGER,
+  visibility_status TEXT NOT NULL DEFAULT 'observed',
+  creator_status TEXT NOT NULL DEFAULT 'none',
+  verification_method TEXT DEFAULT '',
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(observation_id, comment_id),
+  FOREIGN KEY (observation_id) REFERENCES expert_observations(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_expert_comments_observation
+  ON expert_comments(observation_id, creator_status, observed_at DESC, id ASC);
+
+CREATE TABLE IF NOT EXISTS expert_comment_captures (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  observation_id INTEGER NOT NULL,
+  status TEXT NOT NULL DEFAULT 'not_loaded',
+  message TEXT DEFAULT '',
+  observed_at TEXT NOT NULL,
+  visible_count INTEGER NOT NULL DEFAULT 0,
+  complete INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (observation_id) REFERENCES expert_observations(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_expert_comment_captures_observation
+  ON expert_comment_captures(observation_id, observed_at DESC, id DESC);
+
 CREATE TABLE IF NOT EXISTS expert_backtests (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   channel_id INTEGER NOT NULL,

@@ -137,8 +137,12 @@ router.get('/expert/channels/:id/observations', function(req, res) {
 router.post('/expert/channels/:id/analysis-packet', function(req, res) {
   try {
     const channel = expertChannels.getChannel(Number(req.params.id));
-    ok(res, buildAnalysisPacket(channel,
-      expertChannels.listAnalysisObservations(channel.id, req.body || {}), req.body || {}));
+    const observations = expertChannels.listAnalysisObservations(channel.id, req.body || {}).map(function(item) {
+      return Object.assign({}, item, {
+        commentData: expertChannels.listObservationComments(channel.id, item.id, { limit: 200 })
+      });
+    });
+    ok(res, buildAnalysisPacket(channel, observations, req.body || {}));
   } catch (error) {
     fail(res, error, /不存在/.test(error.message) ? 404 : 400);
   }
@@ -155,6 +159,16 @@ router.post('/expert/channels/:id/observations', function(req, res) {
 router.get('/expert/channels/:id/observations/:observationId/metrics', function(req, res) {
   try {
     ok(res, expertChannels.listObservationMetrics(Number(req.params.id), Number(req.params.observationId), req.query || {}));
+  } catch (error) {
+    fail(res, error, /不存在/.test(error.message) ? 404 : 400);
+  }
+});
+
+router.get('/expert/channels/:id/observations/:observationId/comments', function(req, res) {
+  try {
+    ok(res, expertChannels.listObservationComments(
+      Number(req.params.id), Number(req.params.observationId), req.query || {}
+    ));
   } catch (error) {
     fail(res, error, /不存在/.test(error.message) ? 404 : 400);
   }

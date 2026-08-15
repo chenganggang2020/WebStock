@@ -130,6 +130,41 @@ test('Douyin page snapshots are sanitized, deduplicated and bounded before leavi
   assert.equal(Object.prototype.hasOwnProperty.call(normalized.profile, 'ignoredSecret'), false);
 });
 
+test('detail snapshots retain only bounded public comment fields and visible-range coverage', () => {
+  const normalized = normalizeDouyinPageSnapshot({
+    pageType: 'video',
+    pageUrl: 'https://www.douyin.com/video/7533142185677114684',
+    capturedAt: '2026-08-15T08:00:00.000Z',
+    profile: { displayName: '模型先生', profileUrl: 'https://www.douyin.com/user/model-mr' },
+    items: [{
+      sourceUrl: 'https://www.douyin.com/video/7533142185677114684',
+      comments: [{
+        commentId: 'comment-1', authorName: '提问者',
+        authorProfileUrl: 'https://www.douyin.com/user/commenter?from=comment',
+        text: '科技股反弹后怎么看？', publishedAt: '2026-08-15 15:00', likes: 12,
+        ignoredSecret: 'must not leave Electron'
+      }, {
+        commentId: 'reply-1', parentCommentId: 'comment-1', authorName: '模型先生',
+        authorProfileUrl: 'https://www.douyin.com/user/model-mr', text: '先看分化。', isCreatorLabel: true
+      }],
+      commentCoverage: { status: 'visible_partial', message: '仅采集当前页面可见范围' }
+    }]
+  });
+
+  assert.equal(normalized.items[0].comments.length, 2);
+  assert.deepEqual(normalized.items[0].comments[1], {
+    commentId: 'reply-1', parentCommentId: 'comment-1', replyToCommentId: '',
+    authorName: '模型先生', authorPlatformId: '',
+    authorProfileUrl: 'https://www.douyin.com/user/model-mr',
+    text: '先看分化。', publishedAt: '', likes: null, isCreatorLabel: true
+  });
+  assert.deepEqual(normalized.items[0].commentCoverage, {
+    status: 'visible_partial', message: '仅采集当前页面可见范围',
+    observedAt: '2026-08-15T08:00:00.000Z', visibleCount: 2
+  });
+  assert.equal(Object.prototype.hasOwnProperty.call(normalized.items[0].comments[0], 'ignoredSecret'), false);
+});
+
 test('profile snapshots preserve up to one thousand distinct public works', () => {
   const items = Array.from({ length: 1005 }, function(_value, index) {
     const contentId = (7800000000000000000n + BigInt(index)).toString();

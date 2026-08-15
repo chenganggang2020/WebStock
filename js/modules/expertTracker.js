@@ -14,6 +14,7 @@ let expertCreatorTopic = '';
 let expertInitialLoadPromise = null;
 let expertAnalysisPacket = null;
 let expertAnalysisPacketRequestId = 0;
+const expertCommentCache = new Map();
 
 const MODEL_MR_DOUYIN_PROFILE_URL = 'https://www.douyin.com/user/MS4wLjABAAAAK713M9d8PGNb_WiMYf7yKhOI5y60H4uELJK2guDjJT0';
 
@@ -401,6 +402,7 @@ async function expertPollDouyinSyncState() {
     const completedAt = expertDouyinSyncState && expertDouyinSyncState.lastCompletedAt;
     if (!completedAt || completedAt === previousCompletedAt || expertSelectedChannelId() !== channelId) return;
     expertObservations = await expertApi('/api/expert/channels/' + channelId + '/observations?limit=500');
+    expertCommentCache.clear();
     expertBacktests = await expertApi('/api/expert/channels/' + channelId + '/backtests?limit=20');
     expertRenderTimeline();
     expertRenderBacktests();
@@ -827,6 +829,68 @@ function expertCreatorVideoCard(item, selected, related) {
     }).join('') + '</span>' : '') + '</span></button>';
 }
 
+function expertCreatorCommentsHtml(item) {
+  const state = expertCommentCache.get(Number(item.id));
+  if (!state || state.status === 'loading') {
+    return '<section class="creator-detail-section creator-comments-section"><h5>公开评论</h5>' +
+      '<p>正在读取已采集的页面可见评论…</p></section>';
+  }
+  if (state.status === 'error') {
+    return '<section class="creator-detail-section creator-comments-section"><h5>公开评论</h5>' +
+      '<p class="error">评论资料读取失败：' + expertEscape(state.message) + '</p></section>';
+  }
+  const data = state.data || {};
+  const coverage = data.coverage || {};
+  const comments = Array.isArray(data.comments) ? data.comments : [];
+  const byId = new Map(comments.map(function(comment) { return [String(comment.commentId || ''), comment]; }));
+  const creatorLabels = {
+    verified: '作者本人 · 主页一致',
+    platform_marked: '平台标注作者',
+    suspected: '疑似同名 · 未确认'
+  };
+  const creatorCount = comments.filter(function(comment) {
+    return comment.creatorStatus === 'verified' || comment.creatorStatus === 'platform_marked';
+  }).length;
+  const summary = expertEscape(coverage.message || '不能据此断言评论区完整。') +
+    (coverage.observedAt ? ' · 采集于 ' + expertEscape(expertFormatTime(coverage.observedAt)) : '') +
+    ' · 当前保存 ' + comments.length + ' 条' + (creatorCount ? ' · 作者回复 ' + creatorCount + ' 条' : '');
+  const rows = comments.map(function(comment) {
+    const parent = byId.get(String(comment.parentCommentId || comment.replyToCommentId || ''));
+    const creatorLabel = creatorLabels[comment.creatorStatus] || '';
+    const creatorClass = comment.creatorStatus === 'verified' || comment.creatorStatus === 'platform_marked'
+      ? ' creator-comment-author' : '';
+    return '<article class="creator-comment' + creatorClass + '">' +
+      '<header><strong>' + expertEscape(comment.authorName || '未知用户') + '</strong>' +
+        (creatorLabel ? '<span class="creator-comment-badge ' + expertEscape(comment.creatorStatus) + '">' +
+          expertEscape(creatorLabel) + '</span>' : '') +
+        (comment.publishedAt ? '<time>' + expertEscape(expertFormatTime(comment.publishedAt)) + '</time>' : '') +
+        (comment.likes == null ? '' : '<span>赞 ' + expertEscape(expertFormatMetric(comment.likes)) + '</span>') +
+      '</header>' +
+      (parent ? '<div class="creator-comment-parent">回复 ' + expertEscape(parent.authorName || '上级评论') +
+        '：' + expertEscape(parent.text) + '</div>' : '') +
+      '<p>' + expertEscape(comment.text) + '</p></article>';
+  }).join('');
+  return '<section class="creator-detail-section creator-comments-section"><h5>公开评论（仅采集时页面可见范围）</h5>' +
+    '<div class="creator-comment-coverage">' + summary + '</div>' +
+    (rows || '<p>当前详情快照没有保存到可见评论，不能据此判断视频没有评论。</p>') + '</section>';
+}
+
+async function expertLoadCreatorComments(item) {
+  if (!item || expertCommentCache.has(Number(item.id))) return;
+  const observationId = Number(item.id);
+  const channelId = expertSelectedChannelId();
+  expertCommentCache.set(observationId, { status: 'loading' });
+  try {
+    const data = await expertApi('/api/expert/channels/' + channelId + '/observations/' + observationId + '/comments');
+    expertCommentCache.set(observationId, { status: 'complete', data });
+  } catch (error) {
+    expertCommentCache.set(observationId, { status: 'error', message: error.message || String(error) });
+  }
+  if (expertSelectedChannelId() !== channelId || expertSelectedVideoId !== observationId) return;
+  const current = expertObservations.find(function(observation) { return observation.id === observationId; });
+  if (current) expertRenderCreatorDetail(current);
+}
+
 function expertRenderCreatorDetail(item) {
   const target = document.getElementById('expertCreatorVideoDetail');
   if (!target) return;
@@ -879,10 +943,12 @@ function expertRenderCreatorDetail(item) {
   (keyPoints.length ? '<section class="creator-detail-section creator-signal-section"><h5>自动提取的投资信息</h5><ul>' +
     keyPoints.map(function(point) { return '<li>' + expertEscape(point) + '</li>'; }).join('') + '</ul>' +
     (risks.length ? '<p class="expert-risk-line">风险条件：' + expertEscape(risks.join('；')) + '</p>' : '') + '</section>' : '') +
+  expertCreatorCommentsHtml(item) +
   '<footer class="creator-detail-actions">' +
     (item.sourceUrl ? '<a href="' + expertEscape(item.sourceUrl) + '" target="_blank" rel="noopener">打开来源页面</a>' : '<span></span>') +
     '<button class="small-btn danger expert-delete-observation" data-observation-id="' + item.id + '">移除索引（保留本地视频）</button>' +
   '</footer>';
+  expertLoadCreatorComments(item);
 }
 
 function expertRenderCreatorWorkbench() {
@@ -1112,6 +1178,7 @@ function expertResetCreatorFilters() {
   expertCreatorSearch = '';
   expertCreatorStatus = 'all';
   expertCreatorTopic = '';
+  expertCommentCache.clear();
   document.getElementById('expertCreatorSearchInput').value = '';
   document.getElementById('expertCreatorStatusFilter').value = 'all';
 }

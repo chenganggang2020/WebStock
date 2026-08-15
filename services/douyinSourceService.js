@@ -430,9 +430,17 @@ function inspectCapturedPage(channelId, input = {}) {
 
 function importCapturedPage(channelId, input = {}) {
   const plan = planCapturedPage(channelId, input);
-  const items = plan.entries.map(function(entry) {
-    if (entry.changeType === 'unchanged') return entry.existing;
-    return expertChannels.recordObservation(plan.channel.id, entry.observationInput);
+  const items = plan.entries.map(function(entry, index) {
+    const saved = entry.changeType === 'unchanged' ? entry.existing
+      : expertChannels.recordObservation(plan.channel.id, entry.observationInput);
+    const capturedItem = plan.capture.items[index] || {};
+    const isDetailPage = plan.capture.pageType === 'video' || plan.capture.pageType === 'note';
+    if (isDetailPage || (capturedItem.comments || []).length) {
+      expertChannels.recordObservationComments(
+        plan.channel.id, saved.id, capturedItem.comments, capturedItem.commentCoverage
+      );
+    }
+    return saved;
   });
   return {
     pageUrl: plan.capture.pageUrl,
