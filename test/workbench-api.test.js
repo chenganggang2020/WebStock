@@ -142,7 +142,10 @@ test('news, sector and screener APIs return unified success envelopes', async (t
   assert.equal(hotMarket.statusCode, 200);
   assert.equal(hotMarket.json.success, true);
   assert.ok(Array.isArray(hotMarket.json.data.boards.day));
-  assert.ok(hotMarket.json.data.boards.day.length >= 1);
+  assert.equal(hotMarket.json.data.boards.day.length, 0);
+  assert.equal(hotMarket.json.data.marketStatus, 'unavailable');
+  assert.ok(hotMarket.json.data.localWatchBoards.length >= 1);
+  assert.equal(hotMarket.json.data.localWatchBoards.every(item => item.kind === 'local-watch'), true);
   assert.match(hotMarket.json.data.prompt, /WEBSTOCK_HOT_MARKET_ANALYSIS_START/);
   assert.match(hotMarket.json.data.prompt, /当日热门板块|褰撴棩鐑棬鏉垮潡/);
 
