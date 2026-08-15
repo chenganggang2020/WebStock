@@ -188,6 +188,24 @@ test('transcription-pending records remain eligible without filling the entire q
   assert.equal(planned.some(item => item.contentId === 'stale-b'), true);
 });
 
+test('recent transcription-pending records bypass the detail freshness TTL', () => {
+  const planned = planDetailCandidates([{
+    externalContentId: 'recent-asr',
+    mediaMetadata: {
+      detailCapturedAt: '2026-08-11T11:55:00.000Z',
+      asr: { status: 'deferred_limit' }
+    }
+  }], {}, {
+    now: '2026-08-11T12:00:00.000Z',
+    limit: 1,
+    recentTtlMs: 6 * 60 * 60 * 1000,
+    maxTranscriptionPending: 1
+  });
+
+  assert.equal(planned.length, 1);
+  assert.equal(planned[0].reason, 'transcription_pending');
+});
+
 test('detail planner honors an explicit zero TTL for a complete archive pass', () => {
   const planned = planDetailCandidates([{
     externalContentId: 'archive-refresh',

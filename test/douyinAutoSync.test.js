@@ -29,6 +29,57 @@ test('detail queue accepts only direct Douyin works with matching numeric ids', 
   }), false);
 });
 
+test('scheduled detail planning never opens third-party historical sources', async () => {
+  const profileUrl = 'https://www.douyin.com/user/direct-only';
+  const contentId = '7674168772814676657';
+  const sourceUrl = 'https://www.douyin.com/video/' + contentId;
+  const thirdParty = {
+    externalContentId: 'douyin:third-party-research',
+    sourceUrl: 'https://xueqiu.com/9437762706/393709860',
+    title: '第三方研究资料',
+    mediaType: 'video',
+    mediaMetadata: {}
+  };
+  const opened = [];
+  const direct = { externalContentId: contentId, sourceUrl, title: '抖音直链', mediaMetadata: {} };
+  const sync = createDouyinAutoSync({
+    sessionManager: {
+      async captureUrl(url) {
+        opened.push(url);
+        if (url === profileUrl) return {
+          pageType: 'profile', pageUrl: profileUrl, loggedIn: true,
+          profile: { displayName: '模型先生', profileUrl, workCount: 1 },
+          items: [{ contentId, sourceUrl, title: '抖音直链' }]
+        };
+        return {
+          pageType: 'video', pageUrl: sourceUrl, loggedIn: true,
+          profile: { displayName: '模型先生', profileUrl },
+          items: [{ contentId, sourceUrl, title: '抖音直链', summary: '详情' }]
+        };
+      }
+    },
+    channels: {
+      getChannel() { return { id: 92, displayName: '模型先生', platform: 'douyin', profileUrl }; },
+      listObservations() { return [direct, thirdParty]; }
+    },
+    sources: {
+      reanalyzeChannelObservations() { return { updatedCount: 0 }; },
+      verifyCapturedIdentity() { return { matched: true }; },
+      importCapturedPage() {
+        return { addedCount: 0, updatedCount: 0, unchangedCount: 1, items: [direct] };
+      },
+      recordTranscriptionUnavailable() {}
+    },
+    syncState: { markRunning() {}, markCompleted() {}, markFailed() {} },
+    maxDetailsPerRun: 8
+  });
+
+  const result = await sync.syncChannel(92, { trigger: 'scheduled' });
+
+  assert.deepEqual(opened, [profileUrl, sourceUrl]);
+  assert.equal(result.candidateCount, 1);
+});
+
 test('completed ASR without a persisted transcript is still queued for transcription', () => {
   assert.equal(observationNeedsTranscription({
     transcript: '',

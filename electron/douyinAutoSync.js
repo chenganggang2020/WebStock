@@ -358,7 +358,9 @@ function createDouyinAutoSync(options = {}) {
           return [String(item.contentId || ''), item];
         }));
         const planningObservations = profileCapture.items.map(function(item) {
-          return existingByContentId.get(String(item.contentId)) || Object.assign({ externalContentId: item.contentId }, item);
+          return Object.assign({}, existingByContentId.get(String(item.contentId)) || {}, item, {
+            externalContentId: item.contentId
+          });
         });
         existing.forEach(function(observation) {
           if (!visibleByContentId.has(String(observation.externalContentId || ''))) planningObservations.push(observation);
@@ -378,7 +380,7 @@ function createDouyinAutoSync(options = {}) {
           ? summarizeArchiveQueue(archivePlanningObservations) : null;
         const planned = runOptions.mode === 'archive'
           ? planFullArchiveQueue(archivePlanningObservations, planningState)
-          : planDetailCandidates(planningObservations, planningState, {
+          : planDetailCandidates(directPlanningObservations, planningState, {
             limit: maxDetailsPerRun,
             recentTtlMs: 6 * 60 * 60 * 1000,
             maxTranscriptionPending: Math.max(Math.floor(maxDetailsPerRun / 3), 1)

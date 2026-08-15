@@ -167,8 +167,8 @@ function planDetailCandidates(observations, state = {}, options = {}) {
       metadata.detailCapturedAt || itemState.lastFailureAt);
     const isNew = !lastCheckedAt;
     const pendingArchive = mediaArchivePending(observation);
-    if (!isNew && now - lastCheckedAt < recentTtlMs) return;
     const pending = !isNew && transcriptionPending(observation);
+    if (!isNew && !pending && now - lastCheckedAt < recentTtlMs) return;
     eligible.push({
       observation,
       contentId: id,
