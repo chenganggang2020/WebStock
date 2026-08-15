@@ -63,15 +63,27 @@ test('backup roundtrip restores knowledge, research runs and paper portfolios', 
   }, { source: 'test-quotes', capturedAt: '2026-08-08T07:00:00.000Z' });
   const expertChannel = expertChannels.createChannel({
     channelKey: 'backup-model-mr', displayName: '模型先生', subjectType: 'creator', platform: 'douyin',
+    profileUrl: 'https://www.douyin.com/user/backup-model-mr',
     description: '公开创作者资料备份测试。'
   });
-  expertChannels.recordObservation(expertChannel.id, {
+  const expertObservation = expertChannels.recordObservation(expertChannel.id, {
     externalKey: 'public-video-backup', title: '公开页面记录',
     sourceUrl: 'https://www.douyin.com/video/7533142185677114684',
     publishedAt: '2025-07-31T15:19', evidenceLevel: 'primary',
     contentRole: 'direct_quote', mediaType: 'chart', archiveStatus: 'local_reference',
     rightsBasis: 'user_owned', curveData: '起点,10\n终点,12', analysisNotes: '测试曲线。',
+    transcript: '这是需要随备份恢复的本地逐字稿。',
+    engagement: { likes: 88, comments: 2, observedAt: '2026-08-15T08:00:00.000Z' },
+    mediaMetadata: { asr: { status: 'complete', engine: 'faster-whisper' } },
     stockCodes: ['688041'], stance: 'bullish'
+  });
+  expertChannels.recordObservationComments(expertChannel.id, expertObservation.id, [{
+    commentId: 'backup-question', authorName: '读者', text: '怎么看后续？'
+  }, {
+    commentId: 'backup-reply', parentCommentId: 'backup-question', authorName: '模型先生',
+    authorProfileUrl: expertChannel.profileUrl, text: '继续核对证据。', isCreatorLabel: true
+  }], {
+    status: 'visible_partial', observedAt: '2026-08-15T08:00:00.000Z', message: '仅当前页面可见范围'
   });
   expertChannels.recordBacktest(expertChannel.id, {
     runId: 'backup-expert-run', datasetId: 'dataset-demo',
@@ -102,6 +114,8 @@ test('backup roundtrip restores knowledge, research runs and paper portfolios', 
   assert.equal(backup.tables.expertChannels[0].description, '公开创作者资料备份测试。');
   assert.equal(backup.tables.expertChannels[0].observations[0].publishedTimePrecision, 'minute');
   assert.equal(backup.tables.expertChannels[0].observations[0].curveData[1].y, 12);
+  assert.match(backup.tables.expertChannels[0].observations[0].transcript, /本地逐字稿/);
+  assert.equal(backup.tables.expertChannels[0].observations[0].commentData.comments[1].creatorStatus, 'verified');
   assert.equal(backup.tables.expertChannels[0].backtests[0].runId, 'backup-expert-run');
 
   paperPortfolios.deletePortfolio(paperPortfolio.id);
@@ -139,6 +153,12 @@ test('backup roundtrip restores knowledge, research runs and paper portfolios', 
   assert.equal(restoredObservation.publishedTimePrecision, 'minute');
   assert.equal(restoredObservation.mediaType, 'chart');
   assert.equal(restoredObservation.curveData[1].y, 12);
+  assert.match(restoredObservation.transcript, /本地逐字稿/);
+  assert.equal(restoredObservation.engagement.likes, 88);
+  assert.equal(restoredObservation.mediaMetadata.asr.engine, 'faster-whisper');
+  const restoredComments = expertChannels.listObservationComments(restoredExpert.id, restoredObservation.id);
+  assert.equal(restoredComments.comments[1].creatorStatus, 'verified');
+  assert.equal(restoredComments.comments[1].parentCommentId, 'backup-question');
   assert.equal(expertChannels.listBacktests(restoredExpert.id)[0].runId, 'backup-expert-run');
   const restoredBroker = portfolio.listAccounts().find(account => account.accountKey === 'backup-broker-account');
   assert.ok(restoredBroker);

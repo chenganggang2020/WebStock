@@ -778,7 +778,11 @@ function exportChannels() {
     aliases: channel.aliases,
     discoveryQueries: channel.discoveryQueries,
     enabled: channel.enabled,
-    observations: listObservations(channel.id, { limit: 1000 }),
+    observations: listObservations(channel.id, { limit: 1000 }).map(function(observation) {
+      return Object.assign({}, observation, {
+        commentData: listObservationComments(channel.id, observation.id, { limit: 200 })
+      });
+    }),
     backtests: listBacktests(channel.id, { limit: 500 })
   }));
 }
@@ -786,7 +790,14 @@ function exportChannels() {
 function restoreChannels(channels) {
   (Array.isArray(channels) ? channels : []).forEach(item => {
     const channel = createChannel(item);
-    (item.observations || []).forEach(observation => recordObservation(channel.id, observation));
+    (item.observations || []).forEach(function(observation) {
+      const saved = recordObservation(channel.id, observation);
+      const commentData = observation.commentData && typeof observation.commentData === 'object'
+        ? observation.commentData : null;
+      if (commentData) {
+        recordObservationComments(channel.id, saved.id, commentData.comments, commentData.coverage);
+      }
+    });
     (item.backtests || []).forEach(backtest => recordBacktest(channel.id, backtest));
   });
 }

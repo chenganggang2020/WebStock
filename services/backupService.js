@@ -432,6 +432,11 @@ function normalizeExpertChannel(item) {
       contentRole: text(observation.contentRole, 'direct_quote', 40),
       content: text(observation.content, '', 800000),
       summary: text(observation.summary, '', 10000),
+      description: text(observation.description, '', 20000),
+      transcript: text(observation.transcript, '', 800000),
+      engagement: observation.engagement && typeof observation.engagement === 'object' ? observation.engagement : {},
+      mediaMetadata: observation.mediaMetadata && typeof observation.mediaMetadata === 'object' ? observation.mediaMetadata : {},
+      signal: observation.signal && typeof observation.signal === 'object' ? observation.signal : {},
       stockCodes: normalizeStringArray(observation.stockCodes).filter(code => /^\d{6}$/.test(code)),
       sectors: normalizeStringArray(observation.sectors),
       topics: normalizeStringArray(observation.topics),
@@ -443,7 +448,29 @@ function normalizeExpertChannel(item) {
       analysisNotes: text(observation.analysisNotes, '', 20000),
       stance: text(observation.stance, 'unknown', 40),
       horizon: text(observation.horizon, 'unspecified', 80),
-      confidence: Math.min(Math.max(numberOrZero(observation.confidence), 0), 1)
+      confidence: Math.min(Math.max(numberOrZero(observation.confidence), 0), 1),
+      commentData: {
+        comments: (observation.commentData && Array.isArray(observation.commentData.comments)
+          ? observation.commentData.comments : []).slice(0, 200).map(comment => ({
+          commentId: text(comment.commentId, '', 200),
+          parentCommentId: text(comment.parentCommentId, '', 200),
+          replyToCommentId: text(comment.replyToCommentId, '', 200),
+          authorName: text(comment.authorName, '', 160),
+          authorPlatformId: text(comment.authorPlatformId, '', 200),
+          authorProfileUrl: text(comment.authorProfileUrl, '', 1200),
+          text: text(comment.text, '', 10000),
+          publishedAt: text(comment.publishedAt, '', 80),
+          likes: comment.likes == null ? null : Math.max(numberOrZero(comment.likes), 0),
+          isCreatorLabel: comment.creatorStatus === 'platform_marked'
+        })).filter(comment => comment.commentId && comment.text),
+        coverage: observation.commentData && observation.commentData.coverage ? {
+          status: text(observation.commentData.coverage.status, 'not_loaded', 40),
+          message: text(observation.commentData.coverage.message, '', 500),
+          observedAt: text(observation.commentData.coverage.observedAt, '', 50),
+          visibleCount: Math.max(numberOrZero(observation.commentData.coverage.visibleCount), 0),
+          complete: false
+        } : null
+      }
     })),
     backtests: backtests.map(backtest => ({
       runId: text(backtest.runId, '', 160),
