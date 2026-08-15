@@ -91,6 +91,33 @@ function getRun(id) {
   return rowToRun(row);
 }
 
+function updateRun(id, input = {}) {
+  const existing = getRun(id);
+  const run = normalizeRun(Object.assign({}, existing, input, { createdAt: '' }));
+  db.prepare(`UPDATE ai_research_runs SET
+    run_type = ?, model_id = ?, status = ?, title = ?, question = ?, prompt = ?,
+    result_text = ?, evidence_json = ?, request_json = ?, metrics_json = ?,
+    updated_at = CURRENT_TIMESTAMP WHERE id = ?`).run(
+    run.runType, run.modelId, run.status, run.title, run.question, run.prompt, run.result,
+    JSON.stringify(run.evidence), JSON.stringify(run.request), JSON.stringify(run.metrics), Number(id)
+  );
+  return getRun(id);
+}
+
+function failRun(id, error, stage) {
+  const existing = getRun(id);
+  return updateRun(id, {
+    status: 'failed',
+    metrics: Object.assign({}, existing.metrics || {}, {
+      failure: {
+        stage: text(stage, 80) || 'unknown',
+        message: text(error && error.message || error || 'AI 研究运行失败', 2000),
+        failedAt: new Date().toISOString()
+      }
+    })
+  });
+}
+
 function listRuns(options = {}) {
   const conditions = [];
   const params = { limit: Math.min(Math.max(Number(options.limit) || 50, 1), 500) };
@@ -119,6 +146,8 @@ function exportRuns() {
 module.exports = {
   createRun,
   getRun,
+  updateRun,
+  failRun,
   listRuns,
   deleteRun,
   exportRuns

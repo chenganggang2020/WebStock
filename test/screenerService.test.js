@@ -124,6 +124,9 @@ test('technical strategies exclude stocks without technical data and report code
       { code: '688362', price: 25.2, change: 2.1, amount: 900000000 },
       { code: '600584', price: 58.3, change: 1.8, amount: 2400000000 }
     ],
+    technicalSnapshotLimit: 50,
+    technicalSnapshotStoredCount: 81,
+    technicalSnapshotSentCount: 1,
     klineSnapshot: [
       { code: '688362', data: risingKline(20, 0.04) }
     ]
@@ -135,6 +138,9 @@ test('technical strategies exclude stocks without technical data and report code
   assert.equal(result.coverage.quoteCount, 2);
   assert.equal(result.coverage.technicalCount, 1);
   assert.equal(result.coverage.candidatePoolCount, 1);
+  assert.equal(result.coverage.technicalSnapshotLimit, 50);
+  assert.equal(result.coverage.technicalSnapshotStoredCount, 81);
+  assert.match(result.coverage.limitations.join(' '), /单次最多 50 只/);
   assert.equal(result.coverage.excludedForMissingTechnicalCount, result.coverage.universeCount - 1);
   assert.deepEqual(result.candidates.map(item => item.code), ['688362']);
   assert.equal(result.candidates[0].dataCoverage.code, true);

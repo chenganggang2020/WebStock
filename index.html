@@ -31,7 +31,7 @@
         <span>持仓</span><strong id="sidebarPortfolioCount">0</strong>
       </button>
       <button id="sidebarScreenerBtn" class="sidebar-workspace-btn" data-main-view="screener">
-        <span>智能选股</span><strong>AI</strong>
+        <span>本地候选</span><strong>AI</strong>
       </button>
       <button id="sidebarAiResearchBtn" class="sidebar-workspace-btn" data-main-view="aiResearch">
         <span>AI研究</span><strong id="sidebarKnowledgeCount">0</strong>
@@ -74,7 +74,7 @@
       <button class="main-tab" data-main-view="news">资讯</button>
       <button class="main-tab" data-main-view="sectors">板块龙头</button>
       <button class="main-tab" data-main-view="capitalFlow">资金动量</button>
-      <button class="main-tab" data-main-view="screener">智能选股</button>
+      <button class="main-tab" data-main-view="screener">本地候选</button>
       <button class="main-tab" data-main-view="aiResearch">AI研究</button>
       <button class="main-tab" data-main-view="creatorTasks">采集任务</button>
       <button class="main-tab" data-main-view="aiHistory">AI记录</button>
@@ -98,7 +98,7 @@
             <div id="dashboardUpdatedAt" class="muted" aria-live="polite">Last refreshed: --</div>
           </div>
           <div class="quick-actions">
-            <button class="small-btn primary" onclick="switchMainView('screener')">运行智能选股</button>
+            <button class="small-btn primary" onclick="switchMainView('screener')">运行本地候选筛选</button>
             <button class="small-btn" onclick="switchMainView('sectors')">板块龙头</button>
             <button class="small-btn" onclick="switchMainView('portfolio')">新增交易</button>
             <button id="refreshDashboardBtn" class="small-btn">刷新工作台</button>
@@ -518,7 +518,7 @@
 
     <div id="screenerView" class="main-view" style="display:none;">
       <div class="section-header">
-        <h2>智能选股 / 候选观察清单</h2>
+        <h2>本地候选筛选（非全市场实时选股）</h2>
         <div class="section-actions">
           <button id="runScreenerBtn">运行筛选</button>
           <button id="saveScreenerResultBtn">保存结果</button>
@@ -540,7 +540,7 @@
         <div id="screenerStrategyHint" class="strategy-hint"></div>
         <label>筛选范围</label>
         <select id="screenerScope">
-          <option value="all">全市场+个人数据</option>
+          <option value="all">全市场代码基础池 + 本地已加载数据</option>
           <option value="watchlist">自选股</option>
           <option value="portfolio">持仓</option>
           <option value="recent">最近查看</option>

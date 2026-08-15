@@ -150,6 +150,28 @@ test('research runs preserve prompts, evidence and results for review', () => {
   assert.ok(researchRuns.listRuns({ runType: 'knowledge-analysis' }).some(item => item.id === run.id));
 });
 
+test('research runs persist pending, completed and failed lifecycle states', () => {
+  const pending = researchRuns.createRun({
+    runType: 'knowledge-analysis', modelId: 'openai-direct', status: 'pending',
+    title: '运行状态测试', question: '测试问题', request: { stage: 'model_call' }
+  });
+  assert.equal(pending.status, 'pending');
+  const completed = researchRuns.updateRun(pending.id, {
+    status: 'completed', result: '已完成结果', metrics: { elapsedMs: 123 }
+  });
+  assert.equal(completed.status, 'completed');
+  assert.equal(completed.result, '已完成结果');
+  assert.equal(completed.metrics.elapsedMs, 123);
+
+  const failing = researchRuns.createRun({
+    runType: 'knowledge-analysis', modelId: 'openai-direct', status: 'pending', title: '失败状态测试'
+  });
+  const failed = researchRuns.failRun(failing.id, new Error('模型连接超时'), 'model_call');
+  assert.equal(failed.status, 'failed');
+  assert.equal(failed.metrics.failure.stage, 'model_call');
+  assert.equal(failed.metrics.failure.message, '模型连接超时');
+});
+
 test('model registry reports real availability instead of deployment names', () => {
   const models = modelRegistry.listModels();
   const byId = new Map(models.map(item => [item.id, item]));

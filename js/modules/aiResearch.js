@@ -905,14 +905,19 @@ function aiResearchRenderRuns() {
     target.innerHTML = '<div class="empty-state compact">尚无专家知识分析记录。</div>';
     return;
   }
+  const runStatusLabels = { pending: '运行中', completed: '已完成', failed: '失败' };
   target.innerHTML = aiResearchRuns.map(function(run) {
     const evidenceIds = (run.evidence || []).map(function(item) { return item.evidenceId; }).filter(Boolean).slice(0, 8);
+    const failure = run.metrics && run.metrics.failure ? run.metrics.failure : null;
     return '<details class="knowledge-run-row" data-run-id="' + run.id + '">' +
       '<summary><span><strong>' + aiResearchEscape(run.title || run.question || '知识分析') + '</strong>' +
-        '<span class="muted">' + aiResearchEscape(run.modelId) + ' · ' + aiResearchEscape(aiResearchDate(run.createdAt)) + '</span></span>' +
+        '<span class="muted">' + aiResearchEscape(runStatusLabels[run.status] || run.status) + ' · ' +
+          aiResearchEscape(run.modelId) + ' · ' + aiResearchEscape(aiResearchDate(run.createdAt)) + '</span></span>' +
         '<button class="small-btn danger" data-run-action="delete" type="button">删除</button></summary>' +
       (evidenceIds.length ? '<div class="knowledge-run-evidence">证据：' + aiResearchEscape(evidenceIds.join(' / ')) + '</div>' : '') +
-      '<pre>' + aiResearchEscape(run.result || '尚无结果') + '</pre>' +
+      (failure ? '<div class="expert-asr-error">失败阶段：' + aiResearchEscape(failure.stage || 'unknown') +
+        ' · ' + aiResearchEscape(failure.message || '未提供错误信息') + '</div>' : '') +
+      '<pre>' + aiResearchEscape(run.result || (run.status === 'pending' ? '模型调用仍在运行或上次运行未正常结束。' : '尚无结果')) + '</pre>' +
     '</details>';
   }).join('');
 }

@@ -231,6 +231,7 @@ router.delete('/expert/channels/:id/observations/:observationId', function(req, 
 });
 
 router.post('/expert/channels/:id/intent-analysis', async function(req, res) {
+  let run = null;
   try {
     const context = expertChannels.buildIntentContext(Number(req.params.id), req.body || {});
     const aiConfig = getAIConfig();
@@ -241,20 +242,26 @@ router.post('/expert/channels/:id/intent-analysis', async function(req, res) {
       }));
       return;
     }
-    const report = await callAIModel(context.prompt);
-    const run = researchRuns.createRun({
+    const startedAt = Date.now();
+    run = researchRuns.createRun({
       runType: 'expert-intent-analysis',
       modelId: 'openai-direct',
-      status: 'completed',
+      status: 'pending',
       title: context.channel.displayName + '观点与意图分析',
       question: context.question,
       prompt: context.prompt,
-      result: report,
       evidence: context.evidence,
       request: { channelId: context.channel.id, observationCount: context.observationCount }
     });
+    const report = await callAIModel(context.prompt);
+    run = researchRuns.updateRun(run.id, {
+      status: 'completed', result: report, metrics: { elapsedMs: Date.now() - startedAt }
+    });
     ok(res, Object.assign({}, context, { handoffMode: false, report, run }));
   } catch (error) {
+    if (run) {
+      try { researchRuns.failRun(run.id, error, 'model_call'); } catch (runError) {}
+    }
     fail(res, error);
   }
 });
@@ -276,6 +283,7 @@ router.post('/knowledge/search', function(req, res) {
 });
 
 router.post('/knowledge/analyze', async function(req, res) {
+  let run = null;
   try {
     const context = knowledge.buildAnalysisContext(req.body || {});
     if (!context.evidence.length) {
@@ -292,20 +300,26 @@ router.post('/knowledge/analyze', async function(req, res) {
       return;
     }
 
-    const report = await callAIModel(context.prompt);
-    const run = researchRuns.createRun({
+    const startedAt = Date.now();
+    run = researchRuns.createRun({
       runType: 'knowledge-analysis',
       modelId: 'openai-direct',
-      status: 'completed',
+      status: 'pending',
       title: context.question,
       question: context.question,
       prompt: context.prompt,
-      result: report,
       evidence: context.evidence,
       request: { mode: context.mode, query: context.query, engine: context.engine }
     });
+    const report = await callAIModel(context.prompt);
+    run = researchRuns.updateRun(run.id, {
+      status: 'completed', result: report, metrics: { elapsedMs: Date.now() - startedAt }
+    });
     ok(res, Object.assign({}, context, { handoffMode: false, report, run }));
   } catch (error) {
+    if (run) {
+      try { researchRuns.failRun(run.id, error, 'model_call'); } catch (runError) {}
+    }
     fail(res, error);
   }
 });

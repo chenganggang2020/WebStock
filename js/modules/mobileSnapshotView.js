@@ -165,10 +165,10 @@
   function renderScreener(screener) {
     const data = screener || {};
     const candidates = Array.isArray(data.candidates) ? data.candidates : [];
-    return '<section class="mobile-panel screener-panel"><div class="section-title"><div><h2>智能选股</h2><p>' +
+    return '<section class="mobile-panel screener-panel"><div class="section-title"><div><h2>本地候选筛选</h2><p>' +
       escapeHtml(data.taskName || '只展示已保存的真实筛选结果') + '</p></div><span>' + candidates.length + ' 只</span></div>' +
       (data.status === 'available' && candidates.length ? renderCandidateRows(candidates, '候选分') :
-        '<div class="panel-state-message">暂无已保存的智能选股结果；不会用自选股代替。</div>') +
+        '<div class="panel-state-message">暂无已保存的本地候选结果；不会用自选股代替，也不冒充全市场实时选股。</div>') +
       (data.analysisExcerpt ? '<div class="analysis-excerpt"><strong>已保存分析</strong><p>' + escapeHtml(data.analysisExcerpt) + '</p></div>' : '') + '</section>';
   }
 

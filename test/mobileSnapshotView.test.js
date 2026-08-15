@@ -44,7 +44,8 @@ test('mobile view shows saved screener empty state without substituting watchlis
     research: { totals: {}, channels: [] }
   }, 0);
 
-  assert.match(html, /暂无已保存的智能选股结果/);
+  assert.match(html, /暂无已保存的本地候选结果/);
+  assert.match(html, /不冒充全市场实时选股/);
   assert.match(html, /000001/);
   assert.doesNotMatch(html, /000001[^]*候选分/);
 });

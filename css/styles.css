@@ -3235,6 +3235,21 @@ body.dark .md-body blockquote { background: rgba(99,102,241,0.12); }
   font-size: 13px;
 }
 
+.screener-scope-notice {
+  margin: 0 0 10px;
+  padding: 9px 11px;
+  border: 1px solid rgba(217, 119, 6, 0.24);
+  border-radius: 6px;
+  background: rgba(217, 119, 6, 0.07);
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.screener-scope-notice strong {
+  color: #b45309;
+}
+
 .screener-coverage {
   display: flex;
   flex-wrap: wrap;

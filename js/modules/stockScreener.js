@@ -41,7 +41,9 @@ function collectInput() {
       quoteStatus: item.quoteStatus
     }));
   const snapshots = window.State.klineSnapshots || {};
-  const klineSnapshot = Object.keys(snapshots).slice(0, 50).map(code => ({
+  const technicalSnapshotLimit = 50;
+  const technicalSnapshotCodes = Object.keys(snapshots);
+  const klineSnapshot = technicalSnapshotCodes.slice(0, technicalSnapshotLimit).map(code => ({
     code,
     data: Array.isArray(snapshots[code]) ? snapshots[code].slice(-80) : []
   })).filter(item => item.data.length > 0);
@@ -58,6 +60,9 @@ function collectInput() {
     demand: document.getElementById('screenerDemand').value.trim(),
     marketSnapshot,
     klineSnapshot,
+    technicalSnapshotLimit,
+    technicalSnapshotStoredCount: technicalSnapshotCodes.length,
+    technicalSnapshotSentCount: klineSnapshot.length,
     limit: 20
   };
 }
@@ -351,7 +356,10 @@ function renderCoverage(coverage) {
   const exclusion = coverage.technicalRequired
     ? '<span class="screener-technical-exclusion" data-technical-exclusion><strong>缺技术数据已排除</strong> ' + screenerEscapeHtml(coverage.excludedForMissingTechnicalCount || 0) + '</span>'
     : '';
-  return '<div class="screener-coverage" data-screener-coverage title="' + screenerEscapeHtml((coverage.limitations || []).join(' ')) + '">' +
+  const limitations = (coverage.limitations || []).join(' ');
+  return '<div class="screener-scope-notice"><strong>范围说明</strong> 本页面是本地候选筛选，不是全市场实时选股。' +
+    screenerEscapeHtml(limitations ? ' ' + limitations : '') + '</div>' +
+    '<div class="screener-coverage" data-screener-coverage title="' + screenerEscapeHtml(limitations) + '">' +
     metrics.map(function(metric) {
       return '<span><strong>' + screenerEscapeHtml(metric[0]) + '</strong> ' +
         screenerEscapeHtml(metric[1] == null ? 0 : metric[1]) +
@@ -772,7 +780,7 @@ async function runAI() {
   });
   if (data.handoffMode && window.AIAssistant) {
     window.AIAssistant.open({
-      title: '智能选股 ChatGPT 交接',
+      title: '本地候选筛选 ChatGPT 交接',
       prompt: data.prompt,
       promptStyle: lastResult.promptStyle || 'sector-chain',
       summary: '已生成更严格的 GPT 二次筛选提示词。请复制到 ChatGPT，让它按“优先观察 / 等待确认 / 暂时剔除”重新整理候选股。',
@@ -786,8 +794,8 @@ async function runAI() {
     if (activeSavedTaskId) await updateSavedAIResult(activeSavedTaskId, data.report);
     if (window.AIAssistant && window.AIAssistant.saveHistoryRecord) {
       window.AIAssistant.saveHistoryRecord({
-        title: '智能选股 AI 分析',
-        summary: 'AI API 直接返回的智能选股解释。',
+        title: '本地候选筛选 AI 分析',
+        summary: 'AI API 直接返回的本地候选解释；不等同于全市场实时选股。',
         prompt: data.prompt || '',
         result: data.report,
         kind: 'screener',

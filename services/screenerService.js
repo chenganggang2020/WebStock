@@ -682,13 +682,19 @@ function summarizeCoverage(universe, options = {}) {
     profileCount,
     profileRate: rate(profileCount),
     technicalRequired: Boolean(options.technicalRequired),
+    technicalSnapshotLimit: Number(options.technicalSnapshotLimit) || 0,
+    technicalSnapshotStoredCount: Number(options.technicalSnapshotStoredCount) || 0,
+    technicalSnapshotSentCount: Number(options.technicalSnapshotSentCount) || 0,
     candidatePoolCount: Number.isFinite(Number(options.candidatePoolCount)) ? Number(options.candidatePoolCount) : universeCount,
     excludedForMissingTechnicalCount: Number.isFinite(Number(options.excludedForMissingTechnicalCount))
       ? Number(options.excludedForMissingTechnicalCount) : 0,
     limitations: [
       '全市场范围表示股票代码库覆盖，不等于每只股票都有实时行情。',
-      '缺失的行情、技术或主营资料不会按 0 值参与评分。'
-    ]
+      '缺失的行情、技术或主营资料不会按 0 值参与评分。',
+      Number(options.technicalSnapshotLimit) > 0
+        ? '技术指标只使用本机当前已加载并随请求提供的 K 线快照；单次最多 ' + Number(options.technicalSnapshotLimit) + ' 只。'
+        : ''
+    ].filter(Boolean)
   };
 }
 
@@ -709,6 +715,9 @@ function runScreener(input = {}) {
     .slice(0, Math.min(Number(input.limit) || 20, 50));
   const coverage = summarizeCoverage(universe, {
     technicalRequired,
+    technicalSnapshotLimit: input.technicalSnapshotLimit,
+    technicalSnapshotStoredCount: input.technicalSnapshotStoredCount,
+    technicalSnapshotSentCount: input.technicalSnapshotSentCount,
     candidatePoolCount: candidatePool.length,
     excludedForMissingTechnicalCount: universe.length - candidatePool.length
   });

@@ -136,9 +136,12 @@ test('coverage view reports technical exclusion count instead of hiding missing 
     profileCount: 5,
     profileRate: 50,
     technicalRequired: true,
-    excludedForMissingTechnicalCount: 6
+    excludedForMissingTechnicalCount: 6,
+    limitations: ['技术指标只使用本机当前已加载并随请求提供的 K 线快照；单次最多 50 只。']
   });
 
+  assert.match(html, /本地候选筛选，不是全市场实时选股/);
+  assert.match(html, /单次最多 50 只/);
   assert.match(html, /代码覆盖[^]*10[^]*100\.00%/);
   assert.match(html, /行情数据[^]*6[^]*60\.00%/);
   assert.match(html, /技术数据[^]*4[^]*40\.00%/);
