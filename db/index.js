@@ -46,6 +46,14 @@ try {
   ensureColumn('portfolio_snapshots', 'today_pnl', 'REAL DEFAULT 0');
   ensureColumn('portfolio_snapshots', 'source_label', "TEXT DEFAULT ''");
   ensureColumn('portfolio_snapshots', 'holdings_json', "TEXT DEFAULT '[]'");
+  ensureColumn('watchlist', 'auto_d1_low', 'REAL');
+  ensureColumn('watchlist', 'auto_d1_high', 'REAL');
+  ensureColumn('watchlist', 'auto_d2', 'REAL');
+  ensureColumn('watchlist', 'auto_r1', 'REAL');
+  ensureColumn('watchlist', 'auto_confirm', 'REAL');
+  ensureColumn('watchlist', 'auto_levels_date', "TEXT DEFAULT ''");
+  ensureColumn('watchlist', 'auto_levels_updated_at', "TEXT DEFAULT ''");
+  ensureColumn('watchlist', 'auto_levels_method', "TEXT DEFAULT ''");
   db.exec('CREATE INDEX IF NOT EXISTS idx_trades_account_date ON trades(account_id, trade_date, id)');
   db.exec('CREATE INDEX IF NOT EXISTS idx_portfolio_snapshots_account_date ON portfolio_snapshots(account_id, snapshot_date, id)');
   db.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_expert_backtests_run_id ON expert_backtests(run_id) WHERE run_id <> ''");

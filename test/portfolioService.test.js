@@ -12,6 +12,35 @@ process.env.WEBSTOCK_DB_PATH = testDbPath;
 
 const portfolio = require('../services/portfolioService');
 
+test('bulk watchlist import adds missing items without overwriting existing metadata', () => {
+  const existing = portfolio.addWatchlistItem({
+    code: '600900',
+    name: '既有股票',
+    groupName: '人工研究',
+    note: '保留这条备注',
+    alertHigh: 22,
+    sortOrder: 3
+  });
+
+  const result = portfolio.importWatchlistItems([
+    { code: '600900', name: '来源名称' },
+    { code: '600901', name: '新增股票' }
+  ], {
+    groupName: '同花顺自选',
+    note: '同花顺本地自选增量同步'
+  });
+
+  const kept = portfolio.listWatchlist().find(item => item.code === existing.code);
+  const added = portfolio.listWatchlist().find(item => item.code === '600901');
+  assert.equal(result.addedCount, 1);
+  assert.equal(result.existingCount, 1);
+  assert.equal(kept.groupName, '人工研究');
+  assert.equal(kept.note, '保留这条备注');
+  assert.equal(kept.alertHigh, 22);
+  assert.equal(added.groupName, '同花顺自选');
+  assert.equal(added.note, '同花顺本地自选增量同步');
+});
+
 test('portfolio service calculates positions and prevents oversell', () => {
   const buy = portfolio.createTrade({
     code: '000001',

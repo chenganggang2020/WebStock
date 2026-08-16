@@ -55,6 +55,14 @@ function rowToWatchlist(row) {
     note: row.note || '',
     alertHigh: row.alert_high,
     alertLow: row.alert_low,
+    autoD1Low: row.auto_d1_low,
+    autoD1High: row.auto_d1_high,
+    autoD2: row.auto_d2,
+    autoR1: row.auto_r1,
+    autoConfirm: row.auto_confirm,
+    autoLevelsDate: row.auto_levels_date || '',
+    autoLevelsUpdatedAt: row.auto_levels_updated_at || '',
+    autoLevelsMethod: row.auto_levels_method || '',
     sortOrder: row.sort_order,
     createdAt: row.created_at,
     updatedAt: row.updated_at
@@ -111,6 +119,42 @@ function addWatchlistItem(input) {
   });
 
   return rowToWatchlist(db.prepare('SELECT * FROM watchlist WHERE id = ?').get(info.lastInsertRowid));
+}
+
+function importWatchlistItems(items, options = {}) {
+  const rows = Array.isArray(items) ? items : [];
+  const groupName = String(options.groupName || '默认分组').trim() || '默认分组';
+  const note = String(options.note || '');
+  const insert = db.prepare(`
+    INSERT OR IGNORE INTO watchlist (code, name, group_name, note, sort_order)
+    VALUES (@code, @name, @groupName, @note, @sortOrder)
+  `);
+  const startOrderRow = db.prepare('SELECT COALESCE(MAX(sort_order), 0) AS value FROM watchlist').get();
+  let addedCount = 0;
+
+  const run = db.transaction(function() {
+    rows.forEach(function(item, index) {
+      assertCode(item && item.code);
+      const name = String(item && item.name || '').trim();
+      if (!name) throw new Error('股票名称不能为空');
+      const result = insert.run({
+        code: String(item.code),
+        name,
+        groupName,
+        note,
+        sortOrder: Number(startOrderRow.value || 0) + index + 1
+      });
+      addedCount += result.changes;
+    });
+  });
+  run();
+
+  return {
+    sourceCount: rows.length,
+    addedCount,
+    existingCount: rows.length - addedCount,
+    groupName
+  };
 }
 
 function updateWatchlistItem(id, input) {
@@ -766,6 +810,7 @@ module.exports = {
   syncHoldingSnapshot,
   listWatchlist,
   addWatchlistItem,
+  importWatchlistItems,
   updateWatchlistItem,
   deleteWatchlistItem,
   removeWatchlistByCode,

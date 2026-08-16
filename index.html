@@ -1284,7 +1284,7 @@
       </div>
       <div id="combinedWatchlistPanel" class="portfolio-watchlist-panel" style="display:none;">
       <div class="section-header">
-        <div class="section-title-live"><h2>我的自选股</h2><span id="watchlistLiveStatus" class="live-refresh-status">新浪行情快照 · 等待刷新</span></div>
+        <div class="section-title-live"><h2>我的自选股</h2><span id="watchlistLiveStatus" class="live-refresh-status">新浪行情快照 · 等待刷新</span><span id="watchlistSyncStatus" class="live-refresh-status">同花顺自选 · 等待同步</span></div>
         <div class="section-actions">
           <select id="watchlistGroupFilter">
             <option value="">全部分组</option>
@@ -1297,6 +1297,8 @@
           <input id="watchlistSearchInput" placeholder="名称/代码">
           <button id="addCurrentToWatchlistBtn">添加当前股票</button>
           <button id="refreshWatchlistBtn">刷新行情</button>
+          <button id="syncTonghuashunWatchlistBtn">同步同花顺</button>
+          <button id="refreshWatchlistLevelsBtn">更新点位</button>
           <button id="bulkWatchlistGroupBtn">批量分组</button>
           <button id="exportWatchlistCsvBtn">Export CSV</button>
         </div>
@@ -1311,7 +1313,7 @@
               <th>最新价</th>
               <th>涨跌幅</th>
               <th>分组</th>
-              <th>预警价</th>
+              <th>自动点位 / 预警</th>
               <th>状态</th>
               <th>备注</th>
               <th>操作</th>

@@ -61,7 +61,11 @@ function exportUserData() {
 
   const watchlist = db.prepare(`
     SELECT code, name, group_name AS groupName, note, alert_high AS alertHigh,
-      alert_low AS alertLow, sort_order AS sortOrder
+      alert_low AS alertLow, sort_order AS sortOrder,
+      auto_d1_low AS autoD1Low, auto_d1_high AS autoD1High, auto_d2 AS autoD2,
+      auto_r1 AS autoR1, auto_confirm AS autoConfirm,
+      auto_levels_date AS autoLevelsDate, auto_levels_updated_at AS autoLevelsUpdatedAt,
+      auto_levels_method AS autoLevelsMethod
     FROM watchlist
     ORDER BY sort_order ASC, updated_at DESC
   `).all();
@@ -183,7 +187,15 @@ function normalizeWatchlist(item) {
     note: text(item.note, '', 1000),
     alertHigh: numberOrNull(item.alertHigh),
     alertLow: numberOrNull(item.alertLow),
-    sortOrder: integerOrZero(item.sortOrder)
+    sortOrder: integerOrZero(item.sortOrder),
+    autoD1Low: numberOrNull(item.autoD1Low),
+    autoD1High: numberOrNull(item.autoD1High),
+    autoD2: numberOrNull(item.autoD2),
+    autoR1: numberOrNull(item.autoR1),
+    autoConfirm: numberOrNull(item.autoConfirm),
+    autoLevelsDate: text(item.autoLevelsDate, '', 40),
+    autoLevelsUpdatedAt: text(item.autoLevelsUpdatedAt, '', 40),
+    autoLevelsMethod: text(item.autoLevelsMethod, '', 500)
   };
 }
 
@@ -630,8 +642,15 @@ function importUserData(backup, options = {}) {
     `);
 
     const insertWatchlist = db.prepare(`
-      INSERT INTO watchlist (code, name, group_name, note, alert_high, alert_low, sort_order)
-      VALUES (@code, @name, @groupName, @note, @alertHigh, @alertLow, @sortOrder)
+      INSERT INTO watchlist (
+        code, name, group_name, note, alert_high, alert_low, sort_order,
+        auto_d1_low, auto_d1_high, auto_d2, auto_r1, auto_confirm,
+        auto_levels_date, auto_levels_updated_at, auto_levels_method
+      ) VALUES (
+        @code, @name, @groupName, @note, @alertHigh, @alertLow, @sortOrder,
+        @autoD1Low, @autoD1High, @autoD2, @autoR1, @autoConfirm,
+        @autoLevelsDate, @autoLevelsUpdatedAt, @autoLevelsMethod
+      )
       ON CONFLICT(code) DO UPDATE SET
         name = excluded.name,
         group_name = excluded.group_name,
@@ -639,6 +658,14 @@ function importUserData(backup, options = {}) {
         alert_high = excluded.alert_high,
         alert_low = excluded.alert_low,
         sort_order = excluded.sort_order,
+        auto_d1_low = excluded.auto_d1_low,
+        auto_d1_high = excluded.auto_d1_high,
+        auto_d2 = excluded.auto_d2,
+        auto_r1 = excluded.auto_r1,
+        auto_confirm = excluded.auto_confirm,
+        auto_levels_date = excluded.auto_levels_date,
+        auto_levels_updated_at = excluded.auto_levels_updated_at,
+        auto_levels_method = excluded.auto_levels_method,
         updated_at = CURRENT_TIMESTAMP
     `);
 

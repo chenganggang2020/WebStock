@@ -58,6 +58,24 @@ test('structured alert prices remain visible when a note has no D1 D2 R1 syntax'
   assert.deepEqual(marks.areas, []);
 });
 
+test('structured automatic levels take precedence over legacy note parsing', () => {
+  const marks = MarketVisualModel.watchlistMarks({
+    note: 'D1 1-2；D2 1；R1 3；强确认4',
+    autoD1Low: 10.1,
+    autoD1High: 10.5,
+    autoD2: 10.1,
+    autoR1: 12.3,
+    autoConfirm: 12.8
+  });
+
+  assert.deepEqual(marks.areas, [{ name: '自动 D1 观察区', from: 10.1, to: 10.5 }]);
+  assert.deepEqual(marks.lines.map(item => [item.name, item.value]), [
+    ['自动 D2 防守', 10.1],
+    ['自动 R1 压力', 12.3],
+    ['自动确认', 12.8]
+  ]);
+});
+
 test('daily K-line consumes candle classifications and watchlist marks', () => {
   assert.match(klineSource, /MarketVisualModel\.candleColors/);
   assert.match(klineSource, /MarketVisualModel\.watchlistMarks/);

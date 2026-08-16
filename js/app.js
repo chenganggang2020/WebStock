@@ -192,6 +192,12 @@ function bindButtons() {
   if (watchlistSearchInput) watchlistSearchInput.addEventListener('input', Watchlist.renderWatchlist);
   document.getElementById('addCurrentToWatchlistBtn').addEventListener('click', Watchlist.addCurrentStock);
   document.getElementById('refreshWatchlistBtn').addEventListener('click', Watchlist.refreshWatchlistQuotes);
+  document.getElementById('syncTonghuashunWatchlistBtn').addEventListener('click', function() {
+    Watchlist.syncTonghuashunWatchlist().catch(function(error) { alert(error.message || '同花顺自选同步失败'); });
+  });
+  document.getElementById('refreshWatchlistLevelsBtn').addEventListener('click', function() {
+    Watchlist.refreshAutomaticLevels().catch(function(error) { alert(error.message || '自动点位更新失败'); });
+  });
   const bulkWatchlistGroupBtn = document.getElementById('bulkWatchlistGroupBtn');
   if (bulkWatchlistGroupBtn) bulkWatchlistGroupBtn.addEventListener('click', function() {
     Watchlist.bulkSetVisibleGroup().catch(function(error) { alert(error.message || '批量分组失败'); });
@@ -563,6 +569,7 @@ async function init() {
   State.allStocks = await window.ApiClient.fetchJsonData('/api/stocklist');
   State.filteredStocks = State.allStocks.slice(0, State.PAGE_SIZE);
   if (window.Watchlist) await window.Watchlist.loadWatchlist({ skipQuotes: true });
+  if (window.Watchlist && window.Watchlist.scheduleMorningMaintenance) window.Watchlist.scheduleMorningMaintenance();
   if (window.RecentStocks) await window.RecentStocks.load(20).catch(function() {});
   StockList.renderStockTable(State.filteredStocks);
   setTimeout(function() {

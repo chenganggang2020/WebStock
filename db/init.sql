@@ -7,6 +7,14 @@ CREATE TABLE IF NOT EXISTS watchlist (
   alert_high REAL,
   alert_low REAL,
   sort_order INTEGER DEFAULT 0,
+  auto_d1_low REAL,
+  auto_d1_high REAL,
+  auto_d2 REAL,
+  auto_r1 REAL,
+  auto_confirm REAL,
+  auto_levels_date TEXT DEFAULT '',
+  auto_levels_updated_at TEXT DEFAULT '',
+  auto_levels_method TEXT DEFAULT '',
   created_at TEXT DEFAULT CURRENT_TIMESTAMP,
   updated_at TEXT DEFAULT CURRENT_TIMESTAMP
 );

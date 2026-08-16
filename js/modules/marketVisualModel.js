@@ -75,9 +75,25 @@
 
   function watchlistMarks(item) {
     item = item || {};
-    const note = String(item.note || '').replace(/，/g, ',').replace(/；/g, ';');
     const lines = [];
     const areas = [];
+    const automatic = {
+      d1Low: positiveNumber(item.autoD1Low),
+      d1High: positiveNumber(item.autoD1High),
+      d2: positiveNumber(item.autoD2),
+      r1: positiveNumber(item.autoR1),
+      confirm: positiveNumber(item.autoConfirm)
+    };
+    if (automatic.d1Low || automatic.d1High || automatic.d2 || automatic.r1 || automatic.confirm) {
+      if (automatic.d1Low && automatic.d1High) {
+        areas.push({ name: '自动 D1 观察区', from: Math.min(automatic.d1Low, automatic.d1High), to: Math.max(automatic.d1Low, automatic.d1High) });
+      }
+      if (automatic.d2) lines.push({ name: '自动 D2 防守', value: automatic.d2, kind: 'defense' });
+      if (automatic.r1) lines.push({ name: '自动 R1 压力', value: automatic.r1, kind: 'breakout' });
+      if (automatic.confirm) lines.push({ name: '自动确认', value: automatic.confirm, kind: 'confirm' });
+      return { lines: lines, areas: areas };
+    }
+    const note = String(item.note || '').replace(/，/g, ',').replace(/；/g, ';');
     const d1 = note.match(/\bD1\s*([0-9]+(?:\.[0-9]+)?)\s*(?:[-–—~至]\s*([0-9]+(?:\.[0-9]+)?))?/i);
     if (d1) {
       const from = positiveNumber(d1[1]);

@@ -3,6 +3,8 @@ const iconv = require('iconv-lite');
 const router = express.Router();
 
 const portfolio = require('../services/portfolioService');
+const tonghuashunWatchlist = require('../services/tonghuashunWatchlistService');
+const watchlistLevels = require('../services/watchlistLevelService');
 const { isValidApiKey, getAIConfig, callAIModel } = require('./ai');
 const { toSinaSymbol } = require('../utils/market');
 const { appendOneClickOutputInstructions } = require('../services/handoffFormat');
@@ -149,6 +151,30 @@ router.get('/watchlist', function (req, res) {
 router.post('/watchlist', function (req, res) {
   try {
     ok(res, portfolio.addWatchlistItem(req.body));
+  } catch (error) {
+    fail(res, error);
+  }
+});
+
+router.get('/tonghuashun-watchlist/status', function(req, res) {
+  try {
+    ok(res, tonghuashunWatchlist.getStatus());
+  } catch (error) {
+    fail(res, error);
+  }
+});
+
+router.post('/tonghuashun-watchlist/sync', function(req, res) {
+  try {
+    ok(res, tonghuashunWatchlist.syncLocalSelfStock());
+  } catch (error) {
+    fail(res, error);
+  }
+});
+
+router.post('/watchlist/refresh-levels', async function(req, res) {
+  try {
+    ok(res, await watchlistLevels.refreshWatchlistLevels());
   } catch (error) {
     fail(res, error);
   }

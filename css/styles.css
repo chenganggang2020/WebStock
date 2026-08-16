@@ -2122,6 +2122,9 @@ body.dark .md-body blockquote { background: rgba(99,102,241,0.12); }
   overflow-x: auto;
   border-bottom: 1px solid var(--border);
   background: var(--card-bg);
+  min-width: 0;
+  scrollbar-width: thin;
+  white-space: nowrap;
 }
 
 .watchlist-group-tabs {
@@ -2147,6 +2150,24 @@ body.dark .md-body blockquote { background: rgba(99,102,241,0.12); }
 
 .portfolio-watchlist-panel {
   min-width: 0;
+  overflow: hidden;
+}
+
+.watchlist-levels {
+  display: grid;
+  gap: 3px;
+  min-width: 190px;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.watchlist-levels span:first-child {
+  color: #2563eb;
+  font-weight: 700;
+}
+
+.watchlist-levels small {
+  color: var(--muted);
 }
 
 #positionsTable td,

@@ -25,7 +25,106 @@ function watchlistCsvCell(value) {
   return /[",\r\n]/.test(text) ? '"' + text.replace(/"/g, '""') + '"' : text;
 }
 
+function watchlistLevelCell(item) {
+  const d1Low = Number(item.autoD1Low);
+  const d1High = Number(item.autoD1High);
+  const d2 = Number(item.autoD2);
+  const r1 = Number(item.autoR1);
+  const confirm = Number(item.autoConfirm);
+  if ([d1Low, d1High, d2, r1, confirm].every(Number.isFinite)) {
+    const date = item.autoLevelsDate ? '<small>日线 ' + item.autoLevelsDate + '</small>' : '';
+    return '<div class="watchlist-levels" title="' + watchlistTabEscape(item.autoLevelsMethod || '历史日线自动点位') + '">' +
+      '<span>D1 ' + money(d1Low) + '–' + money(d1High) + '</span>' +
+      '<span>D2 ' + money(d2) + ' · R1 ' + money(r1) + ' · 确认 ' + money(confirm) + '</span>' + date + '</div>';
+  }
+  return '<div class="watchlist-levels muted"><span>预警 ' + (item.alertLow || '--') + ' / ' + (item.alertHigh || '--') + '</span><small>等待自动点位</small></div>';
+}
+
 let selectedWatchlistGroup = '';
+let morningMaintenanceTimer = null;
+
+function setWatchlistSyncStatus(text, state) {
+  const element = document.getElementById('watchlistSyncStatus');
+  if (!element) return;
+  element.textContent = text;
+  element.dataset.state = state || 'idle';
+}
+
+async function syncTonghuashunWatchlist(options) {
+  options = options || {};
+  setWatchlistSyncStatus('同花顺自选 · 正在同步', 'loading');
+  try {
+    const result = await watchlistApi('/tonghuashun-watchlist/sync', { method: 'POST' });
+    setWatchlistSyncStatus('同花顺自选 · 新增 ' + result.addedCount + '，已有 ' + result.existingCount, 'ok');
+    await loadWatchlist({ skipQuotes: !!options.skipQuotes });
+    return result;
+  } catch (error) {
+    setWatchlistSyncStatus('同花顺自选 · ' + error.message, 'error');
+    throw error;
+  }
+}
+
+async function refreshAutomaticLevels(options) {
+  options = options || {};
+  setWatchlistSyncStatus('自动点位 · 正在更新', 'loading');
+  try {
+    const result = await watchlistApi('/watchlist/refresh-levels', { method: 'POST' });
+    setWatchlistSyncStatus('自动点位 · 更新 ' + result.updatedCount + '，失败 ' + result.failedCount, result.failedCount ? 'warn' : 'ok');
+    await loadWatchlist({ skipQuotes: true });
+    return result;
+  } catch (error) {
+    setWatchlistSyncStatus('自动点位 · ' + error.message, 'error');
+    if (!options.silent) throw error;
+    return null;
+  }
+}
+
+function beijingClock(now) {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Shanghai',
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit',
+    hourCycle: 'h23'
+  }).formatToParts(now || new Date()).reduce(function(result, part) {
+    if (part.type !== 'literal') result[part.type] = part.value;
+    return result;
+  }, {});
+  const date = parts.year + '-' + parts.month + '-' + parts.day;
+  const pseudoLocal = new Date(date + 'T' + parts.hour + ':' + parts.minute + ':' + parts.second);
+  return { date, pseudoLocal, weekday: pseudoLocal.getDay() };
+}
+
+function nextMorningDelay(now) {
+  const clock = beijingClock(now);
+  const target = new Date(clock.date + 'T09:05:00');
+  if (clock.weekday === 0 || clock.weekday === 6 || clock.pseudoLocal >= target) target.setDate(target.getDate() + 1);
+  while (target.getDay() === 0 || target.getDay() === 6) target.setDate(target.getDate() + 1);
+  return Math.max(1000, target.getTime() - clock.pseudoLocal.getTime());
+}
+
+async function runMorningMaintenance() {
+  const clock = beijingClock(new Date());
+  if (clock.weekday === 0 || clock.weekday === 6 || clock.pseudoLocal < new Date(clock.date + 'T09:05:00')) return false;
+  const storageKey = 'webstock.watchlistMorningMaintenanceDate';
+  try { if (localStorage.getItem(storageKey) === clock.date) return false; } catch (error) {}
+  try {
+    await syncTonghuashunWatchlist({ skipQuotes: true });
+    const levels = await refreshAutomaticLevels({ silent: true });
+    if (!levels) return false;
+    try { localStorage.setItem(storageKey, clock.date); } catch (error) {}
+    return true;
+  } catch (error) {
+    console.warn('自选早间同步失败:', error.message || error);
+    return false;
+  }
+}
+
+function scheduleMorningMaintenance() {
+  if (morningMaintenanceTimer) clearTimeout(morningMaintenanceTimer);
+  runMorningMaintenance().finally(function() {
+    morningMaintenanceTimer = setTimeout(scheduleMorningMaintenance, nextMorningDelay(new Date()));
+  });
+}
 
 function visibleWatchlistItems() {
   let items = (window.State.watchlist || []).slice();
@@ -201,7 +300,7 @@ function renderWatchlist() {
   table.style.display = items.length ? 'table' : 'none';
   tbody.innerHTML = items.map(item => {
     const change = Number(item.change);
-    const colorClass = Number.isFinite(change) && change >= 0 ? 'pnl-up' : 'pnl-down';
+    const colorClass = Number.isFinite(change) && change > 0 ? 'pnl-up' : Number.isFinite(change) && change < 0 ? 'pnl-down' : '';
     const trendColor = window.MarketVisualModel
       ? window.MarketVisualModel.trendColor(change, document.body.classList.contains('dark'))
       : Number.isFinite(change) && change >= 0 ? '#ff2d2d' : '#00b050';
@@ -220,7 +319,7 @@ function renderWatchlist() {
       '<td>' + money(item.price) + '</td>' +
       '<td class="' + colorClass + '">' + (Number.isFinite(change) ? (change >= 0 ? '+' : '') + change.toFixed(2) + '%' : '--') + '</td>' +
       '<td>' + (item.groupName || '默认分组') + '</td>' +
-      '<td>' + (item.alertLow || '--') + ' / ' + (item.alertHigh || '--') + '</td>' +
+      '<td>' + watchlistLevelCell(item) + '</td>' +
       '<td><div class="status-stack">' + quoteStatus + '<span class="' + alertStatus.className + '">' + alertStatus.label + '</span></div></td>' +
       '<td>' + (item.note || '') + '</td>' +
       '<td><div class="stock-actions">' +
@@ -319,6 +418,12 @@ function exportVisibleWatchlistCsv() {
     'group_name',
     'alert_low',
     'alert_high',
+    'auto_d1_low',
+    'auto_d1_high',
+    'auto_d2',
+    'auto_r1',
+    'auto_confirm',
+    'auto_levels_date',
     'alert_status',
     'quote_status',
     'note'
@@ -333,6 +438,12 @@ function exportVisibleWatchlistCsv() {
       item.groupName || '',
       item.alertLow == null ? '' : item.alertLow,
       item.alertHigh == null ? '' : item.alertHigh,
+      item.autoD1Low == null ? '' : item.autoD1Low,
+      item.autoD1High == null ? '' : item.autoD1High,
+      item.autoD2 == null ? '' : item.autoD2,
+      item.autoR1 == null ? '' : item.autoR1,
+      item.autoConfirm == null ? '' : item.autoConfirm,
+      item.autoLevelsDate || '',
       alertStatus.label,
       item.quoteStatus || 'ok',
       item.note || ''
@@ -398,5 +509,8 @@ window.Watchlist = {
   getSelectedGroup: function() { return selectedWatchlistGroup; },
   selectStock,
   analyzeStock,
-  openTradeByCode
+  openTradeByCode,
+  syncTonghuashunWatchlist,
+  refreshAutomaticLevels,
+  scheduleMorningMaintenance
 };

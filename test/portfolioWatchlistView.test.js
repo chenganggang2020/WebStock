@@ -38,3 +38,12 @@ test('double-clicking a watchlist row opens its market detail', () => {
   assert.match(watchlistSource, /data-code="' \+ item\.code \+ '"/);
   assert.match(watchlistSource, /tbody\.ondblclick\s*=\s*handleWatchlistDoubleClick/);
 });
+
+test('watchlist exposes local Tonghuashun sync and automatic level refresh controls', () => {
+  assert.match(indexSource, /id="syncTonghuashunWatchlistBtn"/);
+  assert.match(indexSource, /id="refreshWatchlistLevelsBtn"/);
+  assert.match(indexSource, /id="watchlistSyncStatus"/);
+  assert.match(watchlistSource, /syncTonghuashunWatchlist/);
+  assert.match(watchlistSource, /refreshAutomaticLevels/);
+  assert.match(watchlistSource, /scheduleMorningMaintenance/);
+});
