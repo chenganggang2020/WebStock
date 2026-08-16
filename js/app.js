@@ -346,7 +346,6 @@ function updateSidebarWorkspace() {
     if (el) el.textContent = String(value);
   };
   setText('sidebarWatchlistCount', (State.watchlist || []).length);
-  setText('sidebarPortfolioCount', (State.positions || []).length);
   const sectorDashboard = window.SectorLeaders && window.SectorLeaders.getDashboard ? window.SectorLeaders.getDashboard() : null;
   setText('sidebarSectorCount', ((sectorDashboard && sectorDashboard.overview) || []).length);
   let historyCount = 0;
@@ -359,7 +358,8 @@ function updateSidebarWorkspace() {
   setText('sidebarKnowledgeCount', window.AIResearch && window.AIResearch.getSourceCount ? window.AIResearch.getSourceCount() : 0);
 
   document.querySelectorAll('.sidebar-workspace-btn').forEach(function(btn) {
-    btn.classList.toggle('active', btn.getAttribute('data-main-view') === State.currentMainView);
+    const navigationView = State.currentMainView === 'portfolio' ? 'watchlist' : State.currentMainView;
+    btn.classList.toggle('active', btn.getAttribute('data-main-view') === navigationView);
   });
 }
 
@@ -434,8 +434,9 @@ function switchMainView(view, options) {
   }
   if (view === 'watchlist' || view === 'portfolio') selectPortfolioWatchlistTab(view);
 
+  const navigationView = view === 'portfolio' ? 'watchlist' : view;
   document.querySelectorAll('.main-tab').forEach(function(btn) {
-    btn.classList.toggle('active', btn.getAttribute('data-main-view') === view);
+    btn.classList.toggle('active', btn.getAttribute('data-main-view') === navigationView);
   });
   updateSidebarWorkspace();
   syncMainViewHistory(view, options);

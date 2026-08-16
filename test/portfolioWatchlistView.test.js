@@ -15,6 +15,19 @@ test('portfolio and watchlist share one page with holdings as the first tab and 
   assert.match(appSource, /selectPortfolioWatchlistTab/);
 });
 
+test('desktop navigation exposes one watchlist entry while holdings stays an inner tab', () => {
+  const mainPortfolioEntries = indexSource.match(/class="main-tab"[^>]*data-main-view="portfolio"/g) || [];
+  const sidebarPortfolioEntries = indexSource.match(/class="sidebar-workspace-btn"[^>]*data-main-view="portfolio"/g) || [];
+  const mainWatchlistEntries = indexSource.match(/class="main-tab"[^>]*data-main-view="watchlist"/g) || [];
+  const sidebarWatchlistEntries = indexSource.match(/class="sidebar-workspace-btn"[^>]*data-main-view="watchlist"/g) || [];
+
+  assert.equal(mainPortfolioEntries.length, 0);
+  assert.equal(sidebarPortfolioEntries.length, 0);
+  assert.equal(mainWatchlistEntries.length, 1);
+  assert.equal(sidebarWatchlistEntries.length, 1);
+  assert.match(appSource, /navigationView\s*=\s*view\s*===\s*'portfolio'\s*\?\s*'watchlist'/);
+});
+
 test('watchlist group tabs filter the full local list instead of discarding other groups', () => {
   assert.doesNotMatch(watchlistSource, /watchlist'\s*\+\s*\(group\s*\?/);
   assert.match(watchlistSource, /selectedWatchlistGroup/);
