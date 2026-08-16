@@ -26,12 +26,16 @@ function watchlistCsvCell(value) {
 }
 
 function watchlistLevelCell(item) {
-  const d1Low = Number(item.autoD1Low);
-  const d1High = Number(item.autoD1High);
-  const d2 = Number(item.autoD2);
-  const r1 = Number(item.autoR1);
-  const confirm = Number(item.autoConfirm);
-  if ([d1Low, d1High, d2, r1, confirm].every(Number.isFinite)) {
+  const values = [item.autoD1Low, item.autoD1High, item.autoD2, item.autoR1, item.autoConfirm].map(function(value) {
+    const number = Number(value);
+    return value !== null && value !== '' && Number.isFinite(number) && number > 0 ? number : null;
+  });
+  const d1Low = values[0];
+  const d1High = values[1];
+  const d2 = values[2];
+  const r1 = values[3];
+  const confirm = values[4];
+  if (values.every(function(value) { return value !== null; })) {
     const date = item.autoLevelsDate ? '<small>日线 ' + item.autoLevelsDate + '</small>' : '';
     return '<div class="watchlist-levels" title="' + watchlistTabEscape(item.autoLevelsMethod || '历史日线自动点位') + '">' +
       '<span>D1 ' + money(d1Low) + '–' + money(d1High) + '</span>' +

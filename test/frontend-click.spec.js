@@ -844,7 +844,8 @@ test('Douyin creator workbench shows coverage, searchable videos and transcript 
 test('portfolio accounts switch without mixing holdings or trades', async ({ page }) => {
   page.on('dialog', dialog => dialog.accept());
   await page.goto(baseURL + '/', { waitUntil: 'domcontentloaded' });
-  await page.click('[data-main-view="portfolio"]');
+  await page.click('#sidebarWatchlistBtn');
+  await page.click('#portfolioWatchlistTabs [data-portfolio-watchlist-tab="portfolio"]');
   await expect(page.locator('#portfolioAccountSelect')).toContainText('默认账户');
 
   await page.click('#addPortfolioAccountBtn');
@@ -967,7 +968,7 @@ test('main stock actions and workspace navigation do not throw', async ({ page }
   await page.click('[data-main-view="watchlist"]');
   await expect(page.locator('#watchlistView')).toBeVisible();
 
-  await page.click('[data-main-view="portfolio"]');
+  await page.click('#portfolioWatchlistTabs [data-portfolio-watchlist-tab="portfolio"]');
   await expect(page.locator('#portfolioView')).toBeVisible();
   await page.click('#addTradeFromPortfolioBtn');
   await expect(page.locator('#tradeModalOverlay')).toBeVisible();
@@ -1000,7 +1001,8 @@ test('main stock actions and workspace navigation do not throw', async ({ page }
   expect(tradesDownload.suggestedFilename()).toBe('webstock-trades.csv');
   await page.dblclick('#positionsTbody tr[data-code="000001"]');
   await expect(page.locator('#marketView')).toBeVisible();
-  await page.click('[data-main-view="portfolio"]');
+  await page.click('#sidebarWatchlistBtn');
+  await page.click('#portfolioWatchlistTabs [data-portfolio-watchlist-tab="portfolio"]');
   await page.click('#positionsTbody tr[data-code="000001"]', { button: 'right' });
   await page.click('#stockContextMenu [data-action="sell"]');
   await expect(page.locator('#tradeModalOverlay')).toBeVisible();
@@ -1681,7 +1683,8 @@ test('mobile dark mode workspace remains usable', async ({ page }) => {
   await expect(page.locator('#sectorsView')).toBeVisible();
   await expect(page.locator('#sectorSortSelect')).toBeVisible();
 
-  await page.click('[data-main-view="portfolio"]');
+  await page.click('#sidebarWatchlistBtn');
+  await page.click('#portfolioWatchlistTabs [data-portfolio-watchlist-tab="portfolio"]');
   await expect(page.locator('#portfolioView')).toBeVisible();
   await expect(page.locator('#addTradeFromPortfolioBtn')).toBeVisible();
   await page.click('[data-main-view="trades"]');
