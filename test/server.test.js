@@ -1,6 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const http = require('node:http');
+const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const axios = require('axios');
@@ -12,6 +13,16 @@ process.env.LEVEL2_PROVIDER = 'tonghuashun-http';
 process.env.LEVEL2_BASE_URL = 'http://127.0.0.1:18180';
 process.env.LEVEL2_API_KEY = 'level2-secret-token-1234567890';
 process.env.WEBSTOCK_LEVEL2_CONFIG_PATH = path.join(os.tmpdir(), 'webstock-server-level2-' + process.pid + '.json');
+const serverTestDbPath = path.join(os.tmpdir(), 'webstock-server-' + process.pid + '.db');
+process.env.WEBSTOCK_DB_PATH = serverTestDbPath;
+for (const suffix of ['', '-wal', '-shm']) {
+  try { fs.rmSync(serverTestDbPath + suffix, { force: true }); } catch (error) {}
+}
+process.on('exit', function() {
+  for (const suffix of ['', '-wal', '-shm']) {
+    try { fs.rmSync(serverTestDbPath + suffix, { force: true }); } catch (error) {}
+  }
+});
 
 const app = require('../server');
 

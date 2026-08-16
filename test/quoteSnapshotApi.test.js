@@ -2,8 +2,22 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const express = require('express');
 const http = require('node:http');
+const fs = require('node:fs');
+const os = require('node:os');
+const path = require('node:path');
 const axios = require('axios');
 const iconv = require('iconv-lite');
+
+const quoteTestDbPath = path.join(os.tmpdir(), 'webstock-quote-api-' + process.pid + '.db');
+process.env.WEBSTOCK_DB_PATH = quoteTestDbPath;
+for (const suffix of ['', '-wal', '-shm']) {
+  try { fs.rmSync(quoteTestDbPath + suffix, { force: true }); } catch (error) {}
+}
+process.on('exit', function() {
+  for (const suffix of ['', '-wal', '-shm']) {
+    try { fs.rmSync(quoteTestDbPath + suffix, { force: true }); } catch (error) {}
+  }
+});
 
 function listen(app) {
   return new Promise(function(resolve, reject) {
