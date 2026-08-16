@@ -188,6 +188,38 @@ test('transcription-pending records remain eligible without filling the entire q
   assert.equal(planned.some(item => item.contentId === 'stale-b'), true);
 });
 
+test('recent transcription failure receives a reserved retry slot before stale detail rotation', () => {
+  const observations = [{
+    externalContentId: 'latest-asr-error',
+    publishedAt: '2026-08-16T00:44:00.000Z',
+    mediaMetadata: {
+      detailCapturedAt: '2026-08-16T00:50:44.000Z',
+      asr: { status: 'error', attemptedAt: '2026-08-16T00:50:50.000Z' }
+    }
+  }].concat(Array.from({ length: 8 }, (_value, index) => ({
+    externalContentId: 'stale-' + index,
+    transcript: '已有逐字稿',
+    mediaMetadata: { asr: { status: 'complete' } }
+  })));
+  const state = Object.fromEntries(observations.map(function(observation, index) {
+    return [observation.externalContentId, {
+      lastDetailCheckedAt: index === 0 ? '2026-08-16T00:50:50.000Z' :
+        '2026-08-' + String(index + 1).padStart(2, '0') + 'T00:00:00.000Z'
+    }];
+  }));
+
+  const planned = planDetailCandidates(observations, state, {
+    now: '2026-08-16T03:40:00.000Z',
+    limit: 8,
+    recentTtlMs: 6 * 60 * 60 * 1000,
+    maxTranscriptionPending: 2
+  });
+
+  assert.equal(planned.length, 8);
+  assert.equal(planned[0].contentId, 'latest-asr-error');
+  assert.equal(planned[0].reason, 'transcription_pending');
+});
+
 test('recent transcription-pending records bypass the detail freshness TTL', () => {
   const planned = planDetailCandidates([{
     externalContentId: 'recent-asr',

@@ -194,7 +194,8 @@ function planDetailCandidates(observations, state = {}, options = {}) {
     });
   const pending = eligible.filter(function(item) { return item.reason === 'transcription_pending'; })
     .sort(function(left, right) {
-      return left._lastCheckedAt - right._lastCheckedAt || left.contentId.localeCompare(right.contentId);
+      return left._index - right._index || left._lastCheckedAt - right._lastCheckedAt ||
+        left.contentId.localeCompare(right.contentId);
     })
     .slice(0, maxTranscriptionPending);
 
@@ -203,15 +204,15 @@ function planDetailCandidates(observations, state = {}, options = {}) {
     archives.forEach(function(item) { if (planned.length < limit) planned.push(item); });
   }
   news.forEach(function(item) { if (planned.length < limit) planned.push(item); });
+  pending.forEach(function(item) {
+    if (planned.length < limit) planned.push(item);
+  });
   regular.forEach(function(item) {
     if (planned.length < limit) planned.push(item);
   });
   if (options.prioritizeArchivePending !== true) {
     archives.forEach(function(item) { if (planned.length < limit) planned.push(item); });
   }
-  pending.forEach(function(item) {
-    if (planned.length < limit) planned.push(item);
-  });
   return planned.map(function(item) {
     const result = Object.assign({}, item);
     delete result._lastCheckedAt;

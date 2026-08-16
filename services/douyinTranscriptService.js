@@ -39,6 +39,43 @@ function workspacePath() {
   return path.resolve(process.env.WEBSTOCK_QUANT_WORKSPACE || path.join(quantRoot(), 'workspace'));
 }
 
+function prepareTranscriptionScript(options = {}) {
+  const source = path.resolve(options.source || path.join(quantRoot(), 'douyin_transcribe.py'));
+  const packaged = source.includes('app.asar.unpacked');
+  if (!packaged && !options.durable) {
+    if (!fs.existsSync(source)) throw new Error('本地语音识别脚本缺失：' + source);
+    return source;
+  }
+  const durable = path.resolve(options.durable ||
+    path.join(path.dirname(workspacePath()), 'asr-runtime', 'douyin_transcribe.py'));
+  if (fs.existsSync(source)) {
+    fs.mkdirSync(path.dirname(durable), { recursive: true });
+    const changed = !fs.existsSync(durable) || !fs.readFileSync(source).equals(fs.readFileSync(durable));
+    if (changed) fs.copyFileSync(source, durable);
+  }
+  if (!fs.existsSync(durable)) throw new Error('本地语音识别脚本缺失：' + source);
+  return durable;
+}
+
+function resolveLocalModelSource(modelRoot, model = 'small') {
+  const modelName = String(model || '').trim();
+  if (!/^[0-9A-Za-z._-]+$/.test(modelName)) return '';
+  const repository = path.join(path.resolve(modelRoot), 'models--Systran--faster-whisper-' + modelName);
+  try {
+    const revision = fs.readFileSync(path.join(repository, 'refs', 'main'), 'utf8').trim();
+    if (!/^[0-9A-Za-z._-]+$/.test(revision)) return '';
+    const snapshot = path.join(repository, 'snapshots', revision);
+    const requiredFiles = ['config.json', 'model.bin', 'tokenizer.json', 'vocabulary.txt'];
+    if (!requiredFiles.every(function(name) {
+      const stat = fs.statSync(path.join(snapshot, name));
+      return stat.isFile() && stat.size > 0;
+    })) return '';
+    return snapshot;
+  } catch (error) {
+    return '';
+  }
+}
+
 function resolvePython(explicitPath) {
   const candidates = [];
   if (explicitPath) candidates.push(path.resolve(explicitPath));
@@ -177,15 +214,20 @@ function buildTranscriptionEnvironment(baseEnvironment = process.env) {
   });
 }
 
+function resolveTranscriptionTimeout(options = {}) {
+  return Math.max(Number(options.timeoutMs) || 30 * 60 * 1000, 1000);
+}
+
 function runPythonTranscription(input, options = {}) {
-  const timeoutMs = Math.max(Number(options.timeoutMs) || 15 * 60 * 1000, 1000);
+  const timeoutMs = resolveTranscriptionTimeout(options);
   return new Promise(function(resolve, reject) {
     const args = [
-      path.join(quantRoot(), 'douyin_transcribe.py'),
+      input.scriptPath || path.join(quantRoot(), 'douyin_transcribe.py'),
       '--media', input.mediaPath,
       '--model-root', input.modelRoot,
       '--model', input.model || 'small'
     ];
+    if (input.modelSource) args.push('--model-source', input.modelSource);
     if (input.prompt) args.push('--prompt', String(input.prompt).slice(0, 1000));
     const child = childProcess.spawn(input.pythonPath, args, {
       windowsHide: true,
@@ -256,6 +298,10 @@ function normalizeResult(raw, download) {
 function createDouyinTranscriptService(options = {}) {
   const archiveRoot = path.resolve(options.archiveRoot || options.tempRoot || path.join(path.dirname(workspacePath()), 'media-library', 'douyin'));
   const modelRoot = path.resolve(options.modelRoot || path.join(path.dirname(workspacePath()), 'asr-models'));
+  const scriptPath = prepareTranscriptionScript({
+    source: options.scriptPath,
+    durable: options.durableScriptPath
+  });
   const downloadMedia = options.downloadMedia || downloadMediaFile;
   const runPython = options.runPython || runPythonTranscription;
   const cleanup = cleanupStaleTempFiles(archiveRoot, { maxAgeMs: options.staleTempMaxAgeMs });
@@ -347,11 +393,14 @@ function createDouyinTranscriptService(options = {}) {
       bytes: archiveEvidence.mediaBytes,
       contentType: archiveEvidence.mediaContentType
     };
+    const model = options.model || 'small';
     const raw = await runPython({
       pythonPath: resolvePython(options.pythonPath),
+      scriptPath,
       mediaPath: archiveEvidence.localAssetPath,
       modelRoot,
-      model: options.model || 'small',
+      model,
+      modelSource: resolveLocalModelSource(modelRoot, model),
       prompt: String(input.prompt || '').slice(0, 1000)
     }, options);
     const result = normalizeResult(raw, download);
@@ -371,6 +420,9 @@ module.exports = {
   cleanupStaleTempFiles,
   downloadMediaFile,
   buildTranscriptionEnvironment,
+  resolveTranscriptionTimeout,
+  prepareTranscriptionScript,
+  resolveLocalModelSource,
   runPythonTranscription,
   normalizeResult
 };

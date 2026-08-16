@@ -12,6 +12,7 @@ def main():
     parser.add_argument("--media", required=True)
     parser.add_argument("--model-root", required=True)
     parser.add_argument("--model", default="small")
+    parser.add_argument("--model-source", default="")
     parser.add_argument("--prompt", default="")
     args = parser.parse_args()
 
@@ -20,7 +21,7 @@ def main():
     segments_iter = None
     try:
         model = WhisperModel(
-            args.model,
+            args.model_source or args.model,
             device="cpu",
             compute_type="int8",
             download_root=args.model_root,

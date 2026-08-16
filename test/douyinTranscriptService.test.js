@@ -10,8 +10,45 @@ const {
   isAllowedDouyinMediaUrl,
   cleanupStaleTempFiles,
   buildTranscriptionEnvironment,
+  prepareTranscriptionScript,
+  resolveLocalModelSource,
+  resolveTranscriptionTimeout,
   normalizeResult
 } = require('../services/douyinTranscriptService');
+
+test('packaged transcription script survives cleanup of the portable extraction directory', t => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'webstock-asr-script-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const extractedRoot = path.join(root, 'resources', 'app.asar.unpacked', 'quant');
+  const source = path.join(extractedRoot, 'douyin_transcribe.py');
+  const durable = path.join(root, 'WebStockData', 'asr-runtime', 'douyin_transcribe.py');
+  fs.mkdirSync(extractedRoot, { recursive: true });
+  fs.writeFileSync(source, 'print("packaged ASR")\n', 'utf8');
+
+  const prepared = prepareTranscriptionScript({ source, durable });
+  fs.rmSync(path.join(root, 'resources'), { recursive: true, force: true });
+
+  assert.equal(prepared, durable);
+  assert.equal(fs.readFileSync(prepared, 'utf8'), 'print("packaged ASR")\n');
+});
+
+test('cached Whisper model resolves to a local snapshot without a remote lookup', t => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'webstock-asr-model-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const revision = '536b0662742c02347bc0e980a01041f333bce120';
+  const repository = path.join(root, 'models--Systran--faster-whisper-small');
+  const snapshot = path.join(repository, 'snapshots', revision);
+  fs.mkdirSync(path.join(repository, 'refs'), { recursive: true });
+  fs.mkdirSync(snapshot, { recursive: true });
+  fs.writeFileSync(path.join(repository, 'refs', 'main'), revision + '\n', 'utf8');
+  ['config.json', 'model.bin', 'tokenizer.json', 'vocabulary.txt'].forEach(function(name) {
+    fs.writeFileSync(path.join(snapshot, name), 'cached', 'utf8');
+  });
+
+  assert.equal(resolveLocalModelSource(root, 'small'), snapshot);
+  fs.rmSync(path.join(snapshot, 'model.bin'));
+  assert.equal(resolveLocalModelSource(root, 'small'), '');
+});
 
 test('transcription subprocess caps native CPU thread pools without mutating the parent environment', () => {
   const parentEnvironment = {
@@ -30,6 +67,11 @@ test('transcription subprocess caps native CPU thread pools without mutating the
   assert.equal(environment.NUMEXPR_NUM_THREADS, '1');
   assert.equal(environment.UNRELATED_SETTING, 'preserved');
   assert.equal(parentEnvironment.OMP_NUM_THREADS, '64');
+});
+
+test('cold local model loading has enough time to finish before transcription is terminated', () => {
+  assert.equal(resolveTranscriptionTimeout({}), 30 * 60 * 1000);
+  assert.equal(resolveTranscriptionTimeout({ timeoutMs: 45000 }), 45000);
 });
 
 test('Douyin transcription accepts only HTTPS ByteDance media CDN URLs', () => {
