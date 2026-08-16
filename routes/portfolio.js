@@ -130,6 +130,14 @@ router.post('/accounts/:id/import-holdings', function(req, res) {
   }
 });
 
+router.post('/accounts/:id/sync-holdings', function(req, res) {
+  try {
+    ok(res, portfolio.syncHoldingSnapshot(Number(req.params.id), req.body));
+  } catch (error) {
+    fail(res, error);
+  }
+});
+
 router.get('/watchlist', function (req, res) {
   try {
     ok(res, portfolio.listWatchlist({ group: req.query.group }));

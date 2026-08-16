@@ -183,7 +183,9 @@ function bindButtons() {
   bindMainNavigation();
 
   const watchlistGroupFilter = document.getElementById('watchlistGroupFilter');
-  if (watchlistGroupFilter) watchlistGroupFilter.addEventListener('change', Watchlist.loadWatchlist);
+  if (watchlistGroupFilter) watchlistGroupFilter.addEventListener('change', function() {
+    Watchlist.setSelectedGroup(watchlistGroupFilter.value);
+  });
   const watchlistSortSelect = document.getElementById('watchlistSortSelect');
   if (watchlistSortSelect) watchlistSortSelect.addEventListener('change', Watchlist.renderWatchlist);
   const watchlistSearchInput = document.getElementById('watchlistSearchInput');
@@ -370,6 +372,51 @@ function syncMainViewHistory(view, options) {
   else window.history.pushState(state, '', url);
 }
 
+function setupPortfolioWatchlistPage() {
+  const host = document.getElementById('watchlistView');
+  const portfolio = document.getElementById('portfolioView');
+  const tabs = document.getElementById('portfolioWatchlistTabs');
+  if (!host || !portfolio || !tabs || portfolio.parentElement === host) return;
+  portfolio.classList.remove('main-view');
+  portfolio.classList.add('portfolio-watchlist-panel');
+  host.appendChild(portfolio);
+  tabs.addEventListener('click', function(event) {
+    const button = event.target.closest('[data-portfolio-watchlist-tab]');
+    if (!button) return;
+    const kind = button.getAttribute('data-portfolio-watchlist-tab');
+    if (kind === 'portfolio') {
+      switchMainView('portfolio');
+      return;
+    }
+    if (window.Watchlist) window.Watchlist.setSelectedGroup(button.getAttribute('data-group') || '');
+    switchMainView('watchlist');
+  });
+}
+
+function refreshPortfolioWatchlistTabState() {
+  const currentKind = window.State.currentMainView === 'portfolio' ? 'portfolio' : 'watchlist';
+  const currentGroup = window.Watchlist && window.Watchlist.getSelectedGroup
+    ? window.Watchlist.getSelectedGroup() : '';
+  document.querySelectorAll('[data-portfolio-watchlist-tab]').forEach(function(button) {
+    const kind = button.getAttribute('data-portfolio-watchlist-tab');
+    const group = button.getAttribute('data-group') || '';
+    const active = kind === currentKind && (kind === 'portfolio' || group === currentGroup);
+    button.classList.toggle('active', active);
+    button.setAttribute('aria-selected', active ? 'true' : 'false');
+  });
+}
+
+function selectPortfolioWatchlistTab(view) {
+  const holdings = document.getElementById('portfolioView');
+  const watchlist = document.getElementById('combinedWatchlistPanel');
+  const showHoldings = view === 'portfolio';
+  if (holdings) holdings.style.display = showHoldings ? '' : 'none';
+  if (watchlist) watchlist.style.display = showHoldings ? 'none' : '';
+  refreshPortfolioWatchlistTabState();
+}
+
+window.refreshPortfolioWatchlistTabState = refreshPortfolioWatchlistTabState;
+
 function switchMainView(view, options) {
   const State = window.State;
   options = options || {};
@@ -380,11 +427,12 @@ function switchMainView(view, options) {
     el.classList.remove('active');
   });
 
-  const target = document.getElementById(view + 'View');
+  const target = document.getElementById((view === 'portfolio' ? 'watchlist' : view) + 'View');
   if (target) {
     target.style.display = '';
     target.classList.add('active');
   }
+  if (view === 'watchlist' || view === 'portfolio') selectPortfolioWatchlistTab(view);
 
   document.querySelectorAll('.main-tab').forEach(function(btn) {
     btn.classList.toggle('active', btn.getAttribute('data-main-view') === view);
@@ -506,6 +554,7 @@ async function init() {
 
   // Bind navigation before the first network wait so early user clicks are never dropped.
   bindMainNavigation();
+  setupPortfolioWatchlistPage();
   if (window.NetworkHealth) window.NetworkHealth.start();
   if (window.News && window.News.loadSidebarNews) {
     window.News.loadSidebarNews().catch(function(error) { console.warn(error.message); });

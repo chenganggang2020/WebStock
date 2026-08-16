@@ -38,7 +38,19 @@ function renderKlineChart(rawData, indicator) {
   const axisLabelBorder = isDark ? '#475569' : '#d1d5db';
 
   const dates = rawData.map(d => d.date);
-  const ohlc = rawData.map(d => [d.open, d.close, d.low, d.high]);
+  const isDaily = State.currentPeriod === 'day';
+  const candleVisuals = window.MarketVisualModel
+    ? window.MarketVisualModel.candleColors(State.currentStock || {}, rawData, isDark)
+    : rawData.map(function(d) { return { color: d.close >= d.open ? upColor : downColor }; });
+  const ohlc = rawData.map(function(d, index) {
+    const value = [d.open, d.close, d.low, d.high];
+    if (!isDaily) return value;
+    const color = candleVisuals[index].color;
+    return {
+      value: value,
+      itemStyle: { color: color, color0: color, borderColor: color, borderColor0: color }
+    };
+  });
   const volumes = rawData.map(d => {
     if (typeof d.volume === 'number') return +(d.volume / 10000).toFixed(0);
     return 0;
@@ -51,6 +63,45 @@ function renderKlineChart(rawData, indicator) {
     itemStyle: { color: upColor, color0: downColor, borderColor: upColor, borderColor0: downColor, borderWidth: chartTheme.widths.reference },
     xAxisIndex: 0, yAxisIndex: 0, z: 1
   }];
+
+  const watchlistItem = (State.watchlist || []).find(function(item) {
+    return State.currentStock && item.code === State.currentStock.code;
+  });
+  const watchlistMarks = window.MarketVisualModel && watchlistItem
+    ? window.MarketVisualModel.watchlistMarks(watchlistItem)
+    : { lines: [], areas: [] };
+  const markColors = {
+    defense: downColor,
+    breakout: '#f97316',
+    confirm: '#7c3aed',
+    observe: '#2563eb'
+  };
+  if (watchlistMarks.lines.length) {
+    baseSeries[0].markLine = {
+      symbol: ['none', 'none'],
+      silent: true,
+      label: { show: true, position: 'insideEndTop', color: textColor, formatter: '{b} {c}' },
+      data: watchlistMarks.lines.map(function(mark) {
+        const color = markColors[mark.kind] || chartTheme.colors.reference;
+        return {
+          name: mark.name,
+          yAxis: mark.value,
+          lineStyle: { color: color, width: 1.1, type: 'dashed' },
+          label: { color: color }
+        };
+      })
+    };
+  }
+  if (watchlistMarks.areas.length) {
+    baseSeries[0].markArea = {
+      silent: true,
+      itemStyle: { color: 'rgba(37, 99, 235, 0.08)' },
+      label: { color: '#2563eb', position: 'insideTopRight' },
+      data: watchlistMarks.areas.map(function(area) {
+        return [{ name: area.name, yAxis: area.from }, { yAxis: area.to }];
+      })
+    };
+  }
 
   let needThreeGrids = false;
   let legendData = ['K线'];
@@ -154,7 +205,10 @@ function renderKlineChart(rawData, indicator) {
   const volSeries = {
     name: '成交量(万手)',
     type: 'bar',
-    data: volumes.map(function(v, i) { return { value: v, itemStyle: { color: rawData[i].close >= rawData[i].open ? upColor : downColor } }; }),
+    data: volumes.map(function(v, i) {
+      const color = isDaily ? candleVisuals[i].color : rawData[i].close >= rawData[i].open ? upColor : downColor;
+      return { value: v, itemStyle: { color: color } };
+    }),
     xAxisIndex: volX, yAxisIndex: volY,
     barWidth: chartTheme.volumeBarWidth
   };

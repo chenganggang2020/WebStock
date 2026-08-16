@@ -649,7 +649,7 @@ function getLatestSnapshot(accountId = 1) {
   return row ? rowToPortfolioSnapshot(row) : null;
 }
 
-function importHoldingSnapshot(accountId, input = {}) {
+function importHoldingSnapshot(accountId, input = {}, options = {}) {
   const id = normalizeAccountId(accountId);
   getAccount(id);
   assertDate(input.snapshotDate);
@@ -695,7 +695,15 @@ function importHoldingSnapshot(accountId, input = {}) {
 
   const transaction = db.transaction(function() {
     const existingCount = db.prepare('SELECT COUNT(*) AS count FROM trades WHERE account_id = ?').get(id).count;
-    if (existingCount > 0) throw new Error('目标账户已有交易，不能重复导入持仓基线');
+    if (existingCount > 0) {
+      if (!options.replaceSnapshotBaseline) throw new Error('目标账户已有交易，不能重复导入持仓基线');
+      const manualCount = db.prepare(`
+        SELECT COUNT(*) AS count FROM trades
+        WHERE account_id = ? AND source_type <> 'holding_snapshot'
+      `).get(id).count;
+      if (manualCount > 0) throw new Error('目标账户包含手工交易，不能替换截图持仓基线');
+      db.prepare("DELETE FROM trades WHERE account_id = ? AND source_type = 'holding_snapshot'").run(id);
+    }
     updateAccount(id, { cashBalance });
     normalizedHoldings.forEach(function(holding) {
       createTrade({
@@ -742,6 +750,10 @@ function importHoldingSnapshot(accountId, input = {}) {
   return { account: getAccount(id), snapshot, importedCount: normalizedHoldings.length };
 }
 
+function syncHoldingSnapshot(accountId, input = {}) {
+  return importHoldingSnapshot(accountId, input, { replaceSnapshotBaseline: true });
+}
+
 module.exports = {
   VALID_SIDES,
   listAccounts,
@@ -751,6 +763,7 @@ module.exports = {
   deleteAccount,
   getLatestSnapshot,
   importHoldingSnapshot,
+  syncHoldingSnapshot,
   listWatchlist,
   addWatchlistItem,
   updateWatchlistItem,

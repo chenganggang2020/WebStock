@@ -95,7 +95,9 @@ async function loadPositionMiniCharts(positions) {
         holder.innerHTML = positionMiniChartPlaceholder('暂无分时');
         continue;
       }
-      const trendColor = Number(pos.todayChange) >= 0 ? 'var(--up)' : 'var(--down)';
+      const trendColor = window.MarketVisualModel
+        ? window.MarketVisualModel.trendColor(pos.todayChange, document.body.classList.contains('dark'))
+        : Number(pos.todayChange) >= 0 ? '#ff2d2d' : '#00b050';
       holder.innerHTML = window.StockList.miniChart(
         Object.assign({}, pos, { price: pos.currentPrice, change: pos.todayChange, minuteSeries: series }),
         trendColor
@@ -366,7 +368,9 @@ function renderPositions() {
     const floatingPnl = pos.unrealizedPnl;
     const realizedPnl = pos.realizedPnl;
     const minuteSeries = window.State.minuteSeriesByCode && window.State.minuteSeriesByCode[pos.code];
-    const trendColor = Number(pos.todayChange) >= 0 ? 'var(--up)' : 'var(--down)';
+    const trendColor = window.MarketVisualModel
+      ? window.MarketVisualModel.trendColor(pos.todayChange, document.body.classList.contains('dark'))
+      : Number(pos.todayChange) >= 0 ? '#ff2d2d' : '#00b050';
     const miniChart = Array.isArray(minuteSeries) && minuteSeries.length >= 2 && window.StockList && window.StockList.miniChart
       ? window.StockList.miniChart(Object.assign({}, pos, { price: pos.currentPrice, change: pos.todayChange, minuteSeries: minuteSeries }), trendColor)
       : positionMiniChartPlaceholder('加载分时...');

@@ -2,8 +2,8 @@
   --bg: #f5f6fa;
   --card-bg: #ffffff;
   --text: #2c3e50;
-  --up: #e11d48;
-  --down: #059669;
+  --up: #ff2d2d;
+  --down: #00b050;
   --border: #e0e0e0;
   --hover: #f0f7ff;
   --active: #dbeafe;
@@ -20,8 +20,8 @@ body.dark {
   --bg: #0f172a;
   --card-bg: #1e293b;
   --text: #cbd5e1;
-  --up: #fb7185;
-  --down: #34d399;
+  --up: #ff4d4f;
+  --down: #22c55e;
   --border: #0f172a;
   --hover: #1e293b;
   --active: #334155;
@@ -2112,6 +2112,41 @@ body.dark .md-body blockquote { background: rgba(99,102,241,0.12); }
 #positionsTable tbody tr,
 #watchlistTable tbody tr {
   min-height: 76px;
+}
+
+.portfolio-watchlist-tabs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--border);
+  background: var(--card-bg);
+}
+
+.watchlist-group-tabs {
+  display: contents;
+}
+
+.portfolio-watchlist-tab {
+  flex: 0 0 auto;
+  padding: 7px 14px;
+  border: 1px solid var(--btn-border);
+  border-radius: 18px;
+  background: var(--btn-bg);
+  color: var(--btn-color);
+  cursor: pointer;
+}
+
+.portfolio-watchlist-tab.active {
+  border-color: var(--focus);
+  background: var(--active);
+  color: var(--focus);
+  font-weight: 700;
+}
+
+.portfolio-watchlist-panel {
+  min-width: 0;
 }
 
 #positionsTable td,

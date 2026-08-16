@@ -18,8 +18,9 @@
     light: {
       background: '#ffffff',
       text: '#334155',
-      up: '#cf646b',
-      down: '#3d9b74',
+      up: '#ff2d2d',
+      down: '#00b050',
+      limitUp: '#f5c542',
       grid: '#e2e8f0',
       axis: '#cbd5e1',
       reference: '#94a3b8',
@@ -29,8 +30,9 @@
     dark: {
       background: '#1e293b',
       text: '#cbd5e1',
-      up: '#df7b82',
-      down: '#62b58b',
+      up: '#ff4d4f',
+      down: '#22c55e',
+      limitUp: '#ffd54f',
       grid: '#334155',
       axis: '#475569',
       reference: '#94a3b8',

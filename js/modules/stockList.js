@@ -34,8 +34,11 @@ function minuteStockForCode(code) {
 }
 
 function miniTrendColor(stock) {
-  return Number(stock && (stock.change !== undefined ? stock.change : stock.todayChange)) >= 0
-    ? 'var(--up)' : 'var(--down)';
+  const change = stock && (stock.change !== undefined ? stock.change : stock.todayChange);
+  if (window.MarketVisualModel) {
+    return window.MarketVisualModel.trendColor(change, document.body.classList.contains('dark'));
+  }
+  return Number(change) >= 0 ? '#ff2d2d' : '#00b050';
 }
 
 function minuteChartCellsForCode(code) {

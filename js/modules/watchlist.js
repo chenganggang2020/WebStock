@@ -25,8 +25,15 @@ function watchlistCsvCell(value) {
   return /[",\r\n]/.test(text) ? '"' + text.replace(/"/g, '""') + '"' : text;
 }
 
+let selectedWatchlistGroup = '';
+
 function visibleWatchlistItems() {
   let items = (window.State.watchlist || []).slice();
+  if (selectedWatchlistGroup) {
+    items = items.filter(function(item) {
+      return (item.groupName || '默认分组') === selectedWatchlistGroup;
+    });
+  }
   const keyword = document.getElementById('watchlistSearchInput') ? document.getElementById('watchlistSearchInput').value.trim() : '';
   if (keyword) {
     const normalized = keyword.toLowerCase();
@@ -53,9 +60,8 @@ function visibleWatchlistItems() {
 async function loadWatchlist(options) {
   options = options || {};
   const State = window.State;
-  const group = document.getElementById('watchlistGroupFilter') ? document.getElementById('watchlistGroupFilter').value : '';
   const previousByCode = new Map((State.watchlist || []).map(function(item) { return [item.code, item]; }));
-  State.watchlist = (await watchlistApi('/watchlist' + (group ? '?group=' + encodeURIComponent(group) : ''))).map(function(item) {
+  State.watchlist = (await watchlistApi('/watchlist')).map(function(item) {
     const previous = previousByCode.get(item.code) || {};
     ['price', 'change', 'amount', 'quoteStatus', 'open', 'high', 'low', 'prevClose'].forEach(function(field) {
       if ((item[field] === undefined || item[field] === null) && previous[field] !== undefined) item[field] = previous[field];
@@ -68,6 +74,31 @@ async function loadWatchlist(options) {
   if (window.Dashboard) window.Dashboard.refreshCards();
   if (window.updateSidebarWorkspace) window.updateSidebarWorkspace();
   return State.watchlist;
+}
+
+function setSelectedGroup(group) {
+  selectedWatchlistGroup = String(group || '');
+  const groupFilter = document.getElementById('watchlistGroupFilter');
+  if (groupFilter) groupFilter.value = selectedWatchlistGroup;
+  renderWatchlist();
+}
+
+function watchlistTabEscape(value) {
+  return String(value == null ? '' : value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function renderPortfolioWatchlistTabs(groups) {
+  const box = document.getElementById('watchlistGroupTabs');
+  if (!box) return;
+  box.innerHTML = (groups || []).map(function(group) {
+    return '<button type="button" class="portfolio-watchlist-tab" data-portfolio-watchlist-tab="watchlist" data-group="' +
+      watchlistTabEscape(group) + '" role="tab">' + watchlistTabEscape(group) + '</button>';
+  }).join('');
+  if (window.refreshPortfolioWatchlistTabState) window.refreshPortfolioWatchlistTabState();
 }
 
 async function addCurrentStock() {
@@ -159,10 +190,11 @@ function renderWatchlist() {
 
   const groups = Array.from(new Set(State.watchlist.map(item => item.groupName || '默认分组')));
   if (groupFilter) {
-    const current = groupFilter.value;
+    const current = selectedWatchlistGroup;
     groupFilter.innerHTML = '<option value="">全部分组</option>' + groups.map(group => '<option value="' + group + '">' + group + '</option>').join('');
     groupFilter.value = current;
   }
+  renderPortfolioWatchlistTabs(groups);
 
   const items = visibleWatchlistItems();
   empty.style.display = items.length ? 'none' : '';
@@ -170,7 +202,9 @@ function renderWatchlist() {
   tbody.innerHTML = items.map(item => {
     const change = Number(item.change);
     const colorClass = Number.isFinite(change) && change >= 0 ? 'pnl-up' : 'pnl-down';
-    const trendColor = Number.isFinite(change) && change >= 0 ? 'var(--up)' : 'var(--down)';
+    const trendColor = window.MarketVisualModel
+      ? window.MarketVisualModel.trendColor(change, document.body.classList.contains('dark'))
+      : Number.isFinite(change) && change >= 0 ? '#ff2d2d' : '#00b050';
     const miniChart = window.StockList && window.StockList.miniChart
       ? window.StockList.miniChart(item, trendColor)
       : '';
@@ -180,7 +214,7 @@ function renderWatchlist() {
       : item.quoteStatus === 'stale'
       ? '<span class="status-warn">行情保留</span>'
       : '<span class="status-ok">正常</span>';
-    return '<tr>' +
+    return '<tr data-code="' + item.code + '" tabindex="0" title="双击查看行情">' +
       '<td><button class="link-btn" data-action="view" data-code="' + item.code + '">' + item.code + '</button></td>' +
       '<td><div class="holding-name-cell"><span>' + item.name + '</span><span data-mini-chart-code="' + item.code + '">' + miniChart + '</span></div></td>' +
       '<td>' + money(item.price) + '</td>' +
@@ -199,9 +233,16 @@ function renderWatchlist() {
       '</tr>';
   }).join('');
   tbody.onclick = handleWatchlistClick;
+  tbody.ondblclick = handleWatchlistDoubleClick;
   if (window.StockList && window.StockList.observeMinuteRows) {
     window.StockList.observeMinuteRows(tbody);
   }
+}
+
+function handleWatchlistDoubleClick(event) {
+  if (event.target.closest('button')) return;
+  const row = event.target.closest('tr[data-code]');
+  if (row) selectStock(row.getAttribute('data-code'));
 }
 
 async function handleWatchlistClick(event) {
@@ -352,6 +393,9 @@ window.Watchlist = {
   applyQuoteSnapshot,
   exportVisibleWatchlistCsv,
   bulkSetVisibleGroup,
+  setSelectedGroup,
+  renderPortfolioWatchlistTabs,
+  getSelectedGroup: function() { return selectedWatchlistGroup; },
   selectStock,
   analyzeStock,
   openTradeByCode

@@ -267,3 +267,34 @@ test('portfolio accounts isolate trades and import a broker holding snapshot wit
   assert.equal(summary.cashBalance, 10000);
   assert.equal(summary.totalAssets, 88469);
 });
+
+test('broker screenshot sync replaces only a screenshot baseline and preserves historical snapshots', () => {
+  const account = portfolio.createAccount({ name: '截图更新账户', broker: '测试券商', cashBalance: 10 });
+  portfolio.importHoldingSnapshot(account.id, {
+    snapshotDate: '2026-08-11', cashBalance: 10, totalAssets: 1010, totalMarketValue: 1000,
+    holdings: [{ code: '600001', name: '旧持仓', quantity: 100, costValue: 900, currentPrice: 10 }]
+  });
+
+  const synced = portfolio.syncHoldingSnapshot(account.id, {
+    snapshotDate: '2026-08-16', cashBalance: 20, totalAssets: 2420, totalMarketValue: 2400,
+    holdings: [
+      { code: '600002', name: '新持仓一', quantity: 100, costValue: 1100, currentPrice: 12 },
+      { code: '000003', name: '新持仓二', quantity: 200, costValue: 1000, currentPrice: 6 }
+    ]
+  });
+
+  assert.equal(synced.importedCount, 2);
+  assert.equal(portfolio.listTrades({ accountId: account.id }).length, 2);
+  assert.deepEqual(portfolio.getPositions({}, { accountId: account.id }).map(item => item.code).sort(), ['000003', '600002']);
+  assert.equal(portfolio.getLatestSnapshot(account.id).snapshotDate, '2026-08-16');
+});
+
+test('broker screenshot sync refuses to replace an account containing manual trades', () => {
+  const account = portfolio.createAccount({ name: '手工交易账户' });
+  portfolio.createTrade({ accountId: account.id, code: '600001', name: '手工持仓', side: 'buy', tradeDate: '2026-08-16', price: 10, quantity: 100 });
+
+  assert.throws(() => portfolio.syncHoldingSnapshot(account.id, {
+    snapshotDate: '2026-08-16', cashBalance: 0, totalAssets: 1000, totalMarketValue: 1000,
+    holdings: [{ code: '600002', name: '截图持仓', quantity: 100, costValue: 900, currentPrice: 10 }]
+  }), /手工交易|不能替换/);
+});

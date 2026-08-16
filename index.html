@@ -1281,6 +1281,12 @@
     </div>
 
     <div id="watchlistView" class="main-view" style="display:none;">
+      <div id="portfolioWatchlistTabs" class="portfolio-watchlist-tabs" role="tablist" aria-label="持仓与自选分组">
+        <button type="button" class="portfolio-watchlist-tab active" data-portfolio-watchlist-tab="portfolio" role="tab">持仓</button>
+        <button type="button" class="portfolio-watchlist-tab" data-portfolio-watchlist-tab="watchlist" data-group="" role="tab">全部自选</button>
+        <span id="watchlistGroupTabs" class="watchlist-group-tabs"></span>
+      </div>
+      <div id="combinedWatchlistPanel" class="portfolio-watchlist-panel" style="display:none;">
       <div class="section-header">
         <div class="section-title-live"><h2>我的自选股</h2><span id="watchlistLiveStatus" class="live-refresh-status">新浪行情快照 · 等待刷新</span></div>
         <div class="section-actions">
@@ -1317,6 +1323,7 @@
           </thead>
           <tbody id="watchlistTbody"></tbody>
         </table>
+      </div>
       </div>
     </div>
 
@@ -1610,6 +1617,7 @@
   <script src="js/modules/networkHealth.js"></script>
   <script src="js/modules/search.js"></script>
   <script src="js/modules/chartTheme.js"></script>
+  <script src="js/modules/marketVisualModel.js"></script>
   <script src="js/modules/stockList.js"></script>
   <script src="js/modules/indicators.js"></script>
   <script src="js/modules/klineChart.js"></script>

@@ -1877,3 +1877,28 @@ test('apiFetch reports HTML API responses without Unexpected token', async ({ pa
     allowApiFetchNonJsonConsole = false;
   }
 });
+
+test('holdings and watchlist groups share one tabbed page and watchlist rows open on double click', async ({ page }) => {
+  await page.request.post(baseURL + '/api/portfolio/watchlist', {
+    data: { code: '601138', name: '工业富联', groupName: '验收分组', note: 'D1 64.8–65.3；D2 收盘低于63.7；R1 66.5' }
+  });
+  await page.goto(baseURL + '/#portfolio', { waitUntil: 'domcontentloaded' });
+
+  await expect(page.locator('#watchlistView')).toBeVisible();
+  await expect(page.locator('#portfolioView')).toBeVisible();
+  await expect(page.locator('#combinedWatchlistPanel')).toBeHidden();
+  const tabs = page.locator('#portfolioWatchlistTabs .portfolio-watchlist-tab');
+  expect(await tabs.count()).toBeGreaterThanOrEqual(3);
+  await expect(tabs.nth(0)).toHaveText('持仓');
+
+  await page.click('#sidebarWatchlistBtn');
+  await expect(page.locator('#combinedWatchlistPanel')).toBeVisible();
+  await expect(page.locator('#portfolioView')).toBeHidden();
+  await page.click('#watchlistGroupTabs [data-group="验收分组"]');
+  await expect(page.locator('#watchlistTbody')).toContainText('601138');
+  await expect(page.locator('#watchlistTbody .stock-mini-chart polyline')).toHaveAttribute('stroke', '#00b050');
+
+  await page.dblclick('#watchlistTbody tr[data-code="601138"] td:nth-child(3)');
+  await expect(page.locator('#marketView')).toBeVisible();
+  await expect(page.locator('#chartTitle')).toContainText('601138');
+});
