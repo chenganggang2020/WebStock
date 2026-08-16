@@ -24,8 +24,8 @@ const MINI_CHART_LABELS = {
 
 function minuteStockForCode(code) {
   const State = window.State || {};
-  const lists = [State.filteredStocks, State.searchResults, State.allStocks,
-    State.watchlist, State.positions, State.recentStocks];
+  const lists = [State.watchlist, State.positions, State.filteredStocks,
+    State.searchResults, State.recentStocks, State.allStocks];
   for (const list of lists) {
     const found = (list || []).find(function(item) { return item && item.code === code; });
     if (found) return found;

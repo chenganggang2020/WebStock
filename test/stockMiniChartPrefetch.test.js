@@ -45,7 +45,13 @@ function loadStockList(cells, fetchApiEnvelope) {
       searchResults: [],
       watchlist: []
     },
-    ApiClient: { fetchApiEnvelope }
+    ApiClient: { fetchApiEnvelope },
+    MarketVisualModel: {
+      trendColor(change) {
+        if (change === null || change === undefined || !Number.isFinite(Number(change))) return '#64748b';
+        return Number(change) > 0 ? '#ff2d2d' : Number(change) < 0 ? '#00b050' : '#64748b';
+      }
+    }
   };
   const context = {
     window,
@@ -57,7 +63,7 @@ function loadStockList(cells, fetchApiEnvelope) {
   };
   const source = fs.readFileSync(path.resolve(__dirname, '../js/modules/stockList.js'), 'utf8');
   vm.runInNewContext(source, context, { filename: 'stockList.js' });
-  return { StockList: window.StockList, getObserver() { return observer; } };
+  return { StockList: window.StockList, state: window.State, getObserver() { return observer; } };
 }
 
 test('visible row minute prefetch is lazy, bounded, deduplicated, and keeps failures explicit', async () => {
@@ -132,4 +138,27 @@ test('missing minute data keeps an honest placeholder but colors it from the dai
   assert.match(up, /行情源无分时|暂无真实分时/);
   assert.match(up, /#ff2d2d/);
   assert.doesNotMatch(down, /polyline/);
+});
+
+test('minute prefetch rerender prefers the quoted watchlist row over the unquoted base catalog', async () => {
+  const cell = createCell('601138');
+  const loaded = loadStockList([cell], async function() {
+    return {
+      data: [
+        { time: '2026-08-14 09:35:00', price: 65.5 },
+        { time: '2026-08-14 15:00:00', price: 66.19 }
+      ],
+      meta: { sampling: { intervalMinutes: 5 } }
+    };
+  });
+  loaded.state.allStocks = [{ code: '601138', name: '工业富联' }];
+  loaded.state.watchlist = [{ code: '601138', name: '工业富联', change: 1.47, prevClose: 65.23 }];
+
+  loaded.StockList.observeMinuteRows({ querySelectorAll() { return [cell]; } });
+  loaded.getObserver().callback([{ target: cell, isIntersecting: true }]);
+  await loaded.StockList.waitForMinutePrefetchIdle();
+
+  assert.match(cell.innerHTML, /polyline/);
+  assert.match(cell.innerHTML, /stroke="#ff2d2d"/);
+  assert.doesNotMatch(cell.innerHTML, /stroke="#64748b"[^>]*polyline/);
 });
