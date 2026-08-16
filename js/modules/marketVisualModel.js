@@ -15,7 +15,8 @@
   function trendColor(change, dark) {
     const value = Number(change);
     if (!Number.isFinite(value)) return palette(dark).flat;
-    return value >= 0 ? palette(dark).up : palette(dark).down;
+    if (value === 0) return palette(dark).flat;
+    return value > 0 ? palette(dark).up : palette(dark).down;
   }
 
   function limitRate(stock) {

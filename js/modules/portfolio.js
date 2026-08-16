@@ -54,10 +54,11 @@ function todayReferencePnlValue(pos) {
 let positionMiniChartGeneration = 0;
 const positionMiniChartRequests = new Map();
 
-function positionMiniChartPlaceholder(label) {
+function positionMiniChartPlaceholder(label, color) {
+  const safeColor = portfolioEscape(color || '#94a3b8');
   return '<svg class="stock-mini-chart position-mini-chart-placeholder" viewBox="0 0 168 52" aria-label="' + portfolioEscape(label) + '">' +
-    '<line x1="6" y1="26" x2="162" y2="26" stroke="#d7dee8" stroke-width="1" stroke-dasharray="3 4"/>' +
-    '<text x="84" y="30" text-anchor="middle" fill="#94a3b8" font-size="9">' + portfolioEscape(label) + '</text>' +
+    '<line x1="6" y1="26" x2="162" y2="26" stroke="' + safeColor + '" stroke-width="1" stroke-dasharray="3 4"/>' +
+    '<text x="84" y="30" text-anchor="middle" fill="' + safeColor + '" font-size="9">' + portfolioEscape(label) + '</text>' +
     '</svg>';
 }
 
@@ -91,13 +92,13 @@ async function loadPositionMiniCharts(positions) {
       if (generation !== positionMiniChartGeneration || accountId !== activeAccountId()) return;
       const holder = document.querySelector('#positionsTbody [data-mini-chart-code="' + pos.code + '"]');
       if (!holder) continue;
-      if (!series.length || !window.StockList || !window.StockList.miniChart) {
-        holder.innerHTML = positionMiniChartPlaceholder('暂无分时');
-        continue;
-      }
       const trendColor = window.MarketVisualModel
         ? window.MarketVisualModel.trendColor(pos.todayChange, document.body.classList.contains('dark'))
-        : Number(pos.todayChange) >= 0 ? '#ff2d2d' : '#00b050';
+        : Number(pos.todayChange) > 0 ? '#ff2d2d' : Number(pos.todayChange) < 0 ? '#00b050' : '#64748b';
+      if (!series.length || !window.StockList || !window.StockList.miniChart) {
+        holder.innerHTML = positionMiniChartPlaceholder('暂无分时', trendColor);
+        continue;
+      }
       holder.innerHTML = window.StockList.miniChart(
         Object.assign({}, pos, { price: pos.currentPrice, change: pos.todayChange, minuteSeries: series }),
         trendColor
@@ -370,10 +371,10 @@ function renderPositions() {
     const minuteSeries = window.State.minuteSeriesByCode && window.State.minuteSeriesByCode[pos.code];
     const trendColor = window.MarketVisualModel
       ? window.MarketVisualModel.trendColor(pos.todayChange, document.body.classList.contains('dark'))
-      : Number(pos.todayChange) >= 0 ? '#ff2d2d' : '#00b050';
+      : Number(pos.todayChange) > 0 ? '#ff2d2d' : Number(pos.todayChange) < 0 ? '#00b050' : '#64748b';
     const miniChart = Array.isArray(minuteSeries) && minuteSeries.length >= 2 && window.StockList && window.StockList.miniChart
       ? window.StockList.miniChart(Object.assign({}, pos, { price: pos.currentPrice, change: pos.todayChange, minuteSeries: minuteSeries }), trendColor)
-      : positionMiniChartPlaceholder('加载分时...');
+      : positionMiniChartPlaceholder('加载分时...', trendColor);
     return '<tr data-code="' + pos.code + '" tabindex="0" title="双击查看行情，右键打开持仓操作">' +
       '<td><span class="position-code">' + pos.code + '</span></td>' +
       '<td><div class="holding-name-cell"><span>' + pos.name + '</span><span class="position-mini-chart" data-mini-chart-code="' + pos.code + '">' + miniChart + '</span></div></td>' +

@@ -434,9 +434,10 @@ function stockMiniChart(stock, color) {
       : Array.isArray(sourceSeries) && sourceSeries.length
         ? MINI_CHART_LABELS.insufficient
         : MINI_CHART_LABELS.empty;
+  const placeholderColor = stockEscape(color || miniTrendColor(stock));
   return '<svg class="stock-mini-chart" viewBox="0 0 180 60" role="img" aria-label="' + stockEscape(label) + '">' +
-    '<line class="mini-zero-reference" x1="22" y1="27" x2="174" y2="27" stroke="#94a3b8" stroke-width="' + referenceWidth + '" stroke-dasharray="3 3"/>' +
-    '<text x="90" y="32" text-anchor="middle" fill="#94a3b8" font-size="9">' + stockEscape(label) + '</text>' +
+    '<line class="mini-zero-reference" x1="22" y1="27" x2="174" y2="27" stroke="' + placeholderColor + '" stroke-width="' + referenceWidth + '" stroke-dasharray="3 3"/>' +
+    '<text x="90" y="32" text-anchor="middle" fill="' + placeholderColor + '" font-size="9">' + stockEscape(label) + '</text>' +
     '</svg>';
 }
 

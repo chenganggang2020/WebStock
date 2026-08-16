@@ -90,6 +90,13 @@ CREATE TABLE IF NOT EXISTS market_quote_bars_30s (
 CREATE INDEX IF NOT EXISTS idx_market_quote_bars_30s_date
   ON market_quote_bars_30s(code, trading_date, bar_time);
 
+CREATE TABLE IF NOT EXISTS market_quote_snapshots (
+  code TEXT PRIMARY KEY,
+  payload_json TEXT NOT NULL,
+  fetched_at TEXT NOT NULL,
+  updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE IF NOT EXISTS recent_stocks (
   code TEXT PRIMARY KEY,
   name TEXT NOT NULL,

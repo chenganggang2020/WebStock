@@ -54,6 +54,33 @@ function iso(timestamp) {
     : new Date(timestamp).toISOString();
 }
 
+function beijingParts(timestamp) {
+  return Object.fromEntries(new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Shanghai',
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', hourCycle: 'h23'
+  }).formatToParts(new Date(timestamp)).map(function(part) {
+    return [part.type, part.value];
+  }));
+}
+
+function nextChinaUpstreamAt(timestamp, activeIntervalMs) {
+  const parts = beijingParts(timestamp);
+  const minuteOfDay = Number(parts.hour) * 60 + Number(parts.minute);
+  const dateUtc = Date.UTC(Number(parts.year), Number(parts.month) - 1, Number(parts.day));
+  const weekday = new Date(dateUtc).getUTCDay();
+  const weekdaySession = weekday >= 1 && weekday <= 5;
+  if (weekdaySession && minuteOfDay >= 9 * 60 && minuteOfDay < 15 * 60 + 5) {
+    return timestamp + activeIntervalMs;
+  }
+  for (let offset = minuteOfDay < 9 * 60 && weekdaySession ? 0 : 1; offset <= 7; offset += 1) {
+    const candidateDate = dateUtc + offset * 24 * 60 * 60 * 1000;
+    const candidateDay = new Date(candidateDate).getUTCDay();
+    if (candidateDay >= 1 && candidateDay <= 5) return candidateDate + 60 * 60 * 1000;
+  }
+  return timestamp + activeIntervalMs;
+}
+
 function unavailableQuote(code, source, reason, nextRefreshAt) {
   return {
     code,
@@ -95,6 +122,25 @@ function createQuoteSnapshotService(options = {}) {
   const states = new Map();
   const inFlightByCode = new Map();
 
+  (Array.isArray(options.initialQuotes) ? options.initialQuotes : []).forEach(function(initial) {
+    const code = normalizeCode(initial && initial.code);
+    if (!code || !(Number(initial.price) > 0)) return;
+    const fetchedAtMs = Date.parse(initial.fetchedAt || initial.updatedAt || '');
+    const quoteValue = Object.assign({}, initial, { code });
+    delete quoteValue.fetchedAt;
+    delete quoteValue.changedAt;
+    delete quoteValue.updatedAt;
+    states.set(code, {
+      quote: quoteValue,
+      fingerprint: quoteFingerprint(quoteValue),
+      fetchedAtMs: Number.isFinite(fetchedAtMs) ? fetchedAtMs : now(),
+      changedAtMs: Number.isFinite(fetchedAtMs) ? fetchedAtMs : now(),
+      lastAttemptAtMs: Number.isFinite(fetchedAtMs) ? fetchedAtMs : null,
+      nextRefreshAtMs: nextChinaUpstreamAt(now(), minRefreshMs),
+      lastError: null
+    });
+  });
+
   function stateFor(code) {
     if (!states.has(code)) {
       states.set(code, {
@@ -103,6 +149,7 @@ function createQuoteSnapshotService(options = {}) {
         fetchedAtMs: null,
         changedAtMs: null,
         lastAttemptAtMs: null,
+        nextRefreshAtMs: null,
         lastError: null
       });
     }
@@ -112,7 +159,7 @@ function createQuoteSnapshotService(options = {}) {
   function refreshDue(code, timestamp) {
     if (inFlightByCode.has(code)) return false;
     const state = states.get(code);
-    return !state || state.lastAttemptAtMs === null || timestamp - state.lastAttemptAtMs >= minRefreshMs;
+    return !state || state.lastAttemptAtMs === null || timestamp >= (state.nextRefreshAtMs || state.lastAttemptAtMs + minRefreshMs);
   }
 
   function startBatch(codes) {
@@ -131,6 +178,7 @@ function createQuoteSnapshotService(options = {}) {
           const state = stateFor(code);
           const quote = quotes[code];
           state.lastAttemptAtMs = completedAt;
+          state.nextRefreshAtMs = nextChinaUpstreamAt(completedAt, minRefreshMs);
           if (!quote || typeof quote !== 'object') {
             state.lastError = 'provider-returned-no-quote';
             return;
@@ -149,6 +197,7 @@ function createQuoteSnapshotService(options = {}) {
         codes.forEach(function(code) {
           const state = stateFor(code);
           state.lastAttemptAtMs = completedAt;
+          state.nextRefreshAtMs = nextChinaUpstreamAt(completedAt, minRefreshMs);
           state.lastError = 'provider-request-failed';
         });
       }
@@ -180,8 +229,8 @@ function createQuoteSnapshotService(options = {}) {
 
   function publicQuote(code, timestamp) {
     const state = states.get(code);
-    const nextRefreshAt = iso(state && state.lastAttemptAtMs !== null
-      ? state.lastAttemptAtMs + minRefreshMs : timestamp);
+    const nextRefreshAt = iso(state && state.nextRefreshAtMs !== null
+      ? state.nextRefreshAtMs : timestamp);
     if (!state || !state.quote) {
       const pending = inFlightByCode.has(code);
       return unavailableQuote(code, source,
@@ -189,7 +238,8 @@ function createQuoteSnapshotService(options = {}) {
         nextRefreshAt);
     }
     const ageMs = Math.max(0, timestamp - state.fetchedAtMs);
-    const stale = !!state.lastError || ageMs > staleAfterMs;
+    const latestClose = state.quote.quoteStatus === 'latest-close';
+    const stale = !!state.lastError || (!latestClose && ageMs > staleAfterMs);
     return Object.assign({}, state.quote, {
       quoteStatus: stale ? 'stale' : state.quote.quoteStatus || 'live',
       fetchedAt: iso(state.fetchedAtMs),
@@ -251,5 +301,6 @@ function createQuoteSnapshotService(options = {}) {
 module.exports = {
   createQuoteSnapshotService,
   normalizeCode,
-  classifyChinaQuoteStatus
+  classifyChinaQuoteStatus,
+  nextChinaUpstreamAt
 };

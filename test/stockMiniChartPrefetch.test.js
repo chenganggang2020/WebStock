@@ -121,3 +121,15 @@ test('visible row minute prefetch is lazy, bounded, deduplicated, and keeps fail
   assert.match(cells[4].innerHTML, /行情源无分时/);
   assert.equal(cells[5].innerHTML, '等待加载');
 });
+
+test('missing minute data keeps an honest placeholder but colors it from the daily change', () => {
+  const loaded = loadStockList([], async function() { return { data: [], meta: {} }; });
+  const down = loaded.StockList.miniChart({ code: '000001', change: -1.25 }, '#00b050');
+  const up = loaded.StockList.miniChart({ code: '600000', change: 2.5 }, '#ff2d2d');
+
+  assert.match(down, /行情源无分时|暂无真实分时/);
+  assert.match(down, /#00b050/);
+  assert.match(up, /行情源无分时|暂无真实分时/);
+  assert.match(up, /#ff2d2d/);
+  assert.doesNotMatch(down, /polyline/);
+});

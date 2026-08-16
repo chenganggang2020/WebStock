@@ -160,3 +160,33 @@ test('quote requests are deduplicated, capped at 200 codes and split into batche
   assert.equal(result.meta.realtimeGuaranteed, false);
   assert.equal(result.meta.upstreamMinIntervalMs, 3000);
 });
+
+test('latest close is retained overnight and upstream refresh resumes around 09:00 next trading day', async () => {
+  let timestamp = Date.parse('2026-08-14T07:10:00.000Z'); // Friday 15:10 Beijing
+  let providerCalls = 0;
+  const service = createQuoteSnapshotService({
+    now: () => timestamp,
+    minRefreshMs: 3000,
+    initialQuotes: [{
+      code: '000001', name: '平安银行', price: 10.2, prevClose: 10,
+      change: 2, tradeDate: '2026-08-14', tradeTime: '15:00:00',
+      quoteStatus: 'latest-close', fetchedAt: '2026-08-14T07:00:00.000Z'
+    }],
+    fetchBatch: async function(codes) {
+      providerCalls += 1;
+      return Object.fromEntries(codes.map(code => [code, quote(code, 10.3)]));
+    }
+  });
+
+  const overnight = await service.read(['000001']);
+  assert.equal(providerCalls, 0);
+  assert.equal(overnight.quotes[0].price, 10.2);
+  assert.equal(overnight.quotes[0].change, 2);
+  assert.equal(overnight.quotes[0].quoteStatus, 'latest-close');
+  assert.equal(overnight.quotes[0].stale, false);
+  assert.equal(overnight.quotes[0].nextRefreshAt, '2026-08-17T01:00:00.000Z');
+
+  timestamp = Date.parse('2026-08-17T01:00:00.000Z');
+  await service.read(['000001']);
+  assert.equal(providerCalls, 1);
+});

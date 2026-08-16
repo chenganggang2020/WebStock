@@ -8,8 +8,10 @@ const marketData = require('../services/marketDataService');
 const { createLocalThirtySecondBarService } = require('../services/localThirtySecondBarService');
 const { createPublicMinuteService } = require('../services/publicMinuteService');
 const { createQuoteSnapshotService, classifyChinaQuoteStatus } = require('../services/quoteSnapshotService');
+const { createQuoteSnapshotStore } = require('../services/quoteSnapshotStore');
 const { toSinaSymbol } = require('../utils/market');
 const localThirtySecondBars = createLocalThirtySecondBarService({ db });
+const quoteSnapshotStore = createQuoteSnapshotStore(db);
 
 function ok(res, data, meta) {
   const payload = { success: true, data };
@@ -85,6 +87,11 @@ async function fetchSinaQuoteBatch(codes) {
   } catch (error) {
     console.warn('[Market] Could not persist local 30-second bars:', error.message);
   }
+  try {
+    quoteSnapshotStore.saveAll(Object.values(results), new Date().toISOString());
+  } catch (error) {
+    console.warn('[Market] Could not persist quote snapshots:', error.message);
+  }
   return results;
 }
 
@@ -94,7 +101,8 @@ const quoteSnapshots = createQuoteSnapshotService({
   minRefreshMs: 3000,
   staleAfterMs: 15000,
   batchSize: 80,
-  maxCodes: 200
+  maxCodes: 200,
+  initialQuotes: quoteSnapshotStore.loadAll()
 });
 const publicMinutes = createPublicMinuteService({ marketData });
 

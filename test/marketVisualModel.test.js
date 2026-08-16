@@ -9,7 +9,7 @@ const klineSource = fs.readFileSync(path.join(__dirname, '../js/modules/klineCha
 test('trend colors follow A-share convention with vivid red for gains and green for losses', () => {
   assert.equal(MarketVisualModel.trendColor(1.2, false), '#ff2d2d');
   assert.equal(MarketVisualModel.trendColor(-0.4, false), '#00b050');
-  assert.equal(MarketVisualModel.trendColor(0, true), '#ff4d4f');
+  assert.equal(MarketVisualModel.trendColor(0, true), '#94a3b8');
 });
 
 test('daily candles use yellow for limit-up and green for limit-down', () => {
