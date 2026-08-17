@@ -204,6 +204,28 @@ function renderPortfolioWatchlistTabs(groups) {
   if (window.refreshPortfolioWatchlistTabState) window.refreshPortfolioWatchlistTabState();
 }
 
+function watchlistQuoteStatusHtml(item) {
+  const alertStatus = watchlistAlertStatus(item);
+  const quoteStatus = item.quoteStatus === 'unavailable'
+    ? '<span class="status-danger">行情不可用</span>'
+    : item.quoteStatus === 'stale'
+      ? '<span class="status-warn">行情保留</span>'
+      : '<span class="status-ok">正常</span>';
+  return '<div class="status-stack">' + quoteStatus + '<span class="' + alertStatus.className + '">' + alertStatus.label + '</span></div>';
+}
+
+function watchlistTrend(item) {
+  const change = Number(item.change);
+  return {
+    change,
+    colorClass: Number.isFinite(change) && change > 0 ? 'pnl-up' : Number.isFinite(change) && change < 0 ? 'pnl-down' : '',
+    direction: Number.isFinite(change) && change > 0 ? 'up' : Number.isFinite(change) && change < 0 ? 'down' : 'flat',
+    color: window.MarketVisualModel
+      ? window.MarketVisualModel.trendColor(change, document.body.classList.contains('dark'))
+      : Number.isFinite(change) && change >= 0 ? '#ff2d2d' : '#00b050'
+  };
+}
+
 async function addCurrentStock() {
   const State = window.State;
   if (!State.currentStock) { alert('请先选择一只股票'); return; }
@@ -302,29 +324,22 @@ function renderWatchlist() {
   const items = visibleWatchlistItems();
   empty.style.display = items.length ? 'none' : '';
   table.style.display = items.length ? 'table' : 'none';
+  if (window.StockList && window.StockList.releaseMinuteRows) {
+    window.StockList.releaseMinuteRows(tbody);
+  }
   tbody.innerHTML = items.map(item => {
-    const change = Number(item.change);
-    const colorClass = Number.isFinite(change) && change > 0 ? 'pnl-up' : Number.isFinite(change) && change < 0 ? 'pnl-down' : '';
-    const trendColor = window.MarketVisualModel
-      ? window.MarketVisualModel.trendColor(change, document.body.classList.contains('dark'))
-      : Number.isFinite(change) && change >= 0 ? '#ff2d2d' : '#00b050';
+    const trend = watchlistTrend(item);
     const miniChart = window.StockList && window.StockList.miniChart
-      ? window.StockList.miniChart(item, trendColor)
+      ? window.StockList.miniChart(item, trend.color)
       : '';
-    const alertStatus = watchlistAlertStatus(item);
-    const quoteStatus = item.quoteStatus === 'unavailable'
-      ? '<span class="status-danger">行情不可用</span>'
-      : item.quoteStatus === 'stale'
-      ? '<span class="status-warn">行情保留</span>'
-      : '<span class="status-ok">正常</span>';
-    return '<tr data-code="' + item.code + '" tabindex="0" title="双击查看行情">' +
+    return '<tr data-code="' + item.code + '" data-trend-direction="' + trend.direction + '" tabindex="0" title="双击查看行情">' +
       '<td><button class="link-btn" data-action="view" data-code="' + item.code + '">' + item.code + '</button></td>' +
       '<td><div class="holding-name-cell"><span>' + item.name + '</span><span data-mini-chart-code="' + item.code + '">' + miniChart + '</span></div></td>' +
-      '<td>' + money(item.price) + '</td>' +
-      '<td class="' + colorClass + '">' + (Number.isFinite(change) ? (change >= 0 ? '+' : '') + change.toFixed(2) + '%' : '--') + '</td>' +
+      '<td data-watchlist-field="price">' + money(item.price) + '</td>' +
+      '<td data-watchlist-field="change" class="' + trend.colorClass + '">' + (Number.isFinite(trend.change) ? (trend.change >= 0 ? '+' : '') + trend.change.toFixed(2) + '%' : '--') + '</td>' +
       '<td>' + (item.groupName || '默认分组') + '</td>' +
       '<td>' + watchlistLevelCell(item) + '</td>' +
-      '<td><div class="status-stack">' + quoteStatus + '<span class="' + alertStatus.className + '">' + alertStatus.label + '</span></div></td>' +
+      '<td data-watchlist-field="status">' + watchlistQuoteStatusHtml(item) + '</td>' +
       '<td>' + (item.note || '') + '</td>' +
       '<td><div class="stock-actions">' +
       '<button class="small-btn primary" data-action="view" data-code="' + item.code + '">查看</button>' +
@@ -340,6 +355,48 @@ function renderWatchlist() {
   if (window.StockList && window.StockList.observeMinuteRows) {
     window.StockList.observeMinuteRows(tbody);
   }
+}
+
+function patchWatchlistQuoteRows() {
+  const tbody = document.getElementById('watchlistTbody');
+  const search = document.getElementById('watchlistSearchInput');
+  const sort = document.getElementById('watchlistSortSelect');
+  if (!tbody || (search && search.value.trim()) || (sort && /^change_/.test(sort.value))) {
+    renderWatchlist();
+    return;
+  }
+
+  const items = visibleWatchlistItems();
+  const rows = Array.from(tbody.querySelectorAll('tr[data-code]'));
+  if (rows.length !== items.length || rows.some(function(row, index) {
+    return row.getAttribute('data-code') !== items[index].code;
+  })) {
+    renderWatchlist();
+    return;
+  }
+
+  rows.forEach(function(row, index) {
+    const item = items[index];
+    const trend = watchlistTrend(item);
+    const priceCell = row.querySelector('[data-watchlist-field="price"]');
+    const changeCell = row.querySelector('[data-watchlist-field="change"]');
+    const statusCell = row.querySelector('[data-watchlist-field="status"]');
+    if (priceCell) priceCell.textContent = money(item.price);
+    if (changeCell) {
+      changeCell.className = trend.colorClass;
+      changeCell.textContent = Number.isFinite(trend.change)
+        ? (trend.change >= 0 ? '+' : '') + trend.change.toFixed(2) + '%'
+        : '--';
+    }
+    if (statusCell) statusCell.innerHTML = watchlistQuoteStatusHtml(item);
+    if (row.getAttribute('data-trend-direction') !== trend.direction) {
+      row.setAttribute('data-trend-direction', trend.direction);
+      const chartCell = row.querySelector('[data-mini-chart-code]');
+      if (chartCell && window.StockList && window.StockList.miniChart) {
+        chartCell.innerHTML = window.StockList.miniChart(item, trend.color);
+      }
+    }
+  });
 }
 
 function handleWatchlistDoubleClick(event) {
@@ -402,7 +459,7 @@ function applyQuoteSnapshot(quotes, meta) {
   const model = window.QuoteSnapshotClientModel;
   if (!model || !Array.isArray(State.watchlist)) return { ok: false, count: 0 };
   State.watchlist = model.applyWatchlistQuotes(State.watchlist, quotes);
-  renderWatchlist();
+  patchWatchlistQuoteRows();
   if (window.Dashboard) window.Dashboard.refreshCards();
   if (window.updateSidebarWorkspace) window.updateSidebarWorkspace();
   return {

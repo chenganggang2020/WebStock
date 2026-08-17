@@ -179,6 +179,19 @@ function observeMinuteRows(root) {
   });
 }
 
+function releaseMinuteRows(root) {
+  if (!root || !root.querySelectorAll) return;
+  root.querySelectorAll('[data-mini-chart-code]').forEach(function(cell) {
+    if (minuteRowObserver) minuteRowObserver.unobserve(cell);
+    observedMinuteCells.delete(cell);
+    const code = cell.getAttribute('data-mini-chart-code');
+    const tracked = code ? minutePrefetchCells.get(code) : null;
+    if (!tracked) return;
+    tracked.delete(cell);
+    if (!tracked.size) minutePrefetchCells.delete(code);
+  });
+}
+
 function waitForMinutePrefetchIdle() {
   if (!minutePrefetchActive && !minutePrefetchQueue.length && !minutePrefetchRequests.size) {
     return Promise.resolve();
@@ -751,6 +764,7 @@ window.StockList = {
   runRowAction,
   miniChart: stockMiniChart,
   observeMinuteRows,
+  releaseMinuteRows,
   waitForMinutePrefetchIdle,
   refreshVisibleMinuteCharts,
   updateVisibleQuoteRows,

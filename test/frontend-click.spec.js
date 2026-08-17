@@ -1905,3 +1905,85 @@ test('holdings and watchlist groups share one tabbed page and watchlist rows ope
   await expect(page.locator('#marketView')).toBeVisible();
   await expect(page.locator('#chartTitle')).toContainText('601138');
 });
+
+test('watchlist quote updates stay in place and release detached minute-chart observers', async ({ page }) => {
+  await page.addInitScript(() => {
+    const NativeIntersectionObserver = window.IntersectionObserver;
+    const observed = new Set();
+    window.__watchlistObserverProbe = observed;
+    window.IntersectionObserver = class {
+      constructor(callback, options) {
+        this.nativeObserver = new NativeIntersectionObserver((entries) => callback(entries, this), options);
+      }
+
+      observe(element) {
+        if (element.closest && element.closest('#watchlistTbody')) observed.add(element);
+        return this.nativeObserver.observe(element);
+      }
+
+      unobserve(element) {
+        observed.delete(element);
+        return this.nativeObserver.unobserve(element);
+      }
+
+      disconnect() {
+        observed.clear();
+        return this.nativeObserver.disconnect();
+      }
+
+      takeRecords() {
+        return this.nativeObserver.takeRecords();
+      }
+    };
+  });
+
+  await page.goto(baseURL + '/', { waitUntil: 'domcontentloaded' });
+  await page.waitForSelector('#stockTbody tr', { state: 'attached' });
+  const result = await page.evaluate(async () => {
+    window.LiveRefresh.stop();
+    window.State.watchlist = Array.from({ length: 84 }, (_, index) => ({
+      id: index + 1,
+      code: String(600000 + index),
+      name: '压力测试' + index,
+      groupName: '压力测试',
+      price: 10 + index / 100,
+      change: index % 2 ? 1 : -1,
+      quoteStatus: 'live'
+    }));
+    window.Watchlist.renderWatchlist();
+    await new Promise(resolve => setTimeout(resolve, 50));
+    const firstRow = document.querySelector('#watchlistTbody tr');
+
+    for (let refresh = 0; refresh < 60; refresh += 1) {
+      const quotes = window.State.watchlist.map((item, index) => ({
+        code: item.code,
+        price: item.price + refresh / 100,
+        change: index % 2 ? 1 : -1,
+        quoteStatus: 'live',
+        changedAt: 'refresh-' + refresh
+      }));
+      window.Watchlist.applyQuoteSnapshot(quotes, { fetchedAt: 'refresh-' + refresh });
+      await new Promise(resolve => setTimeout(resolve, 5));
+    }
+    await new Promise(resolve => setTimeout(resolve, 100));
+
+    const observed = Array.from(window.__watchlistObserverProbe);
+    return {
+      rows: document.querySelectorAll('#watchlistTbody tr').length,
+      firstRowPreserved: document.querySelector('#watchlistTbody tr') === firstRow,
+      firstPrice: firstRow.querySelector('[data-watchlist-field="price"]').textContent,
+      firstChange: firstRow.querySelector('[data-watchlist-field="change"]').textContent,
+      firstStatus: firstRow.querySelector('[data-watchlist-field="status"]').textContent,
+      observed: observed.length,
+      detachedObserved: observed.filter(element => !element.isConnected).length
+    };
+  });
+
+  expect(result.rows).toBe(84);
+  expect(result.firstRowPreserved).toBeTruthy();
+  expect(Number(result.firstPrice)).toBeGreaterThan(10);
+  expect(result.firstChange).toBe('-1.00%');
+  expect(result.firstStatus).toContain('正常');
+  expect(result.detachedObserved).toBe(0);
+  expect(result.observed).toBeLessThanOrEqual(84);
+});
