@@ -3,6 +3,18 @@ const assert = require('node:assert/strict');
 
 const view = require('../js/modules/mobileSnapshotView');
 
+test('mobile renders a read-only simulation panel with freshness and cost labels', () => {
+  const html = view.renderSnapshot({ schema: 'webstock.mobile-snapshot/v1', accounts: [],
+    paperSimulation: { accounts: [{ name: '10万元模拟', equity: 100200, cash: 98000, enabled: true,
+      performance: { status: 'stale', netPnl: 200, totalReturn: 0.2, totalCosts: 5, fillCount: 1, observedMaxDrawdown: -0.2 } }] }
+  });
+  assert.match(html, /模拟账户/);
+  assert.match(html, /估值过期/);
+  assert.match(html, /累计收益率/);
+  assert.match(html, /费用/);
+  assert.doesNotMatch(html, /data-paper-monitor-run|立即买入/);
+});
+
 test('mobile view renders the full bounded news stream with importance reasons and independent data states', () => {
   const newsItems = Array.from({ length: 12 }, function(_, index) {
     return {

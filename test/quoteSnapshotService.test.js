@@ -18,6 +18,7 @@ function quote(code, price) {
 }
 
 test('quote status is live only during the matching China trading session', () => {
+  assert.equal(classifyChinaQuoteStatus('2026-08-14', Date.parse('2026-08-14T01:20:00.000Z')), 'auction');
   assert.equal(classifyChinaQuoteStatus('2026-08-14', Date.parse('2026-08-14T02:00:00.000Z')), 'live');
   assert.equal(classifyChinaQuoteStatus('2026-08-14', Date.parse('2026-08-14T04:00:00.000Z')), 'latest-close');
   assert.equal(classifyChinaQuoteStatus('2026-08-14', Date.parse('2026-08-14T12:00:00.000Z')), 'latest-close');
@@ -189,4 +190,37 @@ test('latest close is retained overnight and upstream refresh resumes around 09:
   timestamp = Date.parse('2026-08-17T01:00:00.000Z');
   await service.read(['000001']);
   assert.equal(providerCalls, 1);
+});
+
+test('persisted latest close from an older trading date is revalidated on the first read', async () => {
+  const timestamp = Date.parse('2026-08-26T14:30:00.000Z'); // Wednesday 22:30 Beijing
+  let providerCalls = 0;
+  const service = createQuoteSnapshotService({
+    now: () => timestamp,
+    minRefreshMs: 3000,
+    initialQuotes: [{
+      code: '000001', name: '平安银行', price: 11.27, prevClose: 11.27,
+      change: 0, tradeDate: '2026-08-20', tradeTime: '15:00:00',
+      quoteStatus: 'latest-close', fetchedAt: '2026-08-20T07:00:00.000Z'
+    }],
+    fetchBatch: async function(codes) {
+      providerCalls += 1;
+      return Object.fromEntries(codes.map(code => [code, {
+        ...quote(code, 11.73),
+        prevClose: 11.59,
+        change: 1.21,
+        tradeDate: '2026-08-26',
+        tradeTime: '15:00:00',
+        quoteStatus: 'latest-close'
+      }]));
+    }
+  });
+
+  const result = await service.read(['000001']);
+
+  assert.equal(providerCalls, 1);
+  assert.equal(result.quotes[0].price, 11.73);
+  assert.equal(result.quotes[0].prevClose, 11.59);
+  assert.equal(result.quotes[0].tradeDate, '2026-08-26');
+  assert.equal(result.quotes[0].stale, false);
 });

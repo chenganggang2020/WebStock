@@ -95,7 +95,7 @@ router.post('/user/import', function(req, res) {
 router.post('/user/import-preview', function(req, res) {
   try {
     const payload = req.body && req.body.backup ? req.body.backup : req.body;
-    ok(res, backupService.previewUserDataImport(payload));
+    ok(res, backupService.previewUserDataImport(payload, { mode: req.body && req.body.mode }));
   } catch (error) {
     fail(res, error);
   }

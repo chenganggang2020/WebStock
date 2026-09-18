@@ -353,6 +353,10 @@ async function settingsTestLevel2CurrentStock() {
   try {
     const data = await window.ApiClient.fetchJsonData('/api/level2/large-orders?code=' + encodeURIComponent(code) + '&limit=200');
     const stats = data.stats || {};
+    if (stats.missingAmountCount > 0) {
+      settingsSetLevel2Result('Level-2 数据不完整：' + stats.missingAmountCount + ' 笔金额缺失，净额与占比暂不可计算。', true);
+      return;
+    }
     settingsSetLevel2Result(
       'Level-2 OK: ' + data.code +
       ' large trades ' + (stats.largeTradeCount || 0) +
@@ -369,13 +373,19 @@ async function settingsTestFreeFlowCurrentStock() {
   settingsSetLevel2Result('Fetching free fund-flow estimate for ' + code + '...');
   try {
     const data = await window.ApiClient.fetchJsonData('/api/level2/free-flow?code=' + encodeURIComponent(code));
+    const formatValue = function (value, percent) {
+      if (value == null || typeof value === 'boolean' || String(value).trim() === '' || !Number.isFinite(Number(value))) return '--';
+      return percent ? Number(value).toFixed(2) + '%' : String(Number(value));
+    };
+    const state = data.status === 'unavailable' ? '暂无数据' : data.status === 'partial' ? '部分数据' : '已获取';
     settingsSetLevel2Result(
-      '免费资金流: ' + data.code + ' ' + (data.name || '') +
-      ' 主力净额 ' + (data.mainNetAmount || 0) +
-      ', 超大单 ' + (data.superLargeNetAmount || 0) +
-      ', 大单 ' + (data.largeNetAmount || 0) +
-      ', 模拟大单净额 ' + (data.simulatedLargeNetAmount || 0) +
-      ', 主力占比 ' + (Number(data.mainNetRatio || 0)).toFixed(2) + '%.'
+      '普通资金流（' + state + '）: ' + data.code + ' ' + (data.name || '') +
+      ' 主力净额 ' + formatValue(data.mainNetAmount) +
+      ', 超大单 ' + formatValue(data.superLargeNetAmount) +
+      ', 大单 ' + formatValue(data.largeNetAmount) +
+      ', 超大单与大单净额合计 ' + formatValue(data.simulatedLargeNetAmount) +
+      ', 主力占比 ' + formatValue(data.mainNetRatio, true) +
+      '。金额单位：元；不是暗盘原指标，来源行情时刻未提供。', data.status === 'unavailable'
     );
   } catch (error) {
     settingsSetLevel2Result('Free flow failed: ' + error.message, true);
@@ -404,6 +414,10 @@ async function settingsAnalyzeManualLevel2Paste() {
         volumeUnit: volumeUnitInput ? volumeUnitInput.value : 'share'
       })
     });
+    if (data.stats.missingAmountCount > 0) {
+      settingsSetLevel2Result('粘贴记录中有 ' + data.stats.missingAmountCount + ' 笔金额缺失，净额与占比暂不可计算。', true);
+      return;
+    }
     settingsSetLevel2Result(
       '粘贴模拟: 解析 ' + data.trades.length +
       ' 笔，超过阈值 ' + data.stats.largeTradeCount +
@@ -578,12 +592,16 @@ function settingsImportUserDataFromFile(file) {
       });
       const incoming = preview.incoming || {};
       const current = preview.current || {};
+      const warnings = Array.isArray(preview.warnings) ? preview.warnings.filter(function(item) {
+        return typeof item === 'string' && item.trim();
+      }) : [];
       const message = [
         'Import will replace local WebStock workstation data.',
+        warnings.length ? '导入风险提示：\n' + warnings.join('\n') : '',
         'Incoming: watchlist ' + (incoming.watchlist || 0) + ', trades ' + (incoming.trades || 0) + ', sectors ' + (incoming.sectors || 0) + ', leaders ' + (incoming.sectorLeaders || 0) + ', screener tasks ' + (incoming.screenerResults || 0) + ', knowledge sources ' + (incoming.knowledgeSources || 0) + ', research runs ' + (incoming.researchRuns || 0) + ', paper portfolios ' + (incoming.paperPortfolios || 0) + '.',
         'Current: watchlist ' + (current.watchlist || 0) + ', trades ' + (current.trades || 0) + ', sectors ' + (current.sectors || 0) + ', leaders ' + (current.sectorLeaders || 0) + ', screener tasks ' + (current.screenerResults || 0) + ', knowledge sources ' + (current.knowledgeSources || 0) + ', research runs ' + (current.researchRuns || 0) + ', paper portfolios ' + (current.paperPortfolios || 0) + '.',
         'Continue?'
-      ].join('\n');
+      ].filter(Boolean).join('\n');
       if (!confirm(message)) return;
       const result = await window.ApiClient.fetchJsonData('/api/user/import', {
         method: 'POST',

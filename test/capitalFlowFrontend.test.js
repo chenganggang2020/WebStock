@@ -1,10 +1,13 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
 
 const {
   buildChartOption,
   describeSource,
   describeObservation,
+  formatCapitalFlowError,
   createCapitalFlowModule
 } = require('../js/modules/capitalFlow');
 
@@ -122,6 +125,47 @@ test('describeObservation renders fresh, stale, and unavailable as explicit text
     state: 'unavailable',
     reason: 'observation-time-in-future'
   }).label, /不可用/);
+});
+
+test('network implementation errors are translated into a user-facing source status', () => {
+  assert.equal(
+    formatCapitalFlowError(new Error('socket hang up')),
+    '所选盘中资金来源当前不可用；未切换其他来源，请稍后手动重试。'
+  );
+  assert.equal(
+    formatCapitalFlowError(Object.assign(new Error('connect ECONNRESET 127.0.0.1'), { code: 'ECONNRESET' })),
+    '所选盘中资金来源当前不可用；未切换其他来源，请稍后手动重试。'
+  );
+  assert.equal(formatCapitalFlowError(new Error('未配置已授权 Level-2')), '未配置已授权 Level-2');
+});
+
+test('an unavailable API result also hides raw network implementation errors', async () => {
+  const elements = {};
+  const document = {
+    getElementById: function(id) {
+      if (!elements[id]) elements[id] = { textContent: '', hidden: false, innerHTML: '' };
+      return elements[id];
+    }
+  };
+  const module = createCapitalFlowModule({
+    document,
+    getChart: function() { return null; },
+    fetchData: async function() {
+      return sampleResult({ availability: 'unavailable', points: [], latest: null, error: { code: 'ECONNRESET', message: 'socket hang up' } });
+    }
+  });
+
+  await module.load({ scope: 'stock', code: '000001', source: 'vendor-classified' });
+  assert.equal(elements.capitalFlowError.textContent, '所选盘中资金来源当前不可用；未切换其他来源，请稍后手动重试。');
+  assert.equal(elements.capitalFlowChart.dataset.empty, 'true');
+});
+
+test('opening the capital-flow view is on-demand and does not auto-fetch the single-stock series', () => {
+  const appSource = fs.readFileSync(path.join(__dirname, '..', 'js', 'app.js'), 'utf8');
+  const branch = appSource.match(/if \(view === 'capitalFlow' && window\.CapitalFlow\) \{([\s\S]*?)\n  \}/);
+  assert.ok(branch, 'capital-flow view branch should exist');
+  assert.doesNotMatch(branch[1], /ensureLoaded|\.load\(/);
+  assert.match(branch[1], /\.resize\(\)/);
 });
 
 test('module clears the previous chart before an unavailable result and never falls back', async () => {
@@ -430,7 +474,7 @@ test('a failed current query clears old chart metadata and identifies the reques
 
   assert.equal(elements.capitalFlowNetAmount.textContent, '--');
   assert.equal(elements.capitalFlowError.hidden, false);
-  assert.match(elements.capitalFlowError.textContent, /upstream timeout/);
+  assert.equal(elements.capitalFlowError.textContent, '所选盘中资金来源当前不可用；未切换其他来源，请稍后手动重试。');
   assert.equal(paths.length, 2);
   assert.match(paths[1], /source=local-estimate/);
   assert.ok(chart.clearCalls >= 3);

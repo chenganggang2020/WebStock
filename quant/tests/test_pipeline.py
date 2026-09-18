@@ -21,6 +21,7 @@ from webstock_quant.collector import (
     fetch_sina_history,
     fetch_eastmoney_history,
     fetch_tencent_history,
+    fetch_tencent_forward_adjusted_history,
     select_universe,
 )
 from webstock_quant.cli import build_parser
@@ -287,6 +288,24 @@ class FeatureTests(unittest.TestCase):
         self.assertIn("0.002398", session.get.call_args.kwargs["params"]["secid"])
         self.assertEqual(frame.attrs["source_id"], "eastmoney-public-kline")
 
+    def test_eastmoney_forward_adjustment_is_explicit_in_request_and_source(self):
+        response = Mock()
+        response.raise_for_status.return_value = None
+        response.json.return_value = {"data": {"klines": [
+            "2025-01-02,10.00,10.10,10.20,9.90,10000",
+        ]}}
+        session = Mock()
+        session.get.return_value = response
+
+        frame = fetch_eastmoney_history(
+            session, {"code": "600000", "name": "浦发银行"},
+            "2025-01-01", "2025-01-31", retries=0,
+            adjustment_mode="forward-adjusted",
+        )
+
+        self.assertEqual(session.get.call_args.kwargs["params"]["fqt"], "1")
+        self.assertEqual(frame.attrs["source_id"], "eastmoney-public-kline-forward-adjusted")
+
     def test_eastmoney_uses_declared_http_fallback_after_https_transport_failure(self):
         response = Mock()
         response.raise_for_status.return_value = None
@@ -322,6 +341,127 @@ class FeatureTests(unittest.TestCase):
         )
         self.assertEqual(frame.iloc[1]["close"], 10.3)
         self.assertIn("sz002521,day", session.get.call_args.kwargs["params"]["param"])
+
+    def test_tencent_forward_adjusted_history_paginates_without_mixing_raw_prices(self):
+        first = Mock()
+        first.raise_for_status.return_value = None
+        first.json.return_value = {"data": {"sz000001": {"qfqday": [
+            ["2024-01-02", "10.00", "10.10", "10.20", "9.90", "10000"],
+            ["2024-01-03", "10.10", "10.30", "10.40", "10.00", "12000"],
+        ]}}}
+        second = Mock()
+        second.raise_for_status.return_value = None
+        second.json.return_value = {"data": {"sz000001": {"qfqday": [
+            ["2023-12-29", "9.80", "9.90", "10.00", "9.70", "9000"],
+        ]}}}
+        session = Mock()
+        session.get.side_effect = [first, second]
+
+        frame = fetch_tencent_forward_adjusted_history(
+            session, {"code": "000001", "name": "平安银行"},
+            "2023-12-29", "2024-01-03", retries=0, page_size=2,
+        )
+
+        self.assertEqual(frame.iloc[0]["date"], "2023-12-29")
+        self.assertEqual(frame.iloc[-1]["date"], "2024-01-03")
+        self.assertEqual(frame.attrs["source_id"], "tencent-public-kline-forward-adjusted")
+        self.assertEqual(session.get.call_count, 2)
+        self.assertTrue(all(",qfq" in call.kwargs["params"]["param"] for call in session.get.call_args_list))
+
+    def test_tencent_forward_adjusted_history_uses_official_alternate_host_after_501(self):
+        blocked = Mock()
+        blocked.raise_for_status.side_effect = requests.HTTPError(
+            "501 challenge",
+            response=Mock(status_code=501),
+        )
+        fallback = Mock()
+        fallback.raise_for_status.return_value = None
+        fallback.json.return_value = {"data": {"sh600000": {"qfqday": [
+            ["2025-01-02", "10.00", "10.10", "10.20", "9.90", "10000"],
+        ]}}}
+        session = Mock()
+        session.get.side_effect = [blocked, fallback]
+
+        frame = fetch_tencent_forward_adjusted_history(
+            session, {"code": "600000", "name": "浦发银行"},
+            "2025-01-01", "2025-01-31", retries=0,
+        )
+
+        self.assertEqual(len(frame), 1)
+        self.assertEqual(session.get.call_count, 2)
+        self.assertIn("web.ifzq.gtimg.cn", session.get.call_args_list[0].args[0])
+        self.assertIn("https://ifzq.gtimg.cn/", session.get.call_args_list[1].args[0])
+        self.assertEqual(
+            frame.attrs["source_id"],
+            "tencent-public-kline-forward-adjusted-alternate-host",
+        )
+
+    def test_tencent_forward_adjusted_history_uses_finance_proxy_after_two_501_responses(self):
+        blocked_primary = Mock()
+        blocked_primary.raise_for_status.side_effect = requests.HTTPError(
+            "501 primary challenge",
+            response=Mock(status_code=501),
+        )
+        blocked_alternate = Mock()
+        blocked_alternate.raise_for_status.side_effect = requests.HTTPError(
+            "501 alternate challenge",
+            response=Mock(status_code=501),
+        )
+        fallback = Mock()
+        fallback.raise_for_status.return_value = None
+        fallback.json.return_value = {"data": {"sh600000": {"qfqday": [
+            ["2025-01-02", "10.00", "10.10", "10.20", "9.90", "10000"],
+        ]}}}
+        session = Mock()
+        session.get.side_effect = [blocked_primary, blocked_alternate, fallback]
+
+        frame = fetch_tencent_forward_adjusted_history(
+            session, {"code": "600000", "name": "浦发银行"},
+            "2025-01-01", "2025-01-31", retries=0,
+        )
+
+        self.assertEqual(len(frame), 1)
+        self.assertEqual(session.get.call_count, 3)
+        self.assertIn("proxy.finance.qq.com", session.get.call_args_list[2].args[0])
+        self.assertEqual(
+            frame.attrs["source_id"],
+            "tencent-public-kline-forward-adjusted-finance-proxy",
+        )
+
+    def test_tencent_qfq_request_accepts_day_series_for_non_beijing_symbol(self):
+        response = Mock()
+        response.raise_for_status.return_value = None
+        response.json.return_value = {"data": {"sh688141": {"day": [
+            ["2025-01-02", "10.00", "10.10", "10.20", "9.90", "10000"],
+        ]}}}
+        session = Mock()
+        session.get.return_value = response
+
+        frame = fetch_tencent_forward_adjusted_history(
+            session, {"code": "688141", "name": "杰华特"},
+            "2025-01-01", "2025-01-31", retries=0,
+        )
+
+        self.assertEqual(len(frame), 1)
+        self.assertEqual(
+            frame.attrs["source_id"],
+            "tencent-public-kline-qfq-request-day-series",
+        )
+
+    def test_tencent_qfq_request_rejects_day_only_beijing_symbol(self):
+        response = Mock()
+        response.raise_for_status.return_value = None
+        response.json.return_value = {"data": {"bj920000": {"day": [
+            ["2025-01-02", "10.00", "10.10", "10.20", "9.90", "10000"],
+        ]}}}
+        session = Mock()
+        session.get.return_value = response
+
+        with self.assertRaisesRegex(ValueError, "no rows"):
+            fetch_tencent_forward_adjusted_history(
+                session, {"code": "920000", "name": "北交样本"},
+                "2025-01-01", "2025-01-31", retries=0,
+            )
 
     def test_collection_resumes_valid_files_after_interruption(self):
         dates = pd.bdate_range('2025-01-02', periods=8)
@@ -399,6 +539,124 @@ class FeatureTests(unittest.TestCase):
             self.assertEqual(manifest['quality']['invalidCachedFiles'], 0)
             self.assertEqual(len(list((dataset_dir / 'raw').glob('*.parquet'))), 3)
 
+    def test_collection_retry_progress_does_not_count_stale_failures_as_completed(self):
+        dates = pd.bdate_range('2025-01-02', periods=8)
+
+        def frame_for(stock):
+            return pd.DataFrame([{
+                'date': day.strftime('%Y-%m-%d'), 'code': stock['code'], 'name': stock['name'],
+                'open': 10.0, 'high': 10.2, 'low': 9.8, 'close': 10.1, 'volume': 10000,
+            } for day in dates])
+
+        stocks = [
+            {'code': '000001', 'name': '平安银行'},
+            {'code': '000002', 'name': '万科A'},
+            {'code': '600000', 'name': '浦发银行'},
+        ]
+        with TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            universe_file = root / 'stocks.json'
+            universe_file.write_text(__import__('json').dumps(stocks, ensure_ascii=False), encoding='utf-8')
+            dataset_dir = root / 'datasets' / 'retry-progress'
+            with patch('webstock_quant.collector.fetch_sina_history', side_effect=RuntimeError('offline')), \
+                 patch('webstock_quant.collector.fetch_eastmoney_history', side_effect=RuntimeError('offline')), \
+                 patch('webstock_quant.collector.fetch_tencent_history', side_effect=RuntimeError('offline')):
+                with self.assertRaisesRegex(RuntimeError, 'usable daily data'):
+                    collect_dataset(
+                        universe_file=universe_file, dataset_dir=dataset_dir,
+                        dataset_id='retry-progress', start_date='2025-01-01', end_date='2025-02-01',
+                        limit=3, sleep_ms=0, workers=1,
+                    )
+
+            events = []
+            with patch('webstock_quant.collector.fetch_sina_history', side_effect=lambda session, stock, start, end, retries=0: frame_for(stock)):
+                collect_dataset(
+                    universe_file=universe_file, dataset_dir=dataset_dir,
+                    dataset_id='retry-progress', start_date='2025-01-01', end_date='2025-02-01',
+                    limit=3, sleep_ms=0, workers=1, emit=events.append,
+                )
+
+            progress = [event['current'] for event in events if event.get('stage') == 'collect']
+            self.assertEqual(progress, [1, 2, 3])
+
+    def test_forward_adjusted_collection_stops_retrying_a_failed_primary_for_every_symbol(self):
+        dates = pd.bdate_range('2025-01-02', periods=8)
+        stocks = [
+            {'code': '000001', 'name': '平安银行'},
+            {'code': '000002', 'name': '万科A'},
+        ]
+
+        def adjusted_frame(session, stock, start_date, end_date, retries=1):
+            frame = pd.DataFrame([{
+                'date': day.strftime('%Y-%m-%d'), 'code': stock['code'], 'name': stock['name'],
+                'open': 10.0, 'high': 10.2, 'low': 9.8, 'close': 10.1, 'volume': 10000,
+            } for day in dates])
+            frame.attrs['source_id'] = 'tencent-public-kline-forward-adjusted'
+            return frame
+
+        with TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            universe_file = root / 'stocks.json'
+            universe_file.write_text(__import__('json').dumps(stocks, ensure_ascii=False), encoding='utf-8')
+            with patch('webstock_quant.collector.fetch_eastmoney_history', side_effect=RuntimeError('offline')) as primary, \
+                 patch('webstock_quant.collector.fetch_tencent_forward_adjusted_history', side_effect=adjusted_frame):
+                _, manifest = collect_dataset(
+                    universe_file=universe_file, dataset_dir=root / 'datasets' / 'adjusted-circuit',
+                    dataset_id='adjusted-circuit', start_date='2025-01-01', end_date='2025-02-01',
+                    adjustment_mode='forward-adjusted', limit=2, sleep_ms=0, workers=1,
+                )
+
+        self.assertEqual(primary.call_count, 1)
+        self.assertEqual(manifest['coverage']['succeeded'], 2)
+
+    def test_incremental_collection_reuses_a_verified_baseline_and_fetches_only_missing_dates(self):
+        stocks = [
+            {'code': '000001', 'name': '平安银行'},
+            {'code': '600000', 'name': '浦发银行'},
+        ]
+        calls = []
+
+        def adjusted_frame(session, stock, start_date, end_date, retries=0, adjustment_mode='forward-adjusted'):
+            calls.append((stock['code'], str(start_date), str(end_date)))
+            dates = pd.bdate_range(start_date, end_date)
+            frame = pd.DataFrame([{
+                'date': day.strftime('%Y-%m-%d'), 'code': stock['code'], 'name': stock['name'],
+                'open': 10.0, 'high': 10.2, 'low': 9.8, 'close': 10.1, 'volume': 10000,
+            } for day in dates])
+            frame.attrs['source_id'] = 'eastmoney-public-kline-forward-adjusted'
+            return frame
+
+        with TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            universe_file = root / 'stocks.json'
+            universe_file.write_text(__import__('json').dumps(stocks, ensure_ascii=False), encoding='utf-8')
+            base_dir = root / 'datasets' / 'a-share-qfq-base'
+            next_dir = root / 'datasets' / 'a-share-qfq-next'
+            with patch('webstock_quant.collector.fetch_eastmoney_history', side_effect=adjusted_frame):
+                _, base_manifest = collect_dataset(
+                    universe_file=universe_file, dataset_dir=base_dir,
+                    dataset_id='a-share-qfq-base', start_date='2025-01-01', end_date='2025-01-10',
+                    adjustment_mode='forward-adjusted', limit=2, sleep_ms=0, workers=1,
+                )
+                base_hash = (base_dir / 'raw' / '000001.parquet').read_bytes()
+                calls.clear()
+                _, manifest = collect_dataset(
+                    universe_file=universe_file, dataset_dir=next_dir,
+                    dataset_id='a-share-qfq-next', start_date='2025-01-01', end_date='2025-01-15',
+                    adjustment_mode='forward-adjusted', limit=2, sleep_ms=0, workers=1,
+                    base_dataset_dir=base_dir,
+                )
+
+            self.assertEqual({call[1] for call in calls}, {'2025-01-11'})
+            self.assertEqual({call[2] for call in calls}, {'2025-01-15'})
+            self.assertEqual((base_dir / 'raw' / '000001.parquet').read_bytes(), base_hash)
+            self.assertEqual(manifest['collection']['baseDatasetId'], base_manifest['datasetId'])
+            self.assertEqual(manifest['dateRange']['end'], '2025-01-15')
+            merged = pd.read_parquet(next_dir / 'raw' / '000001.parquet')
+            self.assertEqual(merged['date'].iloc[0], '2025-01-01')
+            self.assertEqual(merged['date'].iloc[-1], '2025-01-15')
+            self.assertEqual(merged['date'].nunique(), len(merged))
+
     def test_collect_cli_exposes_bounded_worker_count(self):
         args = build_parser().parse_args([
             'collect',
@@ -409,6 +667,26 @@ class FeatureTests(unittest.TestCase):
         ])
         self.assertEqual(args.workers, 4)
         self.assertEqual(args.sleep_ms, 600)
+
+    def test_collect_cli_accepts_an_explicit_forward_adjustment_mode(self):
+        args = build_parser().parse_args([
+            'collect',
+            '--workspace', 'workspace',
+            '--universe-file', 'stocks.json',
+            '--dataset-id', 'dataset-demo',
+            '--adjustment-mode', 'forward-adjusted',
+        ])
+        self.assertEqual(args.adjustment_mode, 'forward-adjusted')
+
+    def test_collect_cli_accepts_a_baseline_dataset_id_for_incremental_updates(self):
+        args = build_parser().parse_args([
+            'collect',
+            '--workspace', 'workspace',
+            '--universe-file', 'stocks.json',
+            '--dataset-id', 'dataset-demo-next',
+            '--base-dataset-id', 'dataset-demo-base',
+        ])
+        self.assertEqual(args.base_dataset_id, 'dataset-demo-base')
 
     def test_manifest_hash_does_not_hash_its_own_digest(self):
         manifest = {'schema': 'webstock.quant.dataset.v1', 'datasetId': 'demo'}

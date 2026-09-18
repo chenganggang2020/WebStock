@@ -488,7 +488,7 @@ test('Douyin sync settings persist the ten-minute schedule and latest run status
   });
   const channelId = created.json.data.id;
   const initial = await requestJson(server, '/api/expert/channels/' + channelId + '/sync');
-  assert.equal(initial.json.data.enabled, false);
+  assert.equal(initial.json.data.enabled, true);
   assert.equal(initial.json.data.intervalMinutes, 10);
 
   const updated = await requestJson(server, '/api/expert/channels/' + channelId + '/sync', 'PUT', {

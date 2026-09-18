@@ -4,11 +4,13 @@ const router = express.Router();
 
 const portfolio = require('../services/portfolioService');
 const tonghuashunWatchlist = require('../services/tonghuashunWatchlistService');
+const tonghuashunHoldings = require('../services/tonghuashunHoldingService');
 const watchlistLevels = require('../services/watchlistLevelService');
 const { isValidApiKey, getAIConfig, callAIModel } = require('./ai');
 const { toSinaSymbol } = require('../utils/market');
 const { appendOneClickOutputInstructions } = require('../services/handoffFormat');
 const marketData = require('../services/marketDataService');
+const { classifyChinaQuoteStatus } = require('../services/quoteSnapshotService');
 
 function ok(res, data) {
   res.json({ success: true, data });
@@ -34,7 +36,14 @@ async function fetchQuotesSafe(codes) {
       const code = match[1].replace(/^sh|^sz/, '');
       const fields = match[2].split(',');
       const price = parseFloat(fields[3]) || 0;
-      const prevClose = parseFloat(fields[2]) || price;
+      const prevClose = parseFloat(fields[2]) || null;
+      const tradeDate = fields[30] || '';
+      const tradeTime = fields[31] || '';
+      const observedAt = Date.parse(tradeDate + 'T' + tradeTime + '+08:00');
+      const checkedAt = Date.now();
+      let quoteStatus = price > 0 ? classifyChinaQuoteStatus(tradeDate, checkedAt) : 'unavailable';
+      if (quoteStatus !== 'unavailable' && (!Number.isFinite(observedAt) || observedAt > checkedAt + 5000 ||
+          (['live', 'auction'].includes(quoteStatus) && checkedAt - observedAt > 5 * 60000))) quoteStatus = 'stale';
       map[code] = {
         price,
         open: parseFloat(fields[1]) || 0,
@@ -43,10 +52,10 @@ async function fetchQuotesSafe(codes) {
         prevClose,
         volume: parseFloat(fields[8]) || 0,
         amount: parseFloat(fields[9]) || 0,
-        tradeDate: fields[30] || '',
-        tradeTime: fields[31] || '',
-        change: prevClose ? Number(((price - prevClose) / prevClose * 100).toFixed(2)) : 0,
-        quoteStatus: 'live'
+        tradeDate,
+        tradeTime,
+        change: prevClose ? Number(((price - prevClose) / prevClose * 100).toFixed(2)) : null,
+        quoteStatus
       };
     });
     return map;
@@ -58,6 +67,18 @@ async function fetchQuotesSafe(codes) {
 
 function requestAccountId(req) {
   return Number((req.body && req.body.accountId) || req.query.accountId || 1);
+}
+
+function tonghuashunHoldingSyncOptions(body = {}) {
+  return {
+    accountId: body.accountId,
+    snapshotDate: body.snapshotDate,
+    cashBalance: body.cashBalance,
+    totalMarketValue: body.totalMarketValue,
+    totalAssets: body.totalAssets,
+    todayPnl: body.todayPnl,
+    totalPnl: body.totalPnl
+  };
 }
 
 async function getPositionsWithQuotes(accountId = 1) {
@@ -140,6 +161,34 @@ router.post('/accounts/:id/sync-holdings', function(req, res) {
   }
 });
 
+router.get('/snapshots', function(req, res) {
+  try {
+    ok(res, portfolio.listSnapshots({
+      accountId: requestAccountId(req),
+      limit: req.query.limit
+    }));
+  } catch (error) {
+    fail(res, error);
+  }
+});
+
+// Read persisted holdings independently of upstream quote availability.
+router.get('/holding-snapshot', function(req, res) {
+  try {
+    const accountId = requestAccountId(req);
+    const account = portfolio.getAccount(accountId);
+    const positions = portfolio.getPositions({}, { accountId });
+    const latestSnapshot = portfolio.getLatestSnapshot(accountId);
+    const version = require('node:crypto').createHash('sha256')
+      .update(JSON.stringify({ account, positions, latestSnapshot })).digest('hex');
+    ok(res, { account, positions, latestSnapshot, version,
+      summary: portfolio.getSummary(positions, { accountId }),
+      allocation: portfolio.getAllocation(positions) });
+  } catch (error) {
+    fail(res, error);
+  }
+});
+
 router.get('/watchlist', function (req, res) {
   try {
     ok(res, portfolio.listWatchlist({ group: req.query.group }));
@@ -164,6 +213,22 @@ router.get('/tonghuashun-watchlist/status', function(req, res) {
   }
 });
 
+router.get('/tonghuashun-watchlist/catalog', function(req, res) {
+  try {
+    ok(res, tonghuashunWatchlist.readLocalCatalog());
+  } catch (error) {
+    fail(res, error);
+  }
+});
+
+router.get('/tonghuashun-watchlist/diff', function(req, res) {
+  try {
+    ok(res, tonghuashunWatchlist.previewLocalDiff({ groupId: req.query.groupId }));
+  } catch (error) {
+    fail(res, error);
+  }
+});
+
 router.post('/tonghuashun-watchlist/sync', function(req, res) {
   try {
     ok(res, tonghuashunWatchlist.syncLocalSelfStock());
@@ -172,9 +237,61 @@ router.post('/tonghuashun-watchlist/sync', function(req, res) {
   }
 });
 
+router.get('/tonghuashun-holdings/status', function(req, res) {
+  try {
+    ok(res, tonghuashunHoldings.getStatus());
+  } catch (error) {
+    fail(res, error);
+  }
+});
+
+router.get('/tonghuashun-holdings/preview-local', function(req, res) {
+  try {
+    ok(res, tonghuashunHoldings.previewLocalHolding());
+  } catch (error) {
+    fail(res, error);
+  }
+});
+
+router.post('/tonghuashun-holdings/preview', function(req, res) {
+  try {
+    ok(res, tonghuashunHoldings.previewHoldingText(req.body && req.body.text));
+  } catch (error) {
+    fail(res, error);
+  }
+});
+
+router.post('/tonghuashun-holdings/sync-local', function(req, res) {
+  try {
+    ok(res, tonghuashunHoldings.syncLocalHolding(tonghuashunHoldingSyncOptions(req.body)));
+  } catch (error) {
+    fail(res, error);
+  }
+});
+
+router.post('/tonghuashun-holdings/sync-text', function(req, res) {
+  try {
+    ok(res, tonghuashunHoldings.syncHoldingText(
+      req.body && req.body.text,
+      tonghuashunHoldingSyncOptions(req.body)
+    ));
+  } catch (error) {
+    fail(res, error);
+  }
+});
+
 router.post('/watchlist/refresh-levels', async function(req, res) {
   try {
-    ok(res, await watchlistLevels.refreshWatchlistLevels());
+    const requestedCodes = Array.from(new Set((Array.isArray(req.body && req.body.codes) ? req.body.codes : [])
+      .map(function(code) { return String(code || '').trim(); })
+      .filter(function(code) { return /^\d{6}$/.test(code); }))).slice(0, 200);
+    const includeSaved = req.body && req.body.includeSaved !== false;
+    const saved = includeSaved ? portfolio.listWatchlist() : [];
+    const byCode = new Map(saved.map(function(item) { return [item.code, item]; }));
+    requestedCodes.forEach(function(code) {
+      if (!byCode.has(code)) byCode.set(code, { code, name: code, readOnly: true });
+    });
+    ok(res, await watchlistLevels.refreshWatchlistLevels({ items: Array.from(byCode.values()) }));
   } catch (error) {
     fail(res, error);
   }

@@ -174,6 +174,15 @@
     return [input.scope, input.code, input.source].join('|');
   }
 
+  function formatCapitalFlowError(error) {
+    const message = String(error && error.message || error || '').trim();
+    const code = String(error && error.code || '').trim();
+    if (/socket hang up|ECONN(?:RESET|REFUSED|ABORTED)|ETIMEDOUT|EAI_AGAIN|ENOTFOUND|fetch failed|network error|upstream timeout/i.test(message + ' ' + code)) {
+      return '所选盘中资金来源当前不可用；未切换其他来源，请稍后手动重试。';
+    }
+    return message || '所选盘中资金来源当前不可用；未切换其他来源，请稍后手动重试。';
+  }
+
   function failedResult(input, error) {
     return {
       availability: 'unavailable',
@@ -199,7 +208,7 @@
       latest: null,
       error: {
         code: error && error.code || 'CAPITAL_FLOW_REQUEST_FAILED',
-        message: error && error.message || String(error)
+        message: formatCapitalFlowError(error)
       },
       limitations: ['请求失败；旧查询结果已清除，且未静默切换数据来源。']
     };
@@ -260,6 +269,13 @@
     setText('capitalFlowNetAmount', money(latest && latest.netAmount));
     setText('capitalFlowSpeed', money(latest && latest.netFlowSpeed) + ' ' + unitLabel(speedUnit));
     setText('capitalFlowAcceleration', money(latest && latest.netFlowAcceleration) + ' ' + unitLabel(accelerationUnit));
+    const chartElement = documentObject.getElementById('capitalFlowChart');
+    if (chartElement) {
+      if (!chartElement.dataset) chartElement.dataset = {};
+      chartElement.dataset.empty = data && data.availability === 'available' && Array.isArray(data.points) && data.points.length
+        ? 'false'
+        : 'true';
+    }
     const coverage = data && data.coverage;
     const level2Window = data && data.source && data.source.sourceClass === 'authorized-level2' &&
       (!coverage || coverage.isComplete !== true);
@@ -275,7 +291,7 @@
     setText('capitalFlowHistoryStatus', historyStatus);
     const errorBox = documentObject.getElementById('capitalFlowError');
     if (errorBox) {
-      errorBox.textContent = data && data.error ? data.error.message : '';
+      errorBox.textContent = data && data.error ? formatCapitalFlowError(data.error) : '';
       errorBox.hidden = !(data && data.error);
     }
     const limitations = documentObject.getElementById('capitalFlowLimitations');
@@ -315,6 +331,8 @@
       lastResult = null;
       lastQueryKey = null;
       const pending = loadingResult(input);
+      const onDemandStatus = documentObject && documentObject.getElementById('capitalFlowOnDemandStatus');
+      if (onDemandStatus) onDemandStatus.textContent = '正在查询所选来源；旧读数已清除…';
       if (dependencies.renderMeta) dependencies.renderMeta(pending);
       else defaultRenderMeta(pending, documentObject);
       const path = '/api/capital-flow/series?scope=' + encodeURIComponent(input.scope) +
@@ -330,6 +348,7 @@
         const unavailable = failedResult(input, error);
         if (dependencies.renderMeta) dependencies.renderMeta(unavailable);
         else defaultRenderMeta(unavailable, documentObject);
+        if (onDemandStatus) onDemandStatus.textContent = unavailable.error.message;
         throw error;
       }
       if (sequence !== requestSequence) return data;
@@ -338,7 +357,13 @@
       if (activeChart && activeChart.clear) activeChart.clear();
       if (dependencies.renderMeta) dependencies.renderMeta(data);
       else defaultRenderMeta(data, documentObject);
+      if (onDemandStatus) {
+        onDemandStatus.textContent = data && data.availability === 'available'
+          ? '已完成本次手动观测；页面不会自动重复采样。'
+          : '所选来源未返回可用观测；未切换其他来源。';
+      }
       if (data && data.availability === 'available' && data.points && data.points.length && activeChart) {
+        if (activeChart.resize) activeChart.resize();
         activeChart.setOption(buildChartOption(data, dependencies.getTheme ? dependencies.getTheme() : defaultTheme()), true);
       }
       return data;
@@ -364,7 +389,7 @@
           const box = documentObject.getElementById('capitalFlowError');
           if (box) {
             box.hidden = false;
-            box.textContent = error.message || String(error);
+            box.textContent = formatCapitalFlowError(error);
           }
         });
       });
@@ -402,6 +427,7 @@
     buildChartOption,
     describeSource,
     describeObservation,
+    formatCapitalFlowError,
     createCapitalFlowModule
   };
 });

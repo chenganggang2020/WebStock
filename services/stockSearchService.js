@@ -129,12 +129,23 @@ function rebuildFromProfiles() {
 }
 
 function ensureIndex(baseStocks) {
-  if (indexChecked) return;
   const profileCount = db.prepare('SELECT COUNT(*) AS count FROM stock_profiles').get().count;
   const indexCount = db.prepare('SELECT COUNT(*) AS count FROM stock_search_index').get().count;
   const baseItems = Array.isArray(baseStocks) ? baseStocks : [];
-  if (baseItems.length && indexCount < baseItems.length) rebuildFromStocks(baseItems);
-  if (profileCount > 0) rebuildFromProfiles();
+  const needsBaseIndex = baseItems.length > 0 && indexCount < baseItems.length;
+  const staleProfileCount = profileCount > 0
+    ? db.prepare(`
+        SELECT COUNT(*) AS count
+        FROM stock_profiles AS profile
+        LEFT JOIN stock_search_index AS search ON search.code = profile.code
+        WHERE search.code IS NULL
+           OR COALESCE(search.source, '') <> COALESCE(profile.source, '')
+           OR search.updated_at < profile.updated_at
+      `).get().count
+    : 0;
+  if (indexChecked && !needsBaseIndex && staleProfileCount === 0) return;
+  if (needsBaseIndex) rebuildFromStocks(baseItems);
+  if (profileCount > 0 && (!indexChecked || staleProfileCount > 0)) rebuildFromProfiles();
   indexChecked = true;
 }
 

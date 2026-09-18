@@ -23,7 +23,7 @@ function resolveRuntimeConfig(options = {}) {
     userDataDir,
     dataDir,
     dbPath: path.join(dataDir, 'webstock.db'),
-    legacyDbPath: portable ? path.join(defaultUserDataDir, 'webstock.db') : null,
+    legacyDbPath: portable ? path.join(linkedDataDir || defaultUserDataDir, 'webstock.db') : null,
     level2ConfigPath: path.join(dataDir, 'level2-config.json'),
     quantWorkspacePath: path.join(dataDir, 'quant-workspace'),
     port: normalizePort(options.port)

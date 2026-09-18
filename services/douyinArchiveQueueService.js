@@ -38,7 +38,8 @@ function archiveQueueState(observation) {
   const asr = metadata.asr && typeof metadata.asr === 'object' ? metadata.asr : {};
   const archive = metadata.archive && typeof metadata.archive === 'object' ? metadata.archive : {};
   const remote = metadata.remote && typeof metadata.remote === 'object' ? metadata.remote : {};
-  const transcribed = asr.status === 'complete' && Boolean(normalizedText(observation && observation.transcript));
+  const transcribed = ['complete', 'needs_review'].includes(asr.status) &&
+    Boolean(normalizedText(observation && observation.transcript));
   const noSpeech = asr.status === 'no_speech';
   const unavailable = remote.status === 'identity_rejected';
   const archived = Boolean(normalizedText(observation && observation.localAssetPath ||

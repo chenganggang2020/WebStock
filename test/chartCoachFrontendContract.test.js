@@ -282,6 +282,9 @@ test('chart coach explains strength-graded key levels and marks their last confi
   assert.match(html, /触碰 3 次/);
   assert.match(html, /量能确认 1 次/);
   assert.match(html, /不是价格预测/);
+  assert.match(strip, /<details class="chart-coach-evidence-details">/);
+  assert.doesNotMatch(strip, /<details class="chart-coach-evidence-details"[^>]*\bopen\b/);
+  assert.match(strip, /已标到K线/);
   assert.match(strip, /关键支撑/);
   assert.match(strip, /强 · 3次触碰/);
   assert.match(strip, /强=至少3次触碰/);

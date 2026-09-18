@@ -6,6 +6,8 @@ const RISK_DEFAULTS = {
   balanced: { maxPositions: 8, maxSingleWeight: 0.15, cashReserve: 0.20, feePerTrade: 5 },
   aggressive: { maxPositions: 10, maxSingleWeight: 0.20, cashReserve: 0.10, feePerTrade: 5 }
 };
+const DEFAULT_MONITOR_NAME = 'ChatGPT 盯盘模拟（10万元）';
+const DEFAULT_MONITOR_MARKER = '[system:paper-monitor-default-v1]';
 
 function text(value, maxLength = 2000) {
   return String(value == null ? '' : value).trim().slice(0, maxLength);
@@ -207,6 +209,42 @@ function createFromPacket(input = {}) {
   return getPortfolio(transaction());
 }
 
+function ensureDefaultMonitorPortfolio(input = {}) {
+  const requestedTime = Date.parse(input.now || '');
+  const activatedAt = Number.isFinite(requestedTime)
+    ? new Date(requestedTime).toISOString()
+    : new Date().toISOString();
+  const startMode = input.startMode === 'next-trading-day' ? 'next-trading-day' : 'today';
+  const capital = finite(input.capital, 100000, 1000, 1000000000);
+  const constraints = normalizeConstraints(input.constraints || {}, 'balanced');
+
+  const portfolioId = db.transaction(function() {
+    const existingDefault = db.prepare(`SELECT id FROM paper_portfolios
+      WHERE rationale LIKE ? ORDER BY id DESC LIMIT 1`).get('%' + DEFAULT_MONITOR_MARKER + '%');
+    let id = existingDefault && existingDefault.id;
+    if (!id) {
+      const info = db.prepare(`INSERT INTO paper_portfolios (
+        name, status, as_of, capital, cash_weight, risk_profile, constraints_json, rationale, source_run_id
+      ) VALUES (?, 'active', ?, ?, 1, 'balanced', ?, ?, NULL)`)
+        .run(DEFAULT_MONITOR_NAME, activatedAt, capital, JSON.stringify(constraints),
+          '从启用时点开始的独立纸面模拟；同花顺真实持仓只作只读风险参考。 ' + DEFAULT_MONITOR_MARKER);
+      id = info.lastInsertRowid;
+      db.prepare(`INSERT INTO paper_portfolio_snapshots (
+        portfolio_id, snapshot_at, market_date, market_time, cash_value, market_value,
+        total_value, daily_pnl, total_pnl, total_return, source, source_metadata_json, warnings_json
+      ) VALUES (?, ?, '', '', ?, 0, ?, 0, 0, 0, 'paper-monitor-bootstrap', ?, '[]')`)
+        .run(id, activatedAt, capital, capital, JSON.stringify({ automaticTrading: false }));
+    }
+    db.prepare(`INSERT INTO paper_monitor_settings (
+      portfolio_id, enabled, start_mode, activated_at, schedule_json, holdings_sync_required
+    ) VALUES (?, 1, ?, ?, ?, 1)
+    ON CONFLICT(portfolio_id) DO NOTHING`)
+      .run(id, startMode, activatedAt, JSON.stringify(['09:35', '10:30', '14:50']));
+    return id;
+  })();
+  return getPortfolio(portfolioId, { snapshotLimit: 5000 });
+}
+
 function updateStatus(id, status) {
   const next = text(status, 20).toLowerCase();
   if (!STATUSES.has(next)) throw new Error('纸面组合状态无效');
@@ -276,7 +314,7 @@ function refreshPortfolio(id, quoteMap, metadata = {}) {
   const snapshotAt = Number.isNaN(parsedTime) ? new Date().toISOString() : new Date(parsedTime).toISOString();
   const warnings = [];
   let cashValue = paper.latestSnapshot ? paper.latestSnapshot.cashValue : null;
-  if (!paper.positions.length) {
+  if (!paper.positions.length && metadata.initializePositions !== false) {
     cashValue = initializePositions(paper, quoteMap, snapshotAt, warnings);
     paper = getPortfolio(id);
   }
@@ -363,13 +401,19 @@ function deletePortfolio(id) {
 }
 
 function exportPortfolios() {
-  return db.prepare('SELECT id FROM paper_portfolios ORDER BY id ASC').all().map(row => getPortfolio(row.id, { snapshotLimit: 5000 }));
+  const paperTrading = require('./paperTradingService');
+  return db.prepare('SELECT id FROM paper_portfolios ORDER BY id ASC').all().map(function(row) {
+    return Object.assign(getPortfolio(row.id, { snapshotLimit: 5000 }), {
+      monitor: paperTrading.exportMonitorState(row.id)
+    });
+  });
 }
 
 module.exports = {
   normalizeConstraints,
   allocateWeights,
   createFromPacket,
+  ensureDefaultMonitorPortfolio,
   getPortfolio,
   listPortfolios,
   updateStatus,

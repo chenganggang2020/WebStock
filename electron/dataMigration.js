@@ -40,7 +40,7 @@ function registerPortableDataDirectory(options = {}) {
 
 async function migrateLegacyDatabase(options = {}) {
   const targetDbPath = String(options.targetDbPath || '').trim();
-  const legacyDbPath = String(options.legacyDbPath || '').trim();
+  const legacyDbPath = String(options.registeredDbPath || options.legacyDbPath || '').trim();
   if (!options.portable) return { migrated: false, reason: 'not-portable' };
   if (!targetDbPath || !legacyDbPath) return { migrated: false, reason: 'path-missing' };
   if (path.resolve(targetDbPath) === path.resolve(legacyDbPath)) {

@@ -39,14 +39,14 @@ test('quote snapshot recalculates position valuation but preserves transaction-d
   assert.equal(valued[0].todayReferencePnl, 18);
 });
 
-test('portfolio summary uses updated valuation and leaves unavailable quotes unchanged', () => {
+test('portfolio summary uses updated valuation and withdraws explicitly unavailable quotes', () => {
   const prior = {
     cashBalance: 500, realizedPnl: 20, lifetimeBuyCost: 1000,
     todayPnl: 18, todayReferencePnl: 18
   };
   const positions = [{
     code: '600000', costValue: 1000, marketValue: 1200,
-    unrealizedPnl: 194, symbolTotalPnl: 214
+    unrealizedPnl: 194, symbolTotalPnl: 214, todayPnl: 18, todayReferencePnl: 18
   }];
   const summary = QuoteSnapshotClientModel.summarizePortfolio(prior, positions);
   assert.equal(summary.totalAssets, 1700);
@@ -60,8 +60,8 @@ test('portfolio summary uses updated valuation and leaves unavailable quotes unc
     [{ code: '000001', currentPrice: 10, marketValue: 1000, quoteStatus: 'live' }],
     [{ code: '000001', price: 0, quoteStatus: 'unavailable', reason: 'refresh-pending' }]
   );
-  assert.equal(unchanged[0].currentPrice, 10);
-  assert.equal(unchanged[0].marketValue, 1000);
+  assert.equal(unchanged[0].currentPrice, null);
+  assert.equal(unchanged[0].marketValue, null);
   assert.equal(unchanged[0].quoteStatus, 'unavailable');
   assert.equal(unchanged[0].quoteReason, 'refresh-pending');
 });

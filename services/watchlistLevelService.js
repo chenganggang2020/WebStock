@@ -79,6 +79,7 @@ async function refreshWatchlistLevels(options = {}) {
   const items = options.items || portfolio.listWatchlist();
   const queue = items.slice();
   const failures = [];
+  const levelsByCode = {};
   let updatedCount = 0;
 
   async function worker() {
@@ -86,7 +87,8 @@ async function refreshWatchlistLevels(options = {}) {
       const item = queue.shift();
       try {
         const levels = deriveAutomaticLevels(await fetchBars(item.code));
-        saveLevels(item.id, levels);
+        if (Number.isInteger(Number(item.id)) && Number(item.id) > 0) saveLevels(Number(item.id), levels);
+        levelsByCode[item.code] = levels;
         updatedCount++;
       } catch (error) {
         failures.push({ code: item.code, error: error.message || String(error) });
@@ -101,6 +103,7 @@ async function refreshWatchlistLevels(options = {}) {
     updatedCount,
     failedCount: failures.length,
     failures,
+    levelsByCode,
     updatedAt: new Date().toISOString(),
     method: '历史日线支撑压力自动点位，不是价格预测或交易指令'
   };

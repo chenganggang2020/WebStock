@@ -322,6 +322,9 @@ function calculateTodayPnl(trades, code, quote, currentPrice) {
   if (currentPrice === null) return { value: null, date: null };
 
   const quoteDate = String(quote.tradeDate || quote.quoteDate || beijingDateString());
+  if (quote.stale === true || ['stale', 'saved-snapshot', 'unavailable'].includes(quote.quoteStatus)) {
+    return { value: null, date: quoteDate };
+  }
   const previousClose = Number.isFinite(Number(quote.prevClose)) && Number(quote.prevClose) > 0
     ? Number(quote.prevClose)
     : null;
@@ -378,6 +381,11 @@ function rowToAccount(row) {
 function normalizeAccountId(value) {
   const id = Number(value || 1);
   if (!Number.isInteger(id) || id <= 0) throw new Error('账户编号不合法');
+  const exists = db.prepare('SELECT 1 FROM portfolio_accounts WHERE id = ? AND enabled = 1').get(id);
+  if (!exists && id === 1) {
+    const fallback = db.prepare('SELECT id FROM portfolio_accounts WHERE enabled = 1 ORDER BY is_default DESC, id ASC LIMIT 1').get();
+    if (fallback) return fallback.id;
+  }
   return id;
 }
 
@@ -439,11 +447,18 @@ function updateAccount(id, input = {}) {
 
 function deleteAccount(id) {
   const account = getAccount(id);
-  if (account.isDefault) throw new Error('默认账户不能删除');
-  const tradeCount = db.prepare('SELECT COUNT(*) AS count FROM trades WHERE account_id = ?').get(account.id).count;
-  if (tradeCount > 0) throw new Error('账户已有交易或持仓，不能直接删除');
-  return db.prepare('UPDATE portfolio_accounts SET enabled = 0, updated_at = CURRENT_TIMESTAMP WHERE id = ?')
-    .run(account.id).changes > 0;
+  const replacement = db.prepare('SELECT id FROM portfolio_accounts WHERE enabled = 1 AND id <> ? ORDER BY is_default DESC, id ASC LIMIT 1').get(account.id);
+  if (!replacement) throw new Error('至少需要保留一个持仓账户');
+  const remove = db.transaction(function() {
+    if (account.isDefault) {
+      db.prepare('UPDATE portfolio_accounts SET is_default = 0 WHERE id = ?').run(account.id);
+      db.prepare('UPDATE portfolio_accounts SET is_default = 1, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(replacement.id);
+    }
+    db.prepare('DELETE FROM portfolio_snapshots WHERE account_id = ?').run(account.id);
+    db.prepare('DELETE FROM trades WHERE account_id = ?').run(account.id);
+    return db.prepare('DELETE FROM portfolio_accounts WHERE id = ?').run(account.id).changes > 0;
+  });
+  return remove();
 }
 
 function calculatePositions(trades, quoteMap = {}) {
@@ -453,7 +468,7 @@ function calculatePositions(trades, quoteMap = {}) {
     .filter(pos => pos.quantity > 0)
     .map(pos => {
       const quote = quoteMap[pos.code] || {};
-      const currentPrice = Number.isFinite(Number(quote.price)) && Number(quote.price) > 0 ? Number(quote.price) : null;
+      const currentPrice = quote.quoteStatus !== 'unavailable' && Number.isFinite(Number(quote.price)) && Number(quote.price) > 0 ? Number(quote.price) : null;
       const previousClose = Number.isFinite(Number(quote.prevClose)) && Number(quote.prevClose) > 0 ? Number(quote.prevClose) : null;
       const marketValue = currentPrice === null ? null : currentPrice * pos.quantity;
       const grossUnrealizedPnl = marketValue === null ? null : marketValue - pos.costValue;
@@ -498,7 +513,8 @@ function calculatePositions(trades, quoteMap = {}) {
         todayPnlMethod: 'transaction-adjusted',
         quoteDate: String(quote.tradeDate || quote.quoteDate || ''),
         quoteTime: String(quote.tradeTime || quote.quoteTime || ''),
-        quoteStatus: quote.quoteStatus || (currentPrice === null ? 'unavailable' : 'live')
+        quoteStatus: currentPrice === null ? 'unavailable' : quote.quoteStatus || 'live',
+        quoteStale: quote.stale === true
       };
     });
 }
@@ -616,31 +632,51 @@ function getSummary(positions, filters = {}) {
   const account = getAccount(accountId);
   const resolvedPositions = positions || getPositions({}, { accountId });
   const trades = listTradesAscending({ accountId });
-  const totalMarketValue = resolvedPositions.reduce((sum, pos) => sum + (pos.marketValue === null ? pos.costValue : pos.marketValue), 0);
+  const priced = resolvedPositions.filter(pos => normalizeNullableNumber(pos.marketValue) !== null && pos.quoteStatus !== 'unavailable');
+  const today = beijingDateString();
+  const live = priced.filter(pos => ['live', 'auction'].includes(pos.quoteStatus || 'live') && !pos.quoteStale && (!pos.quoteDate || pos.quoteDate === today));
+  const quoteCoverage = { total: resolvedPositions.length, priced: priced.length, live: live.length, stale: priced.length - live.length, missing: resolvedPositions.length - priced.length };
+  const valuationStatus = !quoteCoverage.total ? 'empty' : !quoteCoverage.priced ? 'unavailable' : quoteCoverage.missing ? 'partial' : quoteCoverage.stale ? 'stale' : 'live';
+  const quoteTimes = priced.filter(pos => pos.quoteDate).map(pos => pos.quoteDate + 'T' + (pos.quoteTime || '')).sort();
+  const earliestQuote = quoteTimes[0] || '';
+  const totalMarketValue = quoteCoverage.missing ? null : priced.reduce((sum, pos) => sum + Number(pos.marketValue), 0);
   const totalCost = resolvedPositions.reduce((sum, pos) => sum + pos.costValue, 0);
-  const unrealizedPnl = resolvedPositions.reduce((sum, pos) => sum + (pos.unrealizedPnl || 0), 0);
-  const todayPnl = resolvedPositions.reduce((sum, pos) => {
-    const value = pos.todayPnl !== undefined && pos.todayPnl !== null ? pos.todayPnl : pos.todayReferencePnl;
-    return sum + (value || 0);
-  }, 0);
+  const unrealizedPnl = quoteCoverage.missing || resolvedPositions.some(pos => normalizeNullableNumber(pos.unrealizedPnl) === null)
+    ? null : resolvedPositions.reduce((sum, pos) => sum + Number(pos.unrealizedPnl), 0);
+  const todayValues = resolvedPositions.map(pos => normalizeNullableNumber(pos.todayPnl === undefined ? pos.todayReferencePnl : pos.todayPnl));
+  const dailyEligible = resolvedPositions.every(function(pos) {
+    return ['live', 'auction', 'latest-close'].includes(pos.quoteStatus || 'live') && !pos.quoteStale;
+  });
+  const todayPnl = quoteCoverage.missing || !dailyEligible || todayValues.includes(null)
+    ? null : todayValues.reduce((sum, value) => sum + value, 0);
+  const pnlDates = Array.from(new Set(resolvedPositions.map(pos => pos.todayPnlDate).filter(Boolean)));
+  const todayPnlDate = todayPnl === null || pnlDates.length !== 1 ? null : pnlDates[0];
+  const todayPnlStatus = todayPnl === null ? 'unavailable'
+    : resolvedPositions.some(pos => pos.quoteStatus === 'latest-close') ? 'latest-close' : 'live';
   const realizedPnl = calculatePositionStates(trades).reduce((sum, pos) => sum + pos.realizedPnl, 0);
-  const totalPnl = realizedPnl + unrealizedPnl;
+  const totalPnl = unrealizedPnl === null ? null : realizedPnl + unrealizedPnl;
   const lifetimeBuyCost = trades.reduce((sum, trade) => trade.side === 'buy' ? sum + Number(trade.amount || 0) : sum, 0);
 
   return {
     accountId,
     accountName: account.name,
     cashBalance: round(account.cashBalance, 2),
-    totalAssets: round(totalMarketValue + account.cashBalance, 2),
-    totalMarketValue: round(totalMarketValue, 2),
+    valuationStatus,
+    quoteCoverage,
+    quoteDate: earliestQuote.slice(0, 10),
+    quoteTime: earliestQuote.slice(11),
+    totalAssets: totalMarketValue === null ? null : round(totalMarketValue + account.cashBalance, 2),
+    totalMarketValue: totalMarketValue === null ? null : round(totalMarketValue, 2),
     totalCost: round(totalCost, 2),
-    unrealizedPnl: round(unrealizedPnl, 2),
-    todayReferencePnl: round(todayPnl, 2),
-    todayPnl: round(todayPnl, 2),
+    unrealizedPnl: unrealizedPnl === null ? null : round(unrealizedPnl, 2),
+    todayReferencePnl: todayPnl === null ? null : round(todayPnl, 2),
+    todayPnl: todayPnl === null ? null : round(todayPnl, 2),
+    todayPnlDate,
+    todayPnlStatus,
     realizedPnl: round(realizedPnl, 2),
-    totalPnl: round(totalPnl, 2),
+    totalPnl: totalPnl === null ? null : round(totalPnl, 2),
     lifetimeBuyCost: round(lifetimeBuyCost, 2),
-    totalPnlRate: lifetimeBuyCost > 0 ? round(totalPnl / lifetimeBuyCost * 100, 2) : 0,
+    totalPnlRate: totalPnl === null ? null : lifetimeBuyCost > 0 ? round(totalPnl / lifetimeBuyCost * 100, 2) : 0,
     positionCount: resolvedPositions.length,
     winCount: resolvedPositions.filter(pos => (pos.unrealizedPnl || 0) > 0).length,
     lossCount: resolvedPositions.filter(pos => (pos.unrealizedPnl || 0) < 0).length
@@ -648,14 +684,15 @@ function getSummary(positions, filters = {}) {
 }
 
 function getAllocation(positions = getPositions()) {
-  const total = positions.reduce((sum, pos) => sum + (pos.marketValue === null ? pos.costValue : pos.marketValue), 0);
-  return positions.map(pos => {
-    const marketValue = pos.marketValue === null ? pos.costValue : pos.marketValue;
+  const values = positions.map(pos => pos.quoteStatus === 'unavailable' ? null : normalizeNullableNumber(pos.marketValue));
+  const total = values.includes(null) ? null : values.reduce((sum, value) => sum + value, 0);
+  return positions.map((pos, index) => {
+    const marketValue = values[index];
     return {
       code: pos.code,
       name: pos.name,
-      marketValue: round(marketValue, 2),
-      ratio: total > 0 ? round(marketValue / total * 100, 2) : 0
+      marketValue: marketValue === null ? null : round(marketValue, 2),
+      ratio: total === null ? null : total > 0 ? round(marketValue / total * 100, 2) : 0
     };
   });
 }
@@ -693,12 +730,48 @@ function getLatestSnapshot(accountId = 1) {
   return row ? rowToPortfolioSnapshot(row) : null;
 }
 
+function listSnapshots(filters = {}) {
+  const accountId = normalizeAccountId(filters.accountId);
+  getAccount(accountId);
+  const requestedLimit = Number(filters.limit || 120);
+  const limit = Number.isFinite(requestedLimit)
+    ? Math.max(1, Math.min(500, Math.trunc(requestedLimit)))
+    : 120;
+  return db.prepare(`
+    SELECT * FROM (
+      SELECT * FROM portfolio_snapshots
+      WHERE account_id = ?
+      ORDER BY snapshot_date DESC, id DESC
+      LIMIT ?
+    )
+    ORDER BY snapshot_date ASC, id ASC
+  `).all(accountId, limit).map(rowToPortfolioSnapshot);
+}
+
+function validateEmptyHoldingSnapshot(input = {}) {
+  if (!Array.isArray(input.holdings) || input.holdings.length || input.holdingsComplete !== true) {
+    throw new Error('空仓同步需要明确的完整持仓列表，不能把未识别到持仓当作清仓');
+  }
+  const values = ['cashBalance', 'totalMarketValue', 'totalAssets'].map(function(field) {
+    const value = input[field];
+    if (!['number', 'string'].includes(typeof value) || String(value).trim() === '' || !Number.isFinite(Number(value))) {
+      throw new Error('空仓同步需要明确的现金、股票市值和总资产以完成对账');
+    }
+    return Number(value);
+  });
+  const [cashBalance, totalMarketValue, totalAssets] = values;
+  if (cashBalance < 0 || totalAssets < 0 || totalMarketValue !== 0 || Math.abs(totalAssets - cashBalance) > 0.05) {
+    throw new Error('空仓同步要求股票市值为 0，且总资产与现金一致');
+  }
+}
+
 function importHoldingSnapshot(accountId, input = {}, options = {}) {
   const id = normalizeAccountId(accountId);
   getAccount(id);
   assertDate(input.snapshotDate);
-  const holdings = Array.isArray(input.holdings) ? input.holdings : [];
-  if (!holdings.length) throw new Error('截图持仓不能为空');
+  if (!Array.isArray(input.holdings)) throw new Error('截图持仓需要完整的 holdings 数组');
+  const holdings = input.holdings;
+  if (!holdings.length) validateEmptyHoldingSnapshot(input);
   const seenCodes = new Set();
   const normalizedHoldings = holdings.map(function(holding) {
     const code = String(holding.code || '');
@@ -725,12 +798,22 @@ function importHoldingSnapshot(accountId, input = {}, options = {}) {
   });
   const cashBalance = normalizeNumber(input.cashBalance, 0);
   const totalCost = round(normalizedHoldings.reduce((sum, item) => sum + item.costValue, 0), 2);
+  const pricesComplete = normalizedHoldings.every(item => item.marketValue !== null);
+  if (!pricesComplete) {
+    const hasAssetEvidence = ['cashBalance', 'totalMarketValue', 'totalAssets'].every(function(field) {
+      const value = input[field];
+      return ['number', 'string'].includes(typeof value) && String(value).trim() !== '' && Number.isFinite(Number(value));
+    });
+    if (!hasAssetEvidence || Number(input.totalMarketValue) <= 0 || cashBalance < 0) {
+      throw new Error('持仓报价不完整，需要独立的现金、正数账户总市值及总资产完成对账');
+    }
+  }
   const calculatedMarketValue = round(normalizedHoldings.reduce((sum, item) => sum + (item.marketValue || 0), 0), 2);
   const totalMarketValue = input.totalMarketValue === undefined
     ? calculatedMarketValue : round(input.totalMarketValue, 2);
   const totalAssets = input.totalAssets === undefined
     ? round(totalMarketValue + cashBalance, 2) : round(input.totalAssets, 2);
-  if (calculatedMarketValue > 0 && Math.abs(totalMarketValue - calculatedMarketValue) > 0.05) {
+  if ((pricesComplete && Math.abs(totalMarketValue - calculatedMarketValue) > 0.05) || calculatedMarketValue - totalMarketValue > 0.05) {
     throw new Error('截图持仓市值合计与账户总市值不一致');
   }
   if (Math.abs(totalAssets - totalMarketValue - cashBalance) > 0.05) {
@@ -806,8 +889,10 @@ module.exports = {
   updateAccount,
   deleteAccount,
   getLatestSnapshot,
+  listSnapshots,
   importHoldingSnapshot,
   syncHoldingSnapshot,
+  validateEmptyHoldingSnapshot,
   listWatchlist,
   addWatchlistItem,
   importWatchlistItems,

@@ -7,8 +7,18 @@ const {
   isDouyinDetailCandidate,
   observationNeedsTranscription,
   summarizeObservationCoverage,
-  planArchiveMediaUrls
+  planArchiveMediaUrls,
+  transcriptionReadiness
 } = require('../electron/douyinAutoSync');
+
+test('missing local transcription runtime is a deferred setup state instead of a collection failure', () => {
+  const readiness = transcriptionReadiness({
+    readiness() {
+      return { available: false, status: 'runtime_missing', message: '安装后继续补转写' };
+    }
+  });
+  assert.deepEqual(readiness, { available: false, status: 'runtime_missing', message: '安装后继续补转写' });
+});
 
 test('detail queue accepts only direct Douyin works with matching numeric ids', () => {
   assert.equal(isDouyinDetailCandidate({
@@ -41,9 +51,14 @@ test('scheduled detail planning never opens third-party historical sources', asy
     mediaMetadata: {}
   };
   const opened = [];
-  const direct = { externalContentId: contentId, sourceUrl, title: '抖音直链', mediaMetadata: {} };
+  let recentProfileCalls = 0;
+  const direct = { externalContentId: contentId, sourceUrl, title: '抖音直链', mediaMetadata: { incrementalPending: true } };
   const sync = createDouyinAutoSync({
     sessionManager: {
+      async captureProfileRecent(url) {
+        recentProfileCalls += 1;
+        return this.captureUrl(url);
+      },
       async captureUrl(url) {
         opened.push(url);
         if (url === profileUrl) return {
@@ -77,6 +92,7 @@ test('scheduled detail planning never opens third-party historical sources', asy
   const result = await sync.syncChannel(92, { trigger: 'scheduled' });
 
   assert.deepEqual(opened, [profileUrl, sourceUrl]);
+  assert.equal(recentProfileCalls, 1);
   assert.equal(result.candidateCount, 1);
 });
 
@@ -99,6 +115,19 @@ test('a permanently archived no-speech video is not repeatedly queued for transc
     transcript: '',
     localAssetPath: 'D:\\archive\\quiet.mp4',
     mediaMetadata: { asr: { status: 'no_speech' } }
+  }), false);
+});
+
+test('a preserved low-confidence transcript waits for review without being transcribed on every poll', () => {
+  assert.equal(observationNeedsTranscription({
+    transcript: '宇宿科技上市一周。',
+    localAssetPath: 'D:\\archive\\needs-review.mp4',
+    mediaMetadata: {
+      asr: {
+        status: 'needs_review',
+        quality: { needsReview: true, reasons: ['low_log_probability'] }
+      }
+    }
   }), false);
 });
 
@@ -319,7 +348,7 @@ test('automatic sync runs every enabled job without one failure blocking the que
   assert.match(result.items[1].error, /登录/);
 });
 
-test('automatic sync discovers new videos, fills incomplete details and refreshes recent metrics', async () => {
+test('automatic sync processes new videos without revisiting legacy incomplete or stale videos', async () => {
   const calls = [];
   const imported = [];
   const reanalyzed = [];
@@ -392,16 +421,14 @@ test('automatic sync discovers new videos, fills incomplete details and refreshe
 
   assert.deepEqual(calls, [
     profileUrl,
-    'https://www.douyin.com/video/1000000000000000001',
-    'https://www.douyin.com/video/1000000000000000002',
-    'https://www.douyin.com/video/1000000000000000003'
+    'https://www.douyin.com/video/1000000000000000002'
   ]);
-  assert.equal(imported.length, 4);
+  assert.equal(imported.length, 2);
   assert.equal(imported[0].pageType, 'profile');
   assert.equal(result.discoveredCount, 3);
-  assert.equal(result.detailedCount, 3);
+  assert.equal(result.detailedCount, 1);
   assert.equal(result.addedCount, 1);
-  assert.equal(result.updatedCount, 2);
+  assert.equal(result.updatedCount, 0);
   assert.equal(result.reanalyzedCount, 2);
   assert.deepEqual(reanalyzed, [1]);
   assert.equal(states.at(-1)[0], 'completed');
@@ -1453,7 +1480,7 @@ test('scheduled polling skips a running full archive and coalesces overlapping p
   assert.equal(settledBeforeRelease, true);
   assert.equal(listDueBeforeRelease, 1);
   assert.deepEqual(callsBeforeRelease, [
-    ['archive', profileUrls[35]],
-    ['check', profileUrls[36]]
+    ['archive', profileUrls[35]]
   ]);
+  assert.deepEqual(captureCalls, [['archive', profileUrls[35]], ['check', profileUrls[36]]]);
 });

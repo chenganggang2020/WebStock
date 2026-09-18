@@ -52,7 +52,7 @@ function envFirst(env, names, fallback) {
 }
 
 function toNumber(value, fallback = 0) {
-  if (value === undefined || value === null || value === '') return fallback;
+  if (value === undefined || value === null || typeof value === 'boolean' || String(value).trim() === '') return fallback;
   const numeric = Number(value);
   return Number.isFinite(numeric) ? numeric : fallback;
 }
@@ -337,12 +337,12 @@ function normalizeTrades(payload, options = {}) {
   const config = options.config || getLevel2Config();
   const multiplier = config.volumeUnit === 'lot' ? 100 : 1;
   return normalizeTradeRows(payload).map(function (item, index) {
-    const price = toNumber(valueFrom(item, ['price', 'tradePrice', '成交价']));
+    const price = toNumber(valueFrom(item, ['price', 'tradePrice', '成交价']), null);
     const volume = toNumber(valueFrom(item, ['volume', 'vol', 'qty', 'quantity', 'tradeQty', '成交量']), null);
     const providedAmount = toNumber(valueFrom(item, ['amount', 'tradeAmount', '成交额']), null);
     const amount = providedAmount !== null
       ? roundMoney(providedAmount)
-      : (volume !== null ? roundMoney(price * volume * multiplier) : null);
+      : (price > 0 && volume !== null && volume >= 0 ? roundMoney(price * volume * multiplier) : null);
     return {
       sequence: valueFrom(item, ['sequence', 'seq', 'id'], index + 1),
       time: valueFrom(item, ['time', 'tradeTime', 'datetime', '成交时间'], ''),
@@ -362,6 +362,7 @@ function calculateLargeOrderStats(trades, options = {}) {
   const stats = {
     threshold,
     tradeCount: trades.length,
+    missingAmountCount: 0,
     buyCount: 0,
     sellCount: 0,
     neutralCount: 0,
@@ -383,7 +384,15 @@ function calculateLargeOrderStats(trades, options = {}) {
   };
 
   trades.forEach(function (trade) {
-    const amount = toNumber(trade.amount);
+    const amount = typeof trade.amount === 'boolean' || String(trade.amount).trim() === ''
+      ? null : toNumber(trade.amount, null);
+    if (amount === null || amount < 0) {
+      stats.missingAmountCount += 1;
+      if (trade.side === 'buy') stats.buyCount += 1;
+      else if (trade.side === 'sell') stats.sellCount += 1;
+      else stats.neutralCount += 1;
+      return;
+    }
     stats.totalAmount += amount;
     if (trade.side === 'buy') {
       stats.buyCount += 1;
@@ -425,9 +434,11 @@ function calculateLargeOrderStats(trades, options = {}) {
     'largeNeutralAmount',
     'largeNetAmount'
   ].forEach(function (key) {
-    stats[key] = roundMoney(stats[key]);
+    stats[key] = stats.missingAmountCount ? null : roundMoney(stats[key]);
   });
-  stats.largeAmountRatio = stats.totalAmount ? Number((stats.largeAmount / stats.totalAmount).toFixed(4)) : 0;
+  stats.largeAmountRatio = stats.missingAmountCount ? null : (stats.totalAmount ? Number((stats.largeAmount / stats.totalAmount).toFixed(4)) : 0);
+  stats.status = stats.missingAmountCount ? 'partial' : 'available';
+  stats.reason = stats.missingAmountCount ? '部分逐笔金额缺失，无法计算完整金额及大单占比' : '';
   stats.topLargeTrades = stats.topLargeTrades
     .sort(function (a, b) { return b.amount - a.amount; })
     .slice(0, 10);
@@ -472,32 +483,47 @@ function toEastmoneySecid(code) {
 
 function normalizeEastmoneyMoneyFlow(row, options = {}) {
   const data = row || {};
-  const mainNetAmount = roundMoney(valueFrom(data, ['f62', 'mainNetAmount'], 0));
-  const superLargeNetAmount = roundMoney(valueFrom(data, ['f66', 'superLargeNetAmount'], 0));
-  const largeNetAmount = roundMoney(valueFrom(data, ['f72', 'largeNetAmount'], 0));
-  const mediumNetAmount = roundMoney(valueFrom(data, ['f78', 'mediumNetAmount'], 0));
-  const smallNetAmount = roundMoney(valueFrom(data, ['f84', 'smallNetAmount'], 0));
-  return {
+  function field(keys, money = false) {
+    const value = valueFrom(data, keys, null);
+    if (typeof value !== 'number' && typeof value !== 'string') return null;
+    const number = toNumber(value, null);
+    return number === null ? null : money ? roundMoney(number) : number;
+  }
+  const mainNetAmount = field(['f62', 'mainNetAmount'], true);
+  const superLargeNetAmount = field(['f66', 'superLargeNetAmount'], true);
+  const largeNetAmount = field(['f72', 'largeNetAmount'], true);
+  const mediumNetAmount = field(['f78', 'mediumNetAmount'], true);
+  const smallNetAmount = field(['f84', 'smallNetAmount'], true);
+  const result = {
     code: normalizeCode(options.code || data.f12 || data.code),
     name: data.f14 || data.name || '',
     provider: 'eastmoney-free-flow',
     sourceType: 'free-estimated',
     timestamp: new Date().toISOString(),
-    price: toNumber(valueFrom(data, ['f2', 'price'], 0)),
-    changePct: toNumber(valueFrom(data, ['f3', 'changePct'], 0)),
+    // This response has no provider observation timestamp. Fetch time is not quote time.
+    observedAt: null,
+    price: field(['f2', 'price']),
+    changePct: field(['f3', 'changePct']),
     mainNetAmount,
-    mainNetRatio: toNumber(valueFrom(data, ['f184', 'mainNetRatio'], 0)),
+    mainNetRatio: field(['f184', 'mainNetRatio']),
     superLargeNetAmount,
-    superLargeNetRatio: toNumber(valueFrom(data, ['f69', 'superLargeNetRatio'], 0)),
+    superLargeNetRatio: field(['f69', 'superLargeNetRatio']),
     largeNetAmount,
-    largeNetRatio: toNumber(valueFrom(data, ['f75', 'largeNetRatio'], 0)),
+    largeNetRatio: field(['f75', 'largeNetRatio']),
     mediumNetAmount,
-    mediumNetRatio: toNumber(valueFrom(data, ['f81', 'mediumNetRatio'], 0)),
+    mediumNetRatio: field(['f81', 'mediumNetRatio']),
     smallNetAmount,
-    smallNetRatio: toNumber(valueFrom(data, ['f87', 'smallNetRatio'], 0)),
-    simulatedLargeNetAmount: roundMoney(superLargeNetAmount + largeNetAmount),
-    note: 'Free Eastmoney fund-flow estimate. This is not raw exchange Level-2 tick data.'
+    smallNetRatio: field(['f87', 'smallNetRatio']),
+    simulatedLargeNetAmount: superLargeNetAmount === null || largeNetAmount === null
+      ? null : roundMoney(superLargeNetAmount + largeNetAmount),
+    note: '东方财富普通资金分类数据，不是暗盘原指标，也不是交易所原始 Level-2 逐笔数据；来源行情时刻未提供。'
   };
+  const fields = ['mainNetAmount', 'superLargeNetAmount', 'largeNetAmount', 'mediumNetAmount',
+    'smallNetAmount', 'mainNetRatio', 'superLargeNetRatio', 'largeNetRatio', 'mediumNetRatio', 'smallNetRatio'];
+  result.missingFields = fields.filter(function (key) { return result[key] === null; });
+  result.status = result.missingFields.length === fields.length ? 'unavailable'
+    : result.missingFields.length ? 'partial' : 'available';
+  return result;
 }
 
 async function getFreeMoneyFlow(code) {

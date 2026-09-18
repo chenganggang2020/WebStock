@@ -47,8 +47,8 @@ function isTailscaleServeRequest(req) {
 
 function requireLanPairing(req, res, next) {
   const expected = String(process.env.WEBSTOCK_LAN_TOKEN || '');
-  const tailscaleServe = isTailscaleServeRequest(req);
-  if (!expected || (isLoopbackAddress(req.socket && req.socket.remoteAddress) && !tailscaleServe)) return next();
+  const tailscaleServe = isTailscaleServeRequest(req) || Boolean(req.get('x-forwarded-proto'));
+  if (isLoopbackAddress(req.socket && req.socket.remoteAddress) && !tailscaleServe) return next();
 
   const queryToken = String(req.query && req.query.pair || '');
   const cookieToken = cookieValue(req.get('cookie'), 'webstock_lan_token');
@@ -67,6 +67,26 @@ function requireLanPairing(req, res, next) {
   return res.status(401).type('text/plain').send('该设备尚未与 WebStock 配对，请使用 Windows 端显示的完整配对地址。');
 }
 
+function requireMobileReadOnly(req, res, next) {
+  const local = isLoopbackAddress(req.socket && req.socket.remoteAddress);
+  if (local && !isTailscaleServeRequest(req) && !req.get('x-forwarded-proto')) return next();
+  const read = ['GET', 'HEAD'].includes(req.method);
+  const target = req.path;
+  if (read && ['/', '/index.html'].includes(target)) return res.redirect(302, '/mobile.html');
+  const reads = ['/mobile.html', '/manifest.webmanifest', '/sw.js', '/WebStock.png', '/api/health', '/api/mobile/snapshot', '/api/mobile/push/status', '/api/quote/snapshot'];
+  if (read && (reads.includes(target) || /^\/(?:css|js|icons|vendor)\//.test(target))) return next();
+  if (target === '/api/mobile/push/subscription' && ['POST', 'DELETE'].includes(req.method)) return next();
+  if (target === '/api/mobile/push/test' && req.method === 'POST') return next();
+  return res.status(403).json({ success: false, error: '手机配对仅允许只读业务数据和通知订阅；请在 Windows 端操作。' });
+}
+
+function externalRequestProtocol(req) {
+  // Only our loopback HTTPS proxy can assert TLS termination. Never trust LAN forwarding headers.
+  if (isLoopbackAddress(req.socket && req.socket.remoteAddress) && req.get('x-forwarded-proto') === 'https' &&
+      (isTailscaleServeRequest(req) || /^[a-z0-9.-]+\.ts\.net(?::\d+)?$/i.test(req.get('host') || ''))) return 'https';
+  return req.protocol;
+}
+
 module.exports = {
   isLoopbackAddress,
   isLocalNetworkAddress,
@@ -74,5 +94,7 @@ module.exports = {
   cookieValue,
   tokenMatches,
   isTailscaleServeRequest,
-  requireLanPairing
+  requireLanPairing,
+  requireMobileReadOnly,
+  externalRequestProtocol
 };

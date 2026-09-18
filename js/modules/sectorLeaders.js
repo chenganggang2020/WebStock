@@ -14,15 +14,31 @@ function sectorEscapeHtml(value) {
     .replace(/'/g, '&#39;');
 }
 
-function sectorFmt(value, digits) {
+function sectorNumber(value) {
+  if (value == null || typeof value === 'boolean' || String(value).trim() === '') return null;
   const n = Number(value);
-  return Number.isFinite(n) ? n.toFixed(digits === undefined ? 2 : digits) : '--';
+  return Number.isFinite(n) ? n : null;
+}
+
+function sectorFmt(value, digits) {
+  const n = sectorNumber(value);
+  return n === null ? '--' : n.toFixed(digits === undefined ? 2 : digits);
 }
 
 function sectorPnlClass(value) {
-  const n = Number(value);
-  if (!Number.isFinite(n)) return '';
+  const n = sectorNumber(value);
+  if (n === null) return '';
   return n >= 0 ? 'pnl-up' : 'pnl-down';
+}
+
+function sectorChange(value, unit = '%', signed = false) {
+  const n = sectorNumber(value);
+  return n === null ? '--' : (signed && n >= 0 ? '+' : '') + sectorFmt(n) + unit;
+}
+
+function sectorAmount(value) {
+  const n = sectorNumber(value);
+  return n === null ? '--' : sectorFmt(n / 100000000) + '亿';
 }
 
 function sectorRoleFilterValue() {
@@ -103,8 +119,8 @@ function renderLeaderRow(item) {
     '<td>' + item.name + '</td>' +
     '<td>' + (item.role || '观察候选') + '（人工标注，未核验）</td>' +
     '<td>' + sectorFmt(item.price) + '</td>' +
-    '<td class="' + sectorPnlClass(item.change) + '">' + (Number.isFinite(Number(item.change)) ? (Number(item.change) >= 0 ? '+' : '') + sectorFmt(item.change) + '%' : '--') + '</td>' +
-    '<td>' + sectorFmt(Number(item.amount) / 100000000) + '亿</td>' +
+    '<td class="' + sectorPnlClass(item.change) + '">' + sectorChange(item.change, '%', true) + '</td>' +
+    '<td>' + sectorAmount(item.amount) + '</td>' +
     '<td>' + (item.strength || '--') + '</td>' +
     '<td>' + (item.note || '') + '</td>' +
     '<td><div class="stock-actions">' +
@@ -231,8 +247,8 @@ async function showLeaderHistory(code) {
           '<td>' + sectorEscapeHtml(item.sectorName || '') + '</td>' +
           '<td>' + sectorEscapeHtml(item.name) + '</td>' +
           '<td>' + sectorFmt(item.price) + '</td>' +
-          '<td class="' + sectorPnlClass(item.change) + '">' + (Number.isFinite(Number(item.change)) ? (Number(item.change) >= 0 ? '+' : '') + sectorFmt(item.change) + '%' : '--') + '</td>' +
-          '<td>' + sectorFmt(Number(item.amount) / 100000000) + '亿</td>' +
+          '<td class="' + sectorPnlClass(item.change) + '">' + sectorChange(item.change, '%', true) + '</td>' +
+          '<td>' + sectorAmount(item.amount) + '</td>' +
           '</tr>';
       }).join('') +
       '</tbody></table></div></section>';
@@ -255,9 +271,9 @@ async function showTrends() {
         '<td>' + sectorEscapeHtml(item.sectorName || '') + '</td>' +
         '<td>' + sectorEscapeHtml(item.code) + '</td>' +
         '<td>' + sectorEscapeHtml(item.name) + '</td>' +
-        '<td class="' + sectorPnlClass(item.latestChange) + '">' + (Number.isFinite(Number(item.latestChange)) ? sectorFmt(item.latestChange) + '%' : '--') + '</td>' +
-        '<td class="' + sectorPnlClass(item.previousChange) + '">' + (Number.isFinite(Number(item.previousChange)) ? sectorFmt(item.previousChange) + '%' : '--') + '</td>' +
-        '<td class="' + sectorPnlClass(item.changeDelta) + '">' + (Number.isFinite(Number(item.changeDelta)) ? (Number(item.changeDelta) >= 0 ? '+' : '') + sectorFmt(item.changeDelta) + 'pct' : '--') + '</td>' +
+        '<td class="' + sectorPnlClass(item.latestChange) + '">' + sectorChange(item.latestChange) + '</td>' +
+        '<td class="' + sectorPnlClass(item.previousChange) + '">' + sectorChange(item.previousChange) + '</td>' +
+        '<td class="' + sectorPnlClass(item.changeDelta) + '">' + sectorChange(item.changeDelta, 'pct', true) + '</td>' +
         '<td>' + sectorEscapeHtml(item.samples) + '</td>' +
         '<td>' + sectorEscapeHtml(item.latestAt || '') + '</td>' +
         '</tr>';
@@ -489,7 +505,7 @@ function renderDashboardSummary() {
   }
   box.innerHTML = '<table class="mini-table"><tbody>' + items.map(function(item) {
     const code = sectorEscapeHtml(item.code);
-    return '<tr><td>' + sectorEscapeHtml(item.sectorName) + '</td><td>' + code + '</td><td>' + sectorEscapeHtml(item.name) + '</td><td class="' + sectorPnlClass(item.change) + '">' + sectorFmt(item.change) + '%</td><td><button class="small-btn" data-action="view" data-code="' + code + '">View</button></td></tr>';
+    return '<tr><td>' + sectorEscapeHtml(item.sectorName) + '</td><td>' + code + '</td><td>' + sectorEscapeHtml(item.name) + '</td><td class="' + sectorPnlClass(item.change) + '">' + sectorChange(item.change) + '</td><td><button class="small-btn" data-action="view" data-code="' + code + '">View</button></td></tr>';
   }).join('') + '</tbody></table>';
   box.onclick = async function(event) {
     const btn = event.target.closest('[data-action]');

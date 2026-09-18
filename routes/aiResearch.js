@@ -6,6 +6,7 @@ const modelRegistry = require('../services/modelRegistryService');
 const expertChannels = require('../services/expertChannelService');
 const douyinSources = require('../services/douyinSourceService');
 const douyinSyncState = require('../services/douyinSyncStateService');
+const creatorMedia = require('../services/creatorMediaService');
 const { buildAnalysisPacket } = require('../services/expertAnalysisPacketService');
 const gptPickImports = require('../services/gptPickImportService');
 const { isValidApiKey, getAIConfig, callAIModel } = require('./ai');
@@ -104,10 +105,27 @@ router.get('/expert/channels', function(req, res) {
 
 router.post('/expert/channels', function(req, res) {
   try {
-    ok(res, expertChannels.createChannel(req.body || {}));
+    const channel = expertChannels.createChannel(req.body || {});
+    if (channel.platform === 'douyin' && channel.profileUrl) douyinSyncState.ensureJob(channel.id, { enabled: channel.enabled, intervalMinutes: 10 });
+    ok(res, channel);
   } catch (error) {
     fail(res, error);
   }
+});
+
+router.put('/expert/channels/:id', function(req, res) {
+  try {
+    const existing = expertChannels.getChannel(Number(req.params.id));
+    const profile = String(req.body.profileUrl || existing.profileUrl).replace(/\/$/, '');
+    if (existing.profileUrl && profile !== existing.profileUrl.replace(/\/$/, '')) {
+      throw new Error('不同主页属于不同作者，请添加新作者，避免把原资料归给其他账号');
+    }
+    const channel = expertChannels.createChannel(Object.assign({}, existing, {
+      displayName: req.body.displayName || existing.displayName, profileUrl: profile,
+      enabled: req.body.enabled == null ? existing.enabled : req.body.enabled === true
+    }));
+    ok(res, channel);
+  } catch (error) { fail(res, error); }
 });
 
 router.get('/expert/channels/:id', function(req, res) {
@@ -174,6 +192,25 @@ router.get('/expert/channels/:id/observations/:observationId/comments', function
   }
 });
 
+router.get('/expert/channels/:id/observations/:observationId/media', function(req, res) {
+  try {
+    const observation = expertChannels.getObservation(req.params.id, req.params.observationId);
+    const filename = creatorMedia.resolveVideo(observation);
+    res.set('X-Content-Type-Options', 'nosniff').type('video/mp4');
+    res.sendFile(filename, { acceptRanges: true, cacheControl: false }, function(error) {
+      if (error && !res.headersSent) fail(res, new Error('视频文件暂不可读取'), 404);
+    });
+  } catch (_) { fail(res, new Error('视频未归档、文件缺失或不在允许的归档目录'), 404); }
+});
+
+router.get('/expert/channels/:id/observations/:observationId/cover', async function(req, res) {
+  try {
+    const observation = expertChannels.getObservation(req.params.id, req.params.observationId);
+    const cover = await creatorMedia.getCover(observation);
+    res.set('X-Content-Type-Options', 'nosniff').type(cover.type).sendFile(cover.filename);
+  } catch (_) { fail(res, new Error('封面暂不可用，可补采视频详情'), 404); }
+});
+
 router.post('/expert/channels/:id/douyin-links', function(req, res) {
   try {
     ok(res, douyinSources.importDouyinLinks(Number(req.params.id), req.body || {}));
@@ -191,11 +228,13 @@ router.post('/expert/channels/:id/douyin-capture', function(req, res) {
 });
 
 router.get('/expert/channels/:id/sync/runs', function(req, res) {
+  res.set('Cache-Control', 'no-store');
   try {
     const channelId = Number(req.params.id);
     expertChannels.getChannel(channelId);
     ok(res, douyinSyncState.listRuns(channelId, {
       limit: req.query.limit,
+      date: req.query.date,
       includeItems: true
     }));
   } catch (error) {
@@ -204,6 +243,7 @@ router.get('/expert/channels/:id/sync/runs', function(req, res) {
 });
 
 router.get('/expert/channels/:id/sync', function(req, res) {
+  res.set('Cache-Control', 'no-store');
   try {
     expertChannels.getChannel(Number(req.params.id));
     ok(res, douyinSyncState.getJob(Number(req.params.id)));

@@ -4,6 +4,8 @@ const researchRuns = require('./researchRunService');
 const RUN_TYPE = 'manual-chatgpt-stock-picks';
 const MODEL_ID = 'chatgpt-manual';
 const SOURCE = 'manual-chatgpt';
+const EXTERNAL_MODEL_ID = 'chatgpt-automation';
+const EXTERNAL_SOURCE = 'external-chatgpt-batch';
 const MAX_CANDIDATES = 20;
 const MAX_INPUT_LENGTH = 250000;
 const CODE_PATTERN = /(?<!\d)(\d{6})(?!\d)/g;
@@ -39,13 +41,18 @@ function readFirst(object, keys) {
 }
 
 function normalizeCandidate(input = {}) {
-  return {
+  const candidate = {
     code: normalizeCode(readFirst(input, ['code', 'stockCode', 'stock_code', 'symbol', 'ticker'])),
     name: cleanText(readFirst(input, ['name', 'stockName', 'stock_name', 'company']), 80),
     reason: cleanText(readFirst(input, ['reason', 'rationale', 'logic', 'thesis', 'recommendationReason']), 2000),
     risk: cleanText(readFirst(input, ['risk', 'risks', 'riskFactors', 'risk_factors']), 2000),
     originalAnalysis: cleanText(readFirst(input, ['originalAnalysis', 'analysis', 'explanation', 'commentary', 'originalText']), 8000)
   };
+  const rank = Number(readFirst(input, ['rank', 'priorityRank', 'priority_rank']));
+  const priority = cleanText(readFirst(input, ['priority', 'tier', 'role']), 20);
+  if (Number.isFinite(rank) && rank > 0) candidate.rank = rank;
+  if (priority) candidate.priority = priority;
+  return candidate;
 }
 
 function findJsonCandidates(content) {
@@ -182,7 +189,7 @@ function finalizeCandidates(rawCandidates) {
     if (byCode.has(candidate.code)) {
       duplicateCount += 1;
       const existing = byCode.get(candidate.code);
-      ['name', 'reason', 'risk', 'originalAnalysis'].forEach(function(field) {
+      ['rank', 'priority', 'name', 'reason', 'risk', 'originalAnalysis'].forEach(function(field) {
         if (!existing[field] && candidate[field]) existing[field] = candidate[field];
       });
       return;
@@ -252,13 +259,17 @@ function parseManualPickContent(content, options = {}) {
 function runToItem(run) {
   if (!run) return null;
   const request = run.request || {};
-  if (run.runType !== RUN_TYPE || run.modelId !== MODEL_ID || request.source !== SOURCE) return null;
+  const supported = run.runType === RUN_TYPE && (
+    (run.modelId === MODEL_ID && request.source === SOURCE) ||
+    (run.modelId === EXTERNAL_MODEL_ID && request.source === EXTERNAL_SOURCE)
+  );
+  if (!supported) return null;
   const candidates = Array.isArray(request.candidates)
     ? finalizeCandidates(request.candidates).candidates.slice(0, MAX_CANDIDATES)
     : [];
   return {
     id: run.id,
-    source: SOURCE,
+    source: request.source,
     importedAt: request.importedAt || run.createdAt,
     title: run.title || '',
     runType: run.runType,
@@ -307,16 +318,53 @@ function importManualPicks(input = {}) {
   return runToItem(run);
 }
 
+function importExternalPicks(input = {}) {
+  const finalized = finalizeCandidates(Array.isArray(input.picks) ? input.picks : []);
+  if (!finalized.candidates.length || finalized.candidates.length !== input.picks.length) {
+    throw new Error('外部研究批次候选必须是 1–20 只不重复的有效 A股代码');
+  }
+  const importedAt = new Date().toISOString();
+  const title = cleanText(input.title, 200) || ('ChatGPT 自动研究批次 ' + importedAt.slice(0, 10));
+  const originalText = JSON.stringify(input.picks, null, 2);
+  const run = researchRuns.createRun({
+    runType: RUN_TYPE,
+    modelId: EXTERNAL_MODEL_ID,
+    status: 'completed',
+    title,
+    result: originalText,
+    evidence: Array.isArray(input.evidence) ? input.evidence : [],
+    request: {
+      source: EXTERNAL_SOURCE,
+      batchKey: cleanText(input.batchKey, 100),
+      generatedAt: cleanText(input.generatedAt, 60),
+      model: cleanText(input.model, 120),
+      importedAt,
+      candidates: finalized.candidates,
+      analysis: cleanText(input.analysis, 20000),
+      originalText,
+      format: 'structured-json',
+      duplicateCount: 0,
+      truncated: false,
+      warnings: ['外部 ChatGPT 产物，WebStock 未独立验证'],
+      security: { trustedHtml: false, executable: false },
+      automaticTrading: false
+    },
+    metrics: { candidateCount: finalized.candidates.length, duplicateCount: 0 },
+    createdAt: importedAt
+  });
+  return runToItem(run);
+}
+
 function listManualPickImports(options = {}) {
   const limit = Math.min(Math.max(Number(options.limit) || 20, 1), 100);
-  const items = researchRuns.listRuns({ runType: RUN_TYPE, modelId: MODEL_ID, limit: Math.min(limit * 3, 500) })
+  const items = researchRuns.listRuns({ runType: RUN_TYPE, limit: Math.min(limit * 3, 500) })
     .map(runToItem)
     .filter(Boolean)
     .slice(0, limit);
   const row = db.prepare(`
     SELECT COUNT(*) AS count FROM ai_research_runs
-    WHERE run_type = ? AND model_id = ? AND json_extract(request_json, '$.source') = ?
-  `).get(RUN_TYPE, MODEL_ID, SOURCE);
+    WHERE run_type = ? AND json_extract(request_json, '$.source') IN (?, ?)
+  `).get(RUN_TYPE, SOURCE, EXTERNAL_SOURCE);
   return { items, total: Number(row && row.count) || 0 };
 }
 
@@ -367,9 +415,12 @@ module.exports = {
   RUN_TYPE,
   MODEL_ID,
   SOURCE,
+  EXTERNAL_MODEL_ID,
+  EXTERNAL_SOURCE,
   MAX_CANDIDATES,
   parseManualPickContent,
   importManualPicks,
+  importExternalPicks,
   listManualPickImports,
   getLatestManualPickImport,
   listManualPickCandidateHistory

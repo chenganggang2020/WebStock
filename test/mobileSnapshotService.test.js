@@ -3,6 +3,20 @@ const assert = require('node:assert/strict');
 
 const { buildMobileSnapshot } = require('../services/mobileSnapshotService');
 
+test('mobile simulation summary stays separate from real holdings and omits raw model inputs', () => {
+  const snapshot = buildMobileSnapshot({
+    paperSimulation: [{ paper: { id: 5, name: '10万元模拟', capital: 100000, positions: [{ code: '600000', quantity: 100 }], latestSnapshot: { cashValue: 98000, totalValue: 100200 } },
+      settings: { enabled: true, lastError: '测试未就绪' },
+      performance: { status: 'recording', totalReturn: 0.2, netPnl: 200, totalCosts: 5 },
+      decisions: [{ prompt: 'secret-input', rawResponse: 'private-model-response' }] }]
+  });
+  assert.equal(snapshot.paperSimulation.accounts[0].equity, 100200);
+  assert.equal(snapshot.paperSimulation.accounts[0].mode, 'paper-only');
+  assert.equal(snapshot.paperSimulation.accounts[0].performance.totalReturn, 0.2);
+  assert.equal(snapshot.accounts.length, 0);
+  assert.doesNotMatch(JSON.stringify(snapshot), /secret-input|private-model-response/);
+});
+
 test('mobile snapshot keeps accounts and exposes only a read-only summary', () => {
   const snapshot = buildMobileSnapshot({
     generatedAt: '2026-08-13T01:30:00.000Z',

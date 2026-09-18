@@ -3,6 +3,20 @@ const assert = require('node:assert/strict');
 
 const { analyzeChart } = require('../services/chartAnalysisService');
 
+test('repeated bars do not satisfy the independent sample minimum', () => {
+  const bar = { date: '2026-09-07', open: 10, high: 11, low: 9, close: 10, volume: 100 };
+  const result = analyzeChart({ code: '000001', period: 'day', asOf: '2026-09-08', bars: Array.from({ length: 20 }, () => ({ ...bar })) });
+  assert.equal(result.status, 'insufficient');
+  assert.equal(result.coverage.eligibleBars, 1);
+  assert.equal(result.coverage.duplicateBars, 19);
+});
+
+test('explicit null volume has the same missing-data behavior as an omitted field', () => {
+  const make = missing => ({ code: '000001', period: 'day', asOf: '2026-02-10', bars: buildBars(40).map((bar, index) => index === 39 ? { ...bar, volume: missing } : bar) });
+  assert.deepEqual(analyzeChart(make(null)), analyzeChart(make(undefined)));
+  assert.deepEqual(analyzeChart(make(' ')), analyzeChart(make(undefined)));
+});
+
 function buildBars(count, options = {}) {
   const start = Date.parse(options.start || '2026-01-01T00:00:00Z');
   const step = options.step == null ? 0.5 : Number(options.step);

@@ -2,6 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
+const vm = require('node:vm');
 
 const root = path.resolve(__dirname, '..');
 const indexSource = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
@@ -42,4 +43,84 @@ test('holdings and watchlist read the local quote snapshot every second without 
   assert.doesNotMatch(liveRefreshSource, /setInterval/);
   assert.match(watchlistSource, /applyQuoteSnapshot/);
   assert.match(portfolioSource, /applyQuoteSnapshot/);
+});
+
+test('local snapshot polling keeps the watchlist monitor badge stable across source fluctuation and recovery', async () => {
+  const attributes = {};
+  const status = {
+    textContent: '',
+    title: '',
+    setAttribute(name, value) { attributes[name] = value; },
+    getAttribute(name) { return attributes[name] || null; }
+  };
+  let envelope = {
+    data: [{
+      code: '600000',
+      price: 10,
+      quoteStatus: 'realtime',
+      providerObservedAt: '2026-09-02T02:00:00.000Z'
+    }],
+    meta: {
+      stale: true,
+      fetchedAt: '2026-09-02T02:00:01.000Z'
+    }
+  };
+  const document = {
+    visibilityState: 'visible',
+    getElementById(id) { return id === 'watchlistLiveStatus' ? status : null; },
+    querySelector() { return null; },
+    addEventListener() {}
+  };
+  const window = {
+    State: {
+      currentMainView: 'watchlist',
+      watchlist: [{ code: '600000' }]
+    },
+    ApiClient: {
+      async fetchApiEnvelope() { return envelope; }
+    },
+    QuoteSnapshotClientModel: {
+      signature(quotes) { return JSON.stringify(quotes); }
+    },
+    Watchlist: {
+      applyQuoteSnapshot() {}
+    },
+    addEventListener() {}
+  };
+
+  vm.runInNewContext(liveRefreshSource, {
+    window,
+    document,
+    console,
+    setTimeout() { return 1; },
+    clearTimeout() {}
+  }, { filename: 'liveRefresh.js' });
+
+  await window.LiveRefresh.sync();
+  const stableText = '本机行情监控 · 每1秒检查（上游最快3秒）';
+  assert.equal(status.textContent, stableText);
+  assert.equal(attributes['data-state'], 'scheduled');
+
+  await window.LiveRefresh.refreshNow();
+  assert.equal(status.textContent, stableText);
+  assert.equal(attributes['data-state'], 'scheduled');
+  assert.match(status.title, /数据源波动/);
+
+  envelope = {
+    data: [{
+      code: '600000',
+      price: 10.1,
+      quoteStatus: 'realtime',
+      providerObservedAt: '2026-09-02T02:00:03.000Z'
+    }],
+    meta: {
+      stale: false,
+      fetchedAt: '2026-09-02T02:00:04.000Z'
+    }
+  };
+
+  await window.LiveRefresh.refreshNow();
+  assert.equal(status.textContent, stableText);
+  assert.equal(attributes['data-state'], 'scheduled');
+  assert.match(status.title, /最近有效行情源时间/);
 });

@@ -4,6 +4,7 @@
   if (root) root.QuoteSnapshotClientModel = api;
 })(typeof window !== 'undefined' ? window : null, function() {
   function finite(value) {
+    if (value === null || value === undefined || value === '') return null;
     const number = Number(value);
     return Number.isFinite(number) ? number : null;
   }
@@ -54,7 +55,13 @@
       const quote = byCode.get(String(position.code || ''));
       if (!quote) return position;
       const evidence = quoteEvidence(quote);
-      if (!usableQuote(quote)) return Object.assign({}, position, evidence);
+      if (!usableQuote(quote)) return Object.assign({}, position, evidence, {
+        currentPrice: null, price: null, marketValue: null, grossUnrealizedPnl: null,
+        unrealizedPnl: null, unrealizedPnlRate: null, netPnl: null, netPnlRate: null,
+        symbolTotalPnl: null, symbolTotalPnlRate: null, todayPnl: null, todayReferencePnl: null,
+        open: null, high: null, low: null, prevClose: null, change: null, todayChange: null,
+        quoteStatus: 'unavailable', quoteDate: String(quote.tradeDate || ''), quoteTime: String(quote.tradeTime || '')
+      });
 
       const price = Number(quote.price);
       const quantity = finite(position.quantity) || 0;
@@ -67,6 +74,9 @@
       const realizedPnl = finite(position.realizedPnl) || 0;
       const investedCapital = finite(position.investedCapital) || 0;
       const symbolTotalPnl = realizedPnl + unrealizedPnl;
+      const quoteDate = String(quote.tradeDate || position.quoteDate || '');
+      const dailyCurrent = ['live', 'auction', 'latest-close'].includes(evidence.quoteStatus) && !evidence.quoteStale &&
+        (!position.todayPnlDate || !quoteDate || position.todayPnlDate === quoteDate);
 
       return Object.assign({}, position, {
         currentPrice: round(price, 3),
@@ -85,7 +95,9 @@
         netPnlRate: costValue > 0 ? round(unrealizedPnl / costValue * 100, 2) : null,
         symbolTotalPnl: round(symbolTotalPnl, 2),
         symbolTotalPnlRate: investedCapital > 0 ? round(symbolTotalPnl / investedCapital * 100, 2) : null,
-        quoteDate: String(quote.tradeDate || position.quoteDate || ''),
+        todayPnl: dailyCurrent ? finite(position.todayPnl === undefined ? position.todayReferencePnl : position.todayPnl) : null,
+        todayReferencePnl: dailyCurrent ? finite(position.todayPnl === undefined ? position.todayReferencePnl : position.todayPnl) : null,
+        quoteDate,
         quoteTime: String(quote.tradeTime || position.quoteTime || '')
       }, evidence);
     });
@@ -94,29 +106,49 @@
   function summarizePortfolio(prior, positions) {
     const summary = Object.assign({}, prior || {});
     const rows = Array.isArray(positions) ? positions : [];
-    const totalMarketValue = rows.reduce(function(total, position) {
-      const marketValue = finite(position.marketValue);
-      const costValue = finite(position.costValue) || 0;
-      return total + (marketValue === null ? costValue : marketValue);
-    }, 0);
+    const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Shanghai', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+    const priced = rows.filter(position => finite(position.marketValue) !== null && position.quoteStatus !== 'unavailable');
+    const live = priced.filter(position => ['live', 'auction'].includes(position.quoteStatus || 'live') && !position.quoteStale && (!position.quoteDate || position.quoteDate === today));
+    const quoteCoverage = { total: rows.length, priced: priced.length, live: live.length, stale: priced.length - live.length, missing: rows.length - priced.length };
+    const valuationStatus = !quoteCoverage.total ? 'empty' : !quoteCoverage.priced ? 'unavailable' : quoteCoverage.missing ? 'partial' : quoteCoverage.stale ? 'stale' : 'live';
+    const quoteTimes = priced.filter(position => position.quoteDate).map(position => position.quoteDate + 'T' + (position.quoteTime || '')).sort();
+    const earliestQuote = quoteTimes[0] || '';
+    const totalMarketValue = quoteCoverage.missing ? null : priced.reduce((total, position) => total + Number(position.marketValue), 0);
     const totalCost = rows.reduce(function(total, position) {
       return total + (finite(position.costValue) || 0);
     }, 0);
-    const unrealizedPnl = rows.reduce(function(total, position) {
-      return total + (finite(position.unrealizedPnl) || 0);
-    }, 0);
+    const unrealizedPnl = quoteCoverage.missing || rows.some(position => finite(position.unrealizedPnl) === null)
+      ? null : rows.reduce((total, position) => total + Number(position.unrealizedPnl), 0);
+    const dailyValues = rows.map(position => finite(position.todayPnl === undefined ? position.todayReferencePnl : position.todayPnl));
+    const dailyEligible = rows.every(function(position) {
+      return ['live', 'auction', 'latest-close'].includes(position.quoteStatus || 'live') && !position.quoteStale;
+    });
+    const todayPnl = quoteCoverage.missing || !dailyEligible || dailyValues.includes(null)
+      ? null : dailyValues.reduce((total, value) => total + value, 0);
+    const pnlDates = Array.from(new Set(rows.map(function(position) { return position.todayPnlDate; }).filter(Boolean)));
+    const todayPnlDate = todayPnl === null || pnlDates.length !== 1 ? null : pnlDates[0];
+    const todayPnlStatus = todayPnl === null ? 'unavailable'
+      : rows.some(function(position) { return position.quoteStatus === 'latest-close'; }) ? 'latest-close' : 'live';
     const realizedPnl = finite(summary.realizedPnl) || 0;
-    const totalPnl = realizedPnl + unrealizedPnl;
+    const totalPnl = unrealizedPnl === null ? null : realizedPnl + unrealizedPnl;
     const lifetimeBuyCost = finite(summary.lifetimeBuyCost) || 0;
-    const cashBalance = finite(summary.cashBalance) || 0;
+    const cashBalance = finite(summary.cashBalance);
 
     return Object.assign(summary, {
-      totalAssets: round(cashBalance + totalMarketValue, 2),
+      valuationStatus,
+      quoteCoverage,
+      quoteDate: earliestQuote.slice(0, 10),
+      quoteTime: earliestQuote.slice(11),
+      totalAssets: cashBalance === null || totalMarketValue === null ? null : round(cashBalance + totalMarketValue, 2),
       totalMarketValue: round(totalMarketValue, 2),
       totalCost: round(totalCost, 2),
       unrealizedPnl: round(unrealizedPnl, 2),
+      todayPnl: round(todayPnl, 2),
+      todayReferencePnl: round(todayPnl, 2),
+      todayPnlDate,
+      todayPnlStatus,
       totalPnl: round(totalPnl, 2),
-      totalPnlRate: lifetimeBuyCost > 0 ? round(totalPnl / lifetimeBuyCost * 100, 2) : summary.totalPnlRate,
+      totalPnlRate: totalPnl === null ? null : lifetimeBuyCost > 0 ? round(totalPnl / lifetimeBuyCost * 100, 2) : totalPnl === 0 ? 0 : null,
       positionCount: rows.length,
       winCount: rows.filter(function(position) { return (finite(position.unrealizedPnl) || 0) > 0; }).length,
       lossCount: rows.filter(function(position) { return (finite(position.unrealizedPnl) || 0) < 0; }).length
@@ -126,16 +158,15 @@
   function allocation(positions) {
     const rows = Array.isArray(positions) ? positions : [];
     const values = rows.map(function(position) {
-      const marketValue = finite(position.marketValue);
-      return marketValue === null ? (finite(position.costValue) || 0) : marketValue;
+      return position.quoteStatus === 'unavailable' ? null : finite(position.marketValue);
     });
-    const total = values.reduce(function(sum, value) { return sum + value; }, 0);
+    const total = values.includes(null) ? null : values.reduce(function(sum, value) { return sum + value; }, 0);
     return rows.map(function(position, index) {
       return {
         code: position.code,
         name: position.name,
         marketValue: round(values[index], 2),
-        ratio: total > 0 ? round(values[index] / total * 100, 2) : 0
+        ratio: total === null ? null : total > 0 ? round(values[index] / total * 100, 2) : 0
       };
     });
   }

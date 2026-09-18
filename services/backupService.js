@@ -3,9 +3,38 @@ const knowledgeService = require('./knowledgeService');
 const paperPortfolioService = require('./paperPortfolioService');
 const researchRunService = require('./researchRunService');
 const expertChannelService = require('./expertChannelService');
+const industryResearchService = require('./industryResearchService');
 
-const BACKUP_VERSION = 6;
+const BACKUP_VERSION = 8;
 const MAX_ITEMS_PER_TABLE = 5000;
+const BACKUP_TABLES = new Set([
+  'portfolioAccounts', 'recentStocks', 'watchlist', 'trades', 'portfolioSnapshots',
+  'sectors', 'sectorLeaders', 'sectorLeaderSnapshots', 'screenerResults',
+  'screenerCandidateNotes', 'knowledgeSources', 'researchRuns', 'paperPortfolios', 'expertChannels', 'industryResearch'
+]);
+
+function validateBackup(backup) {
+  if (!backup || typeof backup !== 'object' || Array.isArray(backup)) throw new Error('Backup JSON object is required');
+  if (backup.version !== undefined && (!Number.isInteger(backup.version) || backup.version < 1 || backup.version > BACKUP_VERSION)) {
+    throw new Error('Unsupported backup version');
+  }
+  const wrapped = Object.prototype.hasOwnProperty.call(backup, 'tables');
+  const tables = wrapped ? backup.tables : backup;
+  if (!tables || typeof tables !== 'object' || Array.isArray(tables)) throw new Error('Backup tables must be an object');
+  const tableNames = Object.keys(tables).filter(key => BACKUP_TABLES.has(key));
+  if (!tableNames.length) throw new Error('Backup must contain at least one supported table');
+  if (wrapped && Object.keys(tables).some(key => !BACKUP_TABLES.has(key))) throw new Error('Unsupported table in backup');
+  if (backup.version === BACKUP_VERSION) {
+    const missingTables = [...BACKUP_TABLES].filter(key => !Object.prototype.hasOwnProperty.call(tables, key));
+    if (missingTables.length) throw new Error('Current backup is missing required tables: ' + missingTables.join(', '));
+  }
+  for (const key of tableNames) {
+    if (!Array.isArray(tables[key])) throw new Error('Backup table ' + key + ' must be an array');
+    if (tables[key].some(item => !item || typeof item !== 'object' || Array.isArray(item))) {
+      throw new Error('Backup table ' + key + ' must contain only objects');
+    }
+  }
+}
 
 function text(value, fallback = '', maxLength = 2000) {
   const next = String(value == null ? fallback : value).trim();
@@ -41,6 +70,40 @@ function arrayFromBackup(backup, key) {
     throw new Error(key + ' exceeds import limit');
   }
   return items;
+}
+
+function packIndustryResearch(flat) {
+  const topics = flat.topics.map(topic => {
+    const versions = flat.versions.filter(version => version.topicId === topic.id);
+    const versionEvidence = new Set(versions.flatMap(version => version.payload.evidenceIds || []));
+    const evidence = flat.evidence.filter(item => versionEvidence.has(item.id));
+    return { ...topic, evidence, versions, runs: flat.runs.filter(run => run.topicId === topic.id) };
+  });
+  const referenced = new Set(topics.flatMap(topic => topic.evidence.map(item => item.id)));
+  if (referenced.size !== flat.evidence.length) throw new Error('Cannot export orphan industry research evidence');
+  if (flat.versions.some(version => !topics.some(topic => topic.id === version.topicId)) || flat.runs.some(run => !topics.some(topic => topic.id === run.topicId))) {
+    throw new Error('Cannot export orphan industry research records');
+  }
+  return topics;
+}
+
+function unpackIndustryResearch(groups) {
+  const flat = { topics: [], evidence: [], versions: [], runs: [] };
+  const seen = new Map();
+  for (const group of groups) {
+    if (!group || !Array.isArray(group.evidence) || !Array.isArray(group.versions) || !Array.isArray(group.runs) || typeof group.id !== 'string') throw new Error('Invalid industry research topic group');
+    const { evidence = [], versions = [], runs = [], ...topic } = group;
+    if (versions.some(item => !item || item.topicId !== group.id) || runs.some(item => !item || item.topicId !== group.id)) throw new Error('Industry research record does not belong to its topic group');
+    flat.topics.push(topic);
+    for (const [key, items] of [['evidence', evidence], ['versions', versions], ['runs', runs]]) {
+      for (const item of items) {
+        const prior = seen.get(`${key}:${item.id}`);
+        if (prior && JSON.stringify(prior) !== JSON.stringify(item)) throw new Error('Duplicate industry research record conflict');
+        if (!prior) { seen.set(`${key}:${item.id}`, item); flat[key].push(item); }
+      }
+    }
+  }
+  return flat;
 }
 
 function exportUserData() {
@@ -163,7 +226,8 @@ function exportUserData() {
       knowledgeSources,
       researchRuns,
       paperPortfolios,
-      expertChannels
+      expertChannels,
+      industryResearch: packIndustryResearch(industryResearchService.exportResearch())
     }
   };
 }
@@ -207,9 +271,19 @@ function normalizePortfolioAccount(item) {
     broker: text(item.broker, '', 120),
     maskedNumber: text(item.maskedNumber, '', 40),
     cashBalance: Math.max(numberOrZero(item.cashBalance), 0),
-    isDefault: item.isDefault === true || accountKey === 'default',
+    isDefault: item.isDefault === true || item.isDefault === 1 || accountKey === 'default',
     note: text(item.note, '', 2000)
   };
+}
+
+function backupDate(value) {
+  const date = text(value, '', 20);
+  const parsed = new Date(date + 'T00:00:00.000Z');
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !Number.isFinite(parsed.getTime()) ||
+      parsed.toISOString().slice(0, 10) !== date) {
+    throw new Error('备份记录缺少有效原始日期，不能按今天的日期导入');
+  }
+  return date;
 }
 
 function normalizeTrade(item) {
@@ -229,7 +303,7 @@ function normalizeTrade(item) {
     code: code(item.code),
     name: text(item.name || item.code, item.code, 80),
     side,
-    tradeDate: text(item.tradeDate, new Date().toISOString().slice(0, 10), 20),
+    tradeDate: backupDate(item.tradeDate),
     price,
     quantity,
     fee,
@@ -253,7 +327,7 @@ function normalizePortfolioSnapshot(item) {
   })).filter(holding => holding.quantity > 0) : [];
   return {
     accountKey: text(item.accountKey, 'default', 120) || 'default',
-    snapshotDate: text(item.snapshotDate, new Date().toISOString().slice(0, 10), 20),
+    snapshotDate: backupDate(item.snapshotDate),
     totalMarketValue: numberOrZero(item.totalMarketValue),
     cashBalance: numberOrZero(item.cashBalance),
     totalAssets: numberOrZero(item.totalAssets),
@@ -368,6 +442,7 @@ function normalizePaperPortfolio(item) {
   const paperItems = Array.isArray(item.items) ? item.items : [];
   const paperPositions = Array.isArray(item.positions) ? item.positions : [];
   const paperSnapshots = Array.isArray(item.snapshots) ? item.snapshots : [];
+  const monitor = item.monitor && typeof item.monitor === 'object' ? item.monitor : null;
   return {
     name: text(item.name, 'Paper portfolio', 160),
     status: ['draft', 'active', 'archived'].includes(status) ? status : 'draft',
@@ -411,7 +486,71 @@ function normalizePaperPortfolio(item) {
       source: text(snapshot.source, '', 100),
       sourceMetadata: snapshot.sourceMetadata && typeof snapshot.sourceMetadata === 'object' ? snapshot.sourceMetadata : {},
       warnings: normalizeStringArray(snapshot.warnings, 100)
-    })).filter(snapshot => snapshot.snapshotAt)
+    })).filter(snapshot => snapshot.snapshotAt),
+    monitor: monitor ? {
+      runs: (Array.isArray(monitor.runs) ? monitor.runs : []).slice(0, MAX_ITEMS_PER_TABLE).map(run => ({
+        slot: text(run.slot, '', 40), status: text(run.status, '', 30), attempts: Math.max(integerOrZero(run.attempts), 0),
+        lastAttemptAt: text(run.lastAttemptAt, '', 40), nextRetryAt: text(run.nextRetryAt, '', 40), error: text(run.error, '', 2000)
+      })).filter(run => /^\d{4}-\d{2}-\d{2}@\d{2}:\d{2}$/.test(run.slot) && ['running', 'retrying', 'succeeded', 'invalid', 'failed', 'missed', 'handoff'].includes(run.status)),
+      settings: monitor.settings ? {
+        enabled: monitor.settings.enabled !== false,
+        startMode: monitor.settings.startMode === 'next-trading-day' ? 'next-trading-day' : 'today',
+        activatedAt: text(monitor.settings.activatedAt, new Date().toISOString(), 40),
+        schedule: normalizeStringArray(monitor.settings.schedule, 12).filter(value => /^\d{2}:\d{2}$/.test(value)),
+        holdingsSyncRequired: monitor.settings.holdingsSyncRequired !== false,
+        lastHoldingsSyncAt: text(monitor.settings.lastHoldingsSyncAt, '', 80),
+        lastHoldingsSource: text(monitor.settings.lastHoldingsSource, '', 120),
+        lastRunSlot: text(monitor.settings.lastRunSlot, '', 40),
+        lastError: text(monitor.settings.lastError, '', 2000)
+      } : null,
+      decisions: (Array.isArray(monitor.decisions) ? monitor.decisions : []).slice(0, MAX_ITEMS_PER_TABLE).map(decision => ({
+        backupId: Math.max(integerOrZero(decision.id), 0),
+        advisedAt: text(decision.advisedAt, '', 40),
+        marketAsOf: text(decision.marketAsOf, '', 40),
+        modelId: text(decision.modelId, 'chatgpt-handoff', 120),
+        mode: ['direct', 'manual', 'scheduled'].includes(decision.mode) ? decision.mode : 'manual',
+        scheduleSlot: text(decision.scheduleSlot, '', 40),
+        promptHash: text(decision.promptHash, '', 128),
+        prompt: text(decision.prompt, '', 250000),
+        inputContext: decision.inputContext && typeof decision.inputContext === 'object' ? decision.inputContext : {},
+        allowedUniverse: Array.isArray(decision.allowedUniverse) ? decision.allowedUniverse.slice(0, 200) : [],
+        rawResponse: text(decision.rawResponse, '', 250000),
+        decision: decision.decision && typeof decision.decision === 'object' ? decision.decision : {},
+        validationStatus: decision.validationStatus === 'valid' ? 'valid' : 'invalid',
+        validationErrors: normalizeStringArray(decision.validationErrors, 100)
+      })).filter(decision => decision.backupId && decision.advisedAt),
+      orders: (Array.isArray(monitor.orders) ? monitor.orders : []).slice(0, MAX_ITEMS_PER_TABLE).map(order => ({
+        backupId: Math.max(integerOrZero(order.id), 0),
+        decisionBackupId: Math.max(integerOrZero(order.decisionId), 0),
+        code: code(order.code),
+        name: text(order.name || order.code, order.code, 100),
+        action: ['buy', 'sell', 'hold'].includes(order.action) ? order.action : 'hold',
+        targetPositionPercent: Math.min(Math.max(numberOrZero(order.targetPositionPercent), 0), 100),
+        confidence: Math.min(Math.max(numberOrZero(order.confidence), 0), 100),
+        reason: text(order.reason, '', 4000),
+        invalidation: text(order.invalidation, '', 4000),
+        advisedAt: text(order.advisedAt, '', 40),
+        status: ['pending', 'filled', 'rejected', 'held', 'cancelled'].includes(order.status) ? order.status : 'rejected',
+        statusReason: text(order.statusReason, '', 2000),
+        filledQuantity: Math.max(integerOrZero(order.filledQuantity), 0)
+      })).filter(order => order.backupId && order.decisionBackupId),
+      fills: (Array.isArray(monitor.fills) ? monitor.fills : []).slice(0, MAX_ITEMS_PER_TABLE).map(fill => ({
+        orderBackupId: Math.max(integerOrZero(fill.orderId), 0),
+        code: code(fill.code),
+        side: fill.side === 'sell' ? 'sell' : 'buy',
+        filledAt: text(fill.filledAt, '', 40),
+        marketDate: text(fill.marketDate, '', 20),
+        marketTime: text(fill.marketTime, '', 20),
+        dataSource: text(fill.dataSource, '', 100),
+        rawPrice: Math.max(numberOrZero(fill.rawPrice), 0),
+        executionPrice: Math.max(numberOrZero(fill.executionPrice), 0),
+        quantity: Math.max(integerOrZero(fill.quantity), 0),
+        grossValue: Math.max(numberOrZero(fill.grossValue), 0),
+        commission: Math.max(numberOrZero(fill.commission), 0),
+        stampDuty: Math.max(numberOrZero(fill.stampDuty), 0),
+        cashChange: numberOrZero(fill.cashChange)
+      })).filter(fill => fill.orderBackupId && fill.quantity > 0 && fill.filledAt)
+    } : null
   };
 }
 
@@ -502,15 +641,20 @@ function normalizeExpertChannel(item) {
 }
 
 function prepareImport(backup) {
-  if (!backup || typeof backup !== 'object') throw new Error('Backup JSON is required');
+  validateBackup(backup);
   const portfolioAccounts = arrayFromBackup(backup, 'portfolioAccounts').map(normalizePortfolioAccount);
-  if (!portfolioAccounts.some(account => account.accountKey === 'default')) {
-    portfolioAccounts.unshift(normalizePortfolioAccount({ accountKey: 'default', name: '默认账户', isDefault: true }));
-  }
   const recentStocks = arrayFromBackup(backup, 'recentStocks').map(normalizeRecent);
   const watchlist = arrayFromBackup(backup, 'watchlist').map(normalizeWatchlist);
   const trades = arrayFromBackup(backup, 'trades').map(normalizeTrade);
   const portfolioSnapshots = arrayFromBackup(backup, 'portfolioSnapshots').map(normalizePortfolioSnapshot);
+  // Legacy trades may have no account identity; do not recreate default for unrelated imports.
+  if (trades.concat(portfolioSnapshots).some(item => item.accountKey === 'default') &&
+      !portfolioAccounts.some(account => account.accountKey === 'default')) {
+    portfolioAccounts.unshift(normalizePortfolioAccount({ accountKey: 'default', name: '默认账户', isDefault: true }));
+  }
+  if (new Set(portfolioAccounts.map(item => item.accountKey)).size !== portfolioAccounts.length) {
+    throw new Error('备份含重复账户身份，不能安全导入');
+  }
   const sectors = arrayFromBackup(backup, 'sectors').map(normalizeSector).filter(item => item.name);
   const sectorLeaders = arrayFromBackup(backup, 'sectorLeaders').map(normalizeLeader);
   const sectorLeaderSnapshots = arrayFromBackup(backup, 'sectorLeaderSnapshots').map(normalizeLeaderSnapshot);
@@ -521,6 +665,8 @@ function prepareImport(backup) {
   const paperPortfolios = arrayFromBackup(backup, 'paperPortfolios').map(normalizePaperPortfolio);
   const expertChannels = arrayFromBackup(backup, 'expertChannels').map(normalizeExpertChannel)
     .filter(item => item.channelKey && item.displayName && item.platform);
+  const tables = backup.tables || backup;
+  const industryResearch = !Array.isArray(tables.industryResearch) ? null : industryResearchService.validateResearch(unpackIndustryResearch(tables.industryResearch));
   return {
     portfolioAccounts,
     recentStocks,
@@ -535,7 +681,8 @@ function prepareImport(backup) {
     knowledgeSources,
     researchRuns,
     paperPortfolios,
-    expertChannels
+    expertChannels,
+    industryResearch
   };
 }
 
@@ -554,7 +701,13 @@ function countsForPrepared(prepared) {
     knowledgeSources: prepared.knowledgeSources.length,
     researchRuns: prepared.researchRuns.length,
     paperPortfolios: prepared.paperPortfolios.length,
-    expertChannels: prepared.expertChannels.length
+    expertChannels: prepared.expertChannels.length,
+    industryResearch: prepared.industryResearch ? {
+      topics: prepared.industryResearch.topics.length,
+      evidence: prepared.industryResearch.evidence.length,
+      versions: prepared.industryResearch.versions.length,
+      runs: prepared.industryResearch.runs.length
+    } : null
   };
 }
 
@@ -573,21 +726,93 @@ function currentCounts() {
     knowledgeSources: db.prepare('SELECT COUNT(*) AS count FROM knowledge_sources').get().count,
     researchRuns: db.prepare('SELECT COUNT(*) AS count FROM ai_research_runs').get().count,
     paperPortfolios: db.prepare('SELECT COUNT(*) AS count FROM paper_portfolios').get().count,
-    expertChannels: db.prepare('SELECT COUNT(*) AS count FROM expert_channels').get().count
+    expertChannels: db.prepare('SELECT COUNT(*) AS count FROM expert_channels').get().count,
+    industryResearch: {
+      topics: db.prepare('SELECT COUNT(*) AS count FROM industry_research_topics').get().count,
+      evidence: db.prepare('SELECT COUNT(*) AS count FROM industry_research_evidence').get().count,
+      versions: db.prepare('SELECT COUNT(*) AS count FROM industry_research_versions').get().count,
+      runs: db.prepare('SELECT COUNT(*) AS count FROM industry_research_runs').get().count
+    }
   };
 }
 
-function previewUserDataImport(backup) {
-  const prepared = prepareImport(backup);
+function importMode(options = {}) {
+  if (options.mode !== undefined && !['merge', 'replace'].includes(options.mode)) {
+    throw new Error('无效的导入模式，只支持 merge 或 replace');
+  }
+  return options.mode || 'replace';
+}
+
+function planPortfolioMerge(prepared) {
+  const accounts = new Map(db.prepare('SELECT * FROM portfolio_accounts').all().map(row => [row.account_key, row]));
+  const declared = new Set(prepared.portfolioAccounts.map(item => item.accountKey));
+  const skipTrades = new Set();
+  const skipSnapshots = new Set();
+  const conflicts = [];
+  const keys = new Set(prepared.trades.concat(prepared.portfolioSnapshots).map(item => item.accountKey));
+  const sameRows = (a, b) => JSON.stringify(a.map(item => JSON.stringify(item)).sort()) ===
+    JSON.stringify(b.map(item => JSON.stringify(item)).sort());
+  for (const accountKey of keys) {
+    const account = accounts.get(accountKey);
+    if (!account) {
+      if (!declared.has(accountKey)) conflicts.push({ accountKey, reason: '备份交易或快照缺少对应账户，不能转入其他账户' });
+      continue;
+    }
+    if (!account.enabled) {
+      conflicts.push({ accountKey, reason: '当前账户已停用，不能通过合并重新激活或追加持仓' });
+      continue;
+    }
+    const oldTrades = db.prepare(`SELECT source_type AS sourceType, code, name, side, trade_date AS tradeDate,
+      price, quantity, fee, tax, amount, note FROM trades WHERE account_id = ?`).all(account.id)
+      .map(row => normalizeTrade({ ...row, accountKey }));
+    const oldSnapshots = db.prepare(`SELECT snapshot_date AS snapshotDate, total_market_value AS totalMarketValue,
+      cash_balance AS cashBalance, total_assets AS totalAssets, total_cost AS totalCost,
+      unrealized_pnl AS unrealizedPnl, realized_pnl AS realizedPnl, total_pnl AS totalPnl, today_pnl AS todayPnl,
+      source_label AS sourceLabel, holdings_json AS holdingsJson FROM portfolio_snapshots WHERE account_id = ?`).all(account.id)
+      .map(row => normalizePortfolioSnapshot({ ...row, accountKey, holdings: JSON.parse(row.holdingsJson || '[]') }));
+    if (!oldTrades.length && !oldSnapshots.length) continue;
+    for (const [table, stored, skipped] of [
+      ['trades', oldTrades, skipTrades], ['portfolioSnapshots', oldSnapshots, skipSnapshots]
+    ]) {
+      const incoming = prepared[table].filter(item => item.accountKey === accountKey);
+      if (!incoming.length) continue;
+      // Old JSON exports have no stable transaction IDs. Only an identical complete history
+      // can be skipped; differing histories need a source-aware recovery, never guessed deduplication.
+      if (sameRows(incoming, stored)) skipped.add(accountKey);
+      else conflicts.push({ accountKey, table, reason: '已有账户历史与备份不一致；缺少逐笔身份，不能安全追加' });
+    }
+  }
   return {
-    mode: 'replace',
+    accounts, skipTrades, skipSnapshots, conflicts,
+    preserved: {
+      portfolioAccounts: prepared.portfolioAccounts.filter(item => accounts.has(item.accountKey)).length,
+      watchlist: prepared.watchlist.filter(item => db.prepare('SELECT 1 FROM watchlist WHERE code = ?').get(item.code)).length,
+      trades: prepared.trades.filter(item => skipTrades.has(item.accountKey)).length,
+      portfolioSnapshots: prepared.portfolioSnapshots.filter(item => skipSnapshots.has(item.accountKey)).length
+    }
+  };
+}
+
+function previewUserDataImport(backup, options = {}) {
+  const mode = importMode(options);
+  const prepared = prepareImport(backup);
+  const legacyScope = backup.version !== BACKUP_VERSION;
+  const plan = mode === 'merge' ? planPortfolioMerge(prepared) : null;
+  return {
+    mode,
+    canImport: !plan || plan.conflicts.length === 0,
+    conflicts: plan ? plan.conflicts : [],
+    preserved: plan ? plan.preserved : null,
+    legacyScope,
+    warnings: (legacyScope ? ['旧版备份可能仅包含部分数据；未提供的产业研究数据会被保留（不再清空为空表），其他未提供表按旧版兼容规则处理。请先保存当前完整备份。'] : [])
+      .concat(mode === 'merge' ? ['合并保留已有账户与自选资料；相同账户的完整历史一致时跳过，不一致时停止导入。其他类别仍按原有合并规则处理。'] : []),
     incoming: countsForPrepared(prepared),
     current: currentCounts()
   };
 }
 
 function importUserData(backup, options = {}) {
-  const mode = options.mode === 'merge' ? 'merge' : 'replace';
+  const mode = importMode(options);
   const prepared = prepareImport(backup);
   const {
     portfolioAccounts,
@@ -603,7 +828,8 @@ function importUserData(backup, options = {}) {
     knowledgeSources,
     researchRuns,
     paperPortfolios,
-    expertChannels
+    expertChannels,
+    industryResearch
   } = prepared;
 
   const summary = {
@@ -612,6 +838,11 @@ function importUserData(backup, options = {}) {
   };
 
   db.transaction(function() {
+    const mergePlan = mode === 'merge' ? planPortfolioMerge(prepared) : null;
+    if (mergePlan && mergePlan.conflicts.length) {
+      throw new Error('账户合并冲突：' + mergePlan.conflicts.map(item => item.accountKey + '：' + item.reason).join('；'));
+    }
+    if (mergePlan) summary.preserved = mergePlan.preserved;
     if (mode === 'replace') {
       db.prepare('DELETE FROM sector_leaders').run();
       db.prepare('DELETE FROM sector_leader_snapshots').run();
@@ -763,24 +994,65 @@ function importUserData(backup, options = {}) {
       ) VALUES (@portfolioId, @snapshotAt, @marketDate, @marketTime, @cashValue, @marketValue,
         @totalValue, @dailyPnl, @totalPnl, @totalReturn, @source, @sourceMetadataJson, @warningsJson)
     `);
+    const insertPaperMonitorSettings = db.prepare(`
+      INSERT INTO paper_monitor_settings (
+        portfolio_id, enabled, start_mode, activated_at, schedule_json, holdings_sync_required,
+        last_holdings_sync_at, last_holdings_source, last_run_slot, last_error
+      ) VALUES (@portfolioId, @enabled, @startMode, @activatedAt, @scheduleJson, @holdingsSyncRequired,
+        @lastHoldingsSyncAt, @lastHoldingsSource, @lastRunSlot, @lastError)
+    `);
+    const insertPaperDecision = db.prepare(`
+      INSERT INTO paper_model_decisions (
+        portfolio_id, advised_at, market_as_of, model_id, mode, schedule_slot, prompt_hash,
+        prompt_text, input_context_json, allowed_universe_json, raw_response, decision_json,
+        validation_status, validation_errors_json
+      ) VALUES (@portfolioId, @advisedAt, @marketAsOf, @modelId, @mode, @scheduleSlot, @promptHash,
+        @prompt, @inputContextJson, @allowedUniverseJson, @rawResponse, @decisionJson,
+        @validationStatus, @validationErrorsJson)
+    `);
+    const insertPaperOrder = db.prepare(`
+      INSERT INTO paper_orders (
+        portfolio_id, decision_id, code, name, action, target_position_percent, confidence,
+        reason, invalidation, advised_at, status, status_reason, filled_quantity
+      ) VALUES (@portfolioId, @decisionId, @code, @name, @action, @targetPositionPercent, @confidence,
+        @reason, @invalidation, @advisedAt, @status, @statusReason, @filledQuantity)
+    `);
+    const insertPaperFill = db.prepare(`
+      INSERT INTO paper_fills (
+        portfolio_id, order_id, code, side, filled_at, market_date, market_time, data_source,
+        raw_price, execution_price, quantity, gross_value, commission, stamp_duty, cash_change
+      ) VALUES (@portfolioId, @orderId, @code, @side, @filledAt, @marketDate, @marketTime, @dataSource,
+        @rawPrice, @executionPrice, @quantity, @grossValue, @commission, @stampDuty, @cashChange)
+    `);
 
     const portfolioAccountIdMap = new Map();
     portfolioAccounts.forEach(item => {
-      upsertPortfolioAccount.run({ ...item, isDefault: item.isDefault ? 1 : 0 });
+      const existing = findPortfolioAccount.get(item.accountKey);
+      if (mode !== 'merge' || !existing) {
+        const keepCurrentDefault = mode === 'merge' && db.prepare('SELECT 1 FROM portfolio_accounts WHERE is_default = 1 AND enabled = 1').get();
+        upsertPortfolioAccount.run({ ...item, isDefault: keepCurrentDefault ? 0 : item.isDefault ? 1 : 0 });
+      }
       const row = findPortfolioAccount.get(item.accountKey);
       if (row) portfolioAccountIdMap.set(item.accountKey, row.id);
     });
-    const defaultAccountId = (findPortfolioAccount.get('default') || { id: 1 }).id;
+    if (mergePlan) mergePlan.accounts.forEach((row, key) => portfolioAccountIdMap.set(key, row.id));
+    const resolveAccount = item => {
+      const id = portfolioAccountIdMap.get(item.accountKey);
+      if (!id) throw new Error('备份缺少对应持仓账户：' + item.accountKey);
+      return id;
+    };
 
     recentStocks.forEach(item => insertRecent.run(item));
-    watchlist.forEach(item => insertWatchlist.run(item));
-    trades.forEach(item => insertTrade.run({
+    watchlist.forEach(item => {
+      if (mode !== 'merge' || !db.prepare('SELECT 1 FROM watchlist WHERE code = ?').get(item.code)) insertWatchlist.run(item);
+    });
+    trades.filter(item => !mergePlan || !mergePlan.skipTrades.has(item.accountKey)).forEach(item => insertTrade.run({
       ...item,
-      accountId: portfolioAccountIdMap.get(item.accountKey) || defaultAccountId
+      accountId: resolveAccount(item)
     }));
-    portfolioSnapshots.forEach(item => insertPortfolioSnapshot.run({
+    portfolioSnapshots.filter(item => !mergePlan || !mergePlan.skipSnapshots.has(item.accountKey)).forEach(item => insertPortfolioSnapshot.run({
       ...item,
-      accountId: portfolioAccountIdMap.get(item.accountKey) || defaultAccountId
+      accountId: resolveAccount(item)
     }));
     const screenerResultIdMap = new Map();
     screenerResults.forEach(item => {
@@ -830,6 +1102,7 @@ function importUserData(backup, options = {}) {
     knowledgeSources.forEach(item => knowledgeService.createSource(item));
     researchRuns.forEach(item => researchRunService.createRun(item));
     expertChannelService.restoreChannels(expertChannels);
+    if (industryResearch) industryResearchService.restoreResearch(industryResearch, { mode, transactional: false });
     paperPortfolios.forEach(item => {
       const info = insertPaperPortfolio.run({
         name: item.name,
@@ -870,6 +1143,65 @@ function importUserData(backup, options = {}) {
         sourceMetadataJson: JSON.stringify(snapshot.sourceMetadata),
         warningsJson: JSON.stringify(snapshot.warnings)
       }));
+      if (item.monitor && item.monitor.settings) {
+        const settings = item.monitor.settings;
+        insertPaperMonitorSettings.run({
+          portfolioId: info.lastInsertRowid,
+          enabled: settings.enabled ? 1 : 0,
+          startMode: settings.startMode,
+          activatedAt: settings.activatedAt,
+          scheduleJson: JSON.stringify(settings.schedule.length ? settings.schedule : ['09:35', '10:30', '14:50']),
+          holdingsSyncRequired: settings.holdingsSyncRequired ? 1 : 0,
+          lastHoldingsSyncAt: settings.lastHoldingsSyncAt,
+          lastHoldingsSource: settings.lastHoldingsSource,
+          lastRunSlot: settings.lastRunSlot,
+          lastError: settings.lastError
+        });
+      }
+      if (item.monitor) {
+        item.monitor.runs.forEach(run => {
+          db.prepare(`INSERT INTO paper_monitor_runs (portfolio_id, slot, status, attempts, last_attempt_at, next_retry_at, error)
+            VALUES (?, ?, ?, ?, ?, ?, ?)`).run(info.lastInsertRowid, run.slot, run.status, run.attempts, run.lastAttemptAt, run.nextRetryAt, run.error);
+        });
+        const decisionIdMap = new Map();
+        item.monitor.decisions.forEach(decision => {
+          const restored = insertPaperDecision.run({
+            portfolioId: info.lastInsertRowid,
+            advisedAt: decision.advisedAt,
+            marketAsOf: decision.marketAsOf,
+            modelId: decision.modelId,
+            mode: decision.mode,
+            scheduleSlot: decision.scheduleSlot,
+            promptHash: decision.promptHash,
+            prompt: decision.prompt,
+            inputContextJson: JSON.stringify(decision.inputContext),
+            allowedUniverseJson: JSON.stringify(decision.allowedUniverse),
+            rawResponse: decision.rawResponse,
+            decisionJson: JSON.stringify(decision.decision),
+            validationStatus: decision.validationStatus,
+            validationErrorsJson: JSON.stringify(decision.validationErrors)
+          });
+          decisionIdMap.set(decision.backupId, Number(restored.lastInsertRowid));
+        });
+        const orderIdMap = new Map();
+        item.monitor.orders.forEach(order => {
+          const decisionId = decisionIdMap.get(order.decisionBackupId);
+          if (!decisionId) return;
+          const restored = insertPaperOrder.run(Object.assign({}, order, {
+            portfolioId: info.lastInsertRowid,
+            decisionId
+          }));
+          orderIdMap.set(order.backupId, Number(restored.lastInsertRowid));
+        });
+        item.monitor.fills.forEach(fill => {
+          const orderId = orderIdMap.get(fill.orderBackupId);
+          if (!orderId) return;
+          insertPaperFill.run(Object.assign({}, fill, {
+            portfolioId: info.lastInsertRowid,
+            orderId
+          }));
+        });
+      }
     });
   })();
 

@@ -218,7 +218,7 @@ test('/api/minute returns an explicit unavailable result instead of generated pr
   assert.equal(result.json.meta.synthetic, false);
 });
 
-test('/api/minute declares the five-minute fallback sampling contract', async (t) => {
+test('/api/minute stays unavailable instead of relabelling five-minute data as monitoring precision', async (t) => {
   minuteCache.clear();
   const today = new Date();
   const date = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
@@ -239,16 +239,9 @@ test('/api/minute declares the five-minute fallback sampling contract', async (t
   const result = await requestJson(server, '/api/minute?code=002565');
 
   assert.equal(result.statusCode, 200);
-  assert.equal(result.json.data.length, 2);
-  assert.deepEqual(result.json.meta.sampling, {
-    intervalSeconds: 300,
-    intervalMinutes: 5,
-    label: '5分钟公开行情',
-    timestampMeaning: 'bar-label',
-    observedPoints: 2,
-    expectedFullDayPoints: 48
-  });
-  assert.equal(result.json.meta.fallbackFrom, 'public-1m');
+  assert.deepEqual(result.json.data, []);
+  assert.equal(result.json.meta.dataSource, 'unavailable');
+  assert.equal(result.json.meta.reason, 'provider-returned-empty-data');
 });
 
 test('/api/minute prefers one-minute public bars when the primary source is available', async (t) => {
@@ -285,7 +278,10 @@ test('/api/minute returns expired last-good data as stale when the provider requ
   minuteCache.set('000001', {
     ts: Date.now() - 120000,
     data: [{ time: '2026-08-11 15:00:00', price: 10.25, volume: 100 }],
-    meta: { dataSource: 'sina-5m', synthetic: false, stale: false, tradingDate: '2026-08-11' }
+    meta: {
+      dataSource: 'tencent-1m', synthetic: false, stale: false, tradingDate: '2026-08-11',
+      sampling: { intervalSeconds: 60, intervalMinutes: 1 }
+    }
   });
   t.after(function() { minuteCache.clear(); });
 
@@ -354,6 +350,72 @@ test('/api/kline treats an empty provider payload as unavailable without a cache
   assert.equal(result.json.meta.dataSource, 'unavailable');
   assert.equal(result.json.meta.stale, false);
   assert.equal(result.json.meta.reason, 'provider-returned-empty-data');
+});
+
+test('/api/kline falls back to Eastmoney when Sina rejects the stock request', async (t) => {
+  klineCache.clear();
+  t.after(function() { klineCache.clear(); });
+
+  const originalGet = axios.get;
+  const requestedUrls = [];
+  axios.get = async function(url) {
+    requestedUrls.push(url);
+    if (url.includes('money.finance.sina.com.cn')) {
+      const error = new Error('request rejected');
+      error.response = { status: 456 };
+      throw error;
+    }
+    return {
+      data: {
+        rc: 0,
+        data: {
+          klines: [
+            '2026-08-25,11.40,11.55,11.60,11.30,100000,1150000.00',
+            '2026-08-26,11.55,11.73,11.75,11.52,1167289,1363009729.54'
+          ]
+        }
+      }
+    };
+  };
+  t.after(function() { axios.get = originalGet; });
+
+  const server = app.listen(0);
+  t.after(() => server.close());
+  const result = await requestJson(server, '/api/kline?code=000001&period=day');
+
+  assert.equal(result.statusCode, 200);
+  assert.equal(result.json.data.length, 2);
+  assert.deepEqual(result.json.data[1], {
+    date: '2026-08-26', open: 11.55, close: 11.73, high: 11.75, low: 11.52,
+    volume: 1167289, amount: 1363009729.54
+  });
+  assert.equal(result.json.meta.dataSource, 'eastmoney-day');
+  assert.equal(result.json.meta.fallbackFrom, 'sina-day');
+  assert.equal(requestedUrls.length, 2);
+  assert.match(requestedUrls[1], /secid=0\.000001/);
+  assert.match(requestedUrls[1], /fqt=0/);
+});
+
+test('/api/kline returns unavailable instead of HTTP 500 when both providers fail', async (t) => {
+  klineCache.clear();
+  t.after(function() { klineCache.clear(); });
+
+  const originalGet = axios.get;
+  axios.get = async function() {
+    const error = new Error('provider rejected request');
+    error.response = { status: 456 };
+    throw error;
+  };
+  t.after(function() { axios.get = originalGet; });
+
+  const server = app.listen(0);
+  t.after(() => server.close());
+  const result = await requestJson(server, '/api/kline?code=000001&period=day');
+
+  assert.equal(result.statusCode, 200);
+  assert.deepEqual(result.json.data, []);
+  assert.equal(result.json.meta.dataSource, 'unavailable');
+  assert.equal(result.json.meta.reason, 'all-providers-failed');
 });
 
 test('/api/quote uses the resilient read timeout and marks an empty provider response unavailable', async (t) => {

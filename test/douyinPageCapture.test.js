@@ -43,6 +43,14 @@ test('visible profile metrics support the live Douyin label order and login plac
   assert.equal(inferVisibleLoggedIn('搜索 充钻石 通知 消息 投稿', true), false);
 });
 
+test('real login wall overrides generic navigation labels even when login controls are divs', () => {
+  const navigation = '搜索 充钻石 通知 消息 投稿 模型先生 作品 386 ';
+  assert.equal(inferVisibleLoggedIn(navigation + '看更多\n最新作品 登录', false), false);
+  assert.equal(inferVisibleLoggedIn(navigation + '登录后免费畅享高清视频 扫码登录 验证码登录 密码登录', false), false);
+  assert.equal(inferVisibleLoggedIn(navigation + '最新作品 登录 置顶视频', false), false);
+  assert.equal(inferVisibleLoggedIn(navigation + '已登录 退出登录', false), true);
+});
+
 test('visible engagement counts support Chinese compact units', () => {
   assert.equal(parseVisibleMetricCount('1.2万'), 12000);
   assert.equal(parseVisibleMetricCount('3.4w'), 34000);

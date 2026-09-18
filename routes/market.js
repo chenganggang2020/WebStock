@@ -5,12 +5,19 @@ const iconv = require('iconv-lite');
 const db = require('../db');
 const { minuteCache, klineCache } = require('./cache');
 const marketData = require('../services/marketDataService');
-const { createLocalThirtySecondBarService } = require('../services/localThirtySecondBarService');
+const { createLocalThirtySecondBarService, createLocalFiveSecondBarService } = require('../services/localThirtySecondBarService');
 const { createPublicMinuteService } = require('../services/publicMinuteService');
 const { createQuoteSnapshotService, classifyChinaQuoteStatus } = require('../services/quoteSnapshotService');
 const { createQuoteSnapshotStore } = require('../services/quoteSnapshotStore');
-const { toSinaSymbol } = require('../utils/market');
+const marketOverviewService = require('../services/marketOverviewService');
+const marketIndexHistoryService = require('../services/marketIndexHistoryService');
+const marketComparisonService = require('../services/marketComparisonService');
+const marketIntradayService = require('../services/marketIntradayService');
+const marketVolumePaceService = require('../services/marketVolumePaceService');
+const globalMarketSignalService = require('../services/globalMarketSignalService');
+const { toSinaSymbol, getEastmoneyMarketId } = require('../utils/market');
 const localThirtySecondBars = createLocalThirtySecondBarService({ db });
+const localFiveSecondBars = createLocalFiveSecondBarService({ db });
 const quoteSnapshotStore = createQuoteSnapshotStore(db);
 
 function ok(res, data, meta) {
@@ -28,6 +35,96 @@ function fetchedAt(entry) {
   return timestamp ? new Date(timestamp).toISOString() : null;
 }
 
+function normalizeSinaDayKline(payload) {
+  if (!Array.isArray(payload)) return [];
+  return payload.map(function(item) {
+    return {
+      date: String(item && item.day || ''),
+      open: Number(item && item.open),
+      close: Number(item && item.close),
+      high: Number(item && item.high),
+      low: Number(item && item.low),
+      volume: Number(item && item.volume),
+      amount: Number(item && item.amount) || 0
+    };
+  }).filter(validDayKlineRow);
+}
+
+function normalizeEastmoneyDayKline(payload) {
+  const lines = payload && payload.data && Array.isArray(payload.data.klines)
+    ? payload.data.klines : [];
+  return lines.map(function(line) {
+    const fields = String(line || '').split(',');
+    return {
+      date: fields[0] || '',
+      open: Number(fields[1]),
+      close: Number(fields[2]),
+      high: Number(fields[3]),
+      low: Number(fields[4]),
+      volume: Number(fields[5]),
+      amount: Number(fields[6]) || 0
+    };
+  }).filter(validDayKlineRow);
+}
+
+function validDayKlineRow(row) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(row.date) &&
+    Number.isFinite(row.open) && row.open > 0 &&
+    Number.isFinite(row.close) && row.close > 0 &&
+    Number.isFinite(row.high) && row.high >= Math.max(row.open, row.close) &&
+    Number.isFinite(row.low) && row.low > 0 && row.low <= Math.min(row.open, row.close) &&
+    Number.isFinite(row.volume) && row.volume >= 0 &&
+    Number.isFinite(row.amount) && row.amount >= 0;
+}
+
+function providerEmptyError() {
+  const error = new Error('K-line providers returned no usable data');
+  error.code = 'PROVIDER_EMPTY_DATA';
+  return error;
+}
+
+async function fetchDayKlineData(code) {
+  let sinaError = null;
+  try {
+    const url = 'https://money.finance.sina.com.cn/quotes_service/api/json_v2.php/CN_MarketData.getKLineData?symbol=' + toSinaSymbol(code) + '&scale=240&ma=no&datalen=10000&klt=100';
+    const response = await marketData.get('kline-day-sina:' + code, url, {
+      headers: { 'Referer': 'https://finance.sina.com.cn' }
+    });
+    const rows = normalizeSinaDayKline(response.data);
+    if (rows.length) return { rows, dataSource: 'sina-day' };
+    sinaError = providerEmptyError();
+  } catch (error) {
+    sinaError = error;
+  }
+
+  try {
+    const params = new URLSearchParams({
+      secid: getEastmoneyMarketId(code) + '.' + code,
+      klt: '101',
+      fqt: '0',
+      lmt: '10000',
+      end: '20500000',
+      fields1: 'f1,f2,f3,f4,f5,f6',
+      fields2: 'f51,f52,f53,f54,f55,f56,f57'
+    });
+    const url = 'https://push2his.eastmoney.com/api/qt/stock/kline/get?' + params.toString();
+    const response = await marketData.get('kline-day-eastmoney:' + code, url, {
+      headers: { 'Referer': 'https://quote.eastmoney.com/' }
+    });
+    const rows = normalizeEastmoneyDayKline(response.data);
+    if (rows.length) {
+      return { rows, dataSource: 'eastmoney-day', fallbackFrom: 'sina-day' };
+    }
+    if (sinaError && sinaError.code === 'PROVIDER_EMPTY_DATA') throw providerEmptyError();
+    throw new Error('Eastmoney K-line provider returned no usable data');
+  } catch (error) {
+    if (error.code === 'PROVIDER_EMPTY_DATA') throw error;
+    const combined = new Error('All K-line providers failed');
+    combined.code = 'ALL_PROVIDERS_FAILED';
+    throw combined;
+  }
+}
+
 async function fetchSinaQuoteBatch(codes) {
   const sinaCodes = codes.map(toSinaSymbol).join(',');
   const url = 'https://hq.sinajs.cn/list=' + sinaCodes;
@@ -42,7 +139,11 @@ async function fetchSinaQuoteBatch(codes) {
     if (!match) return;
     const code = match[1].replace(/^sh|^sz/, '');
     const fields = match[2].split(',');
-    const price = parseFloat(fields[3]) || 0;
+    const buy1Price = parseFloat(fields[11]) || 0;
+    const sell1Price = parseFloat(fields[21]) || 0;
+    const indicativePrice = buy1Price > 0 && sell1Price > 0 && Math.abs(buy1Price - sell1Price) < 0.000001
+      ? buy1Price : 0;
+    const price = indicativePrice || parseFloat(fields[3]) || 0;
     if (price <= 0) return;
     const prevClose = parseFloat(fields[2]) || price;
     results[code] = {
@@ -59,7 +160,7 @@ async function fetchSinaQuoteBatch(codes) {
       providerObservedAt: [fields[30], fields[31]].filter(Boolean).join(' ') || null,
       prevClose,
       change: prevClose ? Number(((price - prevClose) / prevClose * 100).toFixed(2)) : 0,
-      buy1Price: parseFloat(fields[11]) || 0,
+      buy1Price,
       buy2Price: parseFloat(fields[13]) || 0,
       buy3Price: parseFloat(fields[15]) || 0,
       buy4Price: parseFloat(fields[17]) || 0,
@@ -69,7 +170,7 @@ async function fetchSinaQuoteBatch(codes) {
       buy3Vol: parseFloat(fields[14]) || 0,
       buy4Vol: parseFloat(fields[16]) || 0,
       buy5Vol: parseFloat(fields[18]) || 0,
-      sell1Price: parseFloat(fields[21]) || 0,
+      sell1Price,
       sell2Price: parseFloat(fields[23]) || 0,
       sell3Price: parseFloat(fields[25]) || 0,
       sell4Price: parseFloat(fields[27]) || 0,
@@ -84,8 +185,9 @@ async function fetchSinaQuoteBatch(codes) {
   });
   try {
     localThirtySecondBars.recordQuotes(Object.values(results));
+    localFiveSecondBars.recordQuotes(Object.values(results));
   } catch (error) {
-    console.warn('[Market] Could not persist local 30-second bars:', error.message);
+    console.warn('[Market] Could not persist local derived bars:', error.message);
   }
   try {
     quoteSnapshotStore.saveAll(Object.values(results), new Date().toISOString());
@@ -105,6 +207,25 @@ const quoteSnapshots = createQuoteSnapshotService({
   initialQuotes: quoteSnapshotStore.loadAll()
 });
 const publicMinutes = createPublicMinuteService({ marketData });
+const localQuoteSampler = require('../services/localQuoteSampler').createLocalQuoteSampler({
+  readQuotes: codes => quoteSnapshots.read(codes),
+  loadCodes: function() {
+    const portfolio = require('../services/portfolioService');
+    const held = portfolio.listAccounts().filter(account => account.enabled !== false)
+      .flatMap(account => portfolio.getPositions({}, { accountId: account.id }).map(row => row.code));
+    const watched = portfolio.listWatchlist().map(row => row.code);
+    // The existing read-only Tonghuashun adapter; never triggers UI or account synchronization.
+    let local = [];
+    try { local = require('../services/tonghuashunWatchlistService').readLocalSelfStock().items.map(row => row.code); }
+    catch (_) { /* WebStock's saved watchlist remains usable when the local client is absent. */ }
+    return held.concat(watched, local);
+  }
+});
+router.localQuoteSampler = localQuoteSampler;
+router.get('/market/local-sampling-status', function(req, res) {
+  res.set('Cache-Control', 'no-store');
+  ok(res, localQuoteSampler.status());
+});
 
 function requestedQuoteCodes(req) {
   return String(req.query.codes || '').split(',').filter(Boolean);
@@ -127,6 +248,87 @@ router.get('/quote/snapshot', async function(req, res) {
     ok(res, snapshot.quotes, snapshot.meta);
   } catch (error) {
     fail(res, error, 500);
+  }
+});
+
+router.get('/market/indices', async function(req, res) {
+  try {
+    res.setHeader('Cache-Control', 'no-store');
+    ok(res, await marketOverviewService.fetchIndexOverview());
+  } catch (error) {
+    fail(res, error, 502);
+  }
+});
+
+router.get('/market/index-history', async function(req, res) {
+  try {
+    res.setHeader('Cache-Control', 'no-store');
+    ok(res, await marketIndexHistoryService.fetchIndexHistory(req.query.window, req.query.period));
+  } catch (error) {
+    fail(res, error, 502);
+  }
+});
+
+router.get('/market/comparison-catalog', async function(req, res) {
+  try {
+    res.setHeader('Cache-Control', 'no-store');
+    ok(res, await marketComparisonService.fetchCatalog(req.query.q));
+  } catch (error) {
+    fail(res, error, 502);
+  }
+});
+
+router.get('/market/global-signals', async function(req, res) {
+  try {
+    res.setHeader('Cache-Control', 'no-store');
+    ok(res, await globalMarketSignalService.fetch({ force: req.query.refresh === '1' }));
+  } catch (error) {
+    fail(res, error, 502);
+  }
+});
+
+router.get('/market/comparison-history', async function(req, res) {
+  try {
+    res.setHeader('Cache-Control', 'no-store');
+    ok(res, await marketComparisonService.fetchHistory({
+      window: req.query.window,
+      period: req.query.period,
+      keys: req.query.keys
+    }));
+  } catch (error) {
+    const status = /至少选择|最多选择/.test(error && error.message || '') ? 400 : 502;
+    fail(res, error, status);
+  }
+});
+
+router.get('/market/index-intraday', async function(req, res) {
+  try {
+    res.setHeader('Cache-Control', 'no-store');
+    ok(res, await marketIntradayService.fetchIndexIntraday(req.query.keys));
+  } catch (error) {
+    const status = error && error.code === 'INDEX_INTRADAY_KEY_INVALID'
+      ? 400
+      : (/至少选择|最多选择/.test(error && error.message || '') ? 400 : 502);
+    fail(res, error, status);
+  }
+});
+
+router.get('/market/volume-pace', async function(req, res) {
+  try {
+    res.setHeader('Cache-Control', 'no-store');
+    ok(res, await marketVolumePaceService.fetch({ refresh: req.query.refresh === '1' }));
+  } catch (error) {
+    fail(res, error, 502);
+  }
+});
+
+router.get('/market/comparison-intraday', async function(req, res) {
+  try {
+    res.setHeader('Cache-Control', 'no-store');
+    ok(res, await marketIntradayService.fetchIntraday(req.query.keys, { minimum: 2, keepUnknown: true }));
+  } catch (error) {
+    const status = /至少选择|最多选择/.test(error && error.message || '') ? 400 : 502;
+    fail(res, error, status);
   }
 });
 
@@ -167,15 +369,19 @@ router.get('/minute', async function (req, res) {
     return fail(res, 'Missing code');
   }
 
-  if (String(req.query.resolution || '').toLowerCase() === '30s') {
-    const localResult = localThirtySecondBars.list(code, { tradingDate: req.query.date });
+  const resolution = String(req.query.resolution || '').toLowerCase();
+  if (resolution === '5s' || resolution === '30s') {
+    const localBars = resolution === '5s' ? localFiveSecondBars : localThirtySecondBars;
+    const localResult = localBars.list(code, { tradingDate: req.query.date });
     return ok(res, localResult.rows, withMinuteSampling(localResult.meta, localResult.rows));
   }
 
   const isTrading = isTradingTime();
   const cacheDuration = isTrading ? 10 * 1000 : 60 * 1000;
 
-  const cached = minuteCache.get(code);
+  const cachedCandidate = minuteCache.get(code);
+  const cached = cachedCandidate && Number(cachedCandidate.meta && cachedCandidate.meta.sampling &&
+    cachedCandidate.meta.sampling.intervalSeconds) <= 60 ? cachedCandidate : null;
   if (cached && Date.now() - cached.ts < cacheDuration) {
     return ok(res, cached.data, withMinuteSampling(cached.meta, cached.data));
   }
@@ -247,43 +453,16 @@ router.get('/kline', async function (req, res) {
   }
 
   try {
-    const url = 'https://money.finance.sina.com.cn/quotes_service/api/json_v2.php/CN_MarketData.getKLineData?symbol=' + toSinaSymbol(code) + '&scale=240&ma=no&datalen=10000&klt=100';
-    const resp = await marketData.get('kline-day:' + code, url, { headers: { 'Referer': 'https://finance.sina.com.cn' } });
-
-    const data = resp.data;
-    if (Array.isArray(data) && data.length > 0) {
-      const result = [];
-      for (let i = 0; i < data.length; i++) {
-        const item = data[i];
-        result.push({
-          date: item.day || '',
-          open: parseFloat(item.open) || 0,
-          close: parseFloat(item.close) || 0,
-          high: parseFloat(item.high) || 0,
-          low: parseFloat(item.low) || 0,
-          volume: parseFloat(item.volume) || 0,
-          amount: parseFloat(item.amount) || 0
-        });
-      }
-      const timestamp = Date.now();
-      const meta = { dataSource: 'sina-day', stale: false, fetchedAt: new Date(timestamp).toISOString() };
-      klineCache.set(cacheKey, { ts: timestamp, data: result, meta: meta });
-      ok(res, result, meta);
-    } else {
-      if (cached && Array.isArray(cached.data) && cached.data.length) {
-        return ok(res, cached.data, {
-          dataSource: 'cache',
-          stale: true,
-          reason: 'provider-returned-empty-data',
-          fetchedAt: fetchedAt(cached)
-        });
-      }
-      ok(res, [], {
-        dataSource: 'unavailable',
-        stale: false,
-        reason: 'provider-returned-empty-data'
-      });
-    }
+    const fetched = await fetchDayKlineData(code);
+    const timestamp = Date.now();
+    const meta = {
+      dataSource: fetched.dataSource,
+      stale: false,
+      fetchedAt: new Date(timestamp).toISOString()
+    };
+    if (fetched.fallbackFrom) meta.fallbackFrom = fetched.fallbackFrom;
+    klineCache.set(cacheKey, { ts: timestamp, data: fetched.rows, meta: meta });
+    ok(res, fetched.rows, meta);
   } catch (e) {
     console.error('Get kline failed:', e.message);
     if (cached && Array.isArray(cached.data) && cached.data.length) {
@@ -294,7 +473,13 @@ router.get('/kline', async function (req, res) {
         fetchedAt: fetchedAt(cached)
       });
     }
-    fail(res, e, 500);
+    ok(res, [], {
+      dataSource: 'unavailable',
+      stale: false,
+      reason: e.code === 'PROVIDER_EMPTY_DATA'
+        ? 'provider-returned-empty-data'
+        : 'all-providers-failed'
+    });
   }
 });
 
@@ -305,32 +490,16 @@ async function calculateWeekOrMonthData(code, period) {
 
   if (!dayData || Date.now() - dayData.ts > 30 * 60 * 1000) {
     try {
-      const url = 'https://money.finance.sina.com.cn/quotes_service/api/json_v2.php/CN_MarketData.getKLineData?symbol=' + toSinaSymbol(code) + '&scale=240&ma=no&datalen=10000&klt=100';
-      const resp = await marketData.get('kline-day:' + code, url, { headers: { 'Referer': 'https://finance.sina.com.cn' } });
-
-      if (Array.isArray(resp.data) && resp.data.length > 0) {
-        const dayResult = [];
-        for (let i = 0; i < resp.data.length; i++) {
-          const item = resp.data[i];
-          dayResult.push({
-            date: item.day || '',
-            open: parseFloat(item.open) || 0,
-            close: parseFloat(item.close) || 0,
-            high: parseFloat(item.high) || 0,
-            low: parseFloat(item.low) || 0,
-            volume: parseFloat(item.volume) || 0,
-            amount: parseFloat(item.amount) || 0
-          });
-        }
-        const timestamp = Date.now();
-        dayData = { ts: timestamp, data: dayResult };
-        meta = { dataSource: 'sina-day', stale: false, fetchedAt: new Date(timestamp).toISOString() };
-        klineCache.set(dayCacheKey, dayData);
-      } else {
-        const emptyDataError = new Error('Cannot get day data');
-        emptyDataError.code = 'PROVIDER_EMPTY_DATA';
-        throw emptyDataError;
-      }
+      const fetched = await fetchDayKlineData(code);
+      const timestamp = Date.now();
+      meta = {
+        dataSource: fetched.dataSource,
+        stale: false,
+        fetchedAt: new Date(timestamp).toISOString()
+      };
+      if (fetched.fallbackFrom) meta.fallbackFrom = fetched.fallbackFrom;
+      dayData = { ts: timestamp, data: fetched.rows, meta: meta };
+      klineCache.set(dayCacheKey, dayData);
     } catch (error) {
       if (!dayData || !Array.isArray(dayData.data) || !dayData.data.length) throw error;
       meta = {
@@ -345,11 +514,11 @@ async function calculateWeekOrMonthData(code, period) {
   }
 
   if (!meta) {
-    meta = {
+    meta = Object.assign({}, dayData.meta || {}, {
       dataSource: 'cache',
       stale: false,
       fetchedAt: fetchedAt(dayData)
-    };
+    });
   }
 
   if (period === 'week') {

@@ -231,6 +231,24 @@ test('legacy persisted transcripts require verifiable ASR provenance', () => {
   assert.match(packet.markdown, /带转写时间的完整转写/);
 });
 
+test('analysis packets label low-confidence local ASR as awaiting review', () => {
+  const packet = buildAnalysisPacket(channel, [{
+    mediaType: 'video', evidenceLevel: 'primary', title: '待复核视频',
+    sourceUrl: 'https://www.douyin.com/video/213', transcript: '宇宿科技上市一周。',
+    mediaMetadata: {
+      asr: {
+        status: 'needs_review', engine: 'faster-whisper',
+        quality: { needsReview: true, reasons: ['low_log_probability'] },
+        segments: [{ start: 0, end: 3, text: '宇宿科技上市一周。' }]
+      }
+    }
+  }], { mode: 'all' });
+
+  assert.match(packet.markdown, /证据类型：本地 ASR 待复核逐字稿/);
+  assert.match(packet.markdown, /不应当作已确认的完整原话/);
+  assert.doesNotMatch(packet.markdown, /证据类型：本地 ASR 完整逐字稿/);
+});
+
 test('quoted transcript instructions remain enclosed in explicit data boundaries', () => {
   const packet = buildAnalysisPacket(channel, [{
     mediaType: 'video', evidenceLevel: 'primary', title: '含不可信指令的讲话',

@@ -103,6 +103,10 @@ test('capital momentum page renders three panels, provenance, observation time, 
   await page.click('[data-main-view="capitalFlow"]');
   await expect(page).toHaveURL(/#capitalFlow$/);
   await expect(page.locator('#capitalFlowView')).toBeVisible();
+  await expect(page.locator('#capitalFlowOnDemandStatus')).toContainText('进入页面不会自动请求');
+  await expect(page.locator('#capitalFlowSourceTitle')).toHaveText('尚未加载');
+  expect(await page.evaluate(() => window.__capitalFlowChart.options.length)).toBe(0);
+  await page.click('#capitalFlowRefreshBtn');
   await expect(page.locator('#capitalFlowSourceTitle')).toContainText('供应商分类');
   await expect(page.locator('#capitalFlowSourceTier')).toContainText('provider-classified');
   await expect(page.locator('#capitalFlowTruthWarning')).toContainText('不等于交易所真值');
@@ -121,6 +125,8 @@ test('capital momentum page renders three panels, provenance, observation time, 
 
 test('unconfigured Level-2 clears the old chart and never displays a fallback line', async ({ page }) => {
   await page.goto(baseURL + '/#capitalFlow', { waitUntil: 'domcontentloaded' });
+  await expect(page.locator('#capitalFlowSourceTitle')).toHaveText('尚未加载');
+  await page.click('#capitalFlowRefreshBtn');
   await expect(page.locator('#capitalFlowSourceTitle')).toContainText('供应商分类');
   await page.selectOption('#capitalFlowSource', 'authorized-level2');
   await page.click('#capitalFlowRefreshBtn');

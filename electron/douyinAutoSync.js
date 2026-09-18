@@ -1,5 +1,6 @@
-const { planDetailCandidates } = require('../services/douyinSyncPlanningService');
+const { planIncrementalCandidates, discoveryFingerprint } = require('../services/douyinSyncPlanningService');
 const { planFullArchiveQueue, summarizeArchiveQueue } = require('../services/douyinArchiveQueueService');
+const { runDouyinVideoTask } = require('./douyinVideoTask');
 
 const HTTP_URL_PATTERN = /https?:\/\/[^\s<>"'，。；！？、（）【】]+/gi;
 
@@ -30,6 +31,7 @@ function observationNeedsTranscription(observation) {
   const hasTranscript = Boolean(String(observation && observation.transcript || '').trim());
   const status = mediaMetadata.asr && mediaMetadata.asr.status;
   if (status === 'no_speech') return false;
+  if (status === 'needs_review' && hasTranscript) return false;
   return !mediaMetadata.asr || status !== 'complete' || !hasTranscript;
 }
 
@@ -40,7 +42,8 @@ function observationNeedsArchiveBackfill(observation) {
   const archive = mediaMetadata.archive && typeof mediaMetadata.archive === 'object' ? mediaMetadata.archive : {};
   const localAssetPath = String(observation && observation.localAssetPath ||
     archive.localAssetPath || asr.localAssetPath || '').trim();
-  return asr.status === 'complete' && Boolean(String(observation && observation.transcript || '').trim()) && !localAssetPath;
+  return (asr.status === 'complete' || asr.status === 'needs_review') &&
+    Boolean(String(observation && observation.transcript || '').trim()) && !localAssetPath;
 }
 
 function isDouyinDetailCandidate(observation) {
@@ -112,7 +115,9 @@ function summarizeObservationCoverage(observations) {
       ? observation.mediaMetadata : {};
     const status = metadata.asr && metadata.asr.status;
     const remoteStatus = metadata.remote && metadata.remote.status;
-    if (status === 'complete' && String(observation.transcript || '').trim()) transcribedCount += 1;
+    if ((status === 'complete' || status === 'needs_review') && String(observation.transcript || '').trim()) {
+      transcribedCount += 1;
+    }
     else if (status === 'no_speech') noSpeechCount += 1;
     else if (remoteStatus === 'identity_rejected') unavailableCount += 1;
     else if (status === 'error') failedTranscriptionCount += 1;
@@ -148,6 +153,16 @@ function ensureDouyinSyncJobs(channels, syncState, defaults = {}) {
   return eligible.length;
 }
 
+function transcriptionReadiness(transcriber) {
+  if (!transcriber || typeof transcriber.readiness !== 'function') return { available: true };
+  try {
+    const result = transcriber.readiness();
+    return result && typeof result === 'object' ? result : { available: true };
+  } catch (error) {
+    return { available: false, status: 'runtime_missing', message: error.message || '本地转写环境尚未就绪' };
+  }
+}
+
 function createDouyinAutoSync(options = {}) {
   const sessionManager = options.sessionManager;
   const channels = options.channels;
@@ -166,6 +181,14 @@ function createDouyinAutoSync(options = {}) {
   let interval = null;
   let startupTimer = null;
   let dueTask = null;
+  let workQueue = Promise.resolve();
+  const videoTasks = new Map();
+  let paused = false;
+  function enqueue(work) {
+    const task = workQueue.then(work);
+    workQueue = task.catch(() => {});
+    return task;
+  }
 
   if (!sessionManager || typeof sessionManager.captureUrl !== 'function') throw new Error('缺少抖音登录会话采集器');
   if (!channels || !sources || !syncState) throw new Error('缺少抖音自动同步依赖');
@@ -201,7 +224,7 @@ function createDouyinAutoSync(options = {}) {
       if (runOptions.mode === 'archive') throw new Error('该创作者已有采集任务运行中，请完成后再启动完整清单扫描');
       return running.get(id);
     }
-    const task = (async function() {
+    const task = enqueue(async function() {
       let runId = 0;
       const checkOnly = runOptions.mode === 'check';
       const priorJob = typeof syncState.getJob === 'function' ? syncState.getJob(id) : null;
@@ -266,7 +289,9 @@ function createDouyinAutoSync(options = {}) {
         }
         const profileCapture = runOptions.mode === 'archive' && typeof sessionManager.captureProfileArchive === 'function'
           ? await sessionManager.captureProfileArchive(channel.profileUrl, archiveOptions)
-          : await sessionManager.captureUrl(channel.profileUrl);
+          : typeof sessionManager.captureProfileRecent === 'function'
+            ? await sessionManager.captureProfileRecent(channel.profileUrl)
+            : await sessionManager.captureUrl(channel.profileUrl);
         if (runOptions.mode === 'archive' && profileCapture && profileCapture.archive) {
           audit('updateArchiveCheckpoint', id, profileCapture.archive);
         }
@@ -346,6 +371,8 @@ function createDouyinAutoSync(options = {}) {
           syncState.markCompleted(id, result);
           return result;
         }
+        const beforeDiscovery = new Map(channels.listObservations(id, { limit: 1000 })
+          .map(item => [String(item.externalContentId || ''), item]));
         const discoveryResult = batchedDiscoveryResult || sources.importCapturedPage(id, profileCapture);
         const existing = channels.listObservations(id, { limit: 1000 });
         (discoveryResult.items || []).forEach(function(item) {
@@ -358,7 +385,22 @@ function createDouyinAutoSync(options = {}) {
           return [String(item.contentId || ''), item];
         }));
         const planningObservations = profileCapture.items.map(function(item) {
-          return Object.assign({}, existingByContentId.get(String(item.contentId)) || {}, item, {
+          const previous = beforeDiscovery.get(String(item.contentId));
+          const observation = existingByContentId.get(String(item.contentId)) || {};
+          const metadata = Object.assign({}, observation.mediaMetadata || {});
+          const fingerprint = discoveryFingerprint(item);
+          const changed = previous && previous.mediaMetadata && previous.mediaMetadata.discoveryFingerprint &&
+            previous.mediaMetadata.discoveryFingerprint !== fingerprint;
+          if (!previous || changed) {
+            metadata.incrementalPending = true;
+            metadata.incrementalReason = previous ? 'changed' : 'new';
+          }
+          metadata.discoveryFingerprint = fingerprint;
+          if (typeof channels.recordObservation === 'function' && observation.externalKey) {
+            channels.recordObservation(id, { externalKey: observation.externalKey, mediaMetadata: metadata });
+          }
+          return Object.assign({}, observation, item, {
+            mediaMetadata: metadata,
             externalContentId: item.contentId
           });
         });
@@ -380,10 +422,8 @@ function createDouyinAutoSync(options = {}) {
           ? summarizeArchiveQueue(archivePlanningObservations) : null;
         const planned = runOptions.mode === 'archive'
           ? planFullArchiveQueue(archivePlanningObservations, planningState)
-          : planDetailCandidates(directPlanningObservations, planningState, {
+          : planIncrementalCandidates(directPlanningObservations, planningState, {
             limit: maxDetailsPerRun,
-            recentTtlMs: 6 * 60 * 60 * 1000,
-            maxTranscriptionPending: Math.max(Math.floor(maxDetailsPerRun / 3), 1)
           });
         const plannedReasonByContentId = new Map(planned.map(function(entry) {
           return [String(entry.contentId), entry.reason];
@@ -427,6 +467,7 @@ function createDouyinAutoSync(options = {}) {
         let unchangedCount = discoveryUnchangedCount;
         let detailedCount = 0;
         let transcribedCount = 0;
+        let transcriptionDeferredCount = 0;
         let archivedCount = 0;
         let transcriptionAttemptedCount = 0;
         let mediaMissingCount = 0;
@@ -470,6 +511,9 @@ function createDouyinAutoSync(options = {}) {
               return String(observation.externalContentId || '') === String(item.contentId);
             });
             const needsTranscription = transcriber && observationNeedsTranscription(saved);
+            const transcriptionSetup = needsTranscription
+              ? transcriptionReadiness(transcriber)
+              : { available: true };
             const hasLocalArchive = Boolean(saved && (saved.localAssetPath ||
               saved.mediaMetadata && saved.mediaMetadata.archive && saved.mediaMetadata.archive.localAssetPath ||
               saved.mediaMetadata && saved.mediaMetadata.asr && saved.mediaMetadata.asr.localAssetPath));
@@ -577,6 +621,14 @@ function createDouyinAutoSync(options = {}) {
                 transcriptionStatus: 'media_missing',
                 message
               });
+            } else if (needsTranscription && !transcriptionSetup.available) {
+              transcriptionDeferredCount += 1;
+              audit('upsertRunItem', runId, {
+                contentId: item.contentId,
+                detailStatus: 'complete',
+                transcriptionStatus: transcriptionSetup.status || 'runtime_missing',
+                message: transcriptionSetup.message || '本地转写环境尚未就绪；视频详情已保存，等待环境就绪后继续'
+              });
             } else if (needsTranscription && transcriptionAttemptedCount >= transcriptionLimit) {
               audit('upsertRunItem', runId, {
                 contentId: item.contentId,
@@ -623,8 +675,10 @@ function createDouyinAutoSync(options = {}) {
                 audit('upsertRunItem', runId, {
                   contentId: item.contentId,
                   detailStatus: 'complete',
-                  transcriptionStatus: noSpeech ? 'no_speech' : 'complete',
-                  message: noSpeech ? '视频已永久归档，未检测到可识别语音' : '本地语音识别完成',
+                  transcriptionStatus: noSpeech ? 'no_speech' : transcription.status,
+                  message: noSpeech ? '视频已永久归档，未检测到可识别语音'
+                    : transcription.status === 'needs_review' ? '本地语音识别完成，低置信度片段等待复核'
+                      : '本地语音识别完成',
                   mediaBytes: transcription.mediaBytes,
                   elapsedSeconds: transcription.elapsedSeconds
                 });
@@ -692,6 +746,15 @@ function createDouyinAutoSync(options = {}) {
         }
 
         const finalObservations = channels.listObservations(id, { limit: 1000 });
+        finalObservations.forEach(function(observation) {
+          const metadata = observation.mediaMetadata || {};
+          if (metadata.incrementalPending && !observationNeedsTranscription(observation) &&
+              !detailErrors.some(item => String(item.contentId) === String(observation.externalContentId)) &&
+              typeof channels.recordObservation === 'function') {
+            channels.recordObservation(id, { externalKey: observation.externalKey,
+              mediaMetadata: Object.assign({}, metadata, { incrementalPending: false, incrementalReason: '' }) });
+          }
+        });
         const coverage = summarizeObservationCoverage(finalObservations);
         const result = {
           channelId: id,
@@ -709,6 +772,7 @@ function createDouyinAutoSync(options = {}) {
           updatedCount,
           unchangedCount,
           transcribedCount,
+          transcriptionDeferredCount,
           archivedCount,
           transcriptionAttemptedCount,
           mediaMissingCount,
@@ -740,7 +804,7 @@ function createDouyinAutoSync(options = {}) {
         syncState.markFailed(id, sanitizedError);
         throw sanitizedError;
       }
-    })();
+    });
     running.set(id, task);
     const clearRunning = function() {
       if (running.get(id) === task) running.delete(id);
@@ -750,10 +814,13 @@ function createDouyinAutoSync(options = {}) {
   }
 
   function runDue(trigger = 'scheduled') {
+    if (paused) return Promise.resolve({ skipped: true, reason: 'paused' });
     if (dueTask) return Promise.resolve({ skipped: true, reason: 'poll_in_progress' });
     const task = (async function() {
+      ensureDouyinSyncJobs(channels, syncState);
       const jobs = syncState.listDue ? syncState.listDue() : [];
       for (const job of jobs) {
+        if (channels.getChannel(job.channelId).enabled === false) continue;
         if (running.has(Number(job.channelId))) continue;
         try { await syncChannel(job.channelId, { trigger }); } catch (error) {
           log('Scheduled Douyin sync failed for channel ' + job.channelId, safeError(error));
@@ -788,6 +855,43 @@ function createDouyinAutoSync(options = {}) {
     };
   }
 
+  function runVideo(channelId, observationId, stage) {
+    const key = Number(channelId) + ':' + Number(observationId) + ':' + stage;
+    if (videoTasks.has(key)) return videoTasks.get(key);
+    const task = enqueue(async function() {
+      const observation = channels.getObservation(channelId, observationId);
+      syncState.markRunning(channelId);
+      const run = audit('startRun', channelId, { trigger: 'video-' + stage, message: '单视频操作：' + stage });
+      const runId = run && run.id;
+      const update = function(progress) {
+        reportProgress(channelId, { stage: 'processing', message: '单视频：' + (progress.message || stage) });
+        audit('upsertRunItem', runId, { contentId: observation.externalContentId,
+          title: observation.title, sourceUrl: observation.sourceUrl, detailStatus: 'running',
+          transcriptionStatus: stage === 'transcribe' ? progress.stage : 'not_requested',
+          message: safeErrorMessage(progress.message || stage) });
+      };
+      try {
+        const result = await runDouyinVideoTask({ channels, sources, sessionManager, transcriber },
+          channelId, observationId, stage, update);
+        audit('upsertRunItem', runId, { contentId: observation.externalContentId, detailStatus: 'complete',
+          transcriptionStatus: stage === 'transcribe' ? 'complete' : 'not_requested', message: '单视频操作完成' });
+        audit('completeRun', runId, result);
+        syncState.markCompleted(channelId, result);
+        return result;
+      } catch (error) {
+        audit('upsertRunItem', runId, { contentId: observation.externalContentId, detailStatus: 'error',
+          transcriptionStatus: stage === 'transcribe' ? 'error' : 'not_requested', message: safeErrorMessage(error) });
+        audit('failRun', runId, safeError(error));
+        syncState.markFailed(channelId, safeError(error));
+        throw safeError(error);
+      }
+    });
+    videoTasks.set(key, task);
+    const clear = () => videoTasks.delete(key);
+    task.then(clear, clear);
+    return task;
+  }
+
   function start() {
     if (interval) return;
     startupTimer = setTimeoutFn(function() { runDue('startup').catch(error => log('Initial Douyin sync failed', error)); }, startupDelayMs);
@@ -801,7 +905,9 @@ function createDouyinAutoSync(options = {}) {
     interval = null;
   }
 
-  return { syncChannel, syncAll, runDue, start, stop };
+  return { syncChannel, syncAll, runVideo, runDue, start, stop,
+    setPaused(value) { paused = value === true; return { paused }; },
+    status() { return { paused, runningCount: running.size + videoTasks.size }; } };
 }
 
 module.exports = {
@@ -810,6 +916,7 @@ module.exports = {
   observationNeedsTranscription,
   isDouyinDetailCandidate,
   ensureDouyinSyncJobs,
+  transcriptionReadiness,
   summarizeObservationCoverage,
   planArchiveMediaUrls
 };

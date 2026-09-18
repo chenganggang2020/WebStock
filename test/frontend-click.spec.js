@@ -66,6 +66,17 @@ test.beforeEach(async ({ page }) => {
     if (url.includes('echarts')) {
       return route.fulfill({ contentType: 'application/javascript', body: 'window.echarts={init:function(){return {setOption:function(){},resize:function(){},dispose:function(){},on:function(){}}}};' });
     }
+    if (url.includes('/api/market/volume-pace')) {
+      return route.fulfill({ contentType: 'application/json', body: JSON.stringify({
+        success: true,
+        data: {
+          status: 'available', marketState: 'latest-close', tradingDate: '2026-08-28', comparisonDate: '2026-08-27', asOf: '15:00',
+          metrics: { cumulativeYoYPct: 8.2, rolling5YoYPct: -2.1, rolling5SequentialPct: 1.3, cumulativeState: 'neutral', shortTermState: 'steady', divergence: null },
+          series: [{ label: '15:00', cumulativeYoYPct: 8.2, rolling5YoYPct: -2.1, rolling5SequentialPct: 1.3 }],
+          coverage: { alignedPoints: 1 }, source: { label: '测试公开量能' }, quality: { thresholdProfile: 'unvalidated-heuristic-v1' }
+        }
+      }) });
+    }
     if (url.includes('/api/quote')) {
       const codes = new URL(url).searchParams.get('codes').split(',');
       return route.fulfill({
@@ -313,6 +324,83 @@ test.beforeEach(async ({ page }) => {
     }
     return route.continue();
   });
+});
+
+test('homepage market data renders while the stock list request is still pending', async ({ page }) => {
+  let releaseStockList;
+  const pendingStockList = new Promise(resolve => { releaseStockList = resolve; });
+  const fulfillData = (route, data) => route.fulfill({
+    contentType: 'application/json',
+    body: JSON.stringify({ success: true, data })
+  });
+
+  await page.route('**/api/stocklist', async route => {
+    await pendingStockList;
+    await fulfillData(route, []);
+  });
+  await page.route('**/api/market/indices', route => fulfillData(route, {
+    indices: [{
+      key: 'sse',
+      code: '000001',
+      name: '上证指数',
+      price: 3952.18,
+      changePct: -0.11,
+      amount: 970365150000
+    }],
+    turnover: { total: 2101715020000 },
+    source: { label: '公开指数测试源' }
+  }));
+  await page.route('**/api/sentiment/overview*', route => fulfillData(route, {
+    aShare: {
+      score: 54,
+      label: '中性',
+      total: 750,
+      advancing: 425,
+      declining: 308,
+      breadthPct: 56.67,
+      limitUpLike: 18,
+      sharpDown: 18,
+      sourceStatus: 'live',
+      source: '公开行情测试源'
+    }
+  }));
+  await page.route('**/api/hot-market/overview*', route => fulfillData(route, {
+    marketStatus: 'unavailable',
+    boards: { day: [] },
+    sources: []
+  }));
+
+  try {
+    await page.goto(baseURL + '/#dashboard', { waitUntil: 'domcontentloaded' });
+    await expect(page.locator('#dashboardMarketIndices')).toContainText('上证指数', { timeout: 2500 });
+  } finally {
+    releaseStockList();
+  }
+});
+
+test('homepage omits personal summary cards and keeps the monitoring surface free of persisted markup', async ({ page }) => {
+  await page.goto(baseURL + '/#dashboard', { waitUntil: 'domcontentloaded' });
+  const rendered = await page.evaluate(() => {
+    const malicious = '<img data-dashboard-xss="1" src=x onerror="window.__dashboardXss=1">';
+    window.State.watchlist = [{ code: '601138', name: malicious, price: 10, change: 1 }];
+    window.State.positions = [{ code: '600584', name: malicious, quantity: 100, unrealizedPnl: 1 }];
+    window.State.portfolioSummary = { totalMarketValue: 1000, totalPnl: 1 };
+    return {
+      watchlist: document.getElementById('dashboardWatchlistList'),
+      portfolio: document.getElementById('dashboardPortfolioList'),
+      screener: document.getElementById('dashboardScreenerReviewList'),
+      volumePace: Boolean(document.getElementById('volumePaceChart')),
+      injectedNodes: document.querySelectorAll('[data-dashboard-xss="1"]').length
+    };
+  });
+
+  expect(rendered.watchlist).toBeNull();
+  expect(rendered.portfolio).toBeNull();
+  expect(rendered.screener).toBeNull();
+  expect(rendered.volumePace).toBe(true);
+  expect(rendered.injectedNodes).toBe(0);
+  await page.waitForTimeout(50);
+  expect(await page.evaluate(() => window.__dashboardXss)).toBeUndefined();
 });
 
 test('AI research renders the local model registry before delayed quant history', async ({ page }) => {
@@ -581,7 +669,7 @@ test('desktop research library opens a persistent Douyin session and syncs the v
     }
   });
   await page.click('#refreshCreatorTasksBtn');
-  await expect(page.locator('#expertCreatorVideoDetail')).toContainText('ASR 原始逐字稿');
+  await expect(page.locator('#expertCreatorVideoDetail')).toContainText('ASR 简体规范稿');
   await expect(page.locator('.expert-asr-segments summary')).toContainText('带时间戳逐字稿');
   await page.locator('.expert-asr-segments summary').click();
   await expect(page.locator('.expert-asr-segments')).toContainText('00:00–00:03');
@@ -844,7 +932,7 @@ test('Douyin creator workbench shows coverage, searchable videos and transcript 
 test('portfolio accounts switch without mixing holdings or trades', async ({ page }) => {
   page.on('dialog', dialog => dialog.accept());
   await page.goto(baseURL + '/', { waitUntil: 'domcontentloaded' });
-  await page.click('#sidebarWatchlistBtn');
+  await page.click('.main-tab[data-main-view="watchlist"]');
   await page.click('#portfolioWatchlistTabs [data-portfolio-watchlist-tab="portfolio"]');
   await expect(page.locator('#portfolioAccountSelect')).toContainText('默认账户');
 
@@ -896,8 +984,9 @@ test('main stock actions and workspace navigation do not throw', async ({ page }
   await expect(page.locator('#themeToggle')).toHaveAttribute('aria-label', /切换/);
   await expect(page.locator('#clearBtn')).toHaveAttribute('aria-label', /清空/);
 
-  await expect(page.locator('#sidebarWorkspaceNav')).toBeVisible();
-  await expect(page.locator('#sidebarWatchlistBtn')).toContainText('自选');
+  await expect(page.locator('#marketDrawerToggle')).toBeVisible();
+  await page.click('#marketDrawerToggle');
+  await expect(page.locator('#marketDrawer')).toHaveAttribute('aria-hidden', 'false');
   await expect(page.locator('#stockTbody tr:first-child [data-action]')).toHaveCount(0);
   await page.fill('#searchInput', '000001');
   await page.click('#stockTbody tr:first-child');
@@ -911,9 +1000,12 @@ test('main stock actions and workspace navigation do not throw', async ({ page }
   await expect(page.locator('#detailLevel2Result')).toContainText('104500');
   await expect.poll(() => page.evaluate(() => Object.keys(window.State.klineSnapshots || {}).length)).toBeGreaterThan(0);
 
+  await page.click('#marketDrawerToggle');
+  await expect(page.locator('#marketDrawer')).toHaveAttribute('aria-hidden', 'false');
   await page.click('#stockTbody tr:first-child .star-btn');
-  await page.click('#sidebarWatchlistBtn');
+  await page.click('.main-tab[data-main-view="watchlist"]');
   await expect(page.locator('#watchlistView')).toBeVisible();
+  await page.click('#watchlistGroupTabs [data-group="local:默认分组"]');
   await expect(page.locator('#watchlistTbody')).toContainText('000001');
   dialogResponses.push('测试分组', '测试备注', '10', '8');
   await page.click('#watchlistTbody [data-action="edit"]');
@@ -1001,7 +1093,7 @@ test('main stock actions and workspace navigation do not throw', async ({ page }
   expect(tradesDownload.suggestedFilename()).toBe('webstock-trades.csv');
   await page.dblclick('#positionsTbody tr[data-code="000001"]');
   await expect(page.locator('#marketView')).toBeVisible();
-  await page.click('#sidebarWatchlistBtn');
+  await page.click('.main-tab[data-main-view="watchlist"]');
   await page.click('#portfolioWatchlistTabs [data-portfolio-watchlist-tab="portfolio"]');
   await page.click('#positionsTbody tr[data-code="000001"]', { button: 'right' });
   await page.click('#stockContextMenu [data-action="sell"]');
@@ -1118,14 +1210,14 @@ test('main stock actions and workspace navigation do not throw', async ({ page }
   await expect(page.locator('#screenerResults')).toContainText('Playwright candidate note');
   await page.selectOption('#candidateReviewFilter', 'all');
   await page.click('[data-main-view="dashboard"]');
-  await expect(page.locator('#dashboardScreenerReviewList')).toContainText('priority 1');
+  await expect(page.locator('#dashboardScreenerReviewList')).toHaveCount(0);
   await page.click('#refreshDashboardBtn');
-  await expect(page.locator('#dashboardUpdatedAt')).toContainText('Last refreshed:');
-  await expect(page.locator('#refreshDashboardBtn')).toHaveText(/工作台/);
-  await expect(page.locator('#refreshDashboardBtn')).not.toHaveAttribute('aria-busy', 'true');
+  await expect(page.locator('#refreshDashboardBtn')).not.toHaveAttribute('aria-busy', 'true', { timeout: 15000 });
+  await expect(page.locator('#dashboardUpdatedAt')).toContainText('最后更新：');
+  await expect(page.locator('#refreshDashboardBtn')).toHaveText(/刷新行情/);
   await expect(page.locator('#refreshDashboardBtn')).toBeEnabled();
   await expect(page.locator('#dashboardView')).toBeVisible();
-  await page.click('#dashboardScreenerReviewList [data-screener-id]');
+  await page.click('[data-main-view="screener"]');
   await expect(page.locator('#screenerView')).toBeVisible();
   await expect(page.locator('#screenerResults')).toContainText('Saved screener task');
   await expect(page.locator('#screenerResults')).toContainText('Playwright candidate note');
@@ -1296,33 +1388,16 @@ test('main stock actions and workspace navigation do not throw', async ({ page }
   await expect(page.locator('#handoffImportClipboardBtn')).toBeVisible();
   await page.fill('#handoffResultText', '板块热股 ChatGPT 分析记录');
   await page.click('#handoffSaveBtn');
-  await page.click('#sidebarAiHistoryBtn');
+  await page.click('.main-tab[data-main-view="aiHistory"]');
   await expect(page.locator('#aiHistoryView')).toBeVisible();
   await expect(page.locator('#aiHistoryList')).toContainText('板块热股 ChatGPT 分析记录');
   await expect(page.locator('#aiHistoryList')).toContainText('板块龙头');
 
   await page.click('[data-main-view="dashboard"]');
   await expect(page.locator('#dashboardView')).toBeVisible();
-  await page.waitForTimeout(500);
-  await expect(page.locator('#dashboardWatchlistList')).toContainText('Alert high');
-  await page.evaluate(() => {
-    window.State.watchlist = [{ code: '000001', name: 'Ping An Bank', price: 7, alertLow: 8, alertHigh: 20 }];
-    window.State.positions = [{ code: '000002', name: 'Risk Position', unrealizedPnlRate: -12, todayChange: -4 }];
-    window.Dashboard.renderRisks();
-  });
-  await expect(page.locator('#dashboardRiskList')).toContainText('触及低价提醒');
-  await expect(page.locator('#dashboardRiskList')).toContainText('持仓回撤');
-  const riskCount = await page.locator('#dashboardRiskList .risk-item').count();
-  await page.locator('#dashboardRiskList .risk-item').first().click({ button: 'right' });
-  await page.click('#stockContextMenu [data-dashboard-risk-action="dismiss"]');
-  await expect.poll(() => page.locator('#dashboardRiskList .risk-item').count()).toBeLessThan(riskCount);
-  await expect(page.locator('#dashboardRiskList')).toContainText('今日已忽略');
-  await page.locator('#dashboardRiskList').click({ button: 'right' });
-  await page.click('#stockContextMenu [data-dashboard-risk-action="toggle-dismissed"]');
-  await expect(page.locator('#dashboardRiskList .risk-item.dismissed')).toHaveCount(1);
-  await page.locator('#dashboardRiskList .risk-item.dismissed').click({ button: 'right' });
-  await page.click('#stockContextMenu [data-dashboard-risk-action="restore"]');
-  await expect.poll(() => page.locator('#dashboardRiskList .risk-item').count()).toBe(riskCount);
+  await expect(page.locator('#dashboardWatchlistList')).toHaveCount(0);
+  await expect(page.locator('#dashboardRiskList')).toHaveCount(0);
+  await expect(page.locator('#volumePaceChart')).toBeVisible();
 
   await page.click('[data-main-view="stats"]');
   await expect(page.locator('#statsView')).toBeVisible();
@@ -1468,8 +1543,13 @@ test('chart coach explains the current visible chart snapshot without calling AI
   await expect(page.locator('#chartCoachBtn')).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('#chartCoachPanel')).toBeHidden();
   await expect(page.locator('#chartCoachEvidenceStrip')).toBeVisible();
+  await expect(page.locator('#chartCoachEvidenceStrip > details')).not.toHaveAttribute('open', '');
+  await expect(page.locator('#chartCoachEvidenceStrip > details > summary')).toContainText('已标到K线');
   await expect(page.locator('#chartCoachEvidenceStrip')).toContainText('关键支撑');
   await expect(page.locator('#chartCoachEvidenceStrip')).toContainText('强 · 3次触碰');
+  const compactHeight = await page.locator('#chartCoachEvidenceStrip').evaluate(element => element.getBoundingClientRect().height);
+  expect(compactHeight).toBeLessThanOrEqual(48);
+  await expect(page.locator('#chartCoachFlowEvidence')).toBeHidden();
   await expect.poll(() => page.evaluate(() => {
     const series = window.__chartCoachMarks && window.__chartCoachMarks.series;
     return series && series[0] && series[0].markLine && series[0].markLine.data.length;
@@ -1528,10 +1608,10 @@ test('realtime chart keeps missing samples and skips unchanged redraws', async (
         { time: '2026-08-12 09:40:00', price: 11.31, volume: 12000, amount: 135720 }
       ],
       meta: {
-        dataSource: 'sina-5m',
+        dataSource: 'tencent-1m',
         stale: false,
         fetchedAt: '2026-08-12T01:40:00.000Z',
-        sampling: { intervalMinutes: 5, timestampMeaning: 'bar-end' }
+        sampling: { intervalSeconds: 60, intervalMinutes: 1, label: '1分钟公开行情', timestampMeaning: 'bar-end' }
       }
     })
     });
@@ -1540,8 +1620,9 @@ test('realtime chart keeps missing samples and skips unchanged redraws', async (
   await page.goto(baseURL + '/', { waitUntil: 'domcontentloaded' });
   await page.waitForSelector('#stockTbody tr', { state: 'attached' });
   await page.fill('#searchInput', '000001');
+  await page.click('#marketDrawerToggle');
   await page.click('#stockTbody tr:first-child');
-  await expect(page.locator('#chartRealtimeStatus')).toContainText('5分钟采样');
+  await expect(page.locator('#chartRealtimeStatus')).toContainText('1分钟公开行情');
   await expect.poll(() => page.evaluate(() => window.__chartProbe.init.timeChartContainer || 0)).toBe(1);
 
   const first = await page.evaluate(() => {
@@ -1631,11 +1712,13 @@ test('chart coach stays on the chart instead of opening a mobile drawer', async 
   await expect(page.locator('#chartCoachOverlay')).toBeHidden();
   await expect(page.locator('#chartCoachEvidenceStrip')).toBeVisible();
   const evidenceGeometry = await page.locator('#chartCoachEvidenceStrip').evaluate(element => ({
+    height: element.getBoundingClientRect().height,
     width: element.getBoundingClientRect().width,
     parentWidth: element.parentElement.getBoundingClientRect().width,
     scrollWidth: element.scrollWidth,
     clientWidth: element.clientWidth
   }));
+  expect(evidenceGeometry.height).toBeLessThanOrEqual(82);
   expect(evidenceGeometry.width).toBeLessThanOrEqual(evidenceGeometry.parentWidth + 1);
   expect(evidenceGeometry.scrollWidth).toBeLessThanOrEqual(evidenceGeometry.clientWidth + 1);
 });
@@ -1649,9 +1732,10 @@ test('mobile dark mode workspace remains usable', async ({ page }) => {
   await expect(page.locator('body')).toHaveClass(/dark/);
   await expect(page.locator('#dashboardView')).toBeVisible();
   await expect(page.locator('.dashboard-grid')).toBeVisible();
-  await expect(page.locator('#sidebarWorkspaceNav')).toBeVisible();
+  await expect(page.locator('#marketDrawerToggle')).toBeVisible();
 
   await page.fill('#searchInput', '000001');
+  await page.click('#marketDrawerToggle');
   await expect(page.locator('#stockTbody tr:first-child')).toBeVisible();
   await page.click('#stockTbody tr:first-child');
   await expect(page.locator('#marketView')).toBeVisible();
@@ -1683,7 +1767,7 @@ test('mobile dark mode workspace remains usable', async ({ page }) => {
   await expect(page.locator('#sectorsView')).toBeVisible();
   await expect(page.locator('#sectorSortSelect')).toBeVisible();
 
-  await page.click('#sidebarWatchlistBtn');
+  await page.click('.main-tab[data-main-view="watchlist"]');
   await page.click('#portfolioWatchlistTabs [data-portfolio-watchlist-tab="portfolio"]');
   await expect(page.locator('#portfolioView')).toBeVisible();
   await expect(page.locator('#addTradeFromPortfolioBtn')).toBeVisible();
@@ -1708,8 +1792,27 @@ test('market charts resize after viewport and orientation changes', async ({ pag
   expect(counts).toEqual({ kline: 1, time: 1, volume: 1 });
 });
 
+test('homepage owns market overview while stock detail stays an internal homepage mode', async ({ page }) => {
+  await page.goto(baseURL + '/#dashboard', { waitUntil: 'domcontentloaded' });
+  await page.waitForSelector('#stockTbody tr', { state: 'attached' });
+
+  await expect(page.locator('.main-tab[data-main-view="dashboard"]')).toHaveCount(1);
+  await expect(page.locator('.main-tab[data-main-view="market"]')).toHaveCount(0);
+  await expect(page.locator('#dashboardView')).toBeVisible();
+  await expect(page.locator('#dashboardMarketCockpit')).toBeVisible();
+
+  await page.locator('#stockTbody tr:first-child').evaluate(row => row.click());
+  await expect(page.locator('#marketView')).toBeVisible();
+  await expect(page.locator('.main-tab[data-main-view="dashboard"]')).toHaveClass(/active/);
+  await expect(page.locator('#chartTitle')).not.toHaveText('请选择股票');
+
+  await page.click('#backToMarketOverviewBtn');
+  await expect(page.locator('#dashboardView')).toBeVisible();
+  await expect(page.locator('#dashboardMarketCockpit')).toBeVisible();
+});
+
 test('market stale data is labeled instead of presented as realtime', async ({ page }) => {
-  await page.route('**/api/minute?code=000001', route => route.fulfill({
+  await page.route(/\/api\/minute\?code=000001(?:&.*)?$/, route => route.fulfill({
     contentType: 'application/json',
     body: JSON.stringify({
       success: true,
@@ -1723,6 +1826,7 @@ test('market stale data is labeled instead of presented as realtime', async ({ p
   await page.goto(baseURL + '/', { waitUntil: 'domcontentloaded' });
   await page.waitForSelector('#stockTbody tr', { state: 'attached' });
   await page.fill('#searchInput', '000001');
+  await page.click('#marketDrawerToggle');
   await page.click('#stockTbody tr:first-child');
   await expect(page.locator('#chartTitle')).toContainText('缓存');
   await expect(page.locator('#priceInfo')).toContainText('缓存');
@@ -1737,7 +1841,7 @@ test('unavailable market data is never labeled as realtime', async ({ page }) =>
       data: [{ code: '000001', name: '平安银行', quoteStatus: 'unavailable' }]
     })
   }));
-  await page.route('**/api/minute?code=000001', route => route.fulfill({
+  await page.route(/\/api\/minute\?code=000001(?:&.*)?$/, route => route.fulfill({
     contentType: 'application/json',
     body: JSON.stringify({
       success: true,
@@ -1760,6 +1864,7 @@ test('unavailable market data is never labeled as realtime', async ({ page }) =>
   await page.goto(baseURL + '/', { waitUntil: 'domcontentloaded' });
   await page.waitForSelector('#stockTbody tr', { state: 'attached' });
   await page.fill('#searchInput', '000001');
+  await page.click('#marketDrawerToggle');
   await page.click('#stockTbody tr:first-child');
   await expect(page.locator('#chartTitle')).toContainText('行情不可用');
   await expect(page.locator('#priceInfo')).toContainText('暂无分时数据');
@@ -1835,9 +1940,14 @@ test('keyboard activation works for core workspace controls', async ({ page }) =
   await page.keyboard.press('Enter');
   await expect(page.locator('#screenerView')).toBeVisible();
 
-  await page.focus('[data-main-view="market"]');
+  await page.focus('[data-main-view="dashboard"]');
   await page.keyboard.press('Enter');
-  await expect(page.locator('#marketView')).toBeVisible();
+  await expect(page.locator('#dashboardView')).toBeVisible();
+  await page.fill('#searchInput', '000001');
+  await page.focus('#marketDrawerToggle');
+  await page.keyboard.press('Enter');
+  await expect(page.locator('#marketDrawer')).toHaveAttribute('aria-hidden', 'false');
+  await expect(page.locator('#stockTbody tr:first-child')).toBeVisible();
   await page.focus('#stockTbody tr:first-child');
   await page.keyboard.press('Enter');
   await expect(page.locator('#analysisBtn')).toBeVisible();
@@ -1894,10 +2004,10 @@ test('holdings and watchlist groups share one tabbed page and watchlist rows ope
   expect(await tabs.count()).toBeGreaterThanOrEqual(3);
   await expect(tabs.nth(0)).toHaveText('持仓');
 
-  await page.click('#sidebarWatchlistBtn');
+  await page.click('.main-tab[data-main-view="watchlist"]');
   await expect(page.locator('#combinedWatchlistPanel')).toBeVisible();
   await expect(page.locator('#portfolioView')).toBeHidden();
-  await page.click('#watchlistGroupTabs [data-group="验收分组"]');
+  await page.click('#watchlistGroupTabs [data-group="local:验收分组"]');
   await expect(page.locator('#watchlistTbody')).toContainText('601138');
   await expect(page.locator('#watchlistTbody .stock-mini-chart polyline')).toHaveAttribute('stroke', '#00b050');
 
@@ -1906,8 +2016,50 @@ test('holdings and watchlist groups share one tabbed page and watchlist rows ope
   await expect(page.locator('#chartTitle')).toContainText('601138');
 });
 
+test('read-only Tonghuashun groups reject bulk edits and escape local catalog text', async ({ page }) => {
+  await page.addInitScript(() => {
+    const beijingDate = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Asia/Shanghai', year: 'numeric', month: '2-digit', day: '2-digit'
+    }).format(new Date());
+    localStorage.setItem('webstock.watchlistMorningMaintenanceDate', beijingDate);
+  });
+  const mutationUrls = [];
+  const dialogMessages = [];
+  await page.route('**/api/portfolio/watchlist/**', async route => {
+    if (route.request().method() === 'PUT') mutationUrls.push(route.request().url());
+    return route.continue();
+  });
+  page.on('dialog', async dialog => {
+    dialogMessages.push(dialog.message());
+    await dialog.accept();
+  });
+
+  await page.goto(baseURL + '/#watchlist', { waitUntil: 'domcontentloaded' });
+  await expect(page.locator('#watchlistView')).toBeVisible();
+  await page.evaluate(() => {
+    const malicious = '<img data-watchlist-xss="1" src=x onerror="window.__watchlistXss=1">';
+    window.State.tonghuashunCatalog = {
+      groups: [{ name: '只读' + malicious, items: [{ code: '601138', name: malicious, note: malicious }] }]
+    };
+    window.State.watchlist = [];
+    window.Watchlist.setSelectedGroup('只读' + malicious);
+    window.Watchlist.renderWatchlist();
+  });
+
+  await expect(page.locator('#watchlistTbody')).toContainText('<img data-watchlist-xss="1"');
+  await expect(page.locator('[data-watchlist-xss="1"]')).toHaveCount(0);
+  expect(await page.evaluate(() => window.__watchlistXss)).toBeUndefined();
+  await page.click('#bulkWatchlistGroupBtn');
+  await expect.poll(() => dialogMessages.join('\n')).toContain('同花顺本地分组为只读');
+  expect(mutationUrls).toEqual([]);
+});
+
 test('watchlist quote updates stay in place and release detached minute-chart observers', async ({ page }) => {
   await page.addInitScript(() => {
+    const beijingDate = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Asia/Shanghai', year: 'numeric', month: '2-digit', day: '2-digit'
+    }).format(new Date());
+    localStorage.setItem('webstock.watchlistMorningMaintenanceDate', beijingDate);
     const NativeIntersectionObserver = window.IntersectionObserver;
     const observed = new Set();
     window.__watchlistObserverProbe = observed;
@@ -1950,6 +2102,7 @@ test('watchlist quote updates stay in place and release detached minute-chart ob
       change: index % 2 ? 1 : -1,
       quoteStatus: 'live'
     }));
+    window.Watchlist.setSelectedGroup('压力测试');
     window.Watchlist.renderWatchlist();
     await new Promise(resolve => setTimeout(resolve, 50));
     const firstRow = document.querySelector('#watchlistTbody tr');

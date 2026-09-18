@@ -64,7 +64,9 @@ function normalizeEastmoneyTrends(payload) {
       averagePrice
     };
   }).filter(Boolean);
-  return latestTradingRows(rows);
+  return Object.assign(latestTradingRows(rows), {
+    previousClose: numberOrNull(payload && payload.data && payload.data.preClose)
+  });
 }
 
 function normalizeSinaKlines(payload) {
@@ -103,6 +105,8 @@ function normalizeTencentMinute(payload, code) {
   const symbol = toSinaSymbol(normalizedCode(code));
   const container = payload && payload.data && payload.data[symbol];
   const source = container && container.data;
+  const quoteFields = container && container.qt &&
+    (container.qt[symbol] || container.qt[normalizedCode(code)]);
   const tradingDate = normalizedCompactDate(source && source.date);
   const lines = source && Array.isArray(source.data) ? source.data : [];
   let previousCumulativeVolume = 0;
@@ -133,7 +137,16 @@ function normalizeTencentMinute(payload, code) {
         : null
     };
   }).filter(Boolean);
-  return { tradingDate, rows: rows.sort(function(left, right) { return left.time.localeCompare(right.time); }) };
+  return {
+    tradingDate,
+    rows: rows.sort(function(left, right) { return left.time.localeCompare(right.time); }),
+    latestPrice: numberOrNull(quoteFields && quoteFields[3]),
+    previousClose: numberOrNull(quoteFields && quoteFields[4]),
+    openPrice: numberOrNull(quoteFields && quoteFields[5]),
+    changePercent: numberOrNull(quoteFields && quoteFields[32]),
+    highPrice: numberOrNull(quoteFields && quoteFields[33]),
+    lowPrice: numberOrNull(quoteFields && quoteFields[34])
+  };
 }
 
 function shanghaiDate(timestamp) {
@@ -203,7 +216,13 @@ function createPublicMinuteService(options = {}) {
         return {
           rows: normalizedRows.rows,
           meta: sourceMeta('tencent-1m', 1, normalizedRows.tradingDate, timestamp, {
-            ...publicMarketState(timestamp, normalizedRows.tradingDate)
+            ...publicMarketState(timestamp, normalizedRows.tradingDate),
+            previousClose: normalizedRows.previousClose,
+            latestPrice: normalizedRows.latestPrice,
+            openPrice: normalizedRows.openPrice,
+            changePercent: normalizedRows.changePercent,
+            highPrice: normalizedRows.highPrice,
+            lowPrice: normalizedRows.lowPrice
           })
         };
       }
@@ -230,6 +249,7 @@ function createPublicMinuteService(options = {}) {
           rows: normalizedRows.rows,
           meta: sourceMeta('eastmoney-1m', 1, normalizedRows.tradingDate, timestamp, {
             ...publicMarketState(timestamp, normalizedRows.tradingDate),
+            previousClose: normalizedRows.previousClose,
             fallbackFrom: 'tencent-1m',
             reason: oneMinuteReasons[0] || ''
           })
@@ -240,34 +260,15 @@ function createPublicMinuteService(options = {}) {
       oneMinuteReasons.push('eastmoney-request-failed');
     }
 
-    try {
-      const url = 'https://money.finance.sina.com.cn/quotes_service/api/json_v2.php/CN_MarketData.getKLineData?symbol=' +
-        toSinaSymbol(normalized) + '&scale=5&ma=no&datalen=1000';
-      const response = await marketData.get('minute-5m:' + normalized, url, {
-        headers: { Referer: 'https://finance.sina.com.cn' }
-      });
-      const normalizedRows = normalizeSinaKlines(response.data);
-      if (normalizedRows.rows.length) {
-        const timestamp = now();
-        return {
-          rows: normalizedRows.rows,
-          meta: sourceMeta('sina-5m', 5, normalizedRows.tradingDate, timestamp, {
-            ...publicMarketState(timestamp, normalizedRows.tradingDate),
-            fallbackFrom: 'public-1m',
-            reason: 'one-minute-providers-unavailable',
-            fallbackReasons: oneMinuteReasons.slice()
-          })
-        };
-      }
-      const error = new Error('Public minute providers returned no usable data');
-      error.code = 'PROVIDER_EMPTY_DATA';
-      throw error;
-    } catch (error) {
-      if (error.code === 'PROVIDER_EMPTY_DATA') throw error;
-      const unavailable = new Error('Public minute providers are unavailable');
-      unavailable.code = 'PROVIDER_REQUEST_FAILED';
-      throw unavailable;
-    }
+    const allEmpty = oneMinuteReasons.length === 2 && oneMinuteReasons.every(function(reason) {
+      return reason.endsWith('returned-empty-data');
+    });
+    const unavailable = new Error(allEmpty
+      ? 'Public one-minute providers returned no usable data'
+      : 'Public one-minute providers are unavailable');
+    unavailable.code = allEmpty ? 'PROVIDER_EMPTY_DATA' : 'PROVIDER_REQUEST_FAILED';
+    unavailable.reasons = oneMinuteReasons.slice();
+    throw unavailable;
   }
 
   return { fetch };

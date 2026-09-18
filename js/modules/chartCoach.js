@@ -169,26 +169,29 @@
   }
 
   function compactKeyLevel(level) {
-    if (!level) return '<article><span>关键位</span><strong>样本不足</strong><small>等待更多有效高低价</small></article>';
+    if (!level) return '<span class="chart-coach-level-pill"><span>关键位</span><strong>样本不足</strong></span>';
     const typeLabel = level.type === 'support' ? '关键支撑' : '关键压力';
-    return '<article data-strength="' + escapeHtml(level.strengthKey || 'unknown') + '"><span>' + escapeHtml(typeLabel) + '</span>' +
+    return '<span class="chart-coach-level-pill" data-strength="' + escapeHtml(level.strengthKey || 'unknown') + '"><span>' + escapeHtml(typeLabel) + '</span>' +
       '<strong>' + escapeHtml(Number(level.price).toFixed(2)) + '</strong><small>' +
-      escapeHtml((level.strengthLabel || '未分级') + ' · ' + (level.touchCount || 0) + '次触碰 · ' + (level.statusLabel || '状态未声明')) + '</small></article>';
+      escapeHtml((level.strengthLabel || '未分级') + ' · ' + (level.touchCount || 0) + '次触碰') + '</small></span>';
   }
 
   function renderEvidenceStrip(result) {
     const keyLevels = result && result.chartAnnotations && result.chartAnnotations.keyLevels || {};
     const method = keyLevels.method || {};
-    return '<div class="chart-coach-strip-heading"><div><strong>关键位与多源证据</strong>' +
+    return '<details class="chart-coach-evidence-details"><summary>' +
+      '<strong class="chart-coach-evidence-summary-title">图上提示</strong>' +
+      '<span class="chart-coach-strip-levels">' + compactKeyLevel(keyLevels.support) + compactKeyLevel(keyLevels.resistance) + '</span>' +
+      '<small class="chart-coach-evidence-summary-note">已标到K线 · 展开多源详情</small></summary>' +
+      '<div class="chart-coach-evidence-detail-body"><div class="chart-coach-strip-heading"><div><strong>关键位与多源证据</strong>' +
       '<span>历史价位、资讯、资金、GPT 分开核对，不合成交易分数</span></div>' +
       '<small>' + escapeHtml(keyLevels.rulesVersion || '关键位规则未声明') + '</small></div>' +
       (method.strengthRule || method.toleranceRule
         ? '<details class="chart-coach-strip-method"><summary>怎么判断强弱</summary><p>' +
           escapeHtml([method.strengthRule, method.toleranceRule].filter(Boolean).join('；')) + '</p></details>' : '') +
-      '<div class="chart-coach-strip-levels">' + compactKeyLevel(keyLevels.support) + compactKeyLevel(keyLevels.resistance) + '</div>' +
       '<div class="chart-coach-strip-sources"><div id="chartCoachFlowEvidence"><section class="chart-coach-source-card"><h5>资金动量</h5><p class="chart-coach-empty">正在读取，过期或不可用时不参与判断。</p></section></div>' +
       '<div id="chartCoachNewsEvidence"><section class="chart-coach-source-card"><h5>重点资讯</h5><p class="chart-coach-empty">正在读取来源与本地重要性。</p></section></div>' +
-      '<div id="chartCoachGptEvidence"><section class="chart-coach-source-card"><h5>手动 GPT 研究记录</h5><p class="chart-coach-empty">正在匹配当前股票的每日记录。</p></section></div></div>';
+      '<div id="chartCoachGptEvidence"><section class="chart-coach-source-card"><h5>手动 GPT 研究记录</h5><p class="chart-coach-empty">正在匹配当前股票的每日记录。</p></section></div></div></div></details>';
   }
 
   function renderGptPickHistory(history) {

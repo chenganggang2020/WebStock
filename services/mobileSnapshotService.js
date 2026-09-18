@@ -353,6 +353,30 @@ function safeLatestGptPicks(input) {
   };
 }
 
+function safePaperSimulation(states) {
+  const accounts = (Array.isArray(states) ? states : []).slice(0, 10).map(function(state) {
+    const paper = state.paper || {};
+    const latest = paper.latestSnapshot || {};
+    const performance = state.performance || {};
+    const safePerformance = { status: cleanText(performance.status || 'not-started', 30), valuationAt: cleanText(performance.valuationAt, 50) || null };
+    ['netPnl', 'totalReturn', 'totalCosts', 'fillCount', 'decisionCount', 'observedMaxDrawdown', 'tradingDays'].forEach(function(key) {
+      safePerformance[key] = finiteOrNull(performance[key]);
+    });
+    return {
+      id: Number(paper.id), name: cleanText(paper.name, 120), mode: 'paper-only',
+      enabled: Boolean(state.settings && state.settings.enabled),
+      blocked: Boolean(state.settings && state.settings.lastError),
+      capital: finiteOrNull(paper.capital), equity: finiteOrNull(latest.totalValue == null ? paper.capital : latest.totalValue),
+      cash: finiteOrNull(latest.cashValue == null ? paper.capital : latest.cashValue),
+      performance: safePerformance,
+      positions: (paper.positions || []).slice(0, 20).map(function(position) {
+        return { code: cleanText(position.code, 12), name: cleanText(position.name, 80), quantity: finiteOrNull(position.quantity), price: finiteOrNull(position.lastPrice) };
+      })
+    };
+  });
+  return { status: accounts.length ? 'available' : 'empty', accounts };
+}
+
 function buildMobileSnapshot(input = {}) {
   const accounts = (Array.isArray(input.accounts) ? input.accounts : []).map(safeAccount);
   const channels = (Array.isArray(input.researchChannels) ? input.researchChannels : []).map(safeResearchChannel);
@@ -374,6 +398,7 @@ function buildMobileSnapshot(input = {}) {
       marketDataMayBeDelayed: true
     },
     accounts,
+    paperSimulation: safePaperSimulation(input.paperSimulation),
     watchlist: safeWatchlist(input),
     news: safeNews(input),
     capitalMomentum: safeCapitalMomentum(input),
@@ -383,7 +408,7 @@ function buildMobileSnapshot(input = {}) {
     limitations: [
       '移动快照只用于查看，不支持下单或修改 Windows 数据。',
       '实时行情不可用时仅显示带日期的已保存快照；缺失数据保持为空。',
-      '后台更新时间由 Android 系统调度，可能受省电模式影响而晚于 15 分钟。'
+      '手机锁屏后网页不保证持续刷新；通知需要电脑运行、网络连通并已授权订阅。'
     ]
   };
 }
@@ -539,9 +564,18 @@ async function loadMobileSnapshot(options = {}) {
     }
   }
 
+  let paperSimulation = options.paperSimulation || [];
+  if (!Object.prototype.hasOwnProperty.call(options, 'paperSimulation')) {
+    try {
+      const ids = database.prepare('SELECT portfolio_id FROM paper_monitor_settings ORDER BY portfolio_id DESC LIMIT 10').all();
+      const trading = options.paperTrading || require('./paperTradingService');
+      paperSimulation = ids.map(row => trading.getMonitorState(row.portfolio_id));
+    } catch (_) { paperSimulation = []; }
+  }
   return buildMobileSnapshot({
     generatedAt: options.generatedAt,
     accounts: accountInputs,
+    paperSimulation,
     watchlist: watchlistInputs,
     watchlistMeta: {
       source: quoteMeta && quoteMeta.source,

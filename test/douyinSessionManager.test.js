@@ -473,6 +473,42 @@ test('background collection reloads a recoverable Douyin service error', async (
   assert.equal(capture.items.length, 1);
 });
 
+test('recent discovery reads beyond the first viewport with a three-scroll budget', async () => {
+  const BrowserWindow = createFakeBrowserWindow();
+  const manager = createDouyinSessionManager({ BrowserWindow, getParentWindow: () => null,
+    pageSettleMs: 0, archiveScrollSettleMs: 0, capturePollMs: 1, captureReadyTimeoutMs: 50 });
+  const profileUrl = 'https://www.douyin.com/user/recent-profile';
+  const first = { pageType: 'profile', pageUrl: profileUrl, loggedIn: true,
+    profile: { displayName: '创作者', profileUrl, workCount: 100 },
+    items: [{ sourceUrl: 'https://www.douyin.com/video/7800000000000000001', title: '首屏作品' }] };
+  const next = JSON.parse(JSON.stringify(first));
+  next.items.push({ sourceUrl: 'https://www.douyin.com/video/7800000000000000002', title: '下一屏作品' });
+  const pending = manager.captureProfileRecent(profileUrl);
+  BrowserWindow.instances[0].webContents.scriptResults = [first, next, next, next];
+  const capture = await pending;
+  assert.equal(capture.items.length, 2);
+  assert.equal(capture.archive.scrollLimit, 3);
+  assert.equal(capture.archive.scrollCount, 3);
+  assert.equal(capture.archive.complete, false);
+});
+
+test('recent scan interrupted by login loss does not claim a successful logged-in snapshot', async () => {
+  const BrowserWindow = createFakeBrowserWindow();
+  const manager = createDouyinSessionManager({ BrowserWindow, getParentWindow: () => null,
+    pageSettleMs: 0, archiveScrollSettleMs: 0, capturePollMs: 1, captureReadyTimeoutMs: 50 });
+  const profileUrl = 'https://www.douyin.com/user/login-loss-recent';
+  const first = { pageType: 'profile', pageUrl: profileUrl, loggedIn: true,
+    profile: { displayName: '创作者', profileUrl, workCount: 100 },
+    items: [{ sourceUrl: 'https://www.douyin.com/video/7800000000000000001', title: '已加载作品' }] };
+  const pending = manager.captureProfileRecent(profileUrl);
+  BrowserWindow.instances[0].webContents.scriptResults = [first, { ...first, loggedIn: false, items: [] }];
+  const capture = await pending;
+  assert.equal(capture.loggedIn, false);
+  assert.equal(capture.archive.complete, false);
+  assert.equal(capture.archive.stoppedReason, 'login_lost');
+  assert.equal(capture.items.length, 1);
+});
+
 test('complete profile archive merges scroll batches and stops after stable rounds', async () => {
   const BrowserWindow = createFakeBrowserWindow();
   const manager = createDouyinSessionManager({

@@ -20,6 +20,12 @@ const researchDecisionRouter = require('./researchDecision');
 const chartCoachRouter = require('./chartCoach');
 const capitalFlowRouter = require('./capitalFlow');
 const mobileRouter = require('./mobile');
+const dataHealthRouter = require('./dataHealth');
+const industryChainRouter = require('./industryChain');
+const marketBoardsRouter = require('./marketBoards');
+const externalResearchBatchesRouter = require('./externalResearchBatches');
+const marketInstitutionalFlowRouter = require('./marketInstitutionalFlow');
+const eastmoneyEtfDailyRouter = require('./eastmoneyEtfDaily');
 
 router.use('/api', stocksRouter);
 router.use('/api', marketRouter);
@@ -38,7 +44,14 @@ router.use('/api', quantRouter);
 router.use('/api', researchDecisionRouter);
 router.use('/api', chartCoachRouter);
 router.use('/api', capitalFlowRouter);
+router.use('/api', require('./sectorRotation'));
 router.use('/api', mobileRouter);
+router.use('/api', dataHealthRouter);
+router.use('/api', industryChainRouter);
+router.use('/api', marketBoardsRouter);
+router.use('/api', externalResearchBatchesRouter);
+router.use('/api', marketInstitutionalFlowRouter);
+router.use('/api', eastmoneyEtfDailyRouter);
 router.use('/api/portfolio', portfolioRouter);
 
 module.exports = router;

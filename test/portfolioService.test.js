@@ -245,7 +245,8 @@ test('today pnl adjusts for same-day buys, sells, fees and taxes', () => {
   assert.notEqual(position.todayPnl, 84);
 });
 
-test('portfolio accounts isolate trades and import a broker holding snapshot without changing the default account', () => {
+test('portfolio accounts isolate trades and import a broker holding snapshot without changing the default account', t => {
+  t.mock.timers.enable({ apis: ['Date'], now: Date.parse('2026-08-11T02:00:00.000Z') });
   const defaultAccount = portfolio.listAccounts().find(account => account.isDefault);
   assert.ok(defaultAccount);
   const defaultTradesBefore = portfolio.listTrades({ accountId: defaultAccount.id });
@@ -297,6 +298,30 @@ test('portfolio accounts isolate trades and import a broker holding snapshot wit
   assert.equal(summary.totalAssets, 88469);
 });
 
+test('non-default portfolio accounts can be updated and deleted together with their own holdings', () => {
+  const account = portfolio.createAccount({ name: '待更新账户', broker: '原券商', cashBalance: 100 });
+  portfolio.importHoldingSnapshot(account.id, {
+    snapshotDate: '2026-09-09', cashBalance: 200, totalAssets: 1200, totalMarketValue: 1000,
+    holdings: [{ code: '600099', name: '测试持仓', quantity: 100, costValue: 900, currentPrice: 10 }]
+  });
+  const updated = portfolio.updateAccount(account.id, { name: '已更新账户', broker: '新券商', cashBalance: 200 });
+  assert.equal(updated.name, '已更新账户');
+  assert.equal(updated.broker, '新券商');
+  assert.equal(portfolio.deleteAccount(account.id), true);
+  assert.equal(portfolio.listAccounts().some(item => item.id === account.id), false);
+  assert.equal(require('../db').prepare('SELECT COUNT(*) AS count FROM trades WHERE account_id = ?').get(account.id).count, 0);
+  assert.throws(() => portfolio.getAccount(account.id), /不存在/);
+});
+
+test('deleting the former default account promotes the remaining account and keeps default lookup working', () => {
+  const currentDefault = portfolio.listAccounts().find(account => account.isDefault);
+  if (portfolio.listAccounts().length === 1) portfolio.createAccount({ name: '保留账户' });
+  assert.equal(portfolio.deleteAccount(currentDefault.id), true);
+  const replacement = portfolio.listAccounts().find(account => account.isDefault);
+  assert.ok(replacement);
+  assert.equal(portfolio.getAccount().id, replacement.id);
+});
+
 test('broker screenshot sync replaces only a screenshot baseline and preserves historical snapshots', () => {
   const account = portfolio.createAccount({ name: '截图更新账户', broker: '测试券商', cashBalance: 10 });
   portfolio.importHoldingSnapshot(account.id, {
@@ -326,4 +351,26 @@ test('broker screenshot sync refuses to replace an account containing manual tra
     snapshotDate: '2026-08-16', cashBalance: 0, totalAssets: 1000, totalMarketValue: 1000,
     holdings: [{ code: '600002', name: '截图持仓', quantity: 100, costValue: 900, currentPrice: 10 }]
   }), /手工交易|不能替换/);
+});
+
+test('portfolio snapshots are account-isolated and returned oldest-to-newest within the requested tail', () => {
+  const account = portfolio.createAccount({ name: '复利快照账户' });
+  const holding = function(date, price) {
+    return {
+      snapshotDate: date,
+      cashBalance: 100,
+      totalAssets: price * 100 + 100,
+      totalMarketValue: price * 100,
+      holdings: [{ code: '600010', name: '测试快照', quantity: 100, costValue: 1000, currentPrice: price }]
+    };
+  };
+  portfolio.importHoldingSnapshot(account.id, holding('2026-01-01', 10));
+  portfolio.syncHoldingSnapshot(account.id, holding('2026-02-01', 11));
+  portfolio.syncHoldingSnapshot(account.id, holding('2026-03-01', 12));
+
+  const snapshots = portfolio.listSnapshots({ accountId: account.id, limit: 2 });
+  assert.deepEqual(snapshots.map(item => item.snapshotDate), ['2026-02-01', '2026-03-01']);
+  assert.deepEqual(snapshots.map(item => item.totalAssets), [1200, 1300]);
+  assert.ok(snapshots.every(item => item.accountId === account.id));
+  assert.deepEqual(portfolio.listSnapshots({ accountId: 1, limit: 20 }).some(item => item.accountId === account.id), false);
 });

@@ -55,24 +55,26 @@
 
     async function requestHealth() {
       const controller = new AbortControllerRef();
-      const timeoutId = setTimer(function() { controller.abort(); }, REQUEST_TIMEOUT_MS);
-      let response;
+      let timeoutId;
+      const deadline = new Promise(function(_, reject) {
+        timeoutId = setTimer(function() { controller.abort(); reject(new Error('Local health check timed out')); }, REQUEST_TIMEOUT_MS);
+      });
       try {
-        response = await fetchHealth('/api/health', {
-          method: 'GET',
-          cache: 'no-store',
-          credentials: 'same-origin',
-          signal: controller.signal
-        });
-      } finally {
-        clearTimer(timeoutId);
-      }
-      if (!response || !response.ok) throw new Error('Local health check failed');
-      const payload = await response.json();
-      if (!payload || payload.success !== true || !payload.data || payload.data.status !== 'ok') {
-        throw new Error('Local health check returned an invalid status');
-      }
-      return payload.data;
+        return await Promise.race([(async function() {
+          const response = await fetchHealth('/api/health', {
+            method: 'GET',
+            cache: 'no-store',
+            credentials: 'same-origin',
+            signal: controller.signal
+          });
+          if (!response || !response.ok) throw new Error('Local health check failed');
+          const payload = await response.json();
+          if (!payload || payload.success !== true || !payload.data || payload.data.status !== 'ok') {
+            throw new Error('Local health check returned an invalid status');
+          }
+          return payload.data;
+        })(), deadline]);
+      } finally { clearTimer(timeoutId); }
     }
 
     function check() {

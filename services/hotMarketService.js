@@ -7,6 +7,7 @@ const { toSinaSymbol } = require('../utils/market');
 
 const EASTMONEY_HOSTS = [
   'https://push2.eastmoney.com',
+  'https://push2delay.eastmoney.com',
   'https://41.push2.eastmoney.com',
   'https://33.push2.eastmoney.com'
 ];
@@ -546,27 +547,31 @@ function sortMonthBoards(boards) {
 }
 
 function latestSnapshotForToday() {
-  const row = db.prepare(`
+  const rows = db.prepare(`
     SELECT id, payload_json, created_at
     FROM hot_market_snapshots
     WHERE snapshot_date = ?
     ORDER BY datetime(created_at) DESC, id DESC
-    LIMIT 1
-  `).get(todayString());
-  if (!row) return null;
-  try {
-    const payload = JSON.parse(row.payload_json || '{}');
-    payload.snapshotId = payload.snapshotId || row.id;
-    if (Array.isArray(payload.news)) payload.news = payload.news.slice(0, 120);
-    payload.cached = true;
-    payload.cachedSnapshot = true;
-    payload.snapshotCreatedAt = row.created_at;
-    const decorated = decorateOverview(payload);
-    decorated.prompt = buildPrompt(decorated);
-    return decorated;
-  } catch (error) {
-    return null;
+  `).iterate(todayString());
+  for (const row of rows) {
+    try {
+      const payload = JSON.parse(row.payload_json || '{}');
+      const dayBoards = payload.boards && Array.isArray(payload.boards.day) ? payload.boards.day : [];
+      const hotStocks = Array.isArray(payload.hotStocks) ? payload.hotStocks : [];
+      if (payload.marketStatus === 'unavailable' && !dayBoards.length && !hotStocks.length) continue;
+      payload.snapshotId = payload.snapshotId || row.id;
+      if (Array.isArray(payload.news)) payload.news = payload.news.slice(0, 120);
+      payload.cached = true;
+      payload.cachedSnapshot = true;
+      payload.snapshotCreatedAt = row.created_at;
+      const decorated = decorateOverview(payload);
+      decorated.prompt = buildPrompt(decorated);
+      return decorated;
+    } catch (error) {
+      continue;
+    }
   }
+  return null;
 }
 
 function dashboardTable(boards) {

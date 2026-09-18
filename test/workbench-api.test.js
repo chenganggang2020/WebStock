@@ -156,8 +156,9 @@ test('news, sector and screener APIs return unified success envelopes', async (t
   const sentiment = await requestJson(server, '/api/sentiment/overview?refresh=1');
   assert.equal(sentiment.statusCode, 200);
   assert.equal(sentiment.json.success, true);
-  assert.ok(Number.isFinite(sentiment.json.data.aShare.score));
-  assert.equal(sentiment.json.data.vix.name, 'Cboe VIX');
+  assert.equal(sentiment.json.data.aShare.score, null);
+  assert.equal(sentiment.json.data.aShare.sourceStatus, 'unavailable');
+  assert.equal(sentiment.json.data.vix, null);
   assert.match(sentiment.json.data.fearGreed.meaning, /Fear & Greed/);
 
   const cpoThemes = await requestJson(server, '/api/themes/search?q=CPO');
@@ -501,7 +502,7 @@ test('user backup export and import roundtrip', async (t) => {
   const exported = await requestJson(server, '/api/user/export');
   assert.equal(exported.statusCode, 200);
   assert.equal(exported.json.success, true);
-  assert.equal(exported.json.data.version, 6);
+  assert.equal(exported.json.data.version, 8);
   assert.equal(exported.json.data.tables.watchlist[0].code, '000001');
   assert.equal(exported.json.data.tables.trades[0].quantity, 100);
   assert.equal(exported.json.data.tables.sectors[0].name, 'Backup Sector');

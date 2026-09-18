@@ -6,6 +6,7 @@ const path = require('node:path');
 const root = path.resolve(__dirname, '..');
 const indexSource = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 const chartSource = fs.readFileSync(path.join(root, 'js/modules/realtimeChart.js'), 'utf8');
+const klineSource = fs.readFileSync(path.join(root, 'js/modules/klineChart.js'), 'utf8');
 const appSource = fs.readFileSync(path.join(root, 'js/app.js'), 'utf8');
 const stockListSource = fs.readFileSync(path.join(root, 'js/modules/stockList.js'), 'utf8');
 
@@ -56,6 +57,21 @@ test('intraday chart compresses lunch, exposes sampling, and draws a visible zer
   assert.match(chartSource, /成交量\(万手\)/);
 });
 
+test('intraday price and volume charts share a fixed full-session viewport with readable monitoring styles', () => {
+  assert.match(chartSource, /buildFixedTradingViewport/);
+  assert.match(chartSource, /dataZoom:\s*\[/);
+  assert.match(chartSource, /showSymbol:\s*sampling\.intervalSeconds\s*<\s*60/);
+  assert.match(chartSource, /symbolSize:\s*3/);
+  assert.match(chartSource, /lineStyle\.width\s*=\s*2\.2/);
+  assert.match(chartSource, /axisLabel:\s*\{\s*color:\s*textColor,\s*fontSize:\s*12/);
+});
+
+test('intraday chart draws truthful open, local breakout and closing-auction markers', () => {
+  assert.match(chartSource, /buildIntradayMarkers\(minuteData\)/);
+  assert.match(chartSource, /markPoint/);
+  assert.match(chartSource, /triggerUsesFutureData/);
+});
+
 test('intraday view lets the user choose truthful one-minute or derived thirty-second data', () => {
   assert.match(indexSource, /id="realtimeResolutionToggle"/);
   assert.match(indexSource, /data-resolution="1m"/);
@@ -65,8 +81,26 @@ test('intraday view lets the user choose truthful one-minute or derived thirty-s
   assert.match(chartSource, /local-public-quote-30s/);
   assert.match(chartSource, /tencent-1m/);
   assert.match(chartSource, /eastmoney-1m/);
-  assert.match(chartSource, /sina-5m/);
+  assert.doesNotMatch(chartSource, /新浪5分钟自动降级/);
   assert.match(chartSource, /setRealtimeResolution/);
+  assert.match(chartSource, /let realtimeResolution = '1m'/);
+});
+
+test('intraday view offers an optional locally observed opening-auction layer', () => {
+  assert.match(indexSource, /data-auction-layer/);
+  assert.match(indexSource, /竞价图层/);
+  assert.match(chartSource, /resolution=30s/);
+  assert.match(chartSource, /includeAuction/);
+  assert.match(chartSource, /auctionCoverage/);
+});
+
+test('intraday view offers honest local five-second sampling without relabelling it as exchange ticks', () => {
+  assert.match(indexSource, /data-resolution="5s"/);
+  assert.match(indexSource, /本地5秒派生/);
+  assert.match(indexSource, /不是交易所逐笔/);
+  assert.match(chartSource, /resolution=5s/);
+  assert.match(chartSource, /local-public-quote-5s/);
+  assert.doesNotMatch(indexSource, /5秒逐笔|Level-2 5秒/);
 });
 
 test('mini charts do not fall back to misleading OHLC crosses', () => {
@@ -96,4 +130,42 @@ test('chart-related sampling labels stay valid UTF-8 Chinese', () => {
   assert.match(combined, /分时样本不足/);
   assert.match(combined, /行情源无分时/);
   assert.doesNotMatch(combined, /åˆ†æ—¶|å‡ä»·|åˆä¼‘|åˆ†é’Ÿ/);
+});
+
+test('K-line header uses the loaded bar date and close instead of a stale realtime quote', () => {
+  assert.match(klineSource, /function renderAvailableKlineHeader/);
+  assert.match(klineSource, /latest\.date/);
+  assert.match(klineSource, /eastmoney-day/);
+  assert.match(klineSource, /K线收盘/);
+  assert.match(klineSource, /renderAvailableKlineHeader\(State, data, meta\)/);
+});
+
+test('daily chart merges the current minute session, explains its live state and refreshes it automatically', () => {
+  assert.match(klineSource, /mergeCurrentDailyBar\(data, minuteRows, minuteMeta\)/);
+  assert.match(klineSource, /dailyBarMetrics\(rawData, idx\)/);
+  assert.match(klineSource, /涨跌额/);
+  assert.match(klineSource, /涨跌幅/);
+  assert.match(klineSource, /振幅/);
+  assert.match(klineSource, /盘中K线/);
+  assert.match(chartSource, /function isDailyKlineRefreshEligible/);
+  assert.match(chartSource, /KlineChart\.loadKlineData\(code, 'day'\)/);
+  assert.match(chartSource, /日线盘中K线/);
+});
+
+test('daily view renders transparent metrics, auction cards and local signal rules', () => {
+  const modelIndex = indexSource.indexOf('js/modules/marketSignalModel.js');
+  const klineIndex = indexSource.indexOf('js/modules/klineChart.js');
+
+  assert.ok(modelIndex >= 0 && modelIndex < klineIndex, 'market signal model must load before K-line runtime');
+  assert.match(indexSource, /id="klineInsights"/);
+  assert.match(indexSource, /开盘竞价观察/);
+  assert.match(indexSource, /尾盘竞价观察/);
+  assert.match(indexSource, /上交所集合竞价说明/);
+  assert.match(klineSource, /analyzeDaily\(data\)/);
+  assert.match(klineSource, /calculateNineTurn\(data\)/);
+  assert.match(klineSource, /analyzeAuction\(data, minuteRows, minuteMeta, localRows, localMeta\)/);
+  assert.match(klineSource, /detectLocalSignals\(data, minuteRows, minuteMeta\)/);
+  assert.match(klineSource, /\/api\/minute\?code=/);
+  assert.match(klineSource, /resolution=30s/);
+  assert.match(klineSource, /非纯竞价量/);
 });

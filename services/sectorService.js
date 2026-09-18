@@ -51,9 +51,9 @@ function recordLeaderSnapshot(leader, sector, quote = {}) {
     sectorName: (sector && sector.name) || leader.sectorName || '',
     code: leader.code,
     name: leader.name || leader.code,
-    price: Number.isFinite(Number(quote.price)) ? Number(quote.price) : null,
-    change: Number.isFinite(Number(quote.change)) ? Number(quote.change) : null,
-    amount: Number.isFinite(Number(quote.amount)) ? Number(quote.amount) : null
+    price: quote.price != null && quote.price !== '' && Number.isFinite(Number(quote.price)) ? Number(quote.price) : null,
+    change: quote.change != null && quote.change !== '' && Number.isFinite(Number(quote.change)) ? Number(quote.change) : null,
+    amount: quote.amount != null && quote.amount !== '' && Number.isFinite(Number(quote.amount)) ? Number(quote.amount) : null
   });
 }
 
@@ -203,6 +203,10 @@ function listLeaderSnapshots(input = {}) {
 }
 
 function getLeaderTrends(input = {}) {
+  const changeOrNull = value => {
+    if (value == null || typeof value === 'boolean' || String(value).trim() === '') return null;
+    return Number.isFinite(Number(value)) ? Number(value) : null;
+  };
   const limit = Math.min(Math.max(Number(input.limit) || 300, 20), 1000);
   const rows = db.prepare('SELECT * FROM sector_leader_snapshots ORDER BY datetime(captured_at) DESC, id DESC LIMIT ?')
     .all(limit)
@@ -214,18 +218,18 @@ function getLeaderTrends(input = {}) {
   });
   return Array.from(groups.values()).map(items => {
     const latest = items[0];
-    const previous = items.slice(1).find(item => Number.isFinite(Number(item.change)));
-    const latestChange = Number(latest.change);
-    const previousChange = previous ? Number(previous.change) : null;
-    const changeDelta = Number.isFinite(latestChange) && Number.isFinite(previousChange)
+    const previous = items.slice(1).find(item => changeOrNull(item.change) !== null);
+    const latestChange = changeOrNull(latest.change);
+    const previousChange = previous ? changeOrNull(previous.change) : null;
+    const changeDelta = latestChange !== null && previousChange !== null
       ? Number((latestChange - previousChange).toFixed(2))
       : null;
     return {
       code: latest.code,
       name: latest.name,
       sectorName: latest.sectorName,
-      latestChange: Number.isFinite(latestChange) ? latestChange : null,
-      previousChange: Number.isFinite(previousChange) ? previousChange : null,
+      latestChange,
+      previousChange,
       changeDelta,
       latestPrice: latest.price,
       latestAmount: latest.amount,
@@ -334,12 +338,14 @@ async function fetchQuotesSafe(codes) {
       if (!match) return;
       const code = match[1].replace(/^sh|^sz/, '');
       const fields = match[2].split(',');
-      const price = parseFloat(fields[3]) || 0;
-      const prevClose = parseFloat(fields[2]) || price;
+      const price = parseFloat(fields[3]);
+      const prevClose = parseFloat(fields[2]);
+      if (!Number.isFinite(price) || price <= 0) return;
+      const amount = parseFloat(fields[9]);
       map[code] = {
         price,
-        change: prevClose ? Number(((price - prevClose) / prevClose * 100).toFixed(2)) : 0,
-        amount: parseFloat(fields[9]) || 0
+        change: Number.isFinite(prevClose) && prevClose > 0 ? Number(((price - prevClose) / prevClose * 100).toFixed(2)) : null,
+        amount: Number.isFinite(amount) && amount >= 0 ? amount : null
       };
     });
     return map;
@@ -358,15 +364,15 @@ async function getDashboard() {
       .filter(item => item.sectorId === sector.id)
       .map(item => {
         const quote = quoteMap[item.code] || {};
-        const change = Number(quote.change);
+        const change = quote.change == null ? NaN : Number(quote.change);
         return Object.assign({}, item, {
           price: quote.price || null,
           change: Number.isFinite(change) ? change : null,
-          amount: quote.amount || null,
+          amount: quote.amount == null ? null : quote.amount,
           strength: Number.isFinite(change) ? (change >= 3 ? '强' : change <= -3 ? '弱' : '平') : '未知'
         });
       });
-    const validChanges = sectorLeaders.map(item => item.change).filter(value => Number.isFinite(Number(value)));
+    const validChanges = sectorLeaders.map(item => item.change).filter(value => Number.isFinite(value));
     const avgChange = validChanges.length ? validChanges.reduce((sum, value) => sum + Number(value), 0) / validChanges.length : null;
     return Object.assign({}, sector, {
       status: avgChange === null ? '待刷新' : avgChange >= 1 ? '偏强' : avgChange <= -1 ? '偏弱' : '震荡',

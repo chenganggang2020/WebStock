@@ -231,3 +231,22 @@ test('an identity-rejected remote detail is preserved but excluded from repeated
   assert.equal(summary.transcriptionPendingCount, 0);
   assert.deepEqual(planned, []);
 });
+
+test('a low-confidence transcript with a permanent archive is complete for collection purposes', () => {
+  const observation = {
+    externalContentId: '7930000000000000012', mediaType: 'video', evidenceLevel: 'primary',
+    transcript: '宇宿科技上市一周。', localAssetPath: 'D:/archive/review.mp4',
+    mediaMetadata: {
+      asr: { status: 'needs_review', quality: { needsReview: true } },
+      archive: { status: 'complete', localAssetPath: 'D:/archive/review.mp4' }
+    }
+  };
+
+  const summary = summarizeArchiveQueue([observation]);
+  const planned = planFullArchiveQueue([observation]);
+
+  assert.equal(summary.transcribedCount, 1);
+  assert.equal(summary.completedCount, 1);
+  assert.equal(summary.transcriptionPendingCount, 0);
+  assert.deepEqual(planned, []);
+});

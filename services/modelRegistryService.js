@@ -46,6 +46,8 @@ function listModels() {
   const latestMasterResult = latestMasterEntry ? latestMasterEntry.result : null;
   const latestFactorEntry = quant.listFactorResults(20).find(item => item.valid && item.result);
   const latestFactorResult = latestFactorEntry ? latestFactorEntry.result : null;
+  const latestStrategyEntry = quant.listStrategyResults(20).find(item => item.valid && item.result);
+  const latestStrategyResult = latestStrategyEntry ? latestStrategyEntry.result : null;
   const latestQuantStatus = latestQuantResult && latestQuantResult.validationStatus === 'validated'
     ? '已验证'
     : '探索性';
@@ -53,6 +55,8 @@ function listModels() {
   const masterRuntimeLocated = quantRuntimeLocated && !(quantRuntime.versions && !quantRuntime.versions.torch);
   const paperPortfolioCount = db.prepare('SELECT COUNT(*) AS count FROM paper_portfolios').get().count;
   const paperSnapshotCount = db.prepare('SELECT COUNT(*) AS count FROM paper_portfolio_snapshots').get().count;
+  const paperDecisionCount = db.prepare('SELECT COUNT(*) AS count FROM paper_model_decisions').get().count;
+  const paperFillCount = db.prepare('SELECT COUNT(*) AS count FROM paper_fills').get().count;
 
   return [
     {
@@ -82,6 +86,21 @@ function listModels() {
         : '尚无通过契约校验的因子实验。'
     },
     {
+      id: 'local-ma-strategy-lab-v1',
+      name: '主板多策略批量研究',
+      kind: 'research-agent',
+      status: researchModelStatus(quantRuntime, latestStrategyResult),
+      runtime: quantRuntime.versions
+        ? 'Python ' + quantRuntime.versions.python + ' / pandas ' + quantRuntime.versions.pandas
+        : 'Python 3.12 sidecar',
+      costMode: 'local-compute',
+      capabilities: ['受控中文规则卡', '均线/MACD/RSI/放量突破', 'A股成交约束', '滚动样本外稳定区'],
+      requirements: ['带哈希的数据清单', '至少3个样本外窗口', '明确费用和滑点假设'],
+      note: latestStrategyResult
+        ? '已有探索性运行：' + latestStrategyResult.runId + '；历史最佳、最差和稳定区同时展示，自动交易始终关闭。' + resultVerificationNote(latestStrategyEntry)
+        : '尚无通过契约校验的批量策略实验；规则卡只用于研究，不连接券商。'
+    },
+    {
       id: 'evidence-orchestrator-v1',
       name: '证据决策编排器',
       kind: 'research-agent',
@@ -99,9 +118,10 @@ function listModels() {
       status: 'available',
       runtime: 'Node.js / SQLite',
       costMode: 'local-free',
-      capabilities: ['目标权重', '单股上限', '现金保留', '100股取整', '净值与盈亏快照'],
-      requirements: ['先生成证据决策包', '用户确认风险档位和约束'],
-      note: '当前保存了 ' + paperPortfolioCount + ' 个纸面组合和 ' + paperSnapshotCount + ' 个净值快照；不连接券商，也不生成真实订单。'
+      capabilities: ['ChatGPT 定时盯盘', '同花顺持仓只读同步', '下一分钟模拟成交', 'T+1/涨跌停/费用约束', '净值与回撤'],
+      requirements: ['先生成证据决策包', '本交易日同花顺持仓快照', '公开分钟行情'],
+      note: '当前保存了 ' + paperPortfolioCount + ' 个纸面组合、' + paperDecisionCount + ' 次模型判断、' + paperFillCount +
+        ' 笔模拟成交和 ' + paperSnapshotCount + ' 个净值快照；只写纸面账本，不连接券商。'
     },
     {
       id: 'knowledge-fts-v1',

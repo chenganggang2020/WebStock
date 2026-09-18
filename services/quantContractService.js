@@ -4,6 +4,8 @@ const fs = require('node:fs');
 const DATASET_SCHEMA = 'webstock.quant.dataset.v1';
 const RESULT_SCHEMA = 'webstock.quant.result.v1';
 const FACTOR_LAB_SCHEMA = 'webstock.quant.factor-lab.v1';
+const STRATEGY_LAB_SCHEMA = 'webstock.quant.strategy-lab.v1';
+const SIGNAL_SCAN_SCHEMA = 'webstock.quant.signal-scan.v1';
 const SHA256_PATTERN = /^[a-f0-9]{64}$/i;
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const REQUIRED_METRICS = [
@@ -300,6 +302,393 @@ function validateFactorLabResult(input, datasetInput) {
   return result;
 }
 
+function validateStrategyMetrics(input, label, includeValidationMean = false) {
+  const metrics = object(input, label);
+  const required = [
+    'foldCount', 'meanOosReturn', 'medianOosReturn', 'worstOosReturn',
+    'positiveFoldRate', 'maxDrawdown', 'tradeCount', 'winRate'
+  ];
+  required.forEach(name => finiteNumber(metrics[name], label + '.' + name));
+  if (includeValidationMean) finiteNumber(metrics.validationMeanReturn, label + '.validationMeanReturn');
+  return metrics;
+}
+
+function validateExecutionMetrics(input, label) {
+  const metrics = object(input, label);
+  [
+    'netReturn', 'maxDrawdown', 'tradeCount', 'winRate', 'buyCount', 'sellCount',
+    'blockedBuys', 'blockedSells', 'unclosedPositions'
+  ].forEach(name => finiteNumber(metrics[name], label + '.' + name));
+  return metrics;
+}
+
+function validateStrategyLabResult(input, datasetInput) {
+  const result = object(input, 'strategy lab result');
+  const manifest = validateDatasetManifest(datasetInput);
+  if (result.schema !== STRATEGY_LAB_SCHEMA) throw contractError('unsupported strategy lab schema');
+  nonEmptyString(result.runId, 'runId');
+  timestampString(result.createdAt, 'createdAt');
+  if (result.status !== 'completed') throw contractError('only completed strategy lab results can be validated');
+  if (result.validationStatus !== 'exploratory') {
+    throw contractError('strategy lab is exploratory research only');
+  }
+  if (result.automaticTrading !== false) {
+    throw contractError('strategy lab must keep automatic trading disabled');
+  }
+  const asOf = dateString(result.asOf, 'asOf');
+  if (asOf > manifest.asOf) throw contractError('strategy result asOf exceeds dataset asOf');
+
+  const dataManifest = object(result.dataManifest, 'dataManifest');
+  if (dataManifest.datasetId !== manifest.datasetId) throw contractError('strategy result datasetId does not match manifest');
+  if (sha256(dataManifest.sha256, 'dataManifest.sha256') !== manifest.manifestSha256.toLowerCase()) {
+    throw contractError('strategy result manifest SHA256 does not match the dataset manifest hash');
+  }
+  nonEmptyString(object(result.runtime, 'runtime').python, 'runtime.python');
+
+  const ruleCard = object(result.ruleCard, 'ruleCard');
+  const strategyFamily = nonEmptyString(ruleCard.strategyFamily, 'ruleCard.strategyFamily');
+  if (![
+    'moving-average-crossover', 'macd-crossover', 'rsi-rebound', 'volume-breakout',
+    'low-position-volume-stagnation'
+  ].includes(strategyFamily)) {
+    throw contractError('unsupported strategy family');
+  }
+  nonEmptyString(ruleCard.entryRule, 'ruleCard.entryRule');
+  nonEmptyString(ruleCard.exitRule, 'ruleCard.exitRule');
+  if (strategyFamily === 'moving-average-crossover') {
+    const shortWindows = ruleCard.shortWindows;
+    const longWindows = ruleCard.longWindows;
+    if (!Array.isArray(shortWindows) || !shortWindows.length || !Array.isArray(longWindows) || !longWindows.length) {
+      throw contractError('rule card moving-average windows must not be empty');
+    }
+    shortWindows.concat(longWindows).forEach(value => {
+      if (!Number.isInteger(Number(value)) || Number(value) < 1) throw contractError('moving-average windows must be positive integers');
+    });
+  }
+
+  const execution = object(result.executionAssumptions, 'executionAssumptions');
+  [
+    'commissionBps', 'minimumCommission', 'stampDutyBps', 'slippageBps',
+    'capitalPerSymbol', 'boardLot', 'priceLimitRate'
+  ].forEach(name => finiteNumber(execution[name], 'executionAssumptions.' + name));
+  if (execution.tPlusOne !== true) throw contractError('strategy lab must model T+1');
+  if (execution.signalTiming !== 'close-signal-next-open-execution') {
+    throw contractError('strategy lab must execute close signals no earlier than the next open');
+  }
+  nonEmptyString(execution.suspensionPolicy, 'executionAssumptions.suspensionPolicy');
+
+  const windowParameters = object(result.windowParameters, 'windowParameters');
+  ['trainDays', 'validationDays', 'testDays', 'stepDays', 'maxFolds', 'minimumHistoryDays'].forEach(name => {
+    const value = nonNegativeInteger(windowParameters[name], 'windowParameters.' + name);
+    if (value < 1) throw contractError('strategy window parameters must be positive');
+  });
+  if (Number(windowParameters.maxFolds) < 3) throw contractError('strategy lab requires at least three configured folds');
+  if (windowParameters.maxInstruments != null) {
+    const maxInstruments = nonNegativeInteger(windowParameters.maxInstruments, 'windowParameters.maxInstruments');
+    if (maxInstruments < 1 || maxInstruments > 1200) throw contractError('strategy lab instrument cap is invalid');
+  }
+
+  const universe = object(result.universe, 'universe');
+  if (universe.policy !== 'main-board-a-share-ex-st') throw contractError('strategy lab universe must be main-board A-share ex-ST');
+  const requested = nonNegativeInteger(universe.requested, 'universe.requested');
+  const included = nonNegativeInteger(universe.included, 'universe.included');
+  const excludedByBoard = nonNegativeInteger(universe.excludedByBoard, 'universe.excludedByBoard');
+  const excludedSt = nonNegativeInteger(universe.excludedSt, 'universe.excludedSt');
+  const excludedHistory = nonNegativeInteger(universe.excludedInsufficientHistory, 'universe.excludedInsufficientHistory');
+  const excludedLiquidity = universe.excludedByLiquidityCap == null
+    ? 0
+    : nonNegativeInteger(universe.excludedByLiquidityCap, 'universe.excludedByLiquidityCap');
+  if (included + excludedByBoard + excludedSt + excludedHistory + excludedLiquidity !== requested) {
+    throw contractError('strategy universe coverage counts are inconsistent');
+  }
+
+  if (!Array.isArray(result.folds) || result.folds.length < 3) {
+    throw contractError('strategy lab requires at least three sample-out folds');
+  }
+  let previousTestEnd = '';
+  result.folds.forEach((fold, index) => {
+    const value = object(fold, 'folds[' + index + ']');
+    const train = validateSegment(value.train, 'folds[' + index + '].train');
+    const validation = validateSegment(value.validation, 'folds[' + index + '].validation');
+    const testSegment = validateSegment(value.test, 'folds[' + index + '].test');
+    const purgeDays = nonNegativeInteger(value.purgeDays, 'folds[' + index + '].purgeDays');
+    if (!(train.start <= train.end && train.end < validation.start && validation.start <= validation.end && validation.end < testSegment.start && testSegment.start <= testSegment.end)) {
+      throw contractError('strategy fold time ranges overlap or are out of order');
+    }
+    if (purgeDays < 1) throw contractError('strategy fold requires a purge day');
+    if (previousTestEnd && testSegment.start <= previousTestEnd) throw contractError('strategy fold test ranges overlap');
+    previousTestEnd = testSegment.end;
+  });
+
+  if (!Array.isArray(result.parameters) || !result.parameters.length) {
+    throw contractError('strategy parameters must not be empty');
+  }
+  const parameterIds = new Set();
+  result.parameters.forEach((parameter, index) => {
+    const value = object(parameter, 'parameters[' + index + ']');
+    const id = nonEmptyString(value.parameterId, 'parameters[' + index + '].parameterId');
+    if (parameterIds.has(id)) throw contractError('strategy parameter IDs must be unique');
+    parameterIds.add(id);
+    if (strategyFamily === 'moving-average-crossover') {
+      const shortWindow = nonNegativeInteger(value.shortWindow, 'parameters[' + index + '].shortWindow');
+      const longWindow = nonNegativeInteger(value.longWindow, 'parameters[' + index + '].longWindow');
+      if (shortWindow < 1 || shortWindow >= longWindow) throw contractError('strategy moving-average pair is invalid');
+      if (value.settings != null) {
+        const settings = object(value.settings, 'parameters[' + index + '].settings');
+        if (Number(settings.shortWindow) !== shortWindow || Number(settings.longWindow) !== longWindow) {
+          throw contractError('strategy moving-average settings do not match legacy fields');
+        }
+      }
+    } else {
+      nonEmptyString(value.label, 'parameters[' + index + '].label');
+      const settings = object(value.settings, 'parameters[' + index + '].settings');
+      const positive = function(name) {
+        const number = finiteNumber(settings[name], 'parameters[' + index + '].settings.' + name);
+        if (number <= 0) throw contractError('strategy parameter settings must be positive');
+        return number;
+      };
+      if (strategyFamily === 'macd-crossover') {
+        const fast = positive('fastWindow');
+        const slow = positive('slowWindow');
+        const signal = positive('signalWindow');
+        if (![fast, slow, signal].every(Number.isInteger) || fast >= slow) throw contractError('MACD parameter settings are invalid');
+      } else if (strategyFamily === 'rsi-rebound') {
+        const period = positive('rsiPeriod');
+        const entry = positive('entryThreshold');
+        const exit = positive('exitThreshold');
+        if (![period, entry, exit].every(Number.isInteger) || entry >= exit || exit > 100) throw contractError('RSI parameter settings are invalid');
+      } else if (strategyFamily === 'volume-breakout') {
+        const window = positive('breakoutWindow');
+        const multiplier = positive('volumeMultiplier');
+        const margin = settings.breakoutMargin == null ? 0.005 : positive('breakoutMargin');
+        const minClose = settings.minCloseLocation == null ? 0.7 : positive('minCloseLocation');
+        if (!Number.isInteger(window) || multiplier < 1 || margin > 1 || minClose > 1) {
+          throw contractError('volume-breakout parameter settings are invalid');
+        }
+      } else {
+        const lookback = positive('positionLookbackWindow');
+        const maxPosition = positive('maxRangePosition');
+        const volumeWindow = positive('volumeWindow');
+        const multiplier = positive('volumeMultiplier');
+        const maxReturn = positive('maxAbsReturn');
+        const maxRange = positive('maxIntradayRange');
+        const minClose = positive('minCloseLocation');
+        if (!Number.isInteger(lookback) || !Number.isInteger(volumeWindow)
+            || multiplier < 1 || maxPosition > 1 || maxReturn > 1
+            || maxRange > 1 || minClose > 1) {
+          throw contractError('low-position-volume-stagnation parameter settings are invalid');
+        }
+      }
+    }
+    if (!['stable', 'watch', 'rejected'].includes(value.admission)) {
+      throw contractError('strategy admission must be stable, watch or rejected');
+    }
+    stringArray(value.reasons, 'parameters[' + index + '].reasons', true);
+    validateStrategyMetrics(value.metrics, 'parameters[' + index + '].metrics', true);
+    if (!Array.isArray(value.folds) || value.folds.length !== result.folds.length) {
+      throw contractError('strategy parameter fold evidence must match result folds');
+    }
+    value.folds.forEach((evidence, foldIndex) => {
+      const item = object(evidence, 'parameters[' + index + '].folds[' + foldIndex + ']');
+      validateExecutionMetrics(item.validation, 'parameter validation metrics');
+      validateExecutionMetrics(item.test, 'parameter test metrics');
+    });
+  });
+  if (ruleCard.parameterCount != null && nonNegativeInteger(ruleCard.parameterCount, 'ruleCard.parameterCount') !== result.parameters.length) {
+    throw contractError('rule card parameter count does not match result parameters');
+  }
+
+  stringArray(result.stableParameterIds, 'stableParameterIds', true).forEach(id => {
+    if (!parameterIds.has(id)) throw contractError('stable parameter ID is not present in parameters');
+  });
+  const bestId = nonEmptyString(object(result.bestParameter, 'bestParameter').parameterId, 'bestParameter.parameterId');
+  const worstId = nonEmptyString(object(result.worstParameter, 'worstParameter').parameterId, 'worstParameter.parameterId');
+  if (!parameterIds.has(bestId) || !parameterIds.has(worstId)) throw contractError('best or worst strategy parameter is not traceable');
+  validateStrategyMetrics(result.selectedWalkForward, 'selectedWalkForward');
+
+  if (result.currentSignals != null) {
+    const current = object(result.currentSignals, 'currentSignals');
+    if (dateString(current.asOf, 'currentSignals.asOf') !== asOf) throw contractError('current signal cutoff must match strategy asOf');
+    if (current.earliestObservation !== 'next-executable-open') throw contractError('current signals must remain next-open observations');
+    if (current.admissionPolicy !== 'stable-or-watch-only') throw contractError('current signal admission policy is invalid');
+    const scannedUniverse = nonNegativeInteger(current.universeScanned, 'currentSignals.universeScanned');
+    if (scannedUniverse < included || scannedUniverse > requested) throw contractError('current signal universe coverage is invalid');
+    const eligibleParameters = nonNegativeInteger(current.eligibleParameterCount, 'currentSignals.eligibleParameterCount');
+    const scannedParameters = nonNegativeInteger(current.scannedParameterCount, 'currentSignals.scannedParameterCount');
+    if (eligibleParameters > result.parameters.length || scannedParameters > eligibleParameters || scannedParameters > 12) {
+      throw contractError('current signal parameter coverage is invalid');
+    }
+    if (current.parameterScanTruncated !== (eligibleParameters > scannedParameters)) {
+      throw contractError('current signal parameter truncation is inconsistent');
+    }
+    const candidateCount = nonNegativeInteger(current.candidateCount, 'currentSignals.candidateCount');
+    const storedCount = nonNegativeInteger(current.storedCount, 'currentSignals.storedCount');
+    if (!Array.isArray(current.candidates) || current.candidates.length !== storedCount || storedCount > candidateCount || storedCount > 200) {
+      throw contractError('current signal candidate coverage is invalid');
+    }
+    if (current.truncated !== (candidateCount > storedCount)) throw contractError('current signal candidate truncation is inconsistent');
+    const parametersById = new Map(result.parameters.map(parameter => [parameter.parameterId, parameter]));
+    current.candidates.forEach((candidate, candidateIndex) => {
+      const item = object(candidate, 'currentSignals.candidates[' + candidateIndex + ']');
+      const code = nonEmptyString(item.code, 'currentSignals.candidates[' + candidateIndex + '].code');
+      if (!/^\d{6}$/.test(code)) throw contractError('current signal candidate code is invalid');
+      nonEmptyString(item.name, 'currentSignals.candidates[' + candidateIndex + '].name');
+      if (dateString(item.signalDate, 'current signal date') !== asOf) throw contractError('current signal candidate date must match strategy asOf');
+      if (item.strategyFamily !== strategyFamily) throw contractError('current signal candidate strategy family is inconsistent');
+      const ids = stringArray(item.parameterIds, 'current signal parameter IDs');
+      const admissions = stringArray(item.admissions, 'current signal admissions');
+      if (!ids.length || !admissions.length || admissions.some(admission => !['stable', 'watch'].includes(admission))) {
+        throw contractError('current signal candidate admission is invalid');
+      }
+      ids.forEach(id => {
+        const parameter = parametersById.get(id);
+        if (!parameter || !['stable', 'watch'].includes(parameter.admission) || !admissions.includes(parameter.admission)) {
+          throw contractError('current signal candidate references an eliminated or missing parameter');
+        }
+      });
+      const expectedStatus = admissions.includes('stable') ? 'stable' : 'watch';
+      if (item.candidateStatus !== expectedStatus) throw contractError('current signal candidate status is inconsistent');
+      if (!Array.isArray(item.evidence) || item.evidence.length < 1) throw contractError('current signal candidate evidence is missing');
+      item.evidence.forEach((evidence, evidenceIndex) => {
+        const value = object(evidence, 'current signal evidence[' + evidenceIndex + ']');
+        const parameterId = nonEmptyString(value.parameterId, 'current signal evidence parameterId');
+        const parameter = parametersById.get(parameterId);
+        if (!parameter || value.admission !== parameter.admission || !ids.includes(parameterId)) {
+          throw contractError('current signal evidence is not traceable to an admitted parameter');
+        }
+        nonEmptyString(value.label, 'current signal evidence label');
+        finiteNumber(value.positiveFoldRate, 'current signal evidence positiveFoldRate');
+        finiteNumber(value.meanOosReturn, 'current signal evidence meanOosReturn');
+        finiteNumber(value.medianOosReturn, 'current signal evidence medianOosReturn');
+        if (value.signalEvidence != null) {
+          const signal = object(value.signalEvidence, 'current signal raw evidence');
+          if (dateString(signal.signalDate, 'current signal raw evidence date') !== asOf) {
+            throw contractError('current signal raw evidence date must match strategy asOf');
+          }
+          Object.keys(signal).filter(name => name !== 'signalDate').forEach(name => {
+            finiteNumber(signal[name], 'current signal raw evidence.' + name);
+          });
+        }
+      });
+    });
+  }
+
+  if (!Array.isArray(result.artifacts) || !result.artifacts.length) throw contractError('strategy artifacts must not be empty');
+  result.artifacts.forEach((artifact, index) => {
+    object(artifact, 'artifacts[' + index + ']');
+    nonEmptyString(artifact.path, 'artifacts[' + index + '].path');
+    sha256(artifact.sha256, 'artifacts[' + index + '].sha256');
+    nonNegativeInteger(artifact.rows, 'artifacts[' + index + '].rows');
+  });
+  stringArray(result.warnings, 'warnings', true);
+  return result;
+}
+
+function validateSignalScanResult(input, datasetInput) {
+  const result = object(input, 'signal scan result');
+  const manifest = validateDatasetManifest(datasetInput);
+  if (result.schema !== SIGNAL_SCAN_SCHEMA) throw contractError('unsupported signal scan schema');
+  nonEmptyString(result.runId, 'runId');
+  timestampString(result.createdAt, 'createdAt');
+  if (result.status !== 'completed') throw contractError('only completed signal scans can be validated');
+  if (!['exploratory', 'formal'].includes(result.validationMode)) {
+    throw contractError('signal scan validationMode must be exploratory or formal');
+  }
+  if (result.automaticTrading !== false) throw contractError('signal scan must keep automatic trading disabled');
+  const asOf = dateString(result.asOf, 'asOf');
+  if (asOf > manifest.asOf) throw contractError('signal scan asOf exceeds dataset asOf');
+
+  const dataManifest = object(result.dataManifest, 'dataManifest');
+  if (dataManifest.datasetId !== manifest.datasetId) throw contractError('signal scan datasetId does not match manifest');
+  if (sha256(dataManifest.sha256, 'dataManifest.sha256') !== manifest.manifestSha256.toLowerCase()) {
+    throw contractError('signal scan manifest SHA256 does not match the dataset manifest hash');
+  }
+  nonEmptyString(object(result.runtime, 'runtime').python, 'runtime.python');
+
+  const gate = object(result.dataGate, 'dataGate');
+  if (gate.datasetEligibility !== manifest.eligibility) throw contractError('signal scan data eligibility is inconsistent');
+  const expectedFormalAllowed = manifest.eligibility === 'validation_eligible';
+  if (gate.formalAllowed !== expectedFormalAllowed) throw contractError('signal scan formal eligibility is inconsistent');
+  if (result.validationMode === 'formal' && !expectedFormalAllowed) {
+    throw contractError('formal signal scan requires validation-eligible data');
+  }
+  if (gate.researchUseOnly !== (!expectedFormalAllowed || result.validationMode === 'exploratory')) {
+    throw contractError('signal scan research-use label is inconsistent');
+  }
+  if (gate.adjustmentMode !== manifest.adjustmentMode || gate.membershipMode !== manifest.universe.membershipMode) {
+    throw contractError('signal scan data gate provenance is inconsistent');
+  }
+
+  const ruleCard = object(result.ruleCard, 'ruleCard');
+  const strategyFamily = nonEmptyString(ruleCard.strategyFamily, 'ruleCard.strategyFamily');
+  if (![
+    'moving-average-crossover', 'macd-crossover', 'rsi-rebound', 'volume-breakout',
+    'low-position-volume-stagnation'
+  ].includes(strategyFamily)) throw contractError('unsupported signal scan strategy family');
+  nonEmptyString(ruleCard.label, 'ruleCard.label');
+  nonEmptyString(ruleCard.entryRule, 'ruleCard.entryRule');
+  nonEmptyString(ruleCard.exitRule, 'ruleCard.exitRule');
+  const parameterId = nonEmptyString(ruleCard.parameterId, 'ruleCard.parameterId');
+  const settings = object(ruleCard.settings, 'ruleCard.settings');
+  Object.keys(settings).forEach(name => finiteNumber(settings[name], 'ruleCard.settings.' + name));
+
+  const universe = object(result.universe, 'universe');
+  if (universe.policy !== 'main-board-a-share-ex-st') throw contractError('signal scan universe must be main-board A-share ex-ST');
+  const requested = nonNegativeInteger(universe.requested, 'universe.requested');
+  const included = nonNegativeInteger(universe.included, 'universe.included');
+  const excludedBoard = nonNegativeInteger(universe.excludedByBoard, 'universe.excludedByBoard');
+  const excludedSt = nonNegativeInteger(universe.excludedSt, 'universe.excludedSt');
+  const excludedHistory = nonNegativeInteger(universe.excludedInsufficientHistory, 'universe.excludedInsufficientHistory');
+  if (included + excludedBoard + excludedSt + excludedHistory !== requested) {
+    throw contractError('signal scan universe coverage counts are inconsistent');
+  }
+  nonNegativeInteger(universe.minimumHistoryDays, 'universe.minimumHistoryDays');
+
+  const candidateCount = nonNegativeInteger(result.candidateCount, 'candidateCount');
+  const storedCount = nonNegativeInteger(result.storedCount, 'storedCount');
+  if (!Array.isArray(result.candidates) || result.candidates.length !== storedCount
+      || storedCount > candidateCount || storedCount > 2000) {
+    throw contractError('signal scan candidate coverage is invalid');
+  }
+  if (result.truncated !== (candidateCount > storedCount)) throw contractError('signal scan truncation is inconsistent');
+  result.candidates.forEach((candidate, index) => {
+    const item = object(candidate, 'candidates[' + index + ']');
+    const code = nonEmptyString(item.code, 'candidate.code');
+    if (!/^\d{6}$/.test(code)) throw contractError('signal scan candidate code is invalid');
+    nonEmptyString(item.name, 'candidate.name');
+    if (dateString(item.signalDate, 'candidate.signalDate') !== asOf) throw contractError('signal date must match scan asOf');
+    if (item.strategyFamily !== strategyFamily || item.parameterId !== parameterId) {
+      throw contractError('signal candidate rule identity is inconsistent');
+    }
+    const strength = finiteNumber(item.matchStrength, 'candidate.matchStrength');
+    if (strength < 0 || strength > 100) throw contractError('signal match strength must be between 0 and 100');
+    if (item.candidateStatus !== 'rule-match-unconfirmed') throw contractError('signal candidate must remain unconfirmed');
+    const raw = object(item.rawEvidence, 'candidate.rawEvidence');
+    if (dateString(raw.signalDate, 'candidate.rawEvidence.signalDate') !== asOf) {
+      throw contractError('raw signal evidence date must match scan asOf');
+    }
+    Object.keys(raw).filter(name => name !== 'signalDate').forEach(name => {
+      finiteNumber(raw[name], 'candidate.rawEvidence.' + name);
+    });
+    const thresholds = object(item.thresholds, 'candidate.thresholds');
+    Object.keys(thresholds).forEach(name => finiteNumber(thresholds[name], 'candidate.thresholds.' + name));
+    stringArray(item.whyMatched, 'candidate.whyMatched');
+    nonEmptyString(item.confirmationRule, 'candidate.confirmationRule');
+    nonEmptyString(item.invalidationRule, 'candidate.invalidationRule');
+    nonEmptyString(item.earliestActionTiming, 'candidate.earliestActionTiming');
+  });
+
+  if (!Array.isArray(result.artifacts) || !result.artifacts.length) throw contractError('signal scan artifacts must not be empty');
+  result.artifacts.forEach((artifact, index) => {
+    object(artifact, 'artifacts[' + index + ']');
+    nonEmptyString(artifact.path, 'artifacts[' + index + '].path');
+    sha256(artifact.sha256, 'artifacts[' + index + '].sha256');
+    nonNegativeInteger(artifact.rows, 'artifacts[' + index + '].rows');
+  });
+  stringArray(result.warnings, 'warnings', true);
+  return result;
+}
+
 function sha256File(filePath) {
   const hash = crypto.createHash('sha256');
   hash.update(fs.readFileSync(filePath));
@@ -327,9 +716,12 @@ module.exports = {
   DATASET_SCHEMA,
   RESULT_SCHEMA,
   FACTOR_LAB_SCHEMA,
+  STRATEGY_LAB_SCHEMA,
   validateDatasetManifest,
   validateQuantResult,
   validateFactorLabResult,
+  validateStrategyLabResult,
+  validateSignalScanResult,
   sha256File,
   manifestSha256
 };

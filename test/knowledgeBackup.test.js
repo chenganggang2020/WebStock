@@ -12,6 +12,7 @@ process.env.WEBSTOCK_DB_PATH = testDbPath;
 
 const knowledge = require('../services/knowledgeService');
 const paperPortfolios = require('../services/paperPortfolioService');
+const paperTrading = require('../services/paperTradingService');
 const researchRuns = require('../services/researchRunService');
 const expertChannels = require('../services/expertChannelService');
 const backupService = require('../services/backupService');
@@ -59,8 +60,25 @@ test('backup roundtrip restores knowledge, research runs and paper portfolios', 
   });
   paperPortfolios.updateStatus(paperPortfolio.id, 'active');
   paperPortfolios.refreshPortfolio(paperPortfolio.id, {
-    '600879': { price: 12.5, tradeDate: '2026-08-08', tradeTime: '15:00:00' }
-  }, { source: 'test-quotes', capturedAt: '2026-08-08T07:00:00.000Z' });
+    '600879': { price: 12.5, tradeDate: '2026-08-07', tradeTime: '15:00:00' }
+  }, { source: 'test-quotes', capturedAt: '2026-08-07T07:00:00.000Z' });
+  paperTrading.ensureMonitorSettings(paperPortfolio.id, { now: '2026-08-10T01:30:00.000Z' });
+  paperTrading.recordModelDecision(paperPortfolio.id, {
+    advisedAt: '2026-08-10T01:30:00.000Z', marketAsOf: '2026-08-10T01:30:00.000Z',
+    modelId: 'backup-model', mode: 'manual', prompt: 'backup prompt', promptHash: 'c'.repeat(64),
+    inputContext: { source: 'backup-test' }, allowedUniverse: [{ code: '600879', name: '航天电子' }],
+    rawResponse: JSON.stringify({
+      asOf: '2026-08-10T01:30:00.000Z', marketView: 'neutral', cashTargetPercent: 95,
+      orders: [{ code: '600879', action: 'sell', targetPositionPercent: 5, confidence: 60, reason: '测试', invalidation: '测试失效' }],
+      portfolioRisk: ['测试风险'], nextReviewAt: '2026-08-10T06:50:00.000Z'
+    })
+  });
+  paperTrading.executePendingOrders(paperPortfolio.id, {
+    '600879': {
+      rows: [{ time: '2026-08-10 09:31:00', price: 12.6, volume: 10000 }],
+      meta: { dataSource: 'backup-minute', previousClose: 12.5, stale: false }
+    }
+  }, { now: '2026-08-10T01:31:10.000Z' });
   const expertChannel = expertChannels.createChannel({
     channelKey: 'backup-model-mr', displayName: '模型先生', subjectType: 'creator', platform: 'douyin',
     profileUrl: 'https://www.douyin.com/user/backup-model-mr',
@@ -98,8 +116,9 @@ test('backup roundtrip restores knowledge, research runs and paper portfolios', 
     holdings: [{ code: '600879', name: '航天电子', quantity: 100, costValue: 1000, currentPrice: 12.5, pnl: 250 }]
   });
 
+  paperTrading.saveMonitorRun(paperPortfolio.id, '2026-08-07@09:35', { status: 'missed', attempts: 2, error: '测试漏跑' });
   const backup = backupService.exportUserData();
-  assert.equal(backup.version, 6);
+  assert.equal(backup.version, 8);
   assert.equal(backup.tables.portfolioAccounts.length, 2);
   assert.equal(backup.tables.portfolioSnapshots.length, 1);
   assert.equal(backup.tables.trades[0].accountKey, 'backup-broker-account');
@@ -108,7 +127,11 @@ test('backup roundtrip restores knowledge, research runs and paper portfolios', 
   assert.equal(backup.tables.paperPortfolios.length, 1);
   assert.equal(backup.tables.paperPortfolios[0].items[0].code, '600879');
   assert.equal(backup.tables.paperPortfolios[0].positions.length, 1);
-  assert.equal(backup.tables.paperPortfolios[0].snapshots.length, 1);
+  assert.equal(backup.tables.paperPortfolios[0].snapshots.length, 2);
+  assert.equal(backup.tables.paperPortfolios[0].monitor.settings.enabled, true);
+  assert.equal(backup.tables.paperPortfolios[0].monitor.decisions.length, 1);
+  assert.equal(backup.tables.paperPortfolios[0].monitor.fills.length, 1);
+  assert.equal(backup.tables.paperPortfolios[0].monitor.runs[0].status, 'missed');
   assert.equal(backup.tables.knowledgeSources[0].sourceKey, source.sourceKey);
   assert.equal(backup.tables.expertChannels.length, 1);
   assert.equal(backup.tables.expertChannels[0].description, '公开创作者资料备份测试。');
@@ -147,6 +170,11 @@ test('backup roundtrip restores knowledge, research runs and paper portfolios', 
   assert.equal(restoredPaper.positions[0].code, '600879');
   assert.equal(restoredPaper.snapshots.length, 1);
   assert.equal(restoredPaper.sourceRunId, null);
+  const restoredMonitor = paperTrading.getMonitorState(restoredPaper.id);
+  assert.equal(restoredMonitor.settings.enabled, true);
+  assert.equal(restoredMonitor.decisions.length, 1);
+  assert.equal(restoredMonitor.fills.length, 1);
+  assert.equal(restoredMonitor.runs[0].error, '测试漏跑');
   const restoredExpert = expertChannels.listChannels({ query: '模型先生' })[0];
   assert.equal(restoredExpert.description, '公开创作者资料备份测试。');
   const restoredObservation = expertChannels.listObservations(restoredExpert.id)[0];

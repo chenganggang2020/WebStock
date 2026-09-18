@@ -40,6 +40,19 @@ function runnableExecutables(outputDir) {
     .filter(entry => entry.isFile() && /\.exe$/i.test(entry.name) && !/\.__uninstaller\.exe$/i.test(entry.name));
 }
 
+function removeReleasedBuildEntry(fullPath, retained) {
+  try {
+    fs.rmSync(fullPath, { recursive: true, force: true });
+    return true;
+  } catch (error) {
+    if (error && ['EBUSY', 'EACCES', 'EPERM'].includes(error.code)) {
+      retained.push(fullPath);
+      return false;
+    }
+    throw error;
+  }
+}
+
 function promoteRunnableExe(root, stagingDir, outputDir) {
   assertInsideRoot(root, stagingDir);
   assertInsideRoot(root, outputDir);
@@ -70,17 +83,22 @@ function promoteRunnableExe(root, stagingDir, outputDir) {
       backedUp = true;
     }
     fs.renameSync(ready, target);
-    for (const oldEntry of fs.readdirSync(outputDir, { withFileTypes: true })) {
-      if (isPortableData(oldEntry) || oldEntry.name === entry.name || oldEntry.name === path.basename(backup)) continue;
-      fs.rmSync(path.join(outputDir, oldEntry.name), { recursive: true, force: true });
-    }
-    if (backedUp) fs.rmSync(backup, { force: true });
-    return target;
   } catch (error) {
     fs.rmSync(ready, { force: true });
     if (!fs.existsSync(target) && backedUp && fs.existsSync(backup)) fs.renameSync(backup, target);
     throw error;
   }
+
+  const retained = [];
+  for (const oldEntry of fs.readdirSync(outputDir, { withFileTypes: true })) {
+    if (isPortableData(oldEntry) || oldEntry.name === entry.name || oldEntry.name === path.basename(backup)) continue;
+    removeReleasedBuildEntry(path.join(outputDir, oldEntry.name), retained);
+  }
+  if (backedUp) removeReleasedBuildEntry(backup, retained);
+  if (retained.length) {
+    console.warn('Completed package was promoted; retained locked previous artifacts: ' + retained.join(', '));
+  }
+  return target;
 }
 
 module.exports = {

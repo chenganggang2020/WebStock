@@ -51,6 +51,8 @@ function todayReferencePnlValue(pos) {
   return pos && pos.todayReferencePnl !== undefined && pos.todayReferencePnl !== null ? pos.todayReferencePnl : pos.todayPnl;
 }
 
+let editingPortfolioAccountId = null;
+
 let positionMiniChartGeneration = 0;
 const positionMiniChartRequests = new Map();
 
@@ -136,6 +138,31 @@ function portfolioFileDate() {
     : new Date().toISOString().slice(0, 10);
 }
 
+function renderPortfolioValuationStatus() {
+  const meta = document.getElementById('portfolioAccountMeta');
+  if (!meta) return;
+  const account = (window.State.portfolioAccounts || []).find(item => Number(item.id) === activeAccountId());
+  const snapshot = account && account.latestSnapshot;
+  const summary = window.State.portfolioSummary || {};
+  const coverage = summary.quoteCoverage || {};
+  const quoteCount = '报价覆盖 ' + Number(coverage.priced || 0) + '/' + Number(coverage.total || 0);
+  let quality = '';
+  if (summary.valuationStatus === 'unavailable') quality = '行情不可用 · ' + quoteCount + '，整仓估值暂缺';
+  else if (summary.valuationStatus === 'partial') quality = '行情不完整 · ' + quoteCount + '，整仓估值暂缺';
+  else if (summary.valuationStatus === 'stale') quality = '非实时估值 · 最早报价 ' + [summary.quoteDate, summary.quoteTime].filter(Boolean).join(' ') + ' · ' + quoteCount;
+  else if (summary.valuationStatus === 'live') quality = quoteCount + ' · ' + [summary.quoteDate, summary.quoteTime].filter(Boolean).join(' ');
+  else if (summary.valuationStatus === 'empty') quality = '当前空仓 · 无需持仓行情';
+  meta.textContent = [account && account.broker, account && account.maskedNumber,
+    account && '可用资金 ' + fmt(account.cashBalance),
+    snapshot && snapshot.sourceLabel + ' · ' + snapshot.snapshotDate, quality].filter(Boolean).join(' · ');
+}
+
+function renderValuationCharts() {
+  if (!window.PortfolioCharts) return;
+  window.PortfolioCharts.renderAllocationChart(window.State.portfolioAllocation || []);
+  window.PortfolioCharts.renderPnlRankChart(window.State.positions || []);
+}
+
 function renderAccountControls() {
   const accounts = window.State.portfolioAccounts || [];
   const activeId = activeAccountId();
@@ -150,15 +177,7 @@ function renderAccountControls() {
     select.innerHTML = options;
     select.value = String(activeId);
   });
-  const account = accounts.find(item => Number(item.id) === activeId);
-  const meta = document.getElementById('portfolioAccountMeta');
-  if (meta) {
-    const snapshot = account && account.latestSnapshot;
-    meta.textContent = account
-      ? [account.broker, account.maskedNumber, '可用资金 ' + fmt(account.cashBalance), snapshot ? snapshot.sourceLabel + ' · ' + snapshot.snapshotDate : '']
-        .filter(Boolean).join(' · ')
-      : '';
-  }
+  renderPortfolioValuationStatus();
   const compare = document.getElementById('portfolioAccountCompare');
   if (compare) {
     compare.innerHTML = accounts.map(function(item) {
@@ -202,12 +221,21 @@ async function switchAccount(id) {
   if (window.Trades) await window.Trades.loadTrades();
 }
 
-function openAccountModal() {
-  document.getElementById('portfolioAccountNameInput').value = '';
-  document.getElementById('portfolioAccountBrokerInput').value = '';
-  document.getElementById('portfolioAccountMaskedInput').value = '';
-  document.getElementById('portfolioAccountCashInput').value = '0';
-  document.getElementById('portfolioAccountNoteInput').value = '';
+function openAccountModal(accountId) {
+  const account = (window.State.portfolioAccounts || []).find(item => Number(item.id) === Number(accountId));
+  editingPortfolioAccountId = account ? Number(account.id) : null;
+  document.getElementById('portfolioAccountModalTitle').textContent = account ? '编辑持仓账户' : '新增持仓账户';
+  document.getElementById('portfolioAccountNameInput').value = account ? account.name || '' : '';
+  document.getElementById('portfolioAccountBrokerInput').value = account ? account.broker || '' : '';
+  document.getElementById('portfolioAccountMaskedInput').value = account ? account.maskedNumber || '' : '';
+  document.getElementById('portfolioAccountCashInput').value = account ? String(account.cashBalance || 0) : '0';
+  document.getElementById('portfolioAccountNoteInput').value = account ? account.note || '' : '';
+  document.getElementById('portfolioAccountModalOk').textContent = account ? '保存修改' : '创建账户';
+  const deleteButton = document.getElementById('portfolioAccountDelete');
+  if (deleteButton) {
+    deleteButton.hidden = !account || (window.State.portfolioAccounts || []).length <= 1;
+    deleteButton.disabled = false;
+  }
   document.getElementById('portfolioAccountModalOverlay').style.display = 'flex';
   setTimeout(function() { document.getElementById('portfolioAccountNameInput').focus(); }, 0);
 }
@@ -228,14 +256,38 @@ async function createAccountFromModal() {
   if (!payload.name) return alert('账户名称不能为空');
   try {
     button.disabled = true;
-    const account = await portfolioApi('/accounts', {
-      method: 'POST',
+    const account = await portfolioApi(editingPortfolioAccountId ? '/accounts/' + editingPortfolioAccountId : '/accounts', {
+      method: editingPortfolioAccountId ? 'PUT' : 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     });
     window.State.portfolioAccounts = [];
     rememberActiveAccount(account.id);
     closeAccountModal();
+    await loadPortfolio();
+    if (window.Trades) await window.Trades.loadTrades();
+  } catch (error) {
+    alert(error.message);
+  } finally {
+    button.disabled = false;
+  }
+}
+
+function editActiveAccount() {
+  openAccountModal(activeAccountId());
+}
+
+async function deleteAccountFromModal() {
+  const account = (window.State.portfolioAccounts || []).find(item => Number(item.id) === Number(editingPortfolioAccountId));
+  if (!account) return;
+  if (!confirm('删除“' + account.name + '”及其持仓、交易和快照记录？此操作无法撤销。')) return;
+  const button = document.getElementById('portfolioAccountDelete');
+  try {
+    button.disabled = true;
+    await portfolioApi('/accounts/' + account.id, { method: 'DELETE' });
+    closeAccountModal();
+    window.State.portfolioAccounts = [];
+    rememberActiveAccount(1);
     await loadPortfolio();
     if (window.Trades) await window.Trades.loadTrades();
   } catch (error) {
@@ -312,6 +364,13 @@ function renderSummary() {
     todayReference.title = '当日盈亏：日末市值 + 当天卖出/分红收入 - 当天买入/费用支出 - 日初市值。每条交易记录的手续费和印花税只扣一次。';
     todayReference.className = 'summary-value ' + pnlClass(todayPnl);
   }
+  const pnlDate = summary.todayPnlDate || summary.quoteDate || '';
+  const datedClose = summary.todayPnlStatus === 'latest-close';
+  const pnlLabel = document.getElementById('summaryTodayPnlLabel');
+  const pnlHeader = document.getElementById('positionTodayPnlHeader');
+  const labelText = datedClose ? '最近交易日盈亏' + (pnlDate ? '（' + pnlDate + '）' : '') : '当日盈亏';
+  if (pnlLabel) pnlLabel.textContent = labelText;
+  if (pnlHeader) pnlHeader.textContent = labelText;
   const realized = document.getElementById('summaryRealizedPnl');
   realized.textContent = fmt(summary.realizedPnl);
   realized.title = '已实现盈亏：历史卖出、分红和独立费用记录产生的已结算盈亏。';
@@ -323,9 +382,10 @@ function renderSummary() {
     total.className = 'summary-value ' + pnlClass(summary.totalPnl);
   }
   const rate = document.getElementById('summaryPnlRate');
-  rate.textContent = fmt(summary.totalPnlRate) + '%';
+  rate.textContent = fmt(summary.totalPnlRate) + (summary.totalPnlRate == null ? '' : '%');
   rate.title = '累计收益率：累计盈亏 ÷ 历史买入总投入。';
   rate.className = 'summary-value ' + pnlClass(summary.totalPnlRate);
+  renderPortfolioValuationStatus();
 }
 
 function visiblePositions() {
@@ -341,8 +401,8 @@ function visiblePositions() {
     if (sort === 'pnl') return (Number(finalPnlValue(b)) || -999999999) - (Number(finalPnlValue(a)) || -999999999);
     if (sort === 'return') return (Number(finalPnlRateValue(b)) || -999999999) - (Number(finalPnlRateValue(a)) || -999999999);
     if (sort === 'code') return String(a.code || '').localeCompare(String(b.code || ''));
-    const bValue = Number(b.marketValue === null ? b.costValue : b.marketValue) || 0;
-    const aValue = Number(a.marketValue === null ? a.costValue : a.marketValue) || 0;
+    const bValue = Number(b.marketValue) || 0;
+    const aValue = Number(a.marketValue) || 0;
     return bValue - aValue;
   });
   return positions;
@@ -381,7 +441,8 @@ function renderPositions() {
       '<td>' + pos.quantity + '</td>' +
       '<td>' + fmt(pos.avgCost, 3) + '</td>' +
       '<td>' + fmt(pos.currentPrice, 3) + '</td>' +
-      '<td>' + fmt(pos.marketValue === null ? pos.costValue : pos.marketValue) + '</td>' +
+      '<td>' + (window.EastmoneyDarkStocks ? window.EastmoneyDarkStocks.cell(pos) : '--') + '</td>' +
+      '<td>' + fmt(pos.marketValue) + '</td>' +
       '<td class="' + pnlClass(floatingPnl) + '" title="浮动盈亏：当前市值 - 剩余持仓成本；买入手续费已计入剩余成本">' + fmt(floatingPnl) + '</td>' +
       '<td class="' + pnlClass(realizedPnl) + '" title="该股票历史卖出、分红和费用形成的已实现盈亏">' + fmt(realizedPnl) + '</td>' +
       '<td class="' + pnlClass(finalPnl) + '" title="累计盈亏：浮动盈亏 + 已实现盈亏">' + fmt(finalPnl) + '</td>' +
@@ -394,6 +455,7 @@ function renderPositions() {
   tbody.ondblclick = handlePositionDoubleClick;
   tbody.oncontextmenu = handlePositionContextMenu;
   tbody.onkeydown = handlePositionKeydown;
+  if (window.EastmoneyDarkStocks) window.EastmoneyDarkStocks.sync();
   loadPositionMiniCharts(positions).catch(function(error) { console.warn(error.message || error); });
 }
 
@@ -454,14 +516,13 @@ function exportPositionsCsv() {
     'total_fee',
     'today_pnl'
   ]].concat(rows.map(function(pos) {
-    const marketValue = pos.marketValue === null ? pos.costValue : pos.marketValue;
     return [
       pos.code,
       pos.name,
       pos.quantity,
       fmt(pos.avgCost, 3),
       fmt(pos.currentPrice, 3),
-      fmt(marketValue),
+      fmt(pos.marketValue),
       fmt(pos.costValue),
       fmt(pos.unrealizedPnl),
       fmt(pos.realizedPnl),
@@ -533,12 +594,11 @@ function renderStatsOverview() {
     return;
   }
   const sorted = positions.slice().sort(function(a, b) {
-    return (Number(b.marketValue === null ? b.costValue : b.marketValue) || 0) -
-      (Number(a.marketValue === null ? a.costValue : a.marketValue) || 0);
+    return (Number(b.marketValue) || 0) - (Number(a.marketValue) || 0);
   }).slice(0, 8);
   table.innerHTML = '<h3>Top exposures</h3><table class="mini-table"><thead><tr><th>Code</th><th>Name</th><th>Value</th><th>P/L</th><th>Return</th></tr></thead><tbody>' +
     sorted.map(function(pos) {
-      const value = pos.marketValue === null ? pos.costValue : pos.marketValue;
+      const value = pos.marketValue;
       return '<tr><td>' + pos.code + '</td><td>' + pos.name + '</td><td>' + fmt(value) + '</td><td class="' + pnlClass(finalPnlValue(pos)) + '">' + fmt(finalPnlValue(pos)) + '</td><td class="' + pnlClass(finalPnlRateValue(pos)) + '">' + fmt(finalPnlRateValue(pos)) + '%</td></tr>';
     }).join('') +
     '</tbody></table>';
@@ -677,8 +737,136 @@ async function refreshPortfolio() {
   await loadPortfolio();
 }
 
+async function readTonghuashunHoldingClipboard() {
+  const message = '请先在同花顺电脑版持仓表中全选并复制。点击“确定”后，WebStock 只读取这一次剪贴板文本，不读取账号、密码，也不执行交易。';
+  if (!confirm(message)) return '';
+  if (navigator.clipboard && navigator.clipboard.readText) {
+    try {
+      const text = await navigator.clipboard.readText();
+      if (text && text.trim()) return text;
+    } catch (error) {
+      console.warn('读取同花顺持仓剪贴板失败:', error.message || error);
+    }
+  }
+  return prompt('无法自动读取剪贴板，请把同花顺持仓表粘贴到这里：') || '';
+}
+
+async function syncTonghuashunHoldings(options) {
+  options = options || {};
+  const button = document.getElementById('syncTonghuashunHoldingsBtn');
+  const priorLabel = button ? button.textContent : '';
+  if (button) {
+    button.disabled = true;
+    button.textContent = '正在检查持仓…';
+  }
+  try {
+    const status = await portfolioApi('/tonghuashun-holdings/status');
+    let preview;
+    let endpoint;
+    let text = '';
+    if (status.available) {
+      preview = await portfolioApi('/tonghuashun-holdings/preview-local');
+      endpoint = '/tonghuashun-holdings/sync-local';
+    } else {
+      if (options.localOnly) return null;
+      text = await readTonghuashunHoldingClipboard();
+      if (!text.trim()) return null;
+      preview = await portfolioApi('/tonghuashun-holdings/preview', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text })
+      });
+      endpoint = '/tonghuashun-holdings/sync-text';
+    }
+
+    const sample = (preview.holdings || []).slice(0, 5).map(function(item) {
+      return item.name + ' ' + item.quantity + '股';
+    }).join('、');
+    const targetAccount = (window.State.portfolioAccounts || []).find(function(account) {
+      return Number(account.id) === activeAccountId();
+    });
+    if (!options.automatic && !confirm(
+      '已识别 ' + preview.holdingCount + ' 只持仓：' + sample +
+      (preview.holdingCount > 5 ? ' 等' : '') +
+      '\n\n将用这份完整快照更新当前账户“' + (targetAccount && targetAccount.name || '当前账户') + '”，不会执行交易。是否继续？'
+    )) return null;
+
+    const body = options.automatic ? {} : { accountId: activeAccountId() };
+    if (text) body.text = text;
+    if (!options.automatic && (preview.cashBalance === null || preview.cashBalance === undefined)) {
+      const cash = prompt('请输入同花顺账户可用资金（可留空，沿用上次值）：', '');
+      if (cash !== null && cash.trim() !== '') {
+        const value = Number(cash.replace(/[,，]/g, ''));
+        if (!Number.isFinite(value) || value < 0) throw new Error('可用资金格式不正确');
+        body.cashBalance = value;
+      }
+    }
+    const result = await portfolioApi(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    if (!options.automatic) {
+      window.State.portfolioAccounts = [];
+      rememberActiveAccount(result.account.id);
+      await loadPortfolio();
+      alert('已更新“' + result.account.name + '”的 ' + result.importedCount + ' 只持仓。');
+    }
+    return result;
+  } finally {
+    if (button) {
+      button.disabled = false;
+      button.textContent = priorLabel || '更新当前账户持仓';
+    }
+  }
+}
+
+const holdingSnapshotChecks = new Map();
+const holdingSnapshotVersions = new Map();
+
+async function refreshHoldingSnapshot() {
+  const accountId = activeAccountId();
+  const now = Date.now();
+  if (now - (holdingSnapshotChecks.get(accountId) || 0) < 15000) return { ok: true, changed: false };
+  holdingSnapshotChecks.set(accountId, now);
+  try {
+    const result = await portfolioApi('/holding-snapshot?accountId=' + accountId);
+    if (accountId !== activeAccountId()) return { ok: true, changed: false };
+    if (holdingSnapshotVersions.get(accountId) === result.version) return { ok: true, changed: false };
+    holdingSnapshotVersions.set(accountId, result.version);
+    const valued = await portfolioApi('/recalculate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ accountId })
+    });
+    if (accountId !== activeAccountId()) return { ok: true, changed: false };
+    window.State.positions = valued.positions || [];
+    window.State.portfolioSummary = valued.summary || {};
+    window.State.portfolioAllocation = valued.allocation || [];
+    const accounts = window.State.portfolioAccounts || [];
+    const index = accounts.findIndex(account => Number(account.id) === accountId);
+    const account = Object.assign({}, valued.account || result.account, {
+      summary: valued.summary || {}, latestSnapshot: valued.latestSnapshot || result.latestSnapshot
+    });
+    if (index >= 0) accounts[index] = account;
+    else accounts.push(account);
+    window.State.portfolioAccounts = accounts;
+    renderSummary();
+    renderPositions();
+    renderAccountControls();
+    renderStatsOverview();
+    renderValuationCharts();
+    if (window.Dashboard) window.Dashboard.refreshCards();
+    return { ok: true, changed: true };
+  } catch (error) {
+    console.warn('持仓快照读取失败，保留已有持仓：', error.message || error);
+    return { ok: false, changed: false };
+  }
+}
+
 async function refreshLivePortfolio() {
   try {
+    const priorValuationStatus = (window.State.portfolioSummary || {}).valuationStatus;
     const result = await portfolioApi('/recalculate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -689,6 +877,8 @@ async function refreshLivePortfolio() {
     window.State.portfolioAllocation = result.allocation || [];
     renderSummary();
     renderPositions();
+    renderStatsOverview();
+    if (priorValuationStatus !== window.State.portfolioSummary.valuationStatus) renderValuationCharts();
     if (window.Dashboard) window.Dashboard.refreshCards();
     if (window.updateSidebarWorkspace) window.updateSidebarWorkspace();
     return {
@@ -706,6 +896,7 @@ function applyQuoteSnapshot(quotes, meta) {
   const State = window.State;
   const model = window.QuoteSnapshotClientModel;
   if (!model || !Array.isArray(State.positions)) return { ok: false, count: 0 };
+  const priorValuationStatus = (State.portfolioSummary || {}).valuationStatus;
   State.positions = model.applyPositionQuotes(State.positions, quotes);
   State.portfolioSummary = model.summarizePortfolio(State.portfolioSummary, State.positions);
   State.portfolioAllocation = model.allocation(State.positions);
@@ -720,10 +911,8 @@ function applyQuoteSnapshot(quotes, meta) {
   renderSummary();
   renderPositions();
   renderAccountControls();
-  if (window.PortfolioCharts) {
-    window.PortfolioCharts.renderAllocationChart(State.portfolioAllocation);
-    window.PortfolioCharts.renderPnlRankChart(State.positions);
-  }
+  renderStatsOverview();
+  if (priorValuationStatus !== State.portfolioSummary.valuationStatus) renderValuationCharts();
   if (window.Dashboard) window.Dashboard.refreshCards();
   if (window.updateSidebarWorkspace) window.updateSidebarWorkspace();
   return {
@@ -821,8 +1010,10 @@ window.Portfolio = {
   renderAccountControls,
   switchAccount,
   openAccountModal,
+  editActiveAccount,
   closeAccountModal,
   createAccountFromModal,
+  deleteAccountFromModal,
   loadPortfolio,
   loadSummary,
   loadPositions,
@@ -839,7 +1030,9 @@ window.Portfolio = {
   openBuyTradeByCode,
   openSellTradeByCode,
   refreshPortfolio,
+  syncTonghuashunHoldings,
   refreshLivePortfolio,
+  refreshHoldingSnapshot,
   applyQuoteSnapshot,
   selectPositionStock,
   viewTrades,

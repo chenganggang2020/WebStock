@@ -103,6 +103,7 @@ test('expert knowledge API supports source, search, handoff and saved research r
   assert.ok(models.json.data.some(item => item.id === 'knowledge-fts-v1' && item.status === 'available'));
   assert.ok(models.json.data.some(item => item.id === 'master' && item.status !== 'planned'));
   assert.ok(models.json.data.some(item => item.id === 'local-factor-lab-v1' && item.status !== 'planned'));
+  assert.ok(models.json.data.some(item => item.id === 'local-ma-strategy-lab-v1' && item.status !== 'planned'));
   assert.ok(models.json.data.some(item => item.id === 'evidence-orchestrator-v1' && item.status === 'available'));
 
   const screenerResult = await requestJson(server, {

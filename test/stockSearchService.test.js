@@ -27,4 +27,17 @@ test('stock search can seed and query the complete base stock catalog', () => {
   assert.equal(seeded, 3);
   assert.equal(count, 3);
   assert.ok(result.stocks.some(stock => stock.code === '688362'));
+
+  db.prepare(`
+    INSERT INTO stock_profiles (code, source, payload_json, fetched_at, updated_at)
+    VALUES (?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+  `).run('000001', 'profile-refresh-test', JSON.stringify({
+    code: '000001',
+    name: '平安银行',
+    mainBusinessItems: [{ name: '并发索引刷新证据', ratio: 12.3 }]
+  }));
+
+  const refreshed = stockSearch.search('并发索引刷新证据', { baseStocks, limit: 20 });
+  assert.equal(refreshed.stocks[0].code, '000001');
+  assert.equal(refreshed.stocks[0].mainBusinessItems[0].ratio, 12.3);
 });

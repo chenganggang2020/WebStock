@@ -8,6 +8,34 @@ const path = require('node:path');
 const level2 = require('../services/level2Service');
 const { aggregateAuthorizedTrades } = require('../services/capitalFlow');
 
+test('large-order totals stay unknown when a trade amount is missing', () => {
+  const missing = { price: 10, volume: null, amount: null, side: 'buy' };
+  for (const trades of [[missing], [{ amount: 1000, side: 'sell' }, missing]]) {
+    const stats = level2.calculateLargeOrderStats(trades);
+    assert.equal(stats.totalAmount, null);
+    assert.equal(stats.largeNetAmount, null);
+    assert.equal(stats.largeAmountRatio, null);
+    assert.equal(stats.missingAmountCount, 1);
+    assert.equal(stats.buyCount, 1);
+  }
+  const zero = level2.calculateLargeOrderStats([{ amount: 0, side: 'neutral' }]);
+  assert.equal(zero.totalAmount, 0);
+  assert.equal(zero.missingAmountCount, 0);
+});
+
+test('trade normalization cannot derive zero money from missing prices or blank fields', () => {
+  for (const item of [
+    { price: null, volume: 100, amount: null, side: 'buy' },
+    { price: 10, volume: null, amount: ' ', side: 'buy' },
+    { price: 10, volume: false, amount: true, side: 'buy' }
+  ]) {
+    const trades = level2.normalizeTrades([item], { config: { volumeUnit: 'share' } });
+    assert.equal(trades.length, 1);
+    assert.equal(trades[0].amount, null);
+    assert.equal(level2.calculateLargeOrderStats(trades).totalAmount, null);
+  }
+});
+
 function withEnv(values, fn) {
   const oldEnv = {};
   Object.keys(values).forEach(function (key) {
@@ -201,6 +229,41 @@ test('free Eastmoney money-flow rows normalize to simulated large-order fields',
   assert.equal(flow.superLargeNetAmount, 85580728);
   assert.equal(flow.largeNetAmount, -37048518);
   assert.equal(flow.simulatedLargeNetAmount, 48532210);
+  assert.equal(flow.status, 'available');
+  assert.deepEqual(flow.missingFields, []);
+});
+
+test('free-flow missing provider fields remain unknown instead of zero', () => {
+  for (const missing of [undefined, null, '', ' ', '-', false, true, [], {}]) {
+    const flow = level2.normalizeEastmoneyMoneyFlow({
+      f62: missing, f66: missing, f72: missing, f184: missing
+    });
+    for (const key of ['price', 'changePct', 'mainNetAmount', 'superLargeNetAmount',
+      'largeNetAmount', 'mediumNetAmount', 'smallNetAmount', 'mainNetRatio',
+      'superLargeNetRatio', 'largeNetRatio', 'mediumNetRatio', 'smallNetRatio', 'simulatedLargeNetAmount']) {
+      assert.equal(flow[key], null, key);
+    }
+    assert.equal(flow.status, 'unavailable');
+    assert.equal(flow.observedAt, null);
+    assert.match(flow.note, /不是.*暗盘/);
+  }
+});
+
+test('free-flow partial data preserves known values without filling missing bucket totals', () => {
+  const flow = level2.normalizeEastmoneyMoneyFlow({ f62: 0, f66: -50, f184: '0' });
+  assert.equal(flow.status, 'partial');
+  assert.equal(flow.mainNetAmount, 0);
+  assert.equal(flow.superLargeNetAmount, -50);
+  assert.equal(flow.mainNetRatio, 0);
+  assert.equal(flow.simulatedLargeNetAmount, null);
+  assert.equal(level2.normalizeEastmoneyMoneyFlow({ f66: 20, f72: -30 }).simulatedLargeNetAmount, -10);
+  const zero = level2.normalizeEastmoneyMoneyFlow({
+    f62: 0, f66: 0, f72: 0, f78: 0, f84: 0, f184: 0, f69: 0, f75: 0, f81: 0, f87: 0,
+    f2: 1.234
+  });
+  assert.equal(zero.status, 'available');
+  assert.equal(zero.simulatedLargeNetAmount, 0);
+  assert.equal(zero.price, 1.234);
 });
 
 test('manual retail Level-2 paste parses trades and calculates large-order stats', () => {

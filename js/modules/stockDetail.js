@@ -4,6 +4,10 @@ async function refresh(stock) {
   renderWatchlistStatus(stock);
   renderPositionStatus(stock);
   resetLevel2Panel(stock);
+  if (window.EastmoneyDarkStocks) {
+    window.EastmoneyDarkStocks.select(stock);
+    window.EastmoneyDarkStocks.sync();
+  }
   if (window.News) {
     try {
       const items = await window.News.loadStockNews(stock, 'detailNewsList');
@@ -29,9 +33,15 @@ function detailEscapeHtml(value) {
     .replace(/'/g, '&#39;');
 }
 
-function detailFmtMoney(value) {
+function detailNumber(value) {
+  if (value == null || typeof value === 'boolean' || String(value).trim() === '') return null;
   const number = Number(value);
-  if (!Number.isFinite(number)) return '--';
+  return Number.isFinite(number) ? number : null;
+}
+
+function detailFmtMoney(value) {
+  const number = detailNumber(value);
+  if (number === null) return '--';
   const abs = Math.abs(number);
   if (abs >= 100000000) return (number / 100000000).toFixed(2) + '亿';
   if (abs >= 10000) return (number / 10000).toFixed(2) + '万';
@@ -39,12 +49,13 @@ function detailFmtMoney(value) {
 }
 
 function detailFmtPercent(value) {
-  const number = Number(value);
-  return Number.isFinite(number) ? number.toFixed(2) + '%' : '--';
+  const number = detailNumber(value);
+  return number === null ? '--' : number.toFixed(2) + '%';
 }
 
 function detailAmountClass(value) {
-  return Number(value) >= 0 ? 'pnl-up' : 'pnl-down';
+  const number = detailNumber(value);
+  return number === null ? '' : number >= 0 ? 'pnl-up' : 'pnl-down';
 }
 
 function detailSetLevel2Result(message, isError) {
@@ -71,12 +82,12 @@ function renderDetailFreeFlow(data) {
     ['主力净额', data.mainNetAmount],
     ['超大单', data.superLargeNetAmount],
     ['大单', data.largeNetAmount],
-    ['模拟大单净额', data.simulatedLargeNetAmount]
+    ['超大单与大单净额合计', data.simulatedLargeNetAmount]
   ];
   box.innerHTML = '<div class="detail-flow-grid">' + items.map(function(item) {
     return '<div class="detail-flow-item"><span>' + item[0] + '</span><strong class="' + detailAmountClass(item[1]) + '">' + detailFmtMoney(item[1]) + '</strong></div>';
   }).join('') + '</div>' +
-    '<div class="detail-flow-note">主力占比 ' + detailFmtPercent(data.mainNetRatio) + '。免费数据是估算口径，可与同花顺普通会员可见逐笔成交交叉参考。</div>';
+    '<div class="detail-flow-note">主力占比 ' + detailFmtPercent(data.mainNetRatio) + '。金额单位：元（万/亿缩写）。普通资金分类数据，不是暗盘原指标；来源行情时刻未提供。</div>';
 }
 
 async function loadFreeFlowForCurrentStock() {
@@ -88,7 +99,8 @@ async function loadFreeFlowForCurrentStock() {
   try {
     const data = await window.ApiClient.fetchJsonData('/api/level2/free-flow?code=' + encodeURIComponent(stock.code));
     renderDetailFreeFlow(data);
-    detailSetLevel2Result('免费资金流已更新：' + (data.name || stock.name || stock.code));
+    const state = data.status === 'unavailable' ? '暂无数据' : data.status === 'partial' ? '仅获取部分数据' : '已获取';
+    detailSetLevel2Result('普通资金流' + state + '：' + (data.name || stock.name || stock.code), data.status === 'unavailable');
   } catch (error) {
     detailSetLevel2Result('免费资金流获取失败：' + error.message, true);
   } finally {
@@ -118,6 +130,10 @@ async function analyzeDetailManualLevel2Paste() {
       })
     });
     const stats = data.stats || {};
+    if (stats.missingAmountCount > 0) {
+      detailSetLevel2Result('粘贴数据不完整：' + stats.missingAmountCount + ' 笔金额缺失，净额与占比暂不可计算。', true);
+      return;
+    }
     detailSetLevel2Result(
       '粘贴模拟: 解析 ' + (data.trades ? data.trades.length : 0) +
       ' 笔，超过阈值 ' + (stats.largeTradeCount || 0) +
@@ -130,10 +146,10 @@ async function analyzeDetailManualLevel2Paste() {
 }
 
 function detailAlertStatus(item, stock) {
-  const price = Number(stock.price !== undefined ? stock.price : item.price);
+  const price = detailNumber(stock.price !== undefined ? stock.price : item.price);
   const high = Number(item.alertHigh);
   const low = Number(item.alertLow);
-  if (!Number.isFinite(price)) return { className: 'muted', label: 'Alert pending' };
+  if (price === null || price <= 0) return { className: 'muted', label: 'Alert pending' };
   if (Number.isFinite(low) && low > 0 && price <= low) return { className: 'status-danger', label: 'Alert low' };
   if (Number.isFinite(high) && high > 0 && price >= high) return { className: 'status-warn', label: 'Alert high' };
   if ((Number.isFinite(low) && low > 0) || (Number.isFinite(high) && high > 0)) return { className: 'status-ok', label: 'Alert normal' };
@@ -163,8 +179,9 @@ function renderPositionStatus(stock) {
     el.textContent = 'Position: not held';
     return;
   }
-  el.textContent = 'Position: ' + pos.quantity + ' shares, cost ' + pos.avgCost + ', floating P/L ' + (pos.unrealizedPnl === null ? '--' : pos.unrealizedPnl);
-  el.className = 'detail-status ' + (Number(pos.unrealizedPnl) >= 0 ? 'pnl-up' : 'pnl-down');
+  const pnl = detailNumber(pos.unrealizedPnl);
+  el.textContent = 'Position: ' + pos.quantity + ' shares, cost ' + pos.avgCost + ', floating P/L ' + (pnl === null ? '--' : pnl);
+  el.className = 'detail-status ' + detailAmountClass(pnl);
 }
 
 function renderProfile(stock) {

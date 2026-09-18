@@ -123,7 +123,7 @@ function transcriptionPending(observation) {
   const metadata = observation && observation.mediaMetadata && typeof observation.mediaMetadata === 'object'
     ? observation.mediaMetadata : {};
   const asr = metadata.asr && typeof metadata.asr === 'object' ? metadata.asr : {};
-  return Boolean(metadata.detailCapturedAt && asr.status !== 'complete');
+  return Boolean(metadata.detailCapturedAt && !['complete', 'needs_review'].includes(asr.status));
 }
 
 function mediaArchivePending(observation) {
@@ -133,7 +133,8 @@ function mediaArchivePending(observation) {
   const archive = metadata.archive && typeof metadata.archive === 'object' ? metadata.archive : {};
   const localAssetPath = normalizedText(observation && observation.localAssetPath ||
     archive.localAssetPath || asr.localAssetPath);
-  return asr.status === 'complete' && /^[a-f0-9]{64}$/i.test(normalizedText(asr.mediaSha256)) && !localAssetPath;
+  return ['complete', 'needs_review'].includes(asr.status) &&
+    /^[a-f0-9]{64}$/i.test(normalizedText(asr.mediaSha256)) && !localAssetPath;
 }
 
 function planDetailCandidates(observations, state = {}, options = {}) {
@@ -221,7 +222,45 @@ function planDetailCandidates(observations, state = {}, options = {}) {
   });
 }
 
+function discoveryFingerprint(item) {
+  return crypto.createHash('sha256').update(JSON.stringify({
+    title: normalizedText(item && item.title), description: normalizedText(item && item.description)
+  })).digest('hex');
+}
+
+function planIncrementalCandidates(observations, state = {}, options = {}) {
+  const now = timestamp(options.now) || Date.now();
+  return (observations || []).filter(function(observation) {
+    const metadata = observation.mediaMetadata || {};
+    if (metadata.incrementalPending !== true) return false;
+    const status = metadata.asr && metadata.asr.status;
+    const complete = status === 'no_speech' ||
+      (['complete', 'needs_review'].includes(status) && String(observation.transcript || '').trim());
+    if (complete && metadata.incrementalReason !== 'changed') return false;
+    const previous = state[contentId(observation)] || {};
+    return [
+      [previous.failureCount, previous.lastFailureAt],
+      [previous.transcriptionFailureCount, previous.lastTranscriptionFailureAt]
+    ].every(function(pair) {
+      const count = Number(pair[0]) || 0;
+      if (count >= 5) return false;
+      return !count || now >= timestamp(pair[1]) + Math.min(86400000, 900000 * Math.pow(2, count - 1));
+    });
+  }).sort(function(a, b) {
+    // New detail work precedes ASR retries; within each group use actual publication time.
+    // First discovery today is not evidence that an old video was published today.
+    const stage = Number(Boolean(a.mediaMetadata.detailCapturedAt)) - Number(Boolean(b.mediaMetadata.detailCapturedAt));
+    return stage || timestamp(b.publishedAt) - timestamp(a.publishedAt);
+  }).slice(0, Number(options.limit) || 8).map(function(observation) {
+    return { contentId: contentId(observation), observation,
+      reason: observation.mediaMetadata.incrementalReason === 'changed' ? 'changed'
+        : observation.mediaMetadata.detailCapturedAt ? 'transcription_pending' : 'new' };
+  });
+}
+
 module.exports = {
+  discoveryFingerprint,
+  planIncrementalCandidates,
   materialFingerprint,
   materiallyEquivalent,
   planDetailCandidates,

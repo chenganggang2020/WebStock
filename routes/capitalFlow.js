@@ -55,6 +55,90 @@ function createCapitalFlowRouter(options = {}) {
     options.adapters || createCapitalFlowAdapters(options.adapterOptions)
   );
   const router = express.Router();
+  const darkRank = require('../services/capitalFlow/darkRankService').createDarkRankService({load:options.darkRankLoader});
+  const {createDarkStockService,darkSession,stockKeys} = require('../services/capitalFlow/darkStockService');
+  const darkStocks = createDarkStockService({load:options.darkStockLoader});
+  const darkHistory = options.darkHistory || require('../services/capitalFlow/darkObservationStore').createDarkObservationStore();
+  const session = () => darkSession(options.now ? options.now() : new Date());
+  router.get('/capital-flow/dark-session', function(req,res) {
+    res.set('Cache-Control','no-store').json({success:true,data:session()});
+  });
+  router.get('/capital-flow/dark-stocks', async function(req,res) {
+    res.set('Cache-Control','no-store');
+    let codes;
+    try {codes=stockKeys(req.query.codes);} catch (_) {
+      return res.status(400).json({success:false,error:{code:'DARK_STOCK_QUERY_INVALID',message:'请选择 1–200 只带市场前缀的 A 股。'}});
+    }
+    const state=session();
+    if(!state.dataDate) return res.status(503).json({success:false,error:{code:'DARK_CALENDAR_UNKNOWN',message:'交易日历未覆盖当前日期，无法自动选定交易日。'}});
+    try {
+      const data=await darkStocks.get({date:state.dataDate,codes});
+      try {data.historySaved=await darkHistory.append(data);}
+      catch (_) {data.historySaved=false;data.historyWarning='历史写入未成功；当前报价仍可看，已有记录保留';}
+      res.json({success:true,data});
+    }
+    catch (_) {res.status(502).json({success:false,error:{code:'DARK_STOCK_UNAVAILABLE',message:'个股明暗盘榜单匹配暂不可用；未以普通资金或零替代。稍后可重试。'}});}
+  });
+
+  router.get('/capital-flow/dark-stock-history', async function(req,res) {
+    res.set('Cache-Control','no-store');
+    try {
+      if(typeof req.query.code!=='string' || stockKeys(req.query.code).length!==1 || req.query.date!==undefined && typeof req.query.date!=='string')throw Error('Invalid history query');
+      if(req.query.date)require('../services/capitalFlow/eastmoneyDarkRank').buildQuery({date:req.query.date});
+    } catch (_) {return res.status(400).json({success:false,error:{code:'DARK_HISTORY_QUERY_INVALID',message:'请选择一个带市场前缀的股票和有效日期。'}});}
+    try {res.json({success:true,data:await darkHistory.read({code:req.query.code,date:req.query.date})});}
+    catch (_) {res.status(503).json({success:false,error:{code:'DARK_HISTORY_UNAVAILABLE',message:'历史记录读取失败，请保留数据目录以便检查。'}});}
+  });
+
+  router.get('/capital-flow/dark-rank', async function(req, res) {
+    res.set('Cache-Control', 'no-store');
+    let input;
+    try {
+      const q = req.query;
+      if (typeof q.date !== 'string' || !['stock','industry'].includes(q.scope) ||
+        (q.page !== undefined && (typeof q.page !== 'string' || !/^\d+$/.test(q.page)))) throw Error('Invalid query');
+      input = {date:q.date,scope:q.scope,page:q.page === undefined ? 1 : Number(q.page)};
+      require('../services/capitalFlow/eastmoneyDarkRank').buildQuery(input);
+    } catch (_) {
+      return res.status(400).json({success:false,error:{code:'DARK_RANK_QUERY_INVALID',message:'请选择有效日期、个股或行业，以及 1–1000 的页码。'}});
+    }
+    try {
+      res.json({success:true,data:await darkRank.get(input)});
+    } catch (error) {
+      const busy = error.code === 'DARK_RANK_BUSY';
+      res.status(busy ? 429 : 502).json({success:false,error:{code:busy ? 'DARK_RANK_BUSY' : 'DARK_RANK_UNAVAILABLE',
+        message:busy ? '查询较多，请稍后重试。' : '该日期或页面的东方财富暗盘数据暂不可用。没有用普通资金数据替代，请稍后重试或选择其他交易日。'}});
+    }
+  });
+
+  // Raw bytes preserve the evidence hash. This endpoint only computes in memory.
+  const replayBody = express.raw({type: 'application/octet-stream', limit: '2mb', inflate: false});
+  router.post('/capital-flow/replay', function(req, res) {
+    res.set('Cache-Control', 'no-store');
+    replayBody(req, res, function(parseError) {
+      try {
+        if (parseError) throw parseError;
+        if (!Buffer.isBuffer(req.body)) throw apiError('REPLAY_FORMAT', '请以文件原始内容提交 JSON，不接受其他格式。');
+        const options = {};
+        if (req.query.maxGapMs !== undefined) {
+          const raw = req.query.maxGapMs;
+          if (typeof raw !== 'string' || !/^\d+$/.test(raw) || !Number.isSafeInteger(Number(raw)) || Number(raw) <= 0) {
+            throw apiError('REPLAY_CADENCE', '最大采样间隔必须是正整数。');
+          }
+          options.maxTradingGapMs = Number(raw);
+        }
+        const {replayDocument} = require('../services/capitalFlow/replayDocument');
+        res.json({success: true, data: replayDocument(req.body, options)});
+      } catch (error) {
+        res.status(error.status === 413 ? 413 : 400).json({success: false,
+          error: {code: 'REPLAY_REJECTED', message: error.status === 413 ? '文件超过 2 MiB。' : '回放被拒绝：' + error.message}});
+      }
+    });
+  });
+  router.get('/capital-flow/replay-demo', function(req, res) {
+    res.set('Cache-Control', 'no-store');
+    res.json(require('../services/capitalFlow/replay-demo.json'));
+  });
 
   router.get('/capital-flow/series', async function(req, res) {
     try {

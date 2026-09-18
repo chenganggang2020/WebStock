@@ -187,10 +187,20 @@ function topicsWithoutPreviousSignal(existing) {
 }
 
 function normalizedPublishedAt(value, fallback) {
-  const raw = String(value || fallback || '').trim();
-  if (!raw) return '';
-  const parsed = new Date(raw);
-  return Number.isNaN(parsed.getTime()) ? '' : parsed.toISOString();
+  function parse(candidate) {
+    const raw = String(candidate || '').trim().replace(/年|月/g, '-').replace(/日/g, '');
+    const match = raw.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})(?:[T\s]+(\d{1,2}):(\d{2})(?::(\d{2})(\.\d{1,3})?)?)?(Z|[+-]\d{2}:?\d{2})?$/i);
+    if (!match) return '';
+    const day = match[1] + '-' + match[2].padStart(2, '0') + '-' + match[3].padStart(2, '0');
+    const midnight = Date.parse(day + 'T00:00:00Z');
+    if (!Number.isFinite(midnight) || new Date(midnight).toISOString().slice(0, 10) !== day ||
+        Number(match[4] || 0) > 23 || Number(match[5] || 0) > 59 || Number(match[6] || 0) > 59) return '';
+    // Absolute dates on the Chinese source page use Beijing time, not the PC timezone.
+    const time = (match[4] || '00').padStart(2, '0') + ':' + (match[5] || '00') + ':' + (match[6] || '00') + (match[7] || '');
+    const instant = Date.parse(day + 'T' + time + (match[8] || '+08:00'));
+    return Number.isFinite(instant) ? new Date(instant).toISOString() : '';
+  }
+  return parse(value) || parse(fallback);
 }
 
 function comparableObservation(item) {
@@ -241,7 +251,7 @@ function capturedObservationInput(channel, capture, identity, item, existing) {
   ]);
   const description = String(item.description || existing && existing.description || '').trim();
   const existingAsr = existing && existing.mediaMetadata && existing.mediaMetadata.asr;
-  const transcript = String(existingAsr && existingAsr.status === 'complete'
+  const transcript = String(existingAsr && ['complete', 'needs_review'].includes(existingAsr.status)
     ? existing.transcript || ''
     : item.transcript || existing && existing.transcript || '').trim();
   const content = transcript || description || existing && existing.content || '';
@@ -463,8 +473,13 @@ function verifyCapturedIdentity(channelId, input = {}) {
 }
 
 function sanitizedAsrMetadata(result = {}) {
+  const status = result.status === 'needs_review' ? 'needs_review' : 'complete';
+  const normalization = result.normalization && typeof result.normalization === 'object'
+    ? result.normalization : {};
+  const quality = result.quality && typeof result.quality === 'object' ? result.quality : {};
+  const finiteOrNull = function(value) { return Number.isFinite(Number(value)) ? Number(value) : null; };
   return {
-    status: 'complete',
+    status,
     engine: String(result.engine || 'faster-whisper').slice(0, 80),
     engineVersion: String(result.engineVersion || '').slice(0, 80),
     model: String(result.model || 'small').slice(0, 80),
@@ -479,11 +494,30 @@ function sanitizedAsrMetadata(result = {}) {
     mediaContentType: String(result.mediaContentType || '').slice(0, 120),
     localAssetPath: String(result.localAssetPath || result.mediaMetadata && result.mediaMetadata.localAssetPath || '').slice(0, 2000),
     transcribedAt: String(result.transcribedAt || new Date().toISOString()),
+    rawTranscript: String(result.rawTranscript || result.transcript || '').trim().slice(0, 800000),
+    normalization: {
+      script: normalization.script === 'zh-Hans' ? 'zh-Hans' : '',
+      sourceHadTraditional: normalization.sourceHadTraditional === true,
+      converter: String(normalization.converter || '').slice(0, 80)
+    },
+    quality: {
+      needsReview: status === 'needs_review' || quality.needsReview === true,
+      reasons: (Array.isArray(quality.reasons) ? quality.reasons : []).map(function(reason) {
+        return String(reason || '').slice(0, 80);
+      }).filter(Boolean).slice(0, 20),
+      averageLogProbability: finiteOrNull(quality.averageLogProbability),
+      averageNoSpeechProbability: finiteOrNull(quality.averageNoSpeechProbability),
+      maximumCompressionRatio: finiteOrNull(quality.maximumCompressionRatio)
+    },
     segments: (Array.isArray(result.segments) ? result.segments : []).map(function(segment) {
       return {
         start: Math.max(Number(segment.start) || 0, 0),
         end: Math.max(Number(segment.end) || 0, 0),
-        text: String(segment.text || '').trim().slice(0, 4000)
+        rawText: String(segment.rawText || segment.text || '').trim().slice(0, 4000),
+        text: String(segment.text || '').trim().slice(0, 4000),
+        avgLogProbability: finiteOrNull(segment.avgLogProbability),
+        noSpeechProbability: finiteOrNull(segment.noSpeechProbability),
+        compressionRatio: finiteOrNull(segment.compressionRatio)
       };
     }).filter(function(segment) { return segment.text && segment.end >= segment.start; }).slice(0, 10000)
   };
@@ -526,6 +560,10 @@ function applyTranscription(channelId, contentId, result = {}) {
   const transcript = String(result.transcript || '').trim();
   if (!transcript) throw new Error('语音识别结果为空。');
   const asr = sanitizedAsrMetadata(result);
+  const transcriptHistory = [...(existing.mediaMetadata?.transcriptHistory || [])];
+  if (existing.transcript && existing.transcript !== transcript) {
+    transcriptHistory.push({ text: existing.transcript, asr: existing.mediaMetadata?.asr || {} });
+  }
   const previousArchive = existing.mediaMetadata && existing.mediaMetadata.archive || {};
   const preservesHistoricalVerification = previousArchive.verificationMode === 'historical_sha256' &&
     previousArchive.mediaSha256 === asr.mediaSha256 &&
@@ -545,6 +583,7 @@ function applyTranscription(channelId, contentId, result = {}) {
     transcript,
     mediaMetadata: Object.assign({}, existing.mediaMetadata || {}, {
       asr,
+      transcriptHistory,
       archive: asr.localAssetPath ? sanitizedArchiveMetadata({
         localAssetPath: asr.localAssetPath,
         mediaSha256: asr.mediaSha256,
@@ -586,6 +625,12 @@ function applyNoSpeechResult(channelId, contentId, result = {}) {
   if (!archive.localAssetPath || !/^[a-f0-9]{64}$/.test(archive.mediaSha256) || !archive.mediaBytes) {
     throw new Error('无口语视频的本地归档证据不完整。');
   }
+  if (existing.transcript && ['complete', 'needs_review'].includes(existing.mediaMetadata?.asr?.status)) {
+    return expertChannels.recordObservation(channelId, {
+      externalKey: existing.externalKey,
+      mediaMetadata: Object.assign({}, existing.mediaMetadata || {}, { lastAsrAttempt: asr })
+    });
+  }
   return expertChannels.recordObservation(channelId, {
     externalKey: existing.externalKey,
     transcript: '',
@@ -602,7 +647,7 @@ function recordTranscriptionError(channelId, contentId, error) {
   return expertChannels.recordObservation(channelId, {
     externalKey: existing.externalKey,
     mediaMetadata: Object.assign({}, existing.mediaMetadata || {}, {
-      asr: {
+      [existing.transcript && ['complete', 'needs_review'].includes(existing.mediaMetadata?.asr?.status) ? 'lastAsrAttempt' : 'asr']: {
         status: 'error',
         message: String(error && error.message || error || '本地语音识别失败').slice(0, 500),
         attemptedAt: new Date().toISOString()

@@ -22,6 +22,11 @@ SINA_KLINE_URL = (
 EASTMONEY_KLINE_URL = "https://push2his.eastmoney.com/api/qt/stock/kline/get"
 EASTMONEY_KLINE_HTTP_FALLBACK_URL = "http://push2his.eastmoney.com/api/qt/stock/kline/get"
 TENCENT_KLINE_URL = "https://web.ifzq.gtimg.cn/appstock/app/kline/kline"
+TENCENT_FQ_KLINE_URL = "https://web.ifzq.gtimg.cn/appstock/app/fqkline/get"
+TENCENT_FQ_KLINE_ALTERNATE_URL = "https://ifzq.gtimg.cn/appstock/app/fqkline/get"
+TENCENT_FQ_KLINE_PROXY_URL = (
+    "https://proxy.finance.qq.com/ifzqgtimg/appstock/app/fqkline/get"
+)
 DATA_COLUMNS = ["date", "code", "name", "open", "high", "low", "close", "volume"]
 
 
@@ -138,14 +143,18 @@ def fetch_sina_history(session, stock, start_date, end_date, retries=4):
     raise RuntimeError(str(last_error))
 
 
-def fetch_eastmoney_history(session, stock, start_date, end_date, retries=3):
+def fetch_eastmoney_history(
+    session, stock, start_date, end_date, retries=3, adjustment_mode="unadjusted"
+):
+    if adjustment_mode not in ("unadjusted", "forward-adjusted"):
+        raise ValueError("unsupported adjustment mode")
     market = "1" if re.match(r"^[56]", stock["code"]) else "0"
     params = {
         "secid": f"{market}.{stock['code']}",
         "fields1": "f1,f2,f3",
         "fields2": "f51,f52,f53,f54,f55,f56",
         "klt": "101",
-        "fqt": "0",
+        "fqt": "1" if adjustment_mode == "forward-adjusted" else "0",
         "beg": pd.Timestamp(start_date).strftime("%Y%m%d"),
         "end": pd.Timestamp(end_date).strftime("%Y%m%d"),
     }
@@ -153,6 +162,8 @@ def fetch_eastmoney_history(session, stock, start_date, end_date, retries=3):
     for attempt in range(retries + 1):
         try:
             source_id = "eastmoney-public-kline"
+            if adjustment_mode == "forward-adjusted":
+                source_id += "-forward-adjusted"
             try:
                 response = session.get(EASTMONEY_KLINE_URL, params=params, timeout=20)
             except requests.ConnectionError:
@@ -163,6 +174,8 @@ def fetch_eastmoney_history(session, stock, start_date, end_date, retries=3):
                     timeout=20,
                 )
                 source_id = "eastmoney-public-kline-http-fallback"
+                if adjustment_mode == "forward-adjusted":
+                    source_id += "-forward-adjusted"
             response.raise_for_status()
             payload = response.json()
             klines = ((payload or {}).get("data") or {}).get("klines") or []
@@ -229,15 +242,165 @@ def fetch_tencent_history(session, stock, start_date, end_date, retries=3):
     raise RuntimeError(str(last_error))
 
 
-def _request_sha256(dataset_id, start_day, end_day, selected):
+def fetch_tencent_forward_adjusted_history(
+    session, stock, start_date, end_date, retries=2, page_size=640
+):
+    symbol = _sina_symbol(stock["code"])
+    start_day = pd.Timestamp(start_date)
+    cursor = pd.Timestamp(end_date)
+    collected = []
+    used_qfq_day_series = False
+    endpoint_keys = ["primary", "alternate", "finance-proxy"]
+    endpoint_urls = {
+        "primary": TENCENT_FQ_KLINE_URL,
+        "alternate": TENCENT_FQ_KLINE_ALTERNATE_URL,
+        "finance-proxy": TENCENT_FQ_KLINE_PROXY_URL,
+    }
+    endpoint_key = getattr(session, "_webstock_tencent_fq_endpoint", "primary")
+    if endpoint_key not in endpoint_urls:
+        endpoint_key = "primary"
+    page_size = min(max(int(page_size), 2), 640)
+    for _ in range(10):
+        last_error = None
+        rows = []
+        for attempt in range(retries + 1):
+            try:
+                params = {
+                    "param": ",".join([
+                        symbol,
+                        "day",
+                        start_day.strftime("%Y-%m-%d"),
+                        cursor.strftime("%Y-%m-%d"),
+                        str(page_size),
+                        "qfq",
+                    ])
+                }
+                while True:
+                    response = session.get(
+                        endpoint_urls[endpoint_key], params=params, timeout=20
+                    )
+                    try:
+                        response.raise_for_status()
+                        break
+                    except requests.HTTPError as error:
+                        status = getattr(
+                            getattr(error, "response", None), "status_code", None
+                        )
+                        endpoint_index = endpoint_keys.index(endpoint_key)
+                        if status != 501 or endpoint_index >= len(endpoint_keys) - 1:
+                            raise
+                        endpoint_key = endpoint_keys[endpoint_index + 1]
+                        try:
+                            session._webstock_tencent_fq_endpoint = endpoint_key
+                        except Exception:
+                            pass
+                payload = response.json()
+                symbol_payload = (
+                    ((payload or {}).get("data") or {}).get(symbol) or {}
+                )
+                rows = symbol_payload.get("qfqday") or []
+                if not rows and not symbol.startswith("bj"):
+                    rows = symbol_payload.get("day") or []
+                    used_qfq_day_series = bool(rows)
+                break
+            except Exception as error:
+                last_error = error
+                if attempt < retries:
+                    time.sleep(min(1.5 * (2 ** attempt), 10))
+        if last_error is not None and not rows:
+            raise RuntimeError(str(last_error))
+        if not rows:
+            break
+        collected.extend([list(item)[:6] for item in rows])
+        earliest = pd.Timestamp(rows[0][0])
+        if len(rows) < page_size or earliest <= start_day:
+            break
+        next_cursor = earliest - timedelta(days=1)
+        if next_cursor >= cursor:
+            break
+        cursor = next_cursor
+
+    frame = pd.DataFrame(
+        collected,
+        columns=["date", "open", "close", "high", "low", "volume"],
+    )
+    if frame.empty:
+        raise ValueError("Tencent adjusted provider returned no rows")
+    frame["date"] = pd.to_datetime(frame["date"], errors="coerce")
+    for column in ["open", "high", "low", "close", "volume"]:
+        frame[column] = pd.to_numeric(frame[column], errors="coerce")
+    frame = frame[
+        (frame["date"] >= start_day)
+        & (frame["date"] <= pd.Timestamp(end_date))
+    ]
+    frame = frame.dropna(subset=["date", "open", "high", "low", "close", "volume"])
+    frame = frame[(frame["close"] > 0) & (frame["volume"] >= 0)].copy()
+    if frame.empty:
+        raise ValueError("Tencent adjusted provider returned no valid rows")
+    frame["date"] = frame["date"].dt.strftime("%Y-%m-%d")
+    frame["code"] = stock["code"]
+    frame["name"] = stock["name"]
+    result = frame[DATA_COLUMNS].sort_values("date").drop_duplicates("date", keep="last")
+    source_ids = {
+        "primary": "tencent-public-kline-forward-adjusted",
+        "alternate": "tencent-public-kline-forward-adjusted-alternate-host",
+        "finance-proxy": "tencent-public-kline-forward-adjusted-finance-proxy",
+    }
+    result.attrs["source_id"] = (
+        "tencent-public-kline-qfq-request-day-series"
+        if used_qfq_day_series
+        else source_ids[endpoint_key]
+    )
+    return result
+
+
+def _request_sha256(
+    dataset_id, start_day, end_day, selected, adjustment_mode, base_dataset_id=""
+):
     payload = {
         "datasetId": dataset_id,
         "start": start_day,
         "end": end_day,
+        "adjustmentMode": adjustment_mode,
         "codes": [item["code"] for item in selected],
     }
+    if base_dataset_id:
+        payload["baseDatasetId"] = base_dataset_id
     encoded = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
+
+
+def _verified_base_dataset(base_dataset_dir, adjustment_mode, start_day, end_day):
+    if not base_dataset_dir:
+        return None
+    root = Path(base_dataset_dir).resolve()
+    manifest_path = root / "manifest.json"
+    if not manifest_path.is_file():
+        raise ValueError("base dataset manifest is missing")
+    manifest = read_json(manifest_path)
+    if manifest.get("manifestSha256") != manifest_sha256(manifest):
+        raise ValueError("base dataset manifest hash is invalid")
+    if manifest.get("adjustmentMode") != adjustment_mode:
+        raise ValueError("base dataset adjustment mode does not match")
+    base_start = str((manifest.get("dateRange") or {}).get("start") or "")
+    base_end = str((manifest.get("dateRange") or {}).get("end") or "")
+    if not base_start or not base_end:
+        raise ValueError("base dataset date range is missing")
+    if base_start > start_day:
+        raise ValueError("base dataset starts after the requested date range")
+    if base_end > end_day:
+        raise ValueError("base dataset ends after the requested date range")
+    artifacts = {
+        str(item.get("code")): item
+        for item in manifest.get("files", [])
+        if item.get("code") and str(item.get("path") or "").startswith("raw/")
+    }
+    return {
+        "root": root,
+        "datasetId": str(manifest.get("datasetId") or root.name),
+        "manifestSha256": manifest["manifestSha256"],
+        "artifacts": artifacts,
+    }
 
 
 def _normalize_frame(frame, stock, start_day, end_day, strict=False):
@@ -346,10 +509,14 @@ def collect_dataset(
     end_date=None,
     limit=None,
     codes=None,
+    adjustment_mode="unadjusted",
+    base_dataset_dir=None,
     sleep_ms=120,
     workers=3,
     emit=None,
 ):
+    if adjustment_mode not in ("unadjusted", "forward-adjusted"):
+        raise ValueError("unsupported adjustment mode")
     end_date = end_date or date.today().isoformat()
     start_day = pd.Timestamp(start_date).strftime("%Y-%m-%d")
     end_day = pd.Timestamp(end_date).strftime("%Y-%m-%d")
@@ -364,7 +531,18 @@ def collect_dataset(
     root = Path(dataset_dir)
     raw_dir = root / "raw"
     raw_dir.mkdir(parents=True, exist_ok=True)
-    request_sha256 = _request_sha256(dataset_id, start_day, end_day, selected)
+    base_dataset = _verified_base_dataset(
+        base_dataset_dir, adjustment_mode, start_day, end_day
+    )
+    base_dataset_id = base_dataset["datasetId"] if base_dataset else ""
+    request_sha256 = _request_sha256(
+        dataset_id,
+        start_day,
+        end_day,
+        selected,
+        adjustment_mode,
+        base_dataset_id=base_dataset_id,
+    )
     manifest_path = root / "manifest.json"
     if manifest_path.exists():
         try:
@@ -398,6 +576,8 @@ def collect_dataset(
     pending = []
     last_checkpoint = 0
     state_revision = 0
+    processed_pending = 0
+    current_run_failures = 0
 
     def persist_state(status, force=False):
         nonlocal last_checkpoint
@@ -410,6 +590,8 @@ def collect_dataset(
             "status": status,
             "updatedAt": datetime.now(timezone.utc).isoformat(),
             "requestedDateRange": {"start": start_day, "end": end_day},
+            "adjustmentMode": adjustment_mode,
+            "baseDatasetId": base_dataset_id or None,
             "selectedCount": len(selected),
             "completedCodes": sorted(files_by_code),
             "failures": [failures_by_code[code] for code in sorted(failures_by_code)],
@@ -451,16 +633,43 @@ def collect_dataset(
                 time.sleep(delay)
             next_request_at[0] = time.monotonic() + interval
 
-    def collect_one(stock):
-        if not hasattr(thread_state, "session"):
-            thread_state.session = requests.Session()
+    def fetch_public_history(stock, fetch_start, fetch_end):
+        if adjustment_mode == "forward-adjusted":
+            with provider_lock:
+                use_eastmoney = time.monotonic() >= eastmoney_disabled_until[0]
+            frame = None
+            if use_eastmoney:
+                try:
+                    pace_request()
+                    frame = fetch_eastmoney_history(
+                        thread_state.session,
+                        stock,
+                        fetch_start,
+                        fetch_end,
+                        retries=0,
+                        adjustment_mode=adjustment_mode,
+                    )
+                except Exception:
+                    with provider_lock:
+                        eastmoney_disabled_until[0] = time.monotonic() + 300
+            if frame is None:
+                pace_request()
+                frame = fetch_tencent_forward_adjusted_history(
+                    thread_state.session, stock, fetch_start, fetch_end, retries=1
+                )
+            source_id = frame.attrs.get(
+                "source_id", "unknown-public-kline-forward-adjusted"
+            )
+            return frame, source_id
         with provider_lock:
             use_sina = time.monotonic() >= sina_disabled_until[0]
         source_id = "sina-public-kline"
         if use_sina:
             try:
                 pace_request()
-                frame = fetch_sina_history(thread_state.session, stock, start_day, end_day, retries=0)
+                frame = fetch_sina_history(
+                    thread_state.session, stock, fetch_start, fetch_end, retries=0
+                )
             except Exception as error:
                 if "456" in str(error) or "429" in str(error):
                     with provider_lock:
@@ -471,18 +680,22 @@ def collect_dataset(
                     try:
                         pace_request()
                         frame = fetch_eastmoney_history(
-                            thread_state.session, stock, start_day, end_day, retries=0
+                            thread_state.session, stock, fetch_start, fetch_end, retries=0
                         )
                         source_id = frame.attrs.get("source_id", "eastmoney-public-kline")
                     except Exception:
                         with provider_lock:
                             eastmoney_disabled_until[0] = time.monotonic() + 300
                         pace_request()
-                        frame = fetch_tencent_history(thread_state.session, stock, start_day, end_day)
+                        frame = fetch_tencent_history(
+                            thread_state.session, stock, fetch_start, fetch_end
+                        )
                         source_id = "tencent-public-kline"
                 else:
                     pace_request()
-                    frame = fetch_tencent_history(thread_state.session, stock, start_day, end_day)
+                    frame = fetch_tencent_history(
+                        thread_state.session, stock, fetch_start, fetch_end
+                    )
                     source_id = "tencent-public-kline"
         else:
             with provider_lock:
@@ -491,37 +704,82 @@ def collect_dataset(
                 try:
                     pace_request()
                     frame = fetch_eastmoney_history(
-                        thread_state.session, stock, start_day, end_day, retries=0
+                        thread_state.session, stock, fetch_start, fetch_end, retries=0
                     )
                     source_id = frame.attrs.get("source_id", "eastmoney-public-kline")
                 except Exception:
                     with provider_lock:
                         eastmoney_disabled_until[0] = time.monotonic() + 300
                     pace_request()
-                    frame = fetch_tencent_history(thread_state.session, stock, start_day, end_day)
+                    frame = fetch_tencent_history(
+                        thread_state.session, stock, fetch_start, fetch_end
+                    )
                     source_id = "tencent-public-kline"
             else:
                 pace_request()
-                frame = fetch_tencent_history(thread_state.session, stock, start_day, end_day)
+                frame = fetch_tencent_history(
+                    thread_state.session, stock, fetch_start, fetch_end
+                )
                 source_id = "tencent-public-kline"
+        return frame, source_id
+
+    def collect_one(stock):
+        if not hasattr(thread_state, "session"):
+            thread_state.session = requests.Session()
+        base_frame = None
+        base_source_id = ""
+        fetch_start = start_day
+        if base_dataset:
+            base_artifact = base_dataset["artifacts"].get(stock["code"])
+            if base_artifact:
+                base_target = (base_dataset["root"] / base_artifact["path"]).resolve()
+                if base_dataset["root"] not in base_target.parents:
+                    raise ValueError("base dataset artifact path escapes its dataset directory")
+                if not base_target.is_file() or file_sha256(base_target) != base_artifact.get("sha256"):
+                    raise ValueError("base dataset artifact hash is invalid")
+                base_frame, _ = _normalize_frame(
+                    pd.read_parquet(base_target), stock, start_day, end_day, strict=True
+                )
+                base_source_id = str(base_artifact.get("sourceId") or "unknown")
+                fetch_start = (
+                    pd.Timestamp(base_frame["date"].iloc[-1]) + timedelta(days=1)
+                ).strftime("%Y-%m-%d")
+
+        source_id = base_source_id
+        frames = [base_frame] if base_frame is not None else []
+        if fetch_start <= end_day:
+            update_frame, update_source_id = fetch_public_history(
+                stock, fetch_start, end_day
+            )
+            frames.append(update_frame)
+            source_id = (
+                f"incremental:{base_dataset_id}+{update_source_id}"
+                if base_frame is not None
+                else update_source_id
+            )
+        if not frames:
+            raise ValueError("no baseline or provider rows are available")
+        frame = pd.concat(frames, ignore_index=True)
         frame, quality = _normalize_frame(frame, stock, start_day, end_day)
         target = raw_dir / f"{stock['code']}.parquet"
         _write_parquet_atomic(target, frame)
         return _artifact_for(target, root, stock, frame, quality, source_id=source_id)
 
     def record_result(stock, artifact=None, error=None):
-        nonlocal state_revision
+        nonlocal state_revision, processed_pending, current_run_failures
+        processed_pending += 1
         if artifact is not None:
             files_by_code[stock["code"]] = artifact
             sources_by_code[stock["code"]] = artifact.get("sourceId", "unknown")
             failures_by_code.pop(stock["code"], None)
         else:
+            current_run_failures += 1
             failures_by_code[stock["code"]] = {
                 "code": stock["code"],
                 "name": stock["name"],
                 "reason": str(error)[:500],
             }
-        completed = len(files_by_code) + len(failures_by_code)
+        completed = resumed_files + processed_pending
         state_revision += 1
         if emit:
             emit({
@@ -530,7 +788,7 @@ def collect_dataset(
                 "total": len(selected),
                 "code": stock["code"],
                 "succeeded": len(files_by_code),
-                "failed": len(failures_by_code),
+                "failed": current_run_failures,
                 "resumed": resumed_files,
                 "message": f"全市场采集 {completed}/{len(selected)}：{stock['code']} {stock['name']}",
             })
@@ -586,11 +844,22 @@ def collect_dataset(
     })
 
     warnings = [
-        "数据来自新浪、东方财富及腾讯公开日线接口，仅用于研究试跑，条款与完整性未独立验证。",
+        (
+            "数据来自东方财富及腾讯公开前复权日线接口，仅用于研究试跑，条款与完整性未独立验证。"
+            if adjustment_mode == "forward-adjusted"
+            else "数据来自新浪、东方财富及腾讯公开日线接口，仅用于研究试跑，条款与完整性未独立验证。"
+        ),
         "股票池由当前 stocks.json 生成，不包含已退市股的完整点时点名单，存在幸存者偏差。",
         "ST 只按当前名称排除，未重建历史每日 ST 状态。",
-        "日线价格未复权，除权除息可能污染动量与收益标签。",
     ]
+    if adjustment_mode == "unadjusted":
+        warnings.append("日线价格未复权，除权除息可能污染动量与收益标签。")
+    else:
+        warnings.append("前复权降低了公司行动造成的价格跳变，但当前成分和历史 ST 偏差仍然存在。")
+    if base_dataset:
+        warnings.append(
+            f"本数据集基于已校验基线 {base_dataset_id} 增量生成；基线文件保持不变。"
+        )
     if failures:
         warnings.append(f"{len(failures)} 只证券采集失败，已从本次数据集排除。")
     provider_counts = {}
@@ -600,10 +869,15 @@ def collect_dataset(
     if len(provider_counts) > 1:
         warnings.append("数据集混合多个公开来源；成交量单位和历史修订差异可能影响横截面比较。")
 
-    if provider_counts.get("eastmoney-public-kline-http-fallback"):
+    if any(key.startswith("eastmoney-public-kline-http-fallback") for key in provider_counts):
         warnings.append(
             "部分东方财富公开日线在 HTTPS 连接被远端断开后使用了已声明的 HTTP 回退。"
             "文件哈希可固定采集后的内容，但这些响应的传输端身份未经过认证。"
+        )
+    if "tencent-public-kline-qfq-request-day-series" in provider_counts:
+        warnings.append(
+            "部分非北交所证券在明确请求 qfq 时仅返回 day 序列；该序列单独标记来源，"
+            "不等同于已独立核验公司行动调整因子。"
         )
 
     manifest = {
@@ -613,17 +887,39 @@ def collect_dataset(
         "requestSha256": request_sha256,
         "asOf": actual_end,
         "source": {
-            "id": "mixed-public-kline",
-            "name": "Sina, Eastmoney and Tencent public daily K-line endpoints",
+            "id": (
+                "mixed-public-forward-adjusted-kline"
+                if adjustment_mode == "forward-adjusted"
+                else "mixed-public-kline"
+            ),
+            "name": (
+                "Eastmoney and Tencent public forward-adjusted daily K-line endpoints"
+                if adjustment_mode == "forward-adjusted"
+                else "Sina, Eastmoney and Tencent public daily K-line endpoints"
+            ),
             "accessMode": "public-http",
-            "endpoint": SINA_KLINE_URL,
+            "endpoint": (
+                EASTMONEY_KLINE_URL
+                if adjustment_mode == "forward-adjusted"
+                else SINA_KLINE_URL
+            ),
             "termsVerified": False,
-            "providers": [
-                SINA_KLINE_URL,
-                EASTMONEY_KLINE_URL,
-                EASTMONEY_KLINE_HTTP_FALLBACK_URL,
-                TENCENT_KLINE_URL,
-            ],
+            "providers": (
+                [
+                    EASTMONEY_KLINE_URL,
+                    EASTMONEY_KLINE_HTTP_FALLBACK_URL,
+                    TENCENT_FQ_KLINE_URL,
+                    TENCENT_FQ_KLINE_ALTERNATE_URL,
+                    TENCENT_FQ_KLINE_PROXY_URL,
+                ]
+                if adjustment_mode == "forward-adjusted"
+                else [
+                    SINA_KLINE_URL,
+                    EASTMONEY_KLINE_URL,
+                    EASTMONEY_KLINE_HTTP_FALLBACK_URL,
+                    TENCENT_KLINE_URL,
+                ]
+            ),
             "providerCounts": provider_counts,
         },
         "universe": {
@@ -637,7 +933,7 @@ def collect_dataset(
         "requestedDateRange": {"start": start_day, "end": end_day},
         "dateRange": {"start": actual_start, "end": actual_end},
         "columns": DATA_COLUMNS,
-        "adjustmentMode": "unadjusted",
+        "adjustmentMode": adjustment_mode,
         "coverage": {
             "requested": len(selected),
             "succeeded": len(files) - 1,
@@ -651,6 +947,10 @@ def collect_dataset(
             "workers": worker_count,
             "sleepMsPerWorker": max(int(sleep_ms), 0),
             "resumable": True,
+            "baseDatasetId": base_dataset_id or None,
+            "baseManifestSha256": (
+                base_dataset["manifestSha256"] if base_dataset else None
+            ),
         },
         "files": files,
         "eligibility": "exploratory_only",

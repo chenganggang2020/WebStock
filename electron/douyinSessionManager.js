@@ -446,6 +446,7 @@ function createDouyinSessionManager(options = {}) {
     let stable = 0;
     let scrollCount = 0;
     let latest = first;
+    let loginLost = false;
     if (onBatch) {
       await onBatch(Object.assign({}, first, {
         items: first.items.slice(),
@@ -459,7 +460,7 @@ function createDouyinSessionManager(options = {}) {
       const next = normalizeDouyinPageSnapshot(
         await current.webContents.executeJavaScript(buildDouyinPageSnapshotScript(), true)
       );
-      if (!next.loggedIn) break;
+      if (!next.loggedIn) { loginLost = true; break; }
       if (next.profile && next.profile.profileUrl) {
         latest = next;
         reportedWorkCount = Math.max(reportedWorkCount, Number(next.profile.workCount) || 0);
@@ -481,12 +482,12 @@ function createDouyinSessionManager(options = {}) {
       }
     }
     await pauseMedia(current);
-    const visibilityStable = stable >= requiredStableRounds();
+    const visibilityStable = !loginLost && stable >= requiredStableRounds();
     const coverageComplete = visibilityStable && (!reportedWorkCount || merged.size >= reportedWorkCount);
     return Object.assign({}, latest, {
       pageUrl: first.pageUrl,
       pageType: 'profile',
-      loggedIn: true,
+      loggedIn: !loginLost,
       profile: Object.assign({}, first.profile, latest.profile || {}),
       items: Array.from(merged.values()),
       archive: {
@@ -498,7 +499,7 @@ function createDouyinSessionManager(options = {}) {
         scrollLimit: maxScrolls,
         stableRounds: stable,
         incompleteStableRounds: incompleteStableTarget,
-        stoppedReason: visibilityStable ? (coverageComplete ? 'reported_count_reached' : 'visible_page_stable') : 'scroll_limit'
+        stoppedReason: loginLost ? 'login_lost' : visibilityStable ? (coverageComplete ? 'reported_count_reached' : 'visible_page_stable') : 'scroll_limit'
       }
     });
   }
@@ -513,7 +514,12 @@ function createDouyinSessionManager(options = {}) {
     automationWindow = null;
   }
 
-  return { open, collect, captureUrl, captureProfileArchive, status, dispose };
+  function captureProfileRecent(url) {
+    // Bounded discovery beyond the first viewport; this is not a full archive claim.
+    return captureProfileArchive(url, { maxScrolls: 3, stableRounds: 2, incompleteStableRounds: 2 });
+  }
+
+  return { open, collect, captureUrl, captureProfileArchive, captureProfileRecent, status, dispose };
 }
 
 module.exports = { createDouyinSessionManager };

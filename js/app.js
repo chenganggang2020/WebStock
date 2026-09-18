@@ -1,11 +1,89 @@
 let mainNavigationBound = false;
+let marketDrawerReturnFocus = null;
+const UI_STYLE_STORAGE_KEY = 'webstock-ui-style';
+
+function readStoredUiStyle() {
+  try {
+    return window.localStorage.getItem(UI_STYLE_STORAGE_KEY) === 'terminal' ? 'terminal' : 'clarity';
+  } catch (_) {
+    return 'clarity';
+  }
+}
+
+function applyUiStyle(style, persist) {
+  const normalized = style === 'terminal' ? 'terminal' : 'clarity';
+  const dark = normalized === 'terminal';
+  document.body.dataset.uiStyle = normalized;
+  document.body.classList.toggle('dark', dark);
+  const button = document.getElementById('themeToggle');
+  if (button) {
+    const label = button.querySelector('[data-theme-label]');
+    if (label) label.textContent = dark ? '终端深色' : '专业浅色';
+    button.setAttribute('aria-pressed', String(dark));
+    button.setAttribute('aria-label', dark ? '当前终端深色，切换为专业浅色' : '当前专业浅色，切换为终端深色');
+  }
+  const themeColor = document.querySelector('meta[name="theme-color"]');
+  if (themeColor) themeColor.setAttribute('content', dark ? '#010102' : '#f4f4f6');
+  if (persist !== false) {
+    try { window.localStorage.setItem(UI_STYLE_STORAGE_KEY, normalized); } catch (_) {}
+  }
+  return normalized;
+}
+
+function setMarketDrawerOpen(open) {
+  const drawer = document.getElementById('marketDrawer');
+  const toggle = document.getElementById('marketDrawerToggle');
+  if (!drawer || !toggle) return;
+  if (open) marketDrawerReturnFocus = document.activeElement;
+  document.body.classList.toggle('market-drawer-open', Boolean(open));
+  drawer.setAttribute('aria-hidden', open ? 'false' : 'true');
+  drawer.inert = !open;
+  toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+  toggle.setAttribute('aria-label', open ? '关闭行情与资讯' : '打开行情与资讯');
+  if (open) {
+    const close = document.getElementById('marketDrawerClose');
+    if (close) setTimeout(function() {
+      if (document.body.classList.contains('market-drawer-open')) close.focus();
+    }, 0);
+  }
+  if (!open && marketDrawerReturnFocus && typeof marketDrawerReturnFocus.focus === 'function') {
+    marketDrawerReturnFocus.focus();
+    marketDrawerReturnFocus = null;
+  }
+}
+
+function bindMarketDrawer() {
+  const toggle = document.getElementById('marketDrawerToggle');
+  const close = document.getElementById('marketDrawerClose');
+  const backdrop = document.getElementById('marketDrawerBackdrop');
+  if (!toggle || !close || !backdrop || toggle.dataset.bound === 'true') return;
+  toggle.dataset.bound = 'true';
+  toggle.addEventListener('click', function() {
+    setMarketDrawerOpen(!document.body.classList.contains('market-drawer-open'));
+  });
+  close.addEventListener('click', function() { setMarketDrawerOpen(false); });
+  backdrop.addEventListener('click', function() { setMarketDrawerOpen(false); });
+  document.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape') setMarketDrawerOpen(false);
+    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+      event.preventDefault();
+      const search = document.getElementById('searchInput');
+      if (search) search.focus();
+    }
+  });
+  const stockTable = document.getElementById('stockTbody');
+  if (stockTable) stockTable.addEventListener('click', function() {
+    setTimeout(function() { setMarketDrawerOpen(false); }, 0);
+  });
+}
 
 function bindMainNavigation() {
   if (mainNavigationBound) return;
   mainNavigationBound = true;
-  document.querySelectorAll('.main-tab, .sidebar-workspace-btn').forEach(function(btn) {
+  document.querySelectorAll('.main-tab').forEach(function(btn) {
     btn.addEventListener('click', function() {
       switchMainView(btn.getAttribute('data-main-view'));
+      setMarketDrawerOpen(false);
     });
   });
 }
@@ -26,8 +104,12 @@ function bindButtons() {
   if (window.StockDetail) window.StockDetail.bind();
   if (window.Settings) window.Settings.bind();
   if (window.HotMarket) window.HotMarket.bind();
+  if (window.MarketOverview) window.MarketOverview.bind();
+  if (window.MarketComparison) window.MarketComparison.bind();
   if (window.AIResearch) window.AIResearch.bind();
   if (window.CapitalFlow) window.CapitalFlow.bind();
+  if (window.MarketInstitutionalFlow) window.MarketInstitutionalFlow.bind();
+  if (window.CompoundLab) window.CompoundLab.bind();
 
   const indSelect = document.getElementById('indicatorSelect');
   if (indSelect) {
@@ -39,9 +121,7 @@ function bindButtons() {
     });
   }
   document.getElementById('themeToggle').addEventListener('click', function() {
-    document.body.classList.toggle('dark');
-    const btn = document.getElementById('themeToggle');
-    btn.textContent = document.body.classList.contains('dark') ? '☀️' : '🌙';
+    applyUiStyle(document.body.dataset.uiStyle === 'terminal' ? 'clarity' : 'terminal', true);
     if (State.currentView === 'kline' && State.currentRawData.length) {
       KlineChart.renderKlineChart(State.currentRawData, State.currentIndicator);
     } else if (State.currentView === 'realtime' && State.timeChart) {
@@ -58,13 +138,18 @@ function bindButtons() {
       window.PortfolioCharts.resizePortfolioCharts();
     }
     if (State.currentMainView === 'capitalFlow' && window.CapitalFlow) window.CapitalFlow.rerender();
+    if (State.currentMainView === 'compoundLab' && window.CompoundLab) window.CompoundLab.rerender();
+    if (window.VolumePace && typeof window.VolumePace.rerender === 'function') window.VolumePace.rerender();
+    if (window.MarketComparison && typeof window.MarketComparison.rerenderTheme === 'function') {
+      window.MarketComparison.rerenderTheme();
+    }
   });
   document.getElementById('clearBtn').addEventListener('click', Search.clearSearch);
   const refreshDashboardBtn = document.getElementById('refreshDashboardBtn');
   if (refreshDashboardBtn) refreshDashboardBtn.addEventListener('click', async function(event) {
     event.stopImmediatePropagation();
     if (!window.Dashboard || typeof window.Dashboard.load !== 'function') {
-      alert('刷新工作台模块尚未就绪');
+      alert('刷新首页模块尚未就绪');
       return;
     }
     const originalText = refreshDashboardBtn.textContent;
@@ -72,14 +157,16 @@ function bindButtons() {
     refreshDashboardBtn.setAttribute('aria-busy', 'true');
     refreshDashboardBtn.textContent = '刷新中...';
     if (typeof window.Dashboard.setRefreshStatus === 'function') {
-      window.Dashboard.setRefreshStatus('Refreshing dashboard...', false);
+      window.Dashboard.setRefreshStatus('正在刷新行情…', false);
     }
     try {
-      await window.Dashboard.load();
+      const refreshTasks = [window.Dashboard.load({ force: true })];
+      if (window.MarketInstitutionalFlow) refreshTasks.push(window.MarketInstitutionalFlow.load(true));
+      await Promise.all(refreshTasks);
     } catch (error) {
-      const message = error && error.message ? error.message : '刷新工作台失败';
+      const message = error && error.message ? error.message : '刷新首页失败';
       if (typeof window.Dashboard.setRefreshStatus === 'function') {
-        window.Dashboard.setRefreshStatus('Refresh failed: ' + message, true);
+        window.Dashboard.setRefreshStatus('刷新失败：' + message, true);
       }
       alert(message);
     } finally {
@@ -190,6 +277,10 @@ function bindButtons() {
   if (watchlistSortSelect) watchlistSortSelect.addEventListener('change', Watchlist.renderWatchlist);
   const watchlistSearchInput = document.getElementById('watchlistSearchInput');
   if (watchlistSearchInput) watchlistSearchInput.addEventListener('input', Watchlist.renderWatchlist);
+  const watchlistGroupSearch = document.getElementById('watchlistGroupSearch');
+  if (watchlistGroupSearch) watchlistGroupSearch.addEventListener('input', function() {
+    Watchlist.renderPortfolioWatchlistTabs(Watchlist.watchlistGroups());
+  });
   document.getElementById('addCurrentToWatchlistBtn').addEventListener('click', Watchlist.addCurrentStock);
   document.getElementById('refreshWatchlistBtn').addEventListener('click', Watchlist.refreshWatchlistQuotes);
   document.getElementById('syncTonghuashunWatchlistBtn').addEventListener('click', function() {
@@ -207,6 +298,9 @@ function bindButtons() {
 
   document.getElementById('addTradeFromPortfolioBtn').addEventListener('click', function() { Trades.openTradeModal('new'); });
   document.getElementById('refreshPortfolioBtn').addEventListener('click', Portfolio.refreshPortfolio);
+  document.getElementById('syncTonghuashunHoldingsBtn').addEventListener('click', function() {
+    Portfolio.syncTonghuashunHoldings().catch(function(error) { alert(error.message || '同花顺持仓同步失败'); });
+  });
   document.getElementById('portfolioAccountSelect').addEventListener('change', function(event) {
     Portfolio.switchAccount(event.target.value).catch(function(error) { alert(error.message); });
   });
@@ -217,10 +311,12 @@ function bindButtons() {
     const button = event.target.closest('[data-account-id]');
     if (button) Portfolio.switchAccount(button.dataset.accountId).catch(function(error) { alert(error.message); });
   });
-  document.getElementById('addPortfolioAccountBtn').addEventListener('click', Portfolio.openAccountModal);
+  document.getElementById('addPortfolioAccountBtn').addEventListener('click', function() { Portfolio.openAccountModal(); });
+  document.getElementById('editPortfolioAccountBtn').addEventListener('click', Portfolio.editActiveAccount);
   document.getElementById('portfolioAccountModalClose').addEventListener('click', Portfolio.closeAccountModal);
   document.getElementById('portfolioAccountModalCancel').addEventListener('click', Portfolio.closeAccountModal);
   document.getElementById('portfolioAccountModalOk').addEventListener('click', Portfolio.createAccountFromModal);
+  document.getElementById('portfolioAccountDelete').addEventListener('click', Portfolio.deleteAccountFromModal);
   document.getElementById('portfolioAccountModalOverlay').addEventListener('click', function(event) {
     if (event.target === this) Portfolio.closeAccountModal();
   });
@@ -351,7 +447,9 @@ function updateSidebarWorkspace() {
     const el = document.getElementById(id);
     if (el) el.textContent = String(value);
   };
-  setText('sidebarWatchlistCount', (State.watchlist || []).length);
+  const tonghuashunSelfGroup = State.tonghuashunCatalog && Array.isArray(State.tonghuashunCatalog.groups)
+    ? State.tonghuashunCatalog.groups.find(function(group) { return group.name === '同花顺自选'; }) : null;
+  setText('sidebarWatchlistCount', tonghuashunSelfGroup ? tonghuashunSelfGroup.items.length : (State.watchlist || []).length);
   const sectorDashboard = window.SectorLeaders && window.SectorLeaders.getDashboard ? window.SectorLeaders.getDashboard() : null;
   setText('sidebarSectorCount', ((sectorDashboard && sectorDashboard.overview) || []).length);
   let historyCount = 0;
@@ -427,6 +525,7 @@ function switchMainView(view, options) {
   const State = window.State;
   options = options || {};
   State.currentMainView = view;
+  if (window.EastmoneyDarkStocks) window.EastmoneyDarkStocks.sync();
 
   document.querySelectorAll('.main-view').forEach(function(el) {
     el.style.display = 'none';
@@ -440,11 +539,15 @@ function switchMainView(view, options) {
   }
   if (view === 'watchlist' || view === 'portfolio') selectPortfolioWatchlistTab(view);
 
-  const navigationView = view === 'portfolio' ? 'watchlist' : view;
+  let navigationView = view === 'market' ? 'dashboard' : view;
+  navigationView = view === 'portfolio' ? 'watchlist' : navigationView;
   document.querySelectorAll('.main-tab').forEach(function(btn) {
     btn.classList.toggle('active', btn.getAttribute('data-main-view') === navigationView);
   });
   updateSidebarWorkspace();
+  if (window.HotMarket && typeof window.HotMarket.syncSearchMode === 'function') {
+    window.HotMarket.syncSearchMode();
+  }
   syncMainViewHistory(view, options);
 
   if (view === 'watchlist') window.Watchlist.loadWatchlist().catch(function(error) { alert(error.message); });
@@ -452,14 +555,23 @@ function switchMainView(view, options) {
   if (view === 'news') window.News.load().catch(function(error) { alert(error.message); });
   if (view === 'sectors') {
     if (window.HotMarket) window.HotMarket.load({ silent: true, fast: true }).catch(function(error) { console.warn(error.message); });
+    if (window.ExternalResearch) window.ExternalResearch.load().catch(function(error) { console.warn(error.message); });
     window.SectorLeaders.load().catch(function(error) { alert(error.message); });
+  }
+  if (view === 'industryChain' && window.IndustryChain) {
+    if (window.ExternalResearch) window.ExternalResearch.load().catch(function(error) { console.warn(error.message); });
+    window.IndustryChain.load().then(function() {
+      return window.IndustryChain.discover();
+    }).catch(function(error) {
+      console.warn(error && error.message ? error.message : error);
+    });
   }
   if (view === 'screener') window.StockScreener.ensureLoaded().catch(function(error) { alert(error.message); });
   if (view === 'aiResearch') {
     if (window.ExpertTracker) window.ExpertTracker.bind();
     if (window.AIResearch) {
       window.AIResearch.bind();
-      window.AIResearch.ensureLoaded().catch(function(error) { alert(error.message); });
+      window.AIResearch.ensureLoaded(true).catch(function(error) { alert(error.message); });
     }
   }
   if (view === 'creatorTasks' && window.ExpertTracker) {
@@ -482,25 +594,43 @@ function switchMainView(view, options) {
     if (window.PortfolioCharts) window.PortfolioCharts.resizePortfolioCharts();
   }).catch(function(error) { alert(error.message); });
   if (view === 'dashboard' && window.Dashboard) window.Dashboard.load().catch(function(error) { console.warn(error.message); });
+  if (view === 'dashboard' && window.MarketInstitutionalFlow) {
+    window.MarketInstitutionalFlow.ensureLoaded().catch(function(error) { console.warn(error.message); });
+  }
   if (view === 'settings' && window.Settings) window.Settings.load().catch(function(error) { alert(error.message); });
   if (view === 'capitalFlow' && window.CapitalFlow) {
+    if (window.SectorRotation) window.SectorRotation.run();
     const capitalFlowCode = document.getElementById('capitalFlowCode');
     if (capitalFlowCode && State.currentStock && State.currentStock.code) capitalFlowCode.value = State.currentStock.code;
-    window.CapitalFlow.ensureLoaded().then(function() { window.CapitalFlow.resize(); }).catch(function(error) {
-      const errorBox = document.getElementById('capitalFlowError');
-      if (errorBox) {
-        errorBox.hidden = false;
-        errorBox.textContent = error.message || String(error);
-      }
+    window.CapitalFlow.bind();
+    window.CapitalFlow.resize();
+  }
+  if (view === 'capitalFlow' && window.MarketInstitutionalFlow) {
+    window.MarketInstitutionalFlow.ensureLoaded().catch(function(error) {
+      console.warn(error && error.message ? error.message : error);
+    });
+  }
+  if (view === 'compoundLab' && window.CompoundLab) {
+    window.CompoundLab.ensureLoaded().then(function() { window.CompoundLab.resize(); }).catch(function(error) {
+      console.warn(error && error.message ? error.message : error);
+    });
+  }
+  if (view === 'commentStrategy' && window.CommentStrategyLab) {
+    window.CommentStrategyLab.ensureLoaded().catch(function(error) {
+      console.warn(error && error.message ? error.message : error);
     });
   }
   if (window.RealtimeChart && typeof window.RealtimeChart.syncRefreshSchedule === 'function') {
-    window.RealtimeChart.syncRefreshSchedule({ immediate: view === 'market' }).catch(function(error) {
+    const marketDetailVisible = view === 'market' && (!window.MarketOverview || window.MarketOverview.isDetail());
+    window.RealtimeChart.syncRefreshSchedule({ immediate: marketDetailVisible }).catch(function(error) {
       console.warn(error && error.message ? error.message : error);
     });
   }
   if (window.LiveRefresh && typeof window.LiveRefresh.sync === 'function') {
     window.LiveRefresh.sync({ immediate: false });
+  }
+  if (window.MarketComparison && typeof window.MarketComparison.resize === 'function') {
+    setTimeout(function() { window.MarketComparison.resize(); }, 0);
   }
 }
 
@@ -521,14 +651,26 @@ function resizeMarketCharts() {
       if (chart && typeof chart.resize === 'function') chart.resize();
     });
     if (window.State && window.State.currentMainView === 'capitalFlow' && window.CapitalFlow) window.CapitalFlow.resize();
+    if (window.State && window.State.currentMainView === 'compoundLab' && window.CompoundLab) window.CompoundLab.resize();
+    if (window.MarketComparison && typeof window.MarketComparison.resize === 'function') window.MarketComparison.resize();
+    if (window.VolumePace && typeof window.VolumePace.resize === 'function') window.VolumePace.resize();
   }, 60);
 }
 window.addEventListener('resize', resizeMarketCharts);
 window.addEventListener('orientationchange', resizeMarketCharts);
 
 if ('serviceWorker' in navigator) {
+  const hadServiceWorkerController = Boolean(navigator.serviceWorker.controller);
+  let serviceWorkerRefreshStarted = false;
+  navigator.serviceWorker.addEventListener('controllerchange', function() {
+    if (!hadServiceWorkerController || serviceWorkerRefreshStarted) return;
+    serviceWorkerRefreshStarted = true;
+    window.location.reload();
+  });
   window.addEventListener('load', function() {
-    navigator.serviceWorker.register('/sw.js').catch(function(error) {
+    navigator.serviceWorker.register('/sw.js').then(function(registration) {
+      return registration.update();
+    }).catch(function(error) {
       console.warn('Service worker registration failed:', error.message);
     });
   });
@@ -559,12 +701,25 @@ async function init() {
   const State = window.State;
   const StockList = window.StockList;
 
+  applyUiStyle(readStoredUiStyle(), false);
+
   // Bind navigation before the first network wait so early user clicks are never dropped.
+  bindMarketDrawer();
   bindMainNavigation();
+  if (window.MarketComparison) window.MarketComparison.bind();
   setupPortfolioWatchlistPage();
+  const initialDashboardLoad = window.Dashboard
+    ? window.Dashboard.load().catch(function(error) { console.warn(error.message); })
+    : Promise.resolve();
+  if (window.MarketInstitutionalFlow) {
+    window.MarketInstitutionalFlow.ensureLoaded().catch(function(error) { console.warn(error.message); });
+  }
   if (window.NetworkHealth) window.NetworkHealth.start();
   if (window.News && window.News.loadSidebarNews) {
     window.News.loadSidebarNews().catch(function(error) { console.warn(error.message); });
+  }
+  if (window.AIResearch && typeof window.AIResearch.prefetchModels === 'function') {
+    window.AIResearch.prefetchModels().catch(function(error) { console.warn(error.message); });
   }
   State.allStocks = await window.ApiClient.fetchJsonData('/api/stocklist');
   State.filteredStocks = State.allStocks.slice(0, State.PAGE_SIZE);
@@ -576,7 +731,8 @@ async function init() {
     StockList.refreshQuotes(State.filteredStocks).catch(function(error) { console.warn(error.message); });
   }, 0);
   bindButtons();
-  const requestedView = window.location.hash ? decodeURIComponent(window.location.hash.slice(1)) : '';
+  const rawRequestedView = window.location.hash ? decodeURIComponent(window.location.hash.slice(1)) : '';
+  const requestedView = rawRequestedView;
   if (requestedView && document.getElementById(requestedView + 'View')) {
     switchMainView(requestedView, { replace: true });
   } else {
@@ -592,9 +748,9 @@ async function init() {
     StockList.primeStock(pingAn);
   }
   if (window.Dashboard) {
-    setTimeout(function() {
-      window.Dashboard.load().catch(function(error) { console.warn(error.message); });
-    }, 0);
+    initialDashboardLoad.finally(function() {
+      window.Dashboard.refreshCards();
+    });
   }
 }
 

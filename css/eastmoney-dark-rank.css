@@ -1,0 +1,46 @@
+.dark-rank-panel { min-width:0; margin:0 0 22px; padding:24px; background:var(--card-bg); border:1px solid var(--border); border-radius:16px; color:var(--text); font-size:15px; line-height:1.6; }
+.dark-rank-head { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:12px; }
+.dark-rank-panel h3 { font-size:24px; margin:4px 0; }
+.dark-rank-panel h3 span { font-size:14px; font-weight:400; color:var(--text-secondary); }
+.dark-rank-panel a { color:var(--accent); }
+.dark-rank-intro, .dark-rank-hint { color:var(--text-secondary); margin:10px 0; }
+.dark-rank-controls { display:flex; flex-wrap:wrap; align-items:center; gap:16px; margin:18px 0; }
+.dark-rank-controls label { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+.dark-rank-panel input, .dark-rank-panel select, .dark-rank-panel button { font:inherit; min-height:44px; padding:8px 14px; background:var(--btn-bg); color:var(--btn-color); border:1px solid var(--btn-border); border-radius:8px; }
+.dark-rank-panel button { cursor:pointer; }
+.dark-rank-panel button:disabled { cursor:default; opacity:.5; }
+.dark-rank-panel #darkRankRefresh { color:var(--accent); border-color:var(--accent); font-weight:600; }
+.dark-rank-status { padding:14px 16px; background:var(--muted-bg); border:1px solid var(--border); border-radius:10px; overflow-wrap:anywhere; margin:14px 0; }
+.dark-rank-panel h4 { font-size:18px; margin:18px 0 10px; }
+.dark-rank-metrics { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; margin:12px 0; }
+.dark-rank-metrics article { padding:20px; border:1px solid var(--border); border-radius:12px; }
+.dark-rank-metrics strong { display:block; font-size:32px; line-height:1.35; margin:8px 0; overflow-wrap:anywhere; font-variant-numeric:tabular-nums; }
+.dark-rank-panel small { display:block; font-size:14px; }
+.dark-rank-up { color:var(--up); }
+.dark-rank-down { color:var(--down); }
+.dark-rank-neutral { color:var(--text); }
+.dark-rank-table-wrap { overflow-x:auto; max-width:100%; }
+.dark-rank-panel table { border-collapse:collapse; width:100%; min-width:1000px; font-variant-numeric:tabular-nums; }
+.dark-rank-panel th, .dark-rank-panel td { text-align:right; padding:14px 12px; border-bottom:1px solid var(--border); white-space:nowrap; }
+.dark-rank-panel th:first-child, .dark-rank-panel td:first-child, .dark-rank-panel th:last-child, .dark-rank-panel td:last-child { text-align:left; }
+.dark-rank-panel td strong { font-size:19px; }
+.dark-rank-panel td:first-child button { font-weight:600; border:0; background:none; padding:0; text-align:left; color:var(--text-primary); }
+.dark-rank-panel td small { color:var(--text-secondary); }
+.dark-rank-panel tr:hover { background:var(--hover); }
+.dark-rank-pages { display:flex; flex-wrap:wrap; justify-content:center; align-items:center; gap:16px; margin:20px 0; }
+.dark-rank-panel details { margin-top:16px; }
+.dark-rank-panel summary { cursor:pointer; }
+.dark-rank-panel ul { padding-left:22px; margin-top:10px; }
+.dark-rank-panel [hidden] { display:none !important; }
+.dark-rank-controls input[type=checkbox] { min-height:20px; width:20px; accent-color:var(--accent); }
+.dark-stock-detail { margin-top:16px; padding:14px; border:1px solid var(--border); border-radius:10px; }
+.dark-stock-detail h4 { margin:14px 0 8px; font-size:16px; }
+.dark-stock-amounts { display:grid; gap:5px; min-width:165px; font-variant-numeric:tabular-nums; }
+.dark-stock-amounts > div { display:flex; justify-content:space-between; gap:14px; align-items:baseline; }
+.dark-stock-amounts span { color:var(--text-secondary); font-size:12px; }
+.dark-stock-amounts strong { font-size:16px; white-space:nowrap; }
+.dark-stock-detail .dark-stock-amounts strong { font-size:21px; }
+.dark-stock-detail small, .dark-stock-cell small { display:block; font-size:12px; color:var(--text-secondary); line-height:1.5; }
+.dark-stock-toolbar { display:flex; justify-content:space-between; gap:12px; align-items:center; padding:10px 14px; flex-wrap:wrap; }
+.dark-stock-status { font-size:12px; color:var(--text-secondary); overflow-wrap:anywhere; line-height:1.6; }
+@media(max-width:850px) { .dark-rank-panel { padding:16px; } .dark-rank-metrics { grid-template-columns:1fr; } .dark-rank-controls { gap:12px; } .dark-rank-panel h3 { font-size:21px; } }

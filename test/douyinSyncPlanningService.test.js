@@ -238,6 +238,24 @@ test('recent transcription-pending records bypass the detail freshness TTL', () 
   assert.equal(planned[0].reason, 'transcription_pending');
 });
 
+test('a low-confidence transcript is not treated as missing transcription', () => {
+  const planned = planDetailCandidates([{
+    externalContentId: 'reviewed-asr',
+    transcript: '已保存的待复核稿',
+    mediaMetadata: {
+      detailCapturedAt: '2026-08-11T11:55:00.000Z',
+      asr: { status: 'needs_review', quality: { needsReview: true } }
+    }
+  }], {}, {
+    now: '2026-08-11T12:00:00.000Z',
+    limit: 1,
+    recentTtlMs: 6 * 60 * 60 * 1000,
+    maxTranscriptionPending: 1
+  });
+
+  assert.deepEqual(planned, []);
+});
+
 test('detail planner honors an explicit zero TTL for a complete archive pass', () => {
   const planned = planDetailCandidates([{
     externalContentId: 'archive-refresh',

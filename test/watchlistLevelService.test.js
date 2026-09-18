@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const { deriveAutomaticLevels } = require('../services/watchlistLevelService');
+const { deriveAutomaticLevels, refreshWatchlistLevels } = require('../services/watchlistLevelService');
 
 function bars() {
   return Array.from({ length: 45 }, function(_, index) {
@@ -32,4 +32,30 @@ test('automatic watchlist levels are transparent historical support and resistan
 
 test('automatic watchlist levels require enough valid daily bars', () => {
   assert.throws(() => deriveAutomaticLevels(bars().slice(0, 5)), /至少需要 10 根/);
+});
+
+test('automatic levels are returned for read-only Tonghuashun rows without a database id', async () => {
+  const result = await refreshWatchlistLevels({
+    items: [{ code: '601138', name: '工业富联' }],
+    concurrency: 1,
+    fetchDailyBars: async () => bars()
+  });
+
+  assert.equal(result.updatedCount, 1);
+  assert.equal(result.failedCount, 0);
+  assert.equal(result.levelsByCode['601138'].sourceDate, '2026-07-15');
+  assert.ok(result.levelsByCode['601138'].d1Low > 0);
+});
+
+test('automatic level failures keep the exact symbol and reason for the watchlist row', async () => {
+  const result = await refreshWatchlistLevels({
+    items: [{ code: '002463' }],
+    concurrency: 1,
+    fetchDailyBars: async () => bars().slice(0, 5)
+  });
+
+  assert.equal(result.updatedCount, 0);
+  assert.equal(result.failedCount, 1);
+  assert.equal(result.failures[0].code, '002463');
+  assert.match(result.failures[0].error, /至少需要 10 根/);
 });

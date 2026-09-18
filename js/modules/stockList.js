@@ -23,6 +23,10 @@ const MINI_CHART_LABELS = {
 };
 
 function minuteStockForCode(code) {
+  if (window.Watchlist && typeof window.Watchlist.getMiniChartStock === 'function') {
+    const visibleWatchlistStock = window.Watchlist.getMiniChartStock(code);
+    if (visibleWatchlistStock) return visibleWatchlistStock;
+  }
   const State = window.State || {};
   const lists = [State.watchlist, State.positions, State.filteredStocks,
     State.searchResults, State.recentStocks, State.allStocks];
@@ -716,6 +720,7 @@ async function selectStock(stock) {
   }
   const State = window.State;
   const RealtimeChart = window.RealtimeChart;
+  if (window.MarketOverview) window.MarketOverview.showDetail();
   const selectionId = ++stockSelectionSequence;
   const isCurrentSelection = function() {
     return selectionId === stockSelectionSequence && State.currentStock && State.currentStock.code === stock.code;

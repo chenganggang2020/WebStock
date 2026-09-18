@@ -1,4 +1,4 @@
-const CACHE_NAME = 'webstock-static-v8';
+const CACHE_NAME = 'webstock-static-v30';
 const CORE_ASSETS = [
   '/mobile.html',
   '/css/mobile.css',
@@ -13,17 +13,32 @@ const OPTIONAL_ASSETS = [
   '/',
   '/index.html',
   '/css/styles.css',
+  '/css/sector-rotation.css',
+  '/js/modules/eastmoneyDarkRank.js',
+  '/js/modules/sectorRotation.js',
   '/vendor/echarts.min.js',
   '/js/modules/state.js',
   '/js/modules/apiClient.js',
   '/js/modules/time.js',
   '/js/modules/search.js',
+  '/js/modules/marketSignalModel.js',
+  '/js/modules/marketHeatmapModel.js',
+  '/js/modules/marketComparison.js',
+  '/js/modules/marketOverview.js',
+  '/js/modules/volumePace.js',
+  '/js/modules/industryChain.js',
+  '/js/modules/marketInstitutionalFlow.js',
+  '/js/modules/externalResearch.js',
   '/js/modules/stockList.js',
   '/js/modules/hotMarket.js',
   '/js/modules/dashboard.js',
   '/js/modules/news.js',
   '/js/modules/aiResearch.js',
   '/js/modules/portfolio.js',
+  '/js/modules/compoundLabModel.js',
+  '/js/modules/compoundLab.js',
+  '/js/modules/commentStrategyModel.js',
+  '/js/modules/commentStrategyLab.js',
   '/js/app.js'
 ];
 

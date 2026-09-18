@@ -100,3 +100,54 @@ test('all sector leader detail tables use a local horizontal scroll container', 
   const source = fs.readFileSync(path.join(__dirname, '..', 'js', 'modules', 'sectorLeaders.js'), 'utf8');
   assert.equal((source.match(/class="sector-table-scroll"/g) || []).length, 4);
 });
+
+function loadNumericView(apiResult = []) {
+  const box = { innerHTML: '' };
+  const context = {
+    window: { apiFetch: async () => apiResult }, console,
+    document: { getElementById: () => box }
+  };
+  vm.createContext(context);
+  vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'js', 'modules', 'sectorLeaders.js'), 'utf8'), context);
+  return { context, box };
+}
+
+test('candidate rows distinguish unknown price change and turnover from real zero', () => {
+  const { context } = loadNumericView();
+  for (const missing of [null, undefined, '', ' ', false]) {
+    const html = context.window.SectorLeaders.renderCandidateRow({
+      code: '600000', name: 'Test', price: missing, change: missing, amount: missing
+    });
+    assert.match(html, /<td>--<\/td><td class="">--<\/td><td>--<\/td>/);
+    assert.doesNotMatch(html, /pnl-up|pnl-down|0\.00/);
+  }
+  const zero = context.window.SectorLeaders.renderCandidateRow({
+    code: '600000', name: 'Test', price: 10, change: 0, amount: 0
+  });
+  assert.match(zero, /<td class="pnl-up">\+0\.00%<\/td><td>0\.00亿<\/td>/);
+});
+
+test('history rows keep missing quote fields unknown and preserve real zero turnover', async () => {
+  for (const missing of [null, undefined, '', ' ', false]) {
+    const { context, box } = loadNumericView([{ price: missing, change: missing, amount: missing }]);
+    await context.showLeaderHistory('600000');
+    assert.match(box.innerHTML, /<td>--<\/td><td class="">--<\/td><td>--<\/td>/);
+    assert.doesNotMatch(box.innerHTML, /pnl-up|pnl-down|0\.00/);
+  }
+  const { context, box } = loadNumericView([{ price: 10, change: 0, amount: 0 }]);
+  await context.showLeaderHistory('600000');
+  assert.match(box.innerHTML, /<td class="pnl-up">\+0\.00%<\/td><td>0\.00亿<\/td>/);
+});
+
+test('trend table and dashboard summary keep unknown changes uncolored without zero labels', async () => {
+  const { context, box } = loadNumericView([{ latestChange: null, previousChange: null, changeDelta: null }]);
+  await context.window.SectorLeaders.showTrends();
+  assert.match(box.innerHTML, /<td class="">--<\/td><td class="">--<\/td><td class="">--<\/td>/);
+  assert.doesNotMatch(box.innerHTML, /pnl-up|pnl-down|0\.00/);
+  const zero = loadNumericView([{ latestChange: 0, previousChange: 0, changeDelta: 0 }]);
+  await zero.context.window.SectorLeaders.showTrends();
+  assert.match(zero.box.innerHTML, /<td class="pnl-up">0\.00%<\/td><td class="pnl-up">0\.00%<\/td><td class="pnl-up">\+0\.00pct<\/td>/);
+  vm.runInContext('sectorDashboard = { overview: [{ change: null }] }; renderDashboardSummary();', context);
+  assert.match(box.innerHTML, /<td class="">--<\/td>/);
+  assert.doesNotMatch(box.innerHTML, /pnl-up|pnl-down|0\.00|--%/);
+});

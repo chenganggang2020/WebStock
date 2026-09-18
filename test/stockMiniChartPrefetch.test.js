@@ -63,7 +63,7 @@ function loadStockList(cells, fetchApiEnvelope) {
   };
   const source = fs.readFileSync(path.resolve(__dirname, '../js/modules/stockList.js'), 'utf8');
   vm.runInNewContext(source, context, { filename: 'stockList.js' });
-  return { StockList: window.StockList, state: window.State, getObserver() { return observer; } };
+  return { StockList: window.StockList, state: window.State, window, getObserver() { return observer; } };
 }
 
 test('visible row minute prefetch is lazy, bounded, deduplicated, and keeps failures explicit', async () => {
@@ -160,5 +160,31 @@ test('minute prefetch rerender prefers the quoted watchlist row over the unquote
 
   assert.match(cell.innerHTML, /polyline/);
   assert.match(cell.innerHTML, /stroke="#ff2d2d"/);
+  assert.doesNotMatch(cell.innerHTML, /stroke="#64748b"[^>]*polyline/);
+});
+
+test('minute prefetch uses the visible Tonghuashun row quote so red and green do not turn gray', async () => {
+  const cell = createCell('601138');
+  const loaded = loadStockList([cell], async function() {
+    return {
+      data: [
+        { time: '2026-09-01 09:35:00', price: 64.5 },
+        { time: '2026-09-01 15:00:00', price: 62.94 }
+      ],
+      meta: { sampling: { intervalMinutes: 5 } }
+    };
+  });
+  loaded.state.allStocks = [{ code: '601138', name: '工业富联' }];
+  loaded.window.Watchlist = {
+    getMiniChartStock(code) {
+      return code === '601138' ? { code, name: '工业富联', change: -2.93, prevClose: 64.84 } : null;
+    }
+  };
+
+  loaded.StockList.observeMinuteRows({ querySelectorAll() { return [cell]; } });
+  loaded.getObserver().callback([{ target: cell, isIntersecting: true }]);
+  await loaded.StockList.waitForMinutePrefetchIdle();
+
+  assert.match(cell.innerHTML, /stroke="#00b050"/);
   assert.doesNotMatch(cell.innerHTML, /stroke="#64748b"[^>]*polyline/);
 });

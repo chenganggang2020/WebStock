@@ -204,8 +204,15 @@ function createChannel(input = {}) {
   if (!displayName) throw new Error('研究对象名称不能为空');
   if (!platform) throw new Error('来源或平台不能为空');
   if (!SUBJECT_TYPES.has(subjectType)) throw new Error('不支持的研究对象类型');
-  const channelKey = cleanText(input.channelKey, 120) || sha256(subjectType + '\n' + platform + '\n' + displayName).slice(0, 24);
-  const profileUrl = normalizeUrl(input.profileUrl);
+  let profileUrl = normalizeUrl(input.profileUrl);
+  if (platform === 'douyin' && /^https:\/\/www\.douyin\.com\/user\//.test(profileUrl)) {
+    const parsed = new URL(profileUrl);
+    profileUrl = parsed.origin + parsed.pathname.replace(/\/$/, '');
+  }
+  const priorProfile = platform === 'douyin' && profileUrl
+    ? db.prepare('SELECT channel_key FROM expert_channels WHERE platform = ? AND profile_url = ?').get(platform, profileUrl) : null;
+  const channelKey = cleanText(input.channelKey, 120) || (priorProfile && priorProfile.channel_key) ||
+    sha256(subjectType + '\n' + platform + '\n' + (platform === 'douyin' && profileUrl ? profileUrl : displayName)).slice(0, 24);
   const description = cleanText(input.description, 10000);
   const aliases = normalizeArray(input.aliases, { maxLength: 160 });
   const discoveryQueries = normalizeArray(input.discoveryQueries, { maxLength: 300, limit: 30 });
@@ -239,6 +246,7 @@ function observationRow(channelId, externalKey) {
 }
 
 function metricValue(value) {
+  if (value == null || value === '') return null;
   const number = Number(value);
   return Number.isFinite(number) && number >= 0 ? Math.round(number) : null;
 }
@@ -527,8 +535,16 @@ function listObservationMetrics(channelId, observationId, options = {}) {
     ORDER BY datetime(observed_at) DESC, id DESC LIMIT ?`).all(observation.id, limit);
 }
 
+function getObservation(channelId, observationId) {
+  const row = db.prepare('SELECT * FROM expert_observations WHERE channel_id = ? AND id = ?')
+    .get(Number(channelId), Number(observationId));
+  if (!row) throw new Error('观察记录不存在或不属于该作者');
+  return rowToObservation(row);
+}
+
 function rowToComment(row) {
   return {
+    versions: parseJson(row.versions_json, []),
     id: Number(row.id),
     observationId: Number(row.observation_id),
     commentId: row.comment_id,
@@ -576,12 +592,15 @@ function listObservationComments(channelId, observationId, options = {}) {
     .get(Number(observationId), Number(channelId));
   if (!observation) throw new Error('观察记录不存在');
   const limit = Math.min(Math.max(Number(options.limit) || 200, 1), 1000);
+  const offset = Math.max(0, Math.floor(Number(options.offset) || 0));
+  const total = db.prepare('SELECT COUNT(*) AS n FROM expert_comments WHERE observation_id = ?').get(observation.id).n;
   const comments = db.prepare(`SELECT * FROM expert_comments WHERE observation_id = ?
-    ORDER BY id ASC LIMIT ?`).all(observation.id, limit).map(rowToComment);
+    ORDER BY id ASC LIMIT ? OFFSET ?`).all(observation.id, limit, offset).map(rowToComment);
   const capture = db.prepare(`SELECT status, message, observed_at AS observedAt,
     visible_count AS visibleCount, complete FROM expert_comment_captures
     WHERE observation_id = ? ORDER BY datetime(observed_at) DESC, id DESC LIMIT 1`).get(observation.id);
   return {
+    total, offset, hasMore: offset + comments.length < total,
     comments,
     coverage: capture ? Object.assign({}, capture, { complete: Boolean(capture.complete) }) : {
       status: 'not_loaded',
@@ -630,12 +649,36 @@ function recordObservationComments(channelId, observationId, inputComments, inpu
         publishedAt = cleanText(comment.publishedAt, 80);
       }
       const likes = metricValue(comment.likes);
+      const prior = db.prepare('SELECT * FROM expert_comments WHERE observation_id = ? AND comment_id = ?')
+        .get(observation.id, commentId);
+      const commentObservedAt = inputCoverage.restoring === true ? safeIso(comment.observedAt, observedAt) : observedAt;
+      let versions = prior ? JSON.parse(prior.versions_json || '[]') : [];
+      if (inputCoverage.restoring === true && Array.isArray(comment.versions)) {
+        versions = versions.concat(comment.versions.map(function(version) {
+          return { text: cleanText(version.text, 10000), observedAt: safeIso(version.observedAt, commentObservedAt),
+            authorName: cleanText(version.authorName, 160), likes: metricValue(version.likes) };
+        }));
+      }
+      if (prior && (prior.comment_text !== text || prior.likes !== likes || prior.author_name !== cleanText(comment.authorName, 160))) {
+        const older = Date.parse(commentObservedAt) < Date.parse(prior.observed_at);
+        versions.push(older ? { text, observedAt: commentObservedAt, likes, authorName: cleanText(comment.authorName, 160) }
+          : { text: prior.comment_text, observedAt: prior.observed_at, likes: prior.likes, authorName: prior.author_name });
+      }
+      const uniqueVersions = Array.from(new Map(versions.map(version => [
+        JSON.stringify([version.text, version.observedAt, version.likes, version.authorName]), version
+      ])).values());
+      if (prior && Date.parse(commentObservedAt) < Date.parse(prior.observed_at)) {
+        db.prepare('UPDATE expert_comments SET versions_json = ? WHERE id = ?').run(JSON.stringify(uniqueVersions), prior.id);
+        return;
+      }
       upsert.run(
         observation.id, commentId, cleanText(comment.parentCommentId, 200),
         cleanText(comment.replyToCommentId, 200), cleanText(comment.authorName, 160),
         cleanText(comment.authorPlatformId, 200), verification.authorProfileUrl, text,
-        publishedAt, observedAt, likes, verification.creatorStatus, verification.verificationMethod
+        publishedAt, commentObservedAt, likes, verification.creatorStatus, verification.verificationMethod
       );
+      db.prepare('UPDATE expert_comments SET versions_json = ? WHERE observation_id = ? AND comment_id = ?')
+        .run(JSON.stringify(uniqueVersions), observation.id, commentId);
     });
     const status = cleanText(inputCoverage.status, 40) || (comments.length ? 'visible_partial' : 'not_loaded');
     const message = cleanText(inputCoverage.message, 500) || (comments.length
@@ -778,9 +821,12 @@ function exportChannels() {
     aliases: channel.aliases,
     discoveryQueries: channel.discoveryQueries,
     enabled: channel.enabled,
-    observations: listObservations(channel.id, { limit: 1000 }).map(function(observation) {
+    observations: db.prepare('SELECT * FROM expert_observations WHERE channel_id = ? ORDER BY id').all(channel.id).map(rowToObservation).map(function(observation) {
       return Object.assign({}, observation, {
-        commentData: listObservationComments(channel.id, observation.id, { limit: 200 })
+        commentData: Object.assign({}, listObservationComments(channel.id, observation.id), {
+          comments: db.prepare('SELECT * FROM expert_comments WHERE observation_id = ? ORDER BY id').all(observation.id).map(rowToComment),
+          hasMore: false
+        })
       });
     }),
     backtests: listBacktests(channel.id, { limit: 500 })
@@ -795,7 +841,11 @@ function restoreChannels(channels) {
       const commentData = observation.commentData && typeof observation.commentData === 'object'
         ? observation.commentData : null;
       if (commentData) {
-        recordObservationComments(channel.id, saved.id, commentData.comments, commentData.coverage);
+        const comments = commentData.comments || [];
+        for (let offset = 0; offset < Math.max(comments.length, 1); offset += 1000) {
+          recordObservationComments(channel.id, saved.id, comments.slice(offset, offset + 1000),
+            Object.assign({}, commentData.coverage, { restoring: true }));
+        }
       }
     });
     (item.backtests || []).forEach(backtest => recordBacktest(channel.id, backtest));
@@ -814,6 +864,7 @@ module.exports = {
   RIGHTS_BASES,
   createChannel,
   getChannel,
+  getObservation,
   listChannels,
   recordObservation,
   listObservations,

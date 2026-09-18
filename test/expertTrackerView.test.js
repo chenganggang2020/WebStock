@@ -9,11 +9,22 @@ function loadHelpers() {
   const context = vm.createContext({
     window: {}, console, URL, setInterval() { return 1; }, clearInterval() {}
   });
-  vm.runInContext(source + '\nthis.helpers = { expertDisplayTitle, expertCreatorVideoCard, expertCreatorCommentsHtml, expertCommentCache };', context, {
+  vm.runInContext(source + '\nthis.helpers = { expertDisplayTitle, expertCreatorVideoCard, expertCreatorCommentsHtml, expertCommentCache, expertCreatorAsrStatus, expertCreatorAsrStatusLabel, expertCreatorVerificationStatus, expertCreatorStatusMessage, expertRunOutcome };', context, {
     filename: 'expertTracker.js'
   });
   return context.helpers;
 }
+
+test('finished collection with missing speech runtime is partial, not fully completed', () => {
+  const helpers = loadHelpers();
+  assert.match(helpers.expertRunOutcome({ status: 'completed', items: [
+    { detailStatus: 'complete', transcriptionStatus: 'runtime_missing' }
+  ] }).label, /待处理/);
+  const item = { externalContentId: '7674168772814676657', sourceUrl: 'https://www.douyin.com/video/7674168772814676657',
+    mediaMetadata: { asr: { status: 'runtime_missing' } } };
+  assert.equal(helpers.expertCreatorAsrStatus(item), 'runtime_missing');
+  assert.match(helpers.expertCreatorAsrStatusLabel('runtime_missing', true), /环境/);
+});
 
 test('generic Douyin titles use a clearly labelled content-extracted title', () => {
   const { expertDisplayTitle } = loadHelpers();
@@ -25,6 +36,65 @@ test('generic Douyin titles use a clearly labelled content-extracted title', () 
   assert.equal(title.text, '近期科技股进入分化');
   assert.equal(title.sourceLabel, '内容提取标题');
   assert.equal(title.originalTitle, '模型先生于20211009发布的作品');
+});
+
+test('low-confidence ASR has an explicit review status instead of looking complete', () => {
+  const { expertCreatorAsrStatus, expertCreatorAsrStatusLabel, expertCreatorStatusMessage } = loadHelpers();
+  const item = {
+    externalContentId: '7930000000000000012',
+    sourceUrl: 'https://www.douyin.com/video/7930000000000000012',
+    transcript: '宇宿科技上市一周。',
+    mediaMetadata: {
+      detailCapturedAt: '2026-08-30T03:00:00.000Z',
+      asr: { status: 'needs_review', quality: { reasons: ['low_log_probability'] } }
+    }
+  };
+
+  const status = expertCreatorAsrStatus(item);
+  assert.equal(status, 'needs_review');
+  assert.equal(expertCreatorAsrStatusLabel(status, false), '转写待校对');
+  assert.match(expertCreatorStatusMessage(item, status), /不应直接当作完整原话/);
+});
+
+test('a verified local archive stays verified when the original video later becomes unavailable', () => {
+  const { expertCreatorVerificationStatus, expertCreatorVideoCard } = loadHelpers();
+  const item = {
+    id: 4618,
+    channelId: 1,
+    externalContentId: '7683835400880691953',
+    sourceUrl: 'https://www.douyin.com/video/7683835400880691953',
+    title: '已归档视频',
+    availabilityStatus: 'available',
+    transcript: '本地已保存的逐字稿',
+    mediaMetadata: {
+      archive: {
+        status: 'complete',
+        verificationMode: 'current_content_id',
+        mediaSha256: 'a'.repeat(64),
+        mediaBytes: 980657,
+        localAssetPath: 'D:/archive/7683835400880691953.mp4'
+      },
+      asr: { status: 'needs_review' }
+    }
+  };
+
+  let verification = expertCreatorVerificationStatus(item);
+  assert.equal(verification.status, 'verified_archive');
+  assert.equal(verification.label, '已核验归档');
+  let html = expertCreatorVideoCard(item, false, false);
+  assert.match(html, /已核验归档/);
+  assert.match(html, /转写待校对/);
+  assert.doesNotMatch(html, />待复核</);
+
+  item.availabilityStatus = 'unavailable';
+  item.mediaMetadata.remote = { status: 'unavailable', checkedAt: '2026-09-10T13:00:00.000Z' };
+  verification = expertCreatorVerificationStatus(item);
+  assert.equal(verification.status, 'verified_unavailable');
+  assert.equal(verification.label, '已核验 · 原视频不可访问');
+  html = expertCreatorVideoCard(item, false, false);
+  assert.match(html, /已核验 · 原视频不可访问/);
+  assert.match(html, /转写待校对/);
+  assert.doesNotMatch(html, />待复核</);
 });
 
 test('creator video cards render saved covers and identify the title source', () => {

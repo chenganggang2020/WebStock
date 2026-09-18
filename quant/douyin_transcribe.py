@@ -7,6 +7,14 @@ import time
 from faster_whisper import WhisperModel
 
 
+def optional_segment_metric(segment, attribute):
+    value = getattr(segment, attribute, None)
+    try:
+        return round(float(value), 6)
+    except (TypeError, ValueError):
+        return None
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--media", required=True)
@@ -14,6 +22,7 @@ def main():
     parser.add_argument("--model", default="small")
     parser.add_argument("--model-source", default="")
     parser.add_argument("--prompt", default="")
+    parser.add_argument("--hotwords", default="")
     args = parser.parse_args()
 
     started = time.perf_counter()
@@ -34,6 +43,7 @@ def main():
             beam_size=5,
             vad_filter=True,
             initial_prompt=args.prompt[:1000] or None,
+            hotwords=args.hotwords[:500] or None,
         )
         segments = []
         for segment in segments_iter:
@@ -43,6 +53,9 @@ def main():
                     "start": round(float(segment.start), 3),
                     "end": round(float(segment.end), 3),
                     "text": text,
+                    "avgLogProbability": optional_segment_metric(segment, "avg_logprob"),
+                    "noSpeechProbability": optional_segment_metric(segment, "no_speech_prob"),
+                    "compressionRatio": optional_segment_metric(segment, "compression_ratio"),
                 })
 
         result = {

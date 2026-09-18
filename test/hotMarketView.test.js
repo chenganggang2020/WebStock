@@ -44,3 +44,10 @@ test('hot market unavailable state names local sectors as a watchlist, not curre
   assert.match(message, /本地观察板块/);
   assert.doesNotMatch(message, /今日热点.*人工智能/);
 });
+
+test('hot market degradation keeps provider internals out of the visible message', () => {
+  const source = fs.readFileSync(path.join(__dirname, '..', 'js', 'modules', 'hotMarket.js'), 'utf8');
+
+  assert.match(source, /部分行情源暂不可用，以下仅展示当前仍可核验的数据/);
+  assert.doesNotMatch(source, /部分外部接口降级：.*hotMarketOverview\.errors/);
+});

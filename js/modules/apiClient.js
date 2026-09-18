@@ -1,6 +1,14 @@
+function apiErrorMessage(error, fallback) {
+  if (typeof error === 'string' && error.trim()) return error;
+  if (error && typeof error === 'object' && typeof error.message === 'string' && error.message.trim()) {
+    return error.message;
+  }
+  return fallback;
+}
+
 function unwrapApiResponse(json) {
   if (json && typeof json === 'object' && Object.prototype.hasOwnProperty.call(json, 'success')) {
-    if (!json.success) throw new Error(json.error || 'API request failed');
+    if (!json.success) throw new Error(apiErrorMessage(json.error, 'API request failed'));
     return json.data;
   }
   return json;
@@ -8,7 +16,7 @@ function unwrapApiResponse(json) {
 
 function unwrapApiEnvelope(json) {
   if (json && typeof json === 'object' && Object.prototype.hasOwnProperty.call(json, 'success')) {
-    if (!json.success) throw new Error(json.error || 'API request failed');
+    if (!json.success) throw new Error(apiErrorMessage(json.error, 'API request failed'));
     return { data: json.data, meta: json.meta || {} };
   }
   return { data: json, meta: {} };
@@ -33,7 +41,7 @@ function apiFetch(url, options) {
   const requestOptions = Object.assign({}, options || {});
   const method = String(requestOptions.method || 'GET').toUpperCase();
   const preserveEnvelope = requestOptions.preserveEnvelope === true;
-  const serverOwnsRetries = method === 'GET' && /^\/api\/(?:quote|minute|kline)(?:[/?]|$)/.test(String(url));
+  const serverOwnsRetries = method === 'GET' && /^\/api\/(?:quote|minute|kline|market\/(?:index-intraday|comparison-(?:catalog|history|intraday)))(?:[/?]|$)/.test(String(url));
   const timeoutMs = Number.isFinite(Number(requestOptions.timeoutMs))
     ? Math.max(0, Number(requestOptions.timeoutMs))
     : serverOwnsRetries ? 35000 : DEFAULT_TIMEOUT_MS;
@@ -91,7 +99,7 @@ function apiFetch(url, options) {
       }
 
       if (json && typeof json === 'object' && Object.prototype.hasOwnProperty.call(json, 'success') && json.success === false) {
-        const apiError = new Error(json.error || ('API returned failure: ' + response.status));
+        const apiError = new Error(apiErrorMessage(json.error, 'API returned failure: ' + response.status));
         apiError.status = response.status;
         apiError.receivedResponse = true;
         throw apiError;
@@ -99,7 +107,7 @@ function apiFetch(url, options) {
 
       if (!response.ok) {
         const errorMessage = (json && typeof json === 'object' && json.error)
-          ? json.error
+          ? apiErrorMessage(json.error, 'HTTP ' + response.status + ' ' + response.statusText)
           : ('HTTP ' + response.status + ' ' + response.statusText + (String(text || '').trim() ? ': ' + String(text || '').slice(0, 200) : ''));
         const httpError = new Error(errorMessage);
         httpError.status = response.status;

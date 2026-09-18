@@ -179,6 +179,47 @@ test('later transcription preserves a stronger historical SHA archive verificati
   assert.equal(saved.mediaMetadata.archive.mediaSha256, 'b'.repeat(64));
 });
 
+test('low-confidence transcription persists raw evidence and review metadata', () => {
+  const profileUrl = 'https://www.douyin.com/user/asr-review-source-test';
+  const contentId = '7930000000000000012';
+  const localAssetPath = 'D:/archive/' + contentId + '.mp4';
+  const channel = channels.createChannel({
+    channelKey: 'douyin-asr-review-source-test',
+    displayName: 'ASR review creator',
+    platform: 'douyin',
+    profileUrl
+  });
+  importCapturedPage(channel.id, {
+    pageType: 'profile', pageUrl: profileUrl, loggedIn: true,
+    profile: { displayName: 'ASR review creator', profileUrl, workCount: 1 },
+    items: [{ contentId, sourceUrl: 'https://www.douyin.com/video/' + contentId, title: 'review item' }]
+  });
+
+  applyTranscription(channel.id, contentId, {
+    status: 'needs_review',
+    rawTranscript: '宇宿科技上市一周國家搖轉。',
+    transcript: '宇宿科技上市一周国家摇转。',
+    normalization: { script: 'zh-Hans', sourceHadTraditional: true, converter: 'opencc-js/tw-to-cn' },
+    quality: { needsReview: true, reasons: ['low_log_probability'], averageLogProbability: -1.3 },
+    segments: [{
+      start: 0, end: 4,
+      rawText: '宇宿科技上市一周國家搖轉。',
+      text: '宇宿科技上市一周国家摇转。',
+      avgLogProbability: -1.3, noSpeechProbability: 0.02, compressionRatio: 1.1
+    }],
+    localAssetPath,
+    mediaSha256: 'd'.repeat(64), mediaBytes: 900, mediaContentType: 'video/mp4'
+  });
+
+  const saved = channels.findObservationByIdentity(channel.id, { externalContentId: contentId });
+  assert.equal(saved.transcript, '宇宿科技上市一周国家摇转。');
+  assert.equal(saved.mediaMetadata.asr.status, 'needs_review');
+  assert.equal(saved.mediaMetadata.asr.rawTranscript, '宇宿科技上市一周國家搖轉。');
+  assert.deepEqual(saved.mediaMetadata.asr.quality.reasons, ['low_log_probability']);
+  assert.equal(saved.mediaMetadata.asr.normalization.script, 'zh-Hans');
+  assert.equal(saved.mediaMetadata.asr.segments[0].rawText, '宇宿科技上市一周國家搖轉。');
+});
+
 test('a no-speech ASR result preserves the archived video without inventing a transcript', () => {
   const profileUrl = 'https://www.douyin.com/user/no-speech-source-test';
   const contentId = '7930000000000000003';
@@ -231,6 +272,28 @@ test('identity rejection records a preserved remote-unavailable state', () => {
   assert.equal(saved.availabilityStatus, 'unavailable');
   assert.equal(saved.mediaMetadata.remote.status, 'identity_rejected');
   assert.equal(saved.title, 'preserved discovery record');
+});
+
+test('absolute Douyin publication dates are Beijing time and invalid updates preserve valid dates', () => {
+  const profileUrl = 'https://www.douyin.com/user/publication-date-test';
+  const channel = channels.createChannel({ channelKey: 'publication-date-test', displayName: '日期作者', platform: 'douyin', profileUrl });
+  const contentId = '7930000000000000100';
+  const sourceUrl = 'https://www.douyin.com/video/' + contentId;
+  const save = publishedAt => {
+    importCapturedPage(channel.id, { pageType: 'video', pageUrl: sourceUrl, loggedIn: true,
+      profile: { displayName: '日期作者', profileUrl }, items: [{ contentId, sourceUrl, title: '日期测试', publishedAt }] });
+    return channels.findObservationByIdentity(channel.id, { externalContentId: contentId }).publishedAt;
+  };
+  const previousTz = process.env.TZ;
+  process.env.TZ = 'America/New_York';
+  try {
+    assert.equal(save('2026年9月10日 00:34'), '2026-09-09T16:34:00.000Z');
+    assert.equal(save('2026/9/10 18:34'), '2026-09-10T10:34:00.000Z');
+    assert.equal(save('2026.9.10 18:35'), '2026-09-10T10:35:00.000Z');
+    for (const invalid of ['今天', 'invalid', '2026年2月30日 10:00', '2026-09-10 25:00']) {
+      assert.equal(save(invalid), '2026-09-10T10:35:00.000Z');
+    }
+  } finally { if (previousTz === undefined) delete process.env.TZ; else process.env.TZ = previousTz; }
 });
 
 test('a later identity-matched detail clears a stale identity rejection', () => {

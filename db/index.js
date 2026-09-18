@@ -13,6 +13,8 @@ try {
   db.pragma('foreign_keys = ON');
   const initSql = fs.readFileSync(path.join(__dirname, 'init.sql'), 'utf8');
   db.exec(initSql);
+  // Failed attempts remain audited but must not occupy a slot's one valid decision.
+  db.exec('DROP INDEX IF EXISTS idx_paper_decision_schedule_slot');
   const ensureColumn = (table, column, definition) => {
     const columns = db.prepare('PRAGMA table_info(' + table + ')').all();
     if (!columns.some(item => item.name === column)) {
@@ -22,6 +24,7 @@ try {
   ensureColumn('expert_channels', 'subject_type', "TEXT NOT NULL DEFAULT 'creator'");
   ensureColumn('expert_channels', 'description', "TEXT DEFAULT ''");
   ensureColumn('expert_sync_jobs', 'progress_json', "TEXT DEFAULT '{}'");
+  ensureColumn('expert_comments', 'versions_json', "TEXT NOT NULL DEFAULT '[]'");
   ensureColumn('expert_observations', 'published_time_precision', "TEXT NOT NULL DEFAULT 'unknown'");
   ensureColumn('expert_observations', 'media_type', "TEXT NOT NULL DEFAULT 'text'");
   ensureColumn('expert_observations', 'archive_status', "TEXT NOT NULL DEFAULT 'linked'");

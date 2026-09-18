@@ -5,7 +5,31 @@ const os = require('node:os');
 const path = require('node:path');
 const Database = require('better-sqlite3');
 
-const { detectSnapshotChange, buildPrivateNotification, createMobilePushService } = require('../services/mobilePushService');
+const { detectSnapshotChange, buildPrivateNotification, createMobilePushService, comparisonSnapshot } = require('../services/mobilePushService');
+
+test('push detects a holding swap or quantity change even when count and assets are unchanged', () => {
+  const first = snapshot();
+  first.accounts[0].positions = [{ code: '600000', quantity: 100 }];
+  first.accounts[0].valuationStatus = 'live';
+  const next = structuredClone(first);
+  next.accounts[0].positions[0].code = '600001';
+  assert.equal(detectSnapshotChange(comparisonSnapshot(first), comparisonSnapshot(next)).kind, 'portfolio');
+  next.accounts[0].positions[0] = { code: '600000', quantity: 200 };
+  assert.equal(detectSnapshotChange(comparisonSnapshot(first), comparisonSnapshot(next)).kind, 'portfolio');
+});
+
+test('point alerts use fresh crossings, do not repeat unchanged alerts, and ignore stale quotes', () => {
+  const make = (price, quoteTime) => ({ generatedAt: '2026-09-07T02:31:00Z', watchlist: { items: [{ code: '600000', currentPrice: price,
+    alertHigh: 11, alertLow: 9, quoteDate: '2026-09-07', quoteTime: quoteTime || '10:31:00', quoteStatus: 'live' }] } });
+  const before = comparisonSnapshot(make(10));
+  const hit = comparisonSnapshot(make(11.1));
+  assert.equal(detectSnapshotChange(before, hit).kind, 'price-alert');
+  assert.equal(detectSnapshotChange(hit, comparisonSnapshot(make(11.2))), null);
+  const stale = comparisonSnapshot(make(11.2, '09:31:00'), hit);
+  assert.equal(detectSnapshotChange(hit, stale), null);
+  assert.equal(detectSnapshotChange(stale, comparisonSnapshot(make(11.2))), null);
+  assert.doesNotMatch(JSON.stringify(buildPrivateNotification({ kind: 'price-alert', code: '600000', price: 11 })), /600000|11/);
+});
 
 function snapshot(options = {}) {
   return {

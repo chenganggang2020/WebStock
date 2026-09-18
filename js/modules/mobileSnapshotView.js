@@ -209,6 +209,22 @@
         ' 条；刷新可获取最新一批。</div>' : '<div class="feed-tail">已展示当前快照全部资讯</div>') + '</section>';
   }
 
+  function renderPaperSimulation(data) {
+    const accounts = data && data.accounts || [];
+    if (!accounts.length) return '';
+    return '<section class="mobile-panel"><div class="section-title"><div><h2>模拟账户 · 只读</h2><p>前向模拟，与真实账户分开；不支持手机下单。</p></div></div>' + accounts.map(function(account) {
+      const perf = account.performance || {};
+      const status = { 'not-started': '尚未开始判断', recording: '模拟记录中', stale: '估值过期', partial: '部分缺价' }[perf.status] || '等待核验';
+      return '<div class="account-band"><div class="account-head"><h3>' + escapeHtml(account.name) + '</h3><span class="source-state' + (perf.status === 'recording' ? '' : ' stale') + '">' + status + '</span></div>' +
+        '<div class="metric-grid"><div class="metric"><span>模拟权益</span><strong>' + money(account.equity) + '</strong></div>' +
+        '<div class="metric"><span>累计收益率</span><strong class="' + valueClass(perf.totalReturn) + '">' + percent(perf.totalReturn) + '</strong></div>' +
+        '<div class="metric"><span>累计盈亏</span><strong class="' + valueClass(perf.netPnl) + '">' + signedMoney(perf.netPnl) + '</strong></div>' +
+        '<div class="metric"><span>费用与滑点（已扣）</span><strong>' + money(perf.totalCosts) + '</strong></div></div>' +
+        '<p>' + (account.enabled ? '自动已启用' : '自动已暂停') + ' · ' + Number(perf.fillCount || 0) + ' 笔模拟成交 · 净值 ' + escapeHtml(perf.valuationAt || '未开始') + '</p>' +
+        (account.blocked ? '<p class="panel-state-message">最近一次判断未完成，请在电脑端查看原因。</p>' : '') + '</div>';
+    }).join('') + '</section>';
+  }
+
   function renderSnapshot(snapshot, selectedId) {
     if (!snapshot || snapshot.schema !== 'webstock.mobile-snapshot/v1') {
       return '<div class="mobile-error">没有可显示的移动快照</div>';
@@ -232,7 +248,7 @@
       '<div class="metric"><span>当日参考盈亏</span><strong data-summary-field="todayPnl" class="' + valueClass(summary.todayPnl) + '">' + escapeHtml(signedMoney(summary.todayPnl)) + '</strong></div>' +
       '</div></section>' + renderPositions(account);
     }
-    return accountContent + renderWatchlist(snapshot.watchlist) + renderScreener(snapshot.screener) +
+    return accountContent + renderPaperSimulation(snapshot.paperSimulation) + renderWatchlist(snapshot.watchlist) + renderScreener(snapshot.screener) +
       renderGptPicks(snapshot.latestGptPicks) + renderCapitalMomentum(snapshot.capitalMomentum) +
       renderNews(snapshot.news) + renderResearch(snapshot.research);
   }

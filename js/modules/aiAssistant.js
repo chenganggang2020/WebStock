@@ -1,4 +1,5 @@
 let currentHandoff = null;
+let handoffSaving = false;
 const AI_HANDOFF_RESULTS_KEY = 'webstock_ai_handoff_results';
 let handoffClipboardTimer = null;
 let handoffPendingClipboardText = '';
@@ -30,6 +31,7 @@ const HANDOFF_PROMPT_STYLES = {
 
 function aiAssistantBuildPrompt() {
   if (!currentHandoff) return '';
+  if (currentHandoff.kind === 'paper-monitor') return currentHandoff.originalPrompt || currentHandoff.prompt || '';
   const styleEl = document.getElementById('handoffPromptStyle');
   const style = styleEl ? styleEl.value : 'default';
   const prefix = HANDOFF_PROMPT_STYLES[style] || '';
@@ -50,7 +52,10 @@ function aiAssistantOpen(options) {
   document.getElementById('handoffModalTitle').textContent = currentHandoff.title || 'ChatGPT 交接';
   document.getElementById('handoffModalSummary').textContent = currentHandoff.summary || '复制提示词到 ChatGPT，或导入返回结果保存到当前任务。';
   const styleEl = document.getElementById('handoffPromptStyle');
-  if (styleEl) styleEl.value = currentHandoff.promptStyle || 'default';
+  if (styleEl) {
+    styleEl.value = currentHandoff.promptStyle || 'default';
+    styleEl.disabled = currentHandoff.kind === 'paper-monitor';
+  }
   aiAssistantRefreshPromptText();
   document.getElementById('handoffResultText').value = currentHandoff.result || '';
   aiAssistantSetStatus('提示词已生成。建议点“复制并打开 ChatGPT”，会跳到系统浏览器里的 ChatGPT。');
@@ -181,7 +186,8 @@ function aiAssistantSaveHistoryRecord(record) {
 }
 
 async function aiAssistantSaveResult() {
-  if (!currentHandoff) return;
+  if (!currentHandoff || handoffSaving) return;
+  const handoff = currentHandoff;
   const parsed = aiAssistantExtractResultBlock(document.getElementById('handoffResultText').value);
   currentHandoff.result = parsed.text;
   if (!currentHandoff.result) {
@@ -189,23 +195,29 @@ async function aiAssistantSaveResult() {
     return;
   }
   document.getElementById('handoffResultText').value = currentHandoff.result;
-  aiAssistantSaveHistoryRecord({
-    title: currentHandoff.title || 'ChatGPT 交接结果',
-    summary: currentHandoff.summary || '',
-    prompt: currentHandoff.prompt || '',
-    result: currentHandoff.result,
-    kind: currentHandoff.kind || 'general',
-    context: currentHandoff.context || null
-  });
-  if (typeof currentHandoff.onSave === 'function') {
-    try {
-      await currentHandoff.onSave(currentHandoff.result);
-    } catch (error) {
-      console.warn('Failed to link handoff result:', error.message);
-    }
+  const saveButton = document.getElementById('handoffSaveBtn');
+  handoffSaving = true;
+  if (saveButton) saveButton.disabled = true;
+  try {
+    if (typeof handoff.onSave === 'function') await handoff.onSave(handoff.result);
+    aiAssistantSaveHistoryRecord({
+      title: handoff.title || 'ChatGPT 交接结果',
+      summary: handoff.summary || '',
+      prompt: handoff.prompt || '',
+      result: handoff.result,
+      kind: handoff.kind || 'general',
+      context: handoff.context || null
+    });
+    alert(typeof handoff.onSave === 'function' ? '分析结果已保存到本地软件，并已关联到当前任务。' : '分析结果已保存到本地软件。');
+    if (currentHandoff === handoff) aiAssistantClose();
+  } catch (error) {
+    const message = '保存未完成：' + (error.message || String(error));
+    if (currentHandoff === handoff) aiAssistantSetStatus(message);
+    alert(message);
+  } finally {
+    handoffSaving = false;
+    if (saveButton) saveButton.disabled = false;
   }
-  alert('分析结果已保存到本地软件，并已关联到支持关联的当前任务。');
-  aiAssistantClose();
 }
 
 function bindAIAssistant() {

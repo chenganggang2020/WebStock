@@ -47,3 +47,28 @@ test('portfolio account migration preserves old trades and assigns them to the d
   assert.equal(account.name, '默认账户');
   assert.equal(account.is_default, 1);
 });
+
+test('database startup does not recreate a deleted default account when another account exists', () => {
+  const dbPath = path.join(os.tmpdir(), 'webstock-account-no-recreate-' + process.pid + '.db');
+  for (const suffix of ['', '-wal', '-shm']) fs.rmSync(dbPath + suffix, { force: true });
+  const database = new Database(dbPath);
+  database.exec(fs.readFileSync(path.join(__dirname, '..', 'db', 'init.sql'), 'utf8'));
+  database.exec(`
+    INSERT INTO portfolio_accounts
+      (account_key, name, broker, masked_number, cash_balance, is_default, enabled, note)
+    VALUES ('gf-securities-7280', '广发证券 **7280', '广发证券', '**7280', 10000, 1, 1, '持仓快照');
+    DELETE FROM portfolio_accounts WHERE account_key = 'default';
+  `);
+  database.close();
+
+  childProcess.execFileSync(process.execPath, ['-e', "require('./db')"], {
+    cwd: path.join(__dirname, '..'),
+    env: { ...process.env, WEBSTOCK_DB_PATH: dbPath },
+    stdio: 'pipe'
+  });
+
+  const reopened = new Database(dbPath, { readonly: true });
+  const accounts = reopened.prepare('SELECT account_key, is_default FROM portfolio_accounts ORDER BY id').all();
+  reopened.close();
+  assert.deepEqual(accounts, [{ account_key: 'gf-securities-7280', is_default: 1 }]);
+});

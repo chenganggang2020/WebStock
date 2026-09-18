@@ -1,6 +1,12 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('webstockDesktop', Object.freeze({
+  getLoginStartupStatus() {
+    return ipcRenderer.invoke('webstock:login-startup-status');
+  },
+  setLoginStartup(enabled) {
+    return ipcRenderer.invoke('webstock:set-login-startup', enabled === true);
+  },
   getLanAccessStatus() {
     return ipcRenderer.invoke('webstock:lan-access-status');
   },
@@ -36,6 +42,9 @@ contextBridge.exposeInMainWorld('webstockDesktop', Object.freeze({
   },
   syncDouyinChannel(channelId) {
     return ipcRenderer.invoke('webstock:sync-douyin-channel', Number(channelId));
+  },
+  runDouyinVideoTask(channelId, observationId, stage) {
+    return ipcRenderer.invoke('webstock:douyin-video-task', Number(channelId), Number(observationId), String(stage));
   },
   archiveDouyinChannel(channelId) {
     return ipcRenderer.invoke('webstock:archive-douyin-channel', Number(channelId));

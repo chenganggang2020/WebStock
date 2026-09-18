@@ -150,6 +150,7 @@ function copyKnowledgeReferences() {
 }
 
 function finiteNumber(value) {
+  if (value == null || typeof value === 'boolean' || String(value).trim() === '') return null;
   const number = Number(value);
   return Number.isFinite(number) ? number : null;
 }
@@ -220,7 +221,11 @@ function normalizeBars(rows, cutoff) {
   valid.sort(function(left, right) {
     return left.timestamp - right.timestamp || left.index - right.index;
   });
-  return { bars: valid, invalidBars, excludedFutureBars };
+  // Keep the last supplied observation for a timestamp, not repeated samples.
+  const uniqueBars = valid.filter(function(bar, index) {
+    return index === valid.length - 1 || bar.timestamp !== valid[index + 1].timestamp;
+  });
+  return { bars: uniqueBars, duplicateBars: valid.length - uniqueBars.length, invalidBars, excludedFutureBars };
 }
 
 function uniquePush(target, values) {
@@ -251,6 +256,7 @@ function createResult(input, normalized) {
       providedBars: input.bars.length,
       eligibleBars: bars.length,
       invalidBars: normalized.invalidBars,
+      duplicateBars: normalized.duplicateBars,
       excludedFutureBars: normalized.excludedFutureBars,
       minimumBars: MIN_ANALYSIS_BARS,
       firstBarAt: bars.length ? bars[0].date : '',

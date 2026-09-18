@@ -12,6 +12,7 @@ const { createLanServerController } = require('./lanServerController');
 const { createDouyinSessionManager } = require('./douyinSessionManager');
 const { createDouyinAutoSync, ensureDouyinSyncJobs } = require('./douyinAutoSync');
 const { createBackgroundMode } = require('./backgroundMode');
+const { createLoginStartup } = require('./loginStartup');
 const { createDouyinTranscriptService } = require('../services/douyinTranscriptService');
 const { inspectNetworkRoute } = require('./networkRoute');
 const { loadMainWindow } = require('./mainWindowLoader');
@@ -30,13 +31,21 @@ let douyinAutoSync = null;
 let backgroundMode = null;
 let tailscaleAccess = null;
 let mobilePushService = null;
+let fullMarketSyncTimer = null;
+let fullMarketInitialTimer = null;
+let paperMonitorScheduler = null;
+let tonghuashunHoldingScheduler = null;
+let industryResearchScheduler = null;
+let etfDailyScheduler = null;
+let sectorRotation = null;
+let localQuoteSampler = null;
 let servicesStopped = false;
 
 app.setName('WebStock');
+const loginStartup = createLoginStartup({ app, portableExecutable: process.env.PORTABLE_EXECUTABLE_FILE });
 
 const defaultUserDataDir = app.getPath('userData');
-const linkedDataDir = process.env.PORTABLE_EXECUTABLE_DIR
-  ? '' : readRegisteredDataDirectory(defaultUserDataDir);
+const linkedDataDir = readRegisteredDataDirectory(defaultUserDataDir);
 
 const runtimeConfig = resolveRuntimeConfig({
   portableExecutableDir: process.env.PORTABLE_EXECUTABLE_DIR,
@@ -138,7 +147,7 @@ function createWindow(url) {
     minWidth: 1100,
     minHeight: 720,
     title: 'WebStock',
-    show: process.env.WEBSTOCK_BUILD_SMOKE_TEST !== '1',
+    show: process.env.WEBSTOCK_BUILD_SMOKE_TEST !== '1' && !process.argv.includes('--background'),
     icon: appIcon,
     backgroundColor: '#ffffff',
     webPreferences: {
@@ -208,6 +217,18 @@ async function startServer() {
     log
   });
   await serverController.start(readLanEnabled(runtimeConfig.userDataDir));
+  const researchService = require('../services/industryResearchService');
+  const { createIndustryResearchScheduler } = require('../services/industryResearchScheduler');
+  industryResearchScheduler = createIndustryResearchScheduler({ service: researchService });
+  industryResearchScheduler.start();
+  const etfCore = require('../services/eastmoneyEtfDailyService');
+  const etfDailyService = etfCore.getEastmoneyEtfDailyService();
+  etfDailyScheduler = require('../services/eastmoneyEtfDailyScheduler').createEastmoneyEtfDailyScheduler({ service: etfDailyService });
+  if (process.env.WEBSTOCK_BUILD_SMOKE_TEST !== '1') etfDailyScheduler.start();
+  sectorRotation = require('../services/capitalFlow/sectorRotationService').getSectorRotationService();
+  if (process.env.WEBSTOCK_BUILD_SMOKE_TEST !== '1') sectorRotation.start();
+  localQuoteSampler = require('../routes/market').localQuoteSampler;
+  if (process.env.WEBSTOCK_BUILD_SMOKE_TEST !== '1' && process.env.WEBSTOCK_LOCAL_SAMPLING_AUTO !== '0') localQuoteSampler.start();
   tailscaleAccess = createTailscaleAccessService({
     userDataDir: runtimeConfig.userDataDir,
     appPort: port
@@ -232,10 +253,43 @@ function startDouyinAutoSync() {
   douyinAutoSync.start();
 }
 
+function startFullMarketAutoSync() {
+  const quant = require('../services/quantService');
+  const check = function() {
+    try {
+      const result = quant.runScheduledFullMarketSync();
+      if (result.action === 'started') log('Started scheduled full-market daily increment: ' + result.job.id);
+    } catch (error) {
+      log('Scheduled full-market data check failed', error);
+    }
+  };
+  fullMarketInitialTimer = setTimeout(check, 15000);
+  if (fullMarketInitialTimer.unref) fullMarketInitialTimer.unref();
+  fullMarketSyncTimer = setInterval(check, 5 * 60 * 1000);
+  if (fullMarketSyncTimer.unref) fullMarketSyncTimer.unref();
+}
+
+function startPaperMonitorAutoSync() {
+  const { createPaperMonitorScheduler } = require('../services/paperMonitorScheduler');
+  const { createTonghuashunHoldingScheduler } = require('../services/tonghuashunHoldingScheduler');
+  paperMonitorScheduler = createPaperMonitorScheduler({ log });
+  tonghuashunHoldingScheduler = createTonghuashunHoldingScheduler({ log });
+  paperMonitorScheduler.start();
+  tonghuashunHoldingScheduler.start();
+}
+
 async function stopBackgroundServices() {
   if (servicesStopped) return;
   servicesStopped = true;
   if (douyinAutoSync) douyinAutoSync.stop();
+  if (fullMarketInitialTimer) clearTimeout(fullMarketInitialTimer);
+  if (fullMarketSyncTimer) clearInterval(fullMarketSyncTimer);
+  if (paperMonitorScheduler) paperMonitorScheduler.stop();
+  if (tonghuashunHoldingScheduler) tonghuashunHoldingScheduler.stop();
+  if (industryResearchScheduler) industryResearchScheduler.stop();
+  if (etfDailyScheduler) etfDailyScheduler.stop();
+  if (sectorRotation) sectorRotation.stop();
+  if (localQuoteSampler) localQuoteSampler.stop();
   if (mobilePushService) mobilePushService.stop();
   if (douyinSessionManager) douyinSessionManager.dispose();
   if (serverController) await serverController.stop();
@@ -329,6 +383,16 @@ ipcMain.handle('webstock:open-douyin-session', async function(event, url) {
   return getDouyinSessionManager().open(url);
 });
 
+ipcMain.handle('webstock:login-startup-status', function(event) {
+  assertMainWindowSender(event);
+  return loginStartup.status();
+});
+
+ipcMain.handle('webstock:set-login-startup', function(event, enabled) {
+  assertMainWindowSender(event);
+  return loginStartup.setEnabled(enabled === true);
+});
+
 ipcMain.handle('webstock:douyin-session-status', function(event) {
   assertMainWindowSender(event);
   return getDouyinSessionManager().status();
@@ -348,6 +412,12 @@ ipcMain.handle('webstock:sync-douyin-channel', async function(event, channelId) 
   assertMainWindowSender(event);
   if (!douyinAutoSync) throw new Error('抖音自动同步服务尚未启动');
   return douyinAutoSync.syncChannel(Number(channelId), { trigger: 'manual' });
+});
+
+ipcMain.handle('webstock:douyin-video-task', function(event, channelId, observationId, stage) {
+  assertMainWindowSender(event);
+  if (!douyinAutoSync) throw new Error('后台采集服务尚未启动');
+  return douyinAutoSync.runVideo(Number(channelId), Number(observationId), String(stage));
 });
 
 ipcMain.handle('webstock:archive-douyin-channel', async function(event, channelId) {
@@ -376,6 +446,8 @@ if (!gotLock) {
       mobilePushService = require('../services/mobilePushService').getMobilePushService();
       mobilePushService.start();
       startDouyinAutoSync();
+      startFullMarketAutoSync();
+      startPaperMonitorAutoSync();
       createBackgroundController();
     }
     createWindow(url);
@@ -388,6 +460,14 @@ if (!gotLock) {
   app.on('before-quit', function() {
     if (backgroundMode) backgroundMode.setQuitting(true);
     if (douyinAutoSync) douyinAutoSync.stop();
+    if (fullMarketInitialTimer) clearTimeout(fullMarketInitialTimer);
+    if (fullMarketSyncTimer) clearInterval(fullMarketSyncTimer);
+    if (paperMonitorScheduler) paperMonitorScheduler.stop();
+    if (tonghuashunHoldingScheduler) tonghuashunHoldingScheduler.stop();
+    if (industryResearchScheduler) industryResearchScheduler.stop();
+    if (etfDailyScheduler) etfDailyScheduler.stop();
+    if (sectorRotation) sectorRotation.stop();
+    if (localQuoteSampler) localQuoteSampler.stop();
     if (douyinSessionManager) douyinSessionManager.dispose();
     if (!servicesStopped && serverController) serverController.stop().catch(function(error) {
       log('Failed to stop local WebStock server cleanly', error);

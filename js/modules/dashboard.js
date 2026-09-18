@@ -1,10 +1,12 @@
 function dashboardMiniChangeClass(value) {
+  if (value === null || value === undefined || value === '') return '';
   const n = Number(value);
   if (!Number.isFinite(n)) return '';
   return n >= 0 ? 'pnl-up' : 'pnl-down';
 }
 
 function dashboardMiniFmt(value, digits) {
+  if (value === null || value === undefined || value === '') return '--';
   const n = Number(value);
   return Number.isFinite(n) ? n.toFixed(digits === undefined ? 2 : digits) : '--';
 }
@@ -57,6 +59,229 @@ const DASHBOARD_SENTIMENT_REFRESH_MS = 5 * 60 * 1000;
 let dashboardShowDismissedRisks = false;
 let dashboardSentimentTimer = null;
 let dashboardSelectedRiskKey = '';
+let dashboardMarketSnapshot = null;
+
+function dashboardMarketNumber(value) {
+  if (value === null || value === undefined || value === '') return null;
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
+}
+
+function dashboardMarketPoint(value) {
+  const number = dashboardMarketNumber(value);
+  return number === null
+    ? '暂无'
+    : number.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function dashboardMarketPct(value) {
+  const number = dashboardMarketNumber(value);
+  return number === null ? '暂无' : (number > 0 ? '+' : '') + number.toFixed(2) + '%';
+}
+
+function dashboardMarketRatio(value) {
+  const number = dashboardMarketNumber(value);
+  return number === null ? '暂无' : number.toFixed(2) + '%';
+}
+
+function dashboardMarketAmount(value) {
+  const number = dashboardMarketNumber(value);
+  if (number === null) return '暂无';
+  if (Math.abs(number) >= 1000000000000) return (number / 1000000000000).toFixed(2) + '万亿';
+  return (number / 100000000).toFixed(2) + '亿';
+}
+
+function dashboardMarketCount(value) {
+  const number = dashboardMarketNumber(value);
+  return number === null ? '暂无' : String(Math.round(number));
+}
+
+function dashboardMarketVolume(value) {
+  const number = dashboardMarketNumber(value);
+  if (number === null) return '暂无';
+  return number >= 100000000 ? (number / 100000000).toFixed(2) + '亿' : dashboardMarketCount(number);
+}
+
+function dashboardMarketEmpty(message) {
+  return '<div class="dashboard-market-unavailable">' + dashboardEscapeHtml(message) + '</div>';
+}
+
+function dashboardMarketSourceLabel(value) {
+  const labels = {
+    'Eastmoney sector rank': '东方财富板块排行（供应商分类）',
+    'Eastmoney stock rank': '东方财富个股排行',
+    'Sina Finance': '新浪财经资讯',
+    'Sina industry rank': '新浪行业排行（降级，无资金字段）',
+    'Sina stock rank': '新浪个股排行',
+    'Local sector watchlist': '本地观察板块（非实时热点）'
+  };
+  return labels[String(value || '')] || String(value || '');
+}
+
+function dashboardRenderMarketCockpit(snapshot) {
+  snapshot = snapshot || {};
+  const indicesBox = document.getElementById('dashboardMarketIndices');
+  const sectorsBox = document.getElementById('dashboardMarketSectors');
+  const flowBox = document.getElementById('dashboardMarketFlow');
+  const sourcesBox = document.getElementById('dashboardMarketSources');
+  const indicesData = snapshot.indices || null;
+  const sentimentData = snapshot.sentiment || null;
+  const hotData = snapshot.hot || null;
+  const indexHistory = snapshot.indexHistory || null;
+  const indices = indicesData && Array.isArray(indicesData.indices) ? indicesData.indices : [];
+  const aShare = sentimentData && sentimentData.aShare || null;
+  const boards = hotData && hotData.boards && Array.isArray(hotData.boards.day) ? hotData.boards.day : [];
+  const boardGroups = window.MarketOverview && window.MarketOverview.groupBoardsByType
+    ? window.MarketOverview.groupBoardsByType(boards)
+    : {
+        industry: boards.filter(function(item) { return item && (item.kind === 'industry' || item.kind === 'sina-industry'); }),
+        concept: boards.filter(function(item) { return item && item.kind === 'concept'; })
+      };
+
+  if (Object.prototype.hasOwnProperty.call(snapshot, 'sentiment')) {
+    window.State.marketSentiment = sentimentData;
+    dashboardRenderSentiment();
+  }
+
+  if (indicesBox && !(window.MarketComparison && typeof window.MarketComparison.render === 'function')) {
+    indicesBox.innerHTML = indices.length ? indices.slice(0, 8).map(function(item) {
+      const change = dashboardMarketNumber(item.changePct);
+      return '<article class="dashboard-market-index">' +
+        '<div><strong>' + dashboardEscapeHtml(item.name || item.code) + '</strong><span>' + dashboardEscapeHtml(item.code || '') + '</span></div>' +
+        '<b>' + dashboardMarketPoint(item.price) + '</b>' +
+        '<em class="' + (change === null ? '' : dashboardMiniChangeClass(change)) + '">' + dashboardMarketPct(change) + '</em>' +
+        '<small>成交额 ' + dashboardMarketAmount(item.amount) + '</small>' +
+      '</article>';
+    }).join('') : dashboardMarketEmpty('主要指数行情暂不可用，其他模块仍可查看。');
+  }
+
+  if (sectorsBox && !document.getElementById('dashboardMarketHeatmap')) {
+    if (!boards.length || hotData && hotData.marketStatus === 'unavailable') {
+      sectorsBox.innerHTML = dashboardMarketEmpty('外部板块行情暂不可用；本地观察分组不会冒充今日热点。');
+    } else {
+      const rank = function(items) {
+        return window.MarketOverview && window.MarketOverview.rankBoards
+          ? window.MarketOverview.rankBoards(items, 3)
+          : { gainers: [], laggards: [], flowLeaders: [] };
+      };
+      const industryRanked = rank(boardGroups.industry);
+      const conceptRanked = rank(boardGroups.concept);
+      const rows = function(items, label, emptyText) {
+        if (!items.length) return '<section><h5>' + label + '</h5>' + dashboardMarketEmpty(emptyText) + '</section>';
+        return '<section><h5>' + label + '</h5><ol>' + items.map(function(item) {
+          return '<li><span>' + dashboardEscapeHtml(item.name || item.code) + '</span><b class="' + dashboardMiniChangeClass(item.dailyChangePct) + '">' + dashboardMarketPct(item.dailyChangePct) + '</b></li>';
+        }).join('') + '</ol></section>';
+      };
+      sectorsBox.innerHTML = '<div class="dashboard-market-sector-columns">' +
+        rows(industryRanked.gainers, '行业领涨', '行业排行暂不可用') +
+        rows(industryRanked.laggards, '行业靠后', '行业排行暂不可用') +
+        rows(conceptRanked.gainers, '概念领涨', '概念排行暂不可用') +
+        rows(conceptRanked.laggards, '概念靠后', '概念排行暂不可用') + '</div>';
+    }
+  }
+
+  if (flowBox) {
+    const flow = window.MarketOverview && window.MarketOverview.summarizeSectorFlows
+      ? window.MarketOverview.summarizeSectorFlows(boards)
+      : {
+          industry: { availableCount: 0, totalCount: boardGroups.industry.length, leaders: [] },
+          concept: { availableCount: 0, totalCount: boardGroups.concept.length, leaders: [] }
+        };
+    const turnover = indicesData && indicesData.turnover || {};
+    const volume = window.MarketOverview && window.MarketOverview.summarizeMarketVolume
+      ? window.MarketOverview.summarizeMarketVolume(indexHistory)
+      : { available: false, reason: '指数成交量历史暂不可用' };
+    const flowRows = function(summary, label) {
+      const leaders = summary && Array.isArray(summary.leaders) ? summary.leaders.slice(0, 3) : [];
+      const unavailableText = label.indexOf('行业') === 0
+        ? '行业板块资金净额暂不可用' : '概念板块资金净额暂不可用';
+      return '<section><h5>' + label + '</h5>' + (leaders.length
+        ? '<ol>' + leaders.map(function(item) {
+            return '<li><span>' + dashboardEscapeHtml(item.name || item.code) + '</span><b class="' + dashboardMiniChangeClass(item.mainNetInflow) + '">' + dashboardMarketAmount(item.mainNetInflow) + '</b></li>';
+          }).join('') + '</ol>'
+        : dashboardMarketEmpty(unavailableText)) + '</section>';
+    };
+    const flowContent = '<div class="dashboard-market-sector-columns dashboard-market-flow-rankings">' +
+      flowRows(flow.industry, '行业供应商资金净额') + flowRows(flow.concept, '概念供应商资金净额') + '</div>';
+    const volumeContent = volume.available
+      ? '<div class="dashboard-market-volume"><span>量能状态</span><strong>' + dashboardEscapeHtml(volume.state) +
+        ' ' + dashboardMarketRatio(volume.ratio * 100) + '</strong><small>最新合计 ' +
+        dashboardMarketVolume(volume.latest) + ' · 5日均量 ' + dashboardMarketVolume(volume.average5) +
+        '（指数源原始口径） · ' + dashboardEscapeHtml(volume.sourceLabel) + '</small></div>'
+      : dashboardMarketEmpty('量能状态暂不可用：' + dashboardEscapeHtml(volume.reason || '历史覆盖不足'));
+    flowBox.innerHTML = '<div class="dashboard-market-turnover"><span>沪深成交额</span><strong>' + dashboardMarketAmount(turnover.total) + '</strong></div>' +
+      volumeContent +
+      flowContent + '<p class="dashboard-market-boundary">行业与概念按供应商口径分别排行，不跨类型相加；不是全市场真实资金流，也不代表机构身份。</p>';
+  }
+
+  if (sourcesBox) {
+    const sources = [];
+    if (indicesData && indicesData.source && indicesData.source.label) sources.push(indicesData.source.label);
+    if (indexHistory && indexHistory.source && indexHistory.source.label) sources.push(indexHistory.source.label);
+    if (aShare && aShare.source) sources.push(aShare.source);
+    if (hotData && Array.isArray(hotData.sources)) sources.push.apply(sources, hotData.sources);
+    const uniqueSources = sources.filter(Boolean).map(dashboardMarketSourceLabel)
+      .filter(function(item, index, list) { return list.indexOf(item) === index; });
+    const observedTimes = [];
+    if (indicesData && indicesData.fetchedAt) observedTimes.push('指数行情 ' + dashboardDataTime(indicesData.fetchedAt));
+    if (sentimentData && sentimentData.updatedAt) observedTimes.push('市场宽度 ' + dashboardDataTime(sentimentData.updatedAt));
+    if (hotData && hotData.generatedAt) observedTimes.push('板块 ' + dashboardDataTime(hotData.generatedAt));
+    if (indexHistory && indexHistory.fetchedAt) observedTimes.push('指数历史 ' + dashboardDataTime(indexHistory.fetchedAt));
+    const flowSummary = window.MarketOverview && window.MarketOverview.summarizeSectorFlows
+      ? window.MarketOverview.summarizeSectorFlows(boards) : null;
+    const completeFlow = Boolean(flowSummary
+      && flowSummary.industry.totalCount > 0
+      && flowSummary.concept.totalCount > 0
+      && flowSummary.industry.availableCount === flowSummary.industry.totalCount
+      && flowSummary.concept.availableCount === flowSummary.concept.totalCount);
+    const completeBreadth = Boolean(aShare
+      && aShare.sourceStatus !== 'fallback'
+      && ['score', 'advancing', 'declining', 'total', 'breadthPct', 'limitUpLike', 'sharpDown'].every(function(key) {
+        return dashboardMarketNumber(aShare[key]) !== null;
+      }));
+    const completeIndices = indices.length >= 8 && indices.every(function(item) {
+      return dashboardMarketNumber(item.price) !== null
+        && dashboardMarketNumber(item.changePct) !== null
+        && dashboardMarketNumber(item.amount) !== null;
+    });
+    const completeIndexHistory = Boolean(indexHistory && indexHistory.status === 'available' &&
+      indexHistory.comparison && Array.isArray(indexHistory.comparison.dates) &&
+      indexHistory.comparison.dates.length === Number(indexHistory.window));
+    const completeBoardChanges = boardGroups.industry.length > 0
+      && boardGroups.concept.length > 0
+      && boardGroups.industry.length + boardGroups.concept.length === boards.length
+      && boards.every(function(item) { return dashboardMarketNumber(item.dailyChangePct) !== null; });
+    const overviewReady = completeIndices
+      && dashboardMarketNumber(indicesData && indicesData.turnover && indicesData.turnover.total) !== null
+      && completeIndexHistory
+      && completeBreadth
+      && hotData && hotData.marketStatus === 'available' && !hotData.degraded
+      && completeBoardChanges
+      && completeFlow;
+    sourcesBox.dataset.state = overviewReady ? 'ready' : 'partial';
+    const stateText = overviewReady
+      ? '完整'
+      : '部分可用（' + (hotData && hotData.degraded ? '板块源降级' : '存在缺失或不可用字段') + '）';
+    sourcesBox.textContent = '驾驶舱基础数据来源：' + (uniqueSources.join(' · ') || '当前来源暂不可用') +
+      ' · 抓取时间：' + (observedTimes.join('；') || '未记录') +
+      ' · 驾驶舱基础数据状态：' + stateText + ' · 板块云图状态见云图图例';
+  }
+  if (window.MarketComparison && typeof window.MarketComparison.render === 'function') {
+    window.MarketComparison.render(snapshot);
+  }
+}
+
+async function dashboardLoadMarketCockpit(options) {
+  options = options || {};
+  if (!window.MarketOverview || typeof window.MarketOverview.load !== 'function') {
+    dashboardMarketSnapshot = { error: '市场总览模块尚未加载' };
+    dashboardRenderMarketCockpit(dashboardMarketSnapshot);
+    return dashboardMarketSnapshot;
+  }
+  dashboardMarketSnapshot = await window.MarketOverview.load({ refresh: Boolean(options.force) });
+  dashboardRenderMarketCockpit(dashboardMarketSnapshot);
+  return dashboardMarketSnapshot;
+}
 
 function dashboardTodayKey() {
   if (window.WebStockTime && window.WebStockTime.todayDate) return window.WebStockTime.todayDate();
@@ -94,16 +319,27 @@ function dashboardRestoreRisk(key) {
   localStorage.setItem(DASHBOARD_DISMISSED_RISKS_KEY, JSON.stringify(data));
 }
 
-async function dashboardLoad() {
-  await Promise.all([
-    window.RecentStocks ? window.RecentStocks.load(20).catch(function() {}) : Promise.resolve(),
-    window.Watchlist ? window.Watchlist.loadWatchlist({ skipQuotes: true }).catch(function() {}) : Promise.resolve(),
-    window.Portfolio ? window.Portfolio.loadPortfolio().catch(function() {}) : Promise.resolve(),
-    window.News ? window.News.loadDashboardNews().catch(function() {}) : Promise.resolve(),
-    window.SectorLeaders ? window.SectorLeaders.loadDashboardSummary().catch(function() {}) : Promise.resolve(),
-    dashboardLoadSentiment().catch(function(error) { console.warn(error.message); }),
-    dashboardLoadScreenerReviewSummary().catch(function() {})
-  ]);
+async function dashboardLoad(options) {
+  options = options || {};
+  const tasks = [
+    dashboardLoadMarketCockpit(options).catch(function(error) {
+      dashboardMarketSnapshot = { error: error && error.message ? error.message : '市场驾驶舱加载失败' };
+    })
+  ];
+  if (window.EastmoneyEtfDaily && typeof window.EastmoneyEtfDaily.load === 'function') {
+    tasks.push(window.EastmoneyEtfDaily.load(Boolean(options.force)).catch(function(error) { console.warn(error && error.message ? error.message : error); }));
+  }
+  if (window.VolumePace && typeof window.VolumePace.load === 'function') {
+    tasks.push(window.VolumePace.load({ refresh: Boolean(options.force) }).catch(function(error) {
+      console.warn(error && error.message ? error.message : error);
+    }));
+  }
+  if (options.force && window.MarketComparison && typeof window.MarketComparison.loadHeatmapSnapshot === 'function') {
+    tasks.push(window.MarketComparison.loadHeatmapSnapshot({ force: true }).catch(function(error) {
+      console.warn(error && error.message ? error.message : error);
+    }));
+  }
+  await Promise.all(tasks);
   dashboardSetUpdatedAt();
   dashboardRefreshCards();
   dashboardStartSentimentAutoRefresh();
@@ -113,7 +349,7 @@ function dashboardSetUpdatedAt() {
   const target = document.getElementById('dashboardUpdatedAt');
   if (!target) return;
   target.className = 'muted';
-  target.textContent = 'Last refreshed: ' + (
+  target.textContent = '最后更新：' + (
     window.WebStockTime && window.WebStockTime.formatDateTime
       ? window.WebStockTime.formatDateTime(new Date())
       : new Date().toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' })
@@ -128,12 +364,8 @@ function dashboardSetRefreshStatus(message, isError) {
 }
 
 function dashboardRefreshCards() {
+  dashboardRenderMarketCockpit(dashboardMarketSnapshot);
   dashboardRenderSentiment();
-  dashboardRenderWatchlist();
-  dashboardRenderPortfolio();
-  dashboardRenderScreenerReview();
-  dashboardRenderRisks();
-  if (window.RecentStocks) window.RecentStocks.renderDashboard();
 }
 
 async function dashboardLoadScreenerReviewSummary() {
@@ -142,6 +374,16 @@ async function dashboardLoadScreenerReviewSummary() {
 
 async function dashboardLoadSentiment() {
   window.State.marketSentiment = await window.apiFetch('/api/sentiment/overview');
+}
+
+function dashboardDataTime(value) {
+  if (!value) return '未记录';
+  if (/^\d{4}-\d{2}-\d{2}$/.test(String(value))) return String(value);
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return String(value);
+  return window.WebStockTime && window.WebStockTime.formatDateTime
+    ? window.WebStockTime.formatDateTime(parsed)
+    : parsed.toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' });
 }
 
 async function dashboardRefreshSentiment(options) {
@@ -196,7 +438,7 @@ function dashboardShowSentimentContextMenu(event) {
 }
 
 function dashboardSentimentClass(score) {
-  const n = Number(score);
+  const n = dashboardMarketNumber(score);
   if (!Number.isFinite(n)) return '';
   if (n < 45) return 'fear';
   if (n <= 55) return 'neutral';
@@ -209,18 +451,21 @@ function dashboardRenderSentiment() {
   if (!box) return;
   const data = window.State.marketSentiment;
   if (!data) {
-    box.innerHTML = '<div class="empty-state compact">正在加载市场情绪...</div>';
+    box.innerHTML = '<div class="empty-state compact">市场情绪暂不可用</div>';
     return;
   }
   const aShare = data.aShare || {};
   const vix = data.vix || {};
-  const components = (aShare.components || []).map(function(item) {
-    const isBreadth = String(item.name || '').indexOf('上涨家数') >= 0;
-    const valueClass = /-/.test(String(item.value || '')) ? 'pnl-down' : (isBreadth ? '' : dashboardScoreClass(item.score));
-    return '<div class="sentiment-component"><span>' + dashboardEscapeHtml(item.name) + '</span><strong class="' + (isBreadth ? '' : dashboardScoreClass(item.score)) + '">' + dashboardEscapeHtml(item.score) + '</strong><em class="' + valueClass + '">' + dashboardEscapeHtml(item.value) + '</em></div>';
-  }).join('');
+  const total = dashboardMarketNumber(aShare.total);
+  const advancing = dashboardMarketNumber(aShare.advancing);
+  const declining = dashboardMarketNumber(aShare.declining);
+  const flat = total === null || advancing === null || declining === null
+    ? null
+    : Math.max(0, total - advancing - declining);
   const sourceStatus = aShare.sourceStatus || '';
-  const providerNote = sourceStatus === 'sina'
+  const providerNote = sourceStatus === 'unavailable'
+    ? '<div class="provider-status">公开行情暂不可用，情绪分与涨跌统计暂停计算；未使用内置样本。可右键重试刷新。</div>'
+    : sourceStatus === 'sina'
     ? '<div class="provider-status">东方财富连接受限，已切换为新浪财经跨页抽样估算。情绪指数每 5 分钟自动刷新，可右键手动刷新。</div>'
     : (sourceStatus === 'fallback' ? '<div class="provider-status">外部行情暂不可用，当前为内置样本兜底。情绪指数每 5 分钟自动刷新，可右键手动刷新。</div>' : '<div class="provider-status">情绪指数每 5 分钟自动刷新，可右键手动刷新。</div>');
   box.innerHTML = '<div class="sentiment-layout">' +
@@ -230,10 +475,10 @@ function dashboardRenderSentiment() {
       '<em>A股情绪分</em>' +
     '</div>' +
     '<div class="sentiment-details">' +
-      '<div class="sentiment-row"><span>上涨家数占比</span><strong>' + dashboardMiniFmt(aShare.breadthPct) + '%</strong><em><span class="pnl-up">' + (aShare.advancing || 0) + '</span> / <span class="pnl-down">' + (aShare.declining || 0) + '</span> / ' + (aShare.total || 0) + '</em></div>' +
-      '<div class="sentiment-row"><span>平均涨跌幅</span><strong class="' + dashboardMiniChangeClass(aShare.avgChangePct) + '">' + dashboardMiniFmt(aShare.avgChangePct) + '%</strong><em><span class="pnl-up">强 ' + (aShare.strongCount || 0) + '</span> / <span class="pnl-down">弱 ' + (aShare.weakCount || 0) + '</span></em></div>' +
+      '<div class="sentiment-row"><span>上涨家数占比</span><strong>' + dashboardMarketRatio(aShare.breadthPct) + '</strong><em><span class="pnl-up">' + dashboardMarketCount(aShare.advancing) + '</span> / <span class="pnl-down">' + dashboardMarketCount(aShare.declining) + '</span> / ' + dashboardMarketCount(aShare.total) + '</em></div>' +
+      '<div class="sentiment-row"><span>平均涨跌幅</span><strong class="' + dashboardMiniChangeClass(aShare.avgChangePct) + '">' + dashboardMarketPct(aShare.avgChangePct) + '</strong><em><span class="pnl-up">强 ' + dashboardMarketCount(aShare.strongCount) + '</span> / <span class="pnl-down">弱 ' + dashboardMarketCount(aShare.weakCount) + '</span></em></div>' +
+      '<div class="sentiment-row"><span>极端涨跌</span><strong>平盘 ' + dashboardMarketCount(flat) + '</strong><em><span class="pnl-up">涨停样本 ' + dashboardMarketCount(aShare.limitUpLike) + '</span> / <span class="pnl-down">大跌样本 ' + dashboardMarketCount(aShare.sharpDown) + '</span></em></div>' +
       '<div class="sentiment-row"><span>VIX 美股恐慌指数</span><strong>' + dashboardMiniFmt(vix.value) + '</strong><em>' + dashboardEscapeHtml(vix.label || '--') + ' / ' + dashboardEscapeHtml(vix.date || '--') + '</em></div>' +
-      '<div class="sentiment-components">' + components + '</div>' +
     '</div>' +
     '</div>' + providerNote;
   box.oncontextmenu = dashboardShowSentimentContextMenu;
@@ -250,7 +495,8 @@ function dashboardRenderWatchlist() {
   box.innerHTML = '<table class="mini-table"><tbody>' + items.map(function(item) {
     const change = Number(item.change);
     const changeText = Number.isFinite(change) ? (change >= 0 ? '+' : '') + change.toFixed(2) + '%' : '--';
-    return '<tr><td>' + item.code + '</td><td>' + item.name + '</td><td class="' + dashboardMiniChangeClass(change) + '">' + changeText + '</td><td>' + dashboardWatchlistAlertLabel(item) + '</td><td><button class="small-btn" data-code="' + item.code + '">View</button></td></tr>';
+    const code = dashboardEscapeHtml(item.code || '');
+    return '<tr><td>' + code + '</td><td>' + dashboardEscapeHtml(item.name || item.code || '') + '</td><td class="' + dashboardMiniChangeClass(change) + '">' + changeText + '</td><td>' + dashboardWatchlistAlertLabel(item) + '</td><td><button class="small-btn" data-code="' + code + '">View</button></td></tr>';
   }).join('') + '</tbody></table>';
   box.onclick = function(event) {
     const btn = event.target.closest('[data-code]');
@@ -270,7 +516,8 @@ function dashboardRenderPortfolio() {
   }
   box.innerHTML = '<div class="dashboard-kpis"><span>Market value ' + dashboardMiniFmt(summary.totalMarketValue) + '</span><span class="' + dashboardMiniChangeClass(summary.totalPnl) + '">P/L ' + dashboardMiniFmt(summary.totalPnl) + '</span></div>' +
     '<table class="mini-table"><tbody>' + positions.map(function(pos) {
-      return '<tr><td>' + pos.code + '</td><td>' + pos.name + '</td><td>' + pos.quantity + '</td><td class="' + dashboardMiniChangeClass(pos.unrealizedPnl) + '">' + dashboardMiniFmt(pos.unrealizedPnl) + '</td><td><button class="small-btn" data-code="' + pos.code + '">View</button></td></tr>';
+      const code = dashboardEscapeHtml(pos.code || '');
+      return '<tr><td>' + code + '</td><td>' + dashboardEscapeHtml(pos.name || pos.code || '') + '</td><td>' + dashboardEscapeHtml(pos.quantity) + '</td><td class="' + dashboardMiniChangeClass(pos.unrealizedPnl) + '">' + dashboardMiniFmt(pos.unrealizedPnl) + '</td><td><button class="small-btn" data-code="' + code + '">View</button></td></tr>';
     }).join('') + '</tbody></table>';
   box.onclick = function(event) {
     const btn = event.target.closest('[data-code]');
@@ -290,11 +537,11 @@ function dashboardRenderScreenerReview() {
   box.innerHTML = '<table class="mini-table"><tbody>' + items.map(function(item) {
     const counts = item.counts || {};
     return '<tr>' +
-      '<td><strong>' + item.taskName + '</strong><div class="muted">' + item.strategy + ' / ' + item.candidateCount + ' candidates</div></td>' +
-      '<td><span class="review-status">priority ' + (counts.priority || 0) + '</span></td>' +
-      '<td><span class="review-status">risk ' + (counts.risk || 0) + '</span></td>' +
-      '<td><span class="review-status">todo ' + item.unreviewed + '</span></td>' +
-      '<td><button class="small-btn" data-screener-id="' + item.id + '">Open</button></td>' +
+      '<td><strong>' + dashboardEscapeHtml(item.taskName || '') + '</strong><div class="muted">' + dashboardEscapeHtml(item.strategy || '') + ' / ' + dashboardEscapeHtml(item.candidateCount) + ' candidates</div></td>' +
+      '<td><span class="review-status">priority ' + dashboardEscapeHtml(counts.priority || 0) + '</span></td>' +
+      '<td><span class="review-status">risk ' + dashboardEscapeHtml(counts.risk || 0) + '</span></td>' +
+      '<td><span class="review-status">todo ' + dashboardEscapeHtml(item.unreviewed) + '</span></td>' +
+      '<td><button class="small-btn" data-screener-id="' + dashboardEscapeHtml(item.id || '') + '">Open</button></td>' +
       '</tr>';
   }).join('') + '</tbody></table>';
   box.onclick = function(event) {
@@ -560,6 +807,7 @@ function dashboardRenderRisks() {
 window.Dashboard = {
   load: dashboardLoad,
   refreshCards: dashboardRefreshCards,
+  renderMarketCockpit: dashboardRenderMarketCockpit,
   renderWatchlist: dashboardRenderWatchlist,
   renderSentiment: dashboardRenderSentiment,
   renderPortfolio: dashboardRenderPortfolio,

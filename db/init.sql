@@ -35,8 +35,9 @@ CREATE TABLE IF NOT EXISTS portfolio_accounts (
 
 INSERT OR IGNORE INTO portfolio_accounts
   (id, account_key, name, broker, masked_number, cash_balance, is_default, enabled, note)
-VALUES
-  (1, 'default', '默认账户', '', '', 0, 1, 1, '升级前已有持仓和交易记录');
+SELECT
+  1, 'default', '默认账户', '', '', 0, 1, 1, '升级前已有持仓和交易记录'
+WHERE NOT EXISTS (SELECT 1 FROM portfolio_accounts);
 
 CREATE TABLE IF NOT EXISTS trades (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -88,6 +89,10 @@ CREATE TABLE IF NOT EXISTS market_quote_bars_30s (
   observed_count INTEGER NOT NULL DEFAULT 1,
   last_cumulative_volume REAL,
   last_cumulative_amount REAL,
+  auction_reference_price REAL,
+  auction_matched_volume REAL,
+  auction_unmatched_buy_volume REAL,
+  auction_unmatched_sell_volume REAL,
   provider_last_at TEXT NOT NULL,
   source TEXT NOT NULL DEFAULT 'sina-public-quote',
   created_at TEXT DEFAULT CURRENT_TIMESTAMP,
@@ -97,6 +102,33 @@ CREATE TABLE IF NOT EXISTS market_quote_bars_30s (
 
 CREATE INDEX IF NOT EXISTS idx_market_quote_bars_30s_date
   ON market_quote_bars_30s(code, trading_date, bar_time);
+
+CREATE TABLE IF NOT EXISTS market_quote_bars_5s (
+  code TEXT NOT NULL,
+  trading_date TEXT NOT NULL,
+  bar_time TEXT NOT NULL,
+  open REAL NOT NULL,
+  high REAL NOT NULL,
+  low REAL NOT NULL,
+  close REAL NOT NULL,
+  volume REAL,
+  amount REAL,
+  observed_count INTEGER NOT NULL DEFAULT 1,
+  last_cumulative_volume REAL,
+  last_cumulative_amount REAL,
+  auction_reference_price REAL,
+  auction_matched_volume REAL,
+  auction_unmatched_buy_volume REAL,
+  auction_unmatched_sell_volume REAL,
+  provider_last_at TEXT NOT NULL,
+  source TEXT NOT NULL DEFAULT 'sina-public-quote',
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (code, bar_time)
+);
+
+CREATE INDEX IF NOT EXISTS idx_market_quote_bars_5s_date
+  ON market_quote_bars_5s(code, trading_date, bar_time);
 
 CREATE TABLE IF NOT EXISTS market_quote_snapshots (
   code TEXT PRIMARY KEY,
@@ -269,6 +301,27 @@ CREATE TABLE IF NOT EXISTS ai_research_runs (
   updated_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS external_research_batches (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  batch_key TEXT NOT NULL UNIQUE,
+  payload_hash TEXT NOT NULL,
+  schema_version TEXT NOT NULL,
+  source_system TEXT NOT NULL,
+  task_id TEXT NOT NULL,
+  run_id TEXT NOT NULL,
+  revision INTEGER NOT NULL,
+  market_date TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'partial',
+  payload_json TEXT NOT NULL,
+  webstock_run_id INTEGER,
+  webstock_status TEXT NOT NULL DEFAULT 'pending',
+  tonghuashun_status TEXT NOT NULL DEFAULT 'pending',
+  delivery_json TEXT NOT NULL DEFAULT '{}',
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (webstock_run_id) REFERENCES ai_research_runs(id) ON DELETE SET NULL
+);
+
 CREATE TABLE IF NOT EXISTS expert_channels (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   channel_key TEXT NOT NULL UNIQUE,
@@ -429,6 +482,7 @@ CREATE TABLE IF NOT EXISTS expert_comments (
   visibility_status TEXT NOT NULL DEFAULT 'observed',
   creator_status TEXT NOT NULL DEFAULT 'none',
   verification_method TEXT DEFAULT '',
+  versions_json TEXT NOT NULL DEFAULT '[]',
   created_at TEXT DEFAULT CURRENT_TIMESTAMP,
   updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
   UNIQUE(observation_id, comment_id),
@@ -542,6 +596,85 @@ CREATE TABLE IF NOT EXISTS paper_portfolio_snapshots (
   FOREIGN KEY (portfolio_id) REFERENCES paper_portfolios(id) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS paper_monitor_settings (
+  portfolio_id INTEGER PRIMARY KEY,
+  enabled INTEGER NOT NULL DEFAULT 1,
+  start_mode TEXT NOT NULL DEFAULT 'today' CHECK(start_mode IN ('today', 'next-trading-day')),
+  activated_at TEXT NOT NULL,
+  schedule_json TEXT NOT NULL DEFAULT '["09:35","10:30","14:50"]',
+  holdings_sync_required INTEGER NOT NULL DEFAULT 1,
+  last_holdings_sync_at TEXT DEFAULT '',
+  last_holdings_source TEXT DEFAULT '',
+  last_run_slot TEXT DEFAULT '',
+  last_error TEXT DEFAULT '',
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (portfolio_id) REFERENCES paper_portfolios(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS paper_model_decisions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  portfolio_id INTEGER NOT NULL,
+  advised_at TEXT NOT NULL,
+  market_as_of TEXT NOT NULL,
+  model_id TEXT NOT NULL,
+  mode TEXT NOT NULL CHECK(mode IN ('direct', 'manual', 'scheduled')),
+  schedule_slot TEXT DEFAULT '',
+  prompt_hash TEXT NOT NULL,
+  prompt_text TEXT NOT NULL,
+  input_context_json TEXT NOT NULL DEFAULT '{}',
+  allowed_universe_json TEXT NOT NULL DEFAULT '[]',
+  raw_response TEXT NOT NULL,
+  decision_json TEXT NOT NULL DEFAULT '{}',
+  validation_status TEXT NOT NULL CHECK(validation_status IN ('valid', 'invalid')),
+  validation_errors_json TEXT NOT NULL DEFAULT '[]',
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (portfolio_id) REFERENCES paper_portfolios(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS paper_orders (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  portfolio_id INTEGER NOT NULL,
+  decision_id INTEGER NOT NULL,
+  code TEXT NOT NULL,
+  name TEXT NOT NULL,
+  action TEXT NOT NULL CHECK(action IN ('buy', 'sell', 'hold')),
+  target_position_percent REAL NOT NULL,
+  confidence REAL NOT NULL,
+  reason TEXT NOT NULL,
+  invalidation TEXT NOT NULL,
+  advised_at TEXT NOT NULL,
+  status TEXT NOT NULL CHECK(status IN ('pending', 'filled', 'rejected', 'held', 'cancelled')),
+  status_reason TEXT DEFAULT '',
+  filled_quantity INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (portfolio_id) REFERENCES paper_portfolios(id) ON DELETE CASCADE,
+  FOREIGN KEY (decision_id) REFERENCES paper_model_decisions(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS paper_fills (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  portfolio_id INTEGER NOT NULL,
+  order_id INTEGER NOT NULL UNIQUE,
+  code TEXT NOT NULL,
+  side TEXT NOT NULL CHECK(side IN ('buy', 'sell')),
+  filled_at TEXT NOT NULL,
+  market_date TEXT NOT NULL,
+  market_time TEXT NOT NULL,
+  data_source TEXT NOT NULL,
+  raw_price REAL NOT NULL,
+  execution_price REAL NOT NULL,
+  quantity INTEGER NOT NULL,
+  gross_value REAL NOT NULL,
+  commission REAL NOT NULL,
+  stamp_duty REAL NOT NULL,
+  cash_change REAL NOT NULL,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (portfolio_id) REFERENCES paper_portfolios(id) ON DELETE CASCADE,
+  FOREIGN KEY (order_id) REFERENCES paper_orders(id) ON DELETE CASCADE
+);
+
 CREATE TABLE IF NOT EXISTS mobile_push_subscriptions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     endpoint TEXT NOT NULL UNIQUE,
@@ -577,11 +710,36 @@ CREATE INDEX IF NOT EXISTS idx_knowledge_sources_author ON knowledge_sources(aut
 CREATE UNIQUE INDEX IF NOT EXISTS idx_knowledge_chunks_source_order ON knowledge_chunks(source_id, chunk_index);
 CREATE INDEX IF NOT EXISTS idx_ai_research_runs_type ON ai_research_runs(run_type, created_at);
 CREATE INDEX IF NOT EXISTS idx_ai_research_runs_model ON ai_research_runs(model_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_external_research_batches_date ON external_research_batches(market_date, created_at);
 CREATE INDEX IF NOT EXISTS idx_paper_portfolios_status ON paper_portfolios(status, updated_at);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_paper_portfolio_item_unique ON paper_portfolio_items(portfolio_id, code);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_paper_portfolio_position_unique ON paper_portfolio_positions(portfolio_id, code);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_paper_portfolio_snapshot_unique ON paper_portfolio_snapshots(portfolio_id, snapshot_at);
 CREATE INDEX IF NOT EXISTS idx_paper_portfolio_snapshots_time ON paper_portfolio_snapshots(portfolio_id, snapshot_at DESC);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_paper_valid_decision_schedule_slot
+  ON paper_model_decisions(portfolio_id, schedule_slot) WHERE schedule_slot <> '' AND validation_status = 'valid';
+CREATE TABLE IF NOT EXISTS paper_monitor_preparations (
+  id TEXT PRIMARY KEY,
+  portfolio_id INTEGER NOT NULL REFERENCES paper_portfolios(id) ON DELETE CASCADE,
+  prepared_at TEXT NOT NULL,
+  expires_at TEXT NOT NULL,
+  payload_json TEXT NOT NULL,
+  decision_id INTEGER REFERENCES paper_model_decisions(id) ON DELETE SET NULL
+);
+CREATE INDEX IF NOT EXISTS idx_paper_preparations_portfolio ON paper_monitor_preparations(portfolio_id, prepared_at);
+CREATE TABLE IF NOT EXISTS paper_monitor_runs (
+  portfolio_id INTEGER NOT NULL REFERENCES paper_portfolios(id) ON DELETE CASCADE,
+  slot TEXT NOT NULL,
+  status TEXT NOT NULL,
+  attempts INTEGER NOT NULL DEFAULT 0,
+  last_attempt_at TEXT NOT NULL DEFAULT '',
+  next_retry_at TEXT NOT NULL DEFAULT '',
+  error TEXT NOT NULL DEFAULT '',
+  PRIMARY KEY (portfolio_id, slot)
+);
+CREATE INDEX IF NOT EXISTS idx_paper_decisions_time ON paper_model_decisions(portfolio_id, advised_at DESC, id DESC);
+CREATE INDEX IF NOT EXISTS idx_paper_orders_status ON paper_orders(portfolio_id, status, advised_at, id);
+CREATE INDEX IF NOT EXISTS idx_paper_fills_time ON paper_fills(portfolio_id, filled_at DESC, id DESC);
 
 CREATE TRIGGER IF NOT EXISTS trg_knowledge_chunk_insert
 AFTER INSERT ON knowledge_chunks
@@ -629,3 +787,74 @@ JOIN knowledge_sources AS source ON source.id = chunk.source_id
 WHERE NOT EXISTS (
   SELECT 1 FROM knowledge_chunks_fts AS indexed WHERE indexed.chunk_id = chunk.id
 );
+
+-- Industry research V1 stores immutable, bounded JSON snapshots alongside the
+-- existing classification tables.  No legacy table is modified or cleared.
+CREATE TABLE IF NOT EXISTS industry_research_topics (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  aliases_json TEXT NOT NULL DEFAULT '[]',
+  source_urls_json TEXT NOT NULL DEFAULT '[]',
+  enabled INTEGER NOT NULL DEFAULT 0,
+  interval_minutes INTEGER NOT NULL DEFAULT 1440,
+  last_attempt_at TEXT,
+  last_success_at TEXT,
+  next_due_at TEXT,
+  current_version_id TEXT,
+  config_json TEXT NOT NULL DEFAULT '{}'
+);
+
+CREATE TABLE IF NOT EXISTS industry_research_evidence (
+  id TEXT PRIMARY KEY,
+  canonical_url TEXT NOT NULL,
+  content_sha256 TEXT NOT NULL,
+  payload_json TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  UNIQUE(canonical_url, content_sha256)
+);
+
+CREATE TABLE IF NOT EXISTS industry_research_versions (
+  id TEXT PRIMARY KEY,
+  topic_id TEXT NOT NULL REFERENCES industry_research_topics(id) ON DELETE CASCADE,
+  sequence INTEGER NOT NULL,
+  previous_version_id TEXT,
+  content_hash TEXT NOT NULL,
+  payload_json TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  UNIQUE(topic_id, sequence)
+);
+
+CREATE TABLE IF NOT EXISTS industry_research_runs (
+  id TEXT PRIMARY KEY,
+  topic_id TEXT NOT NULL REFERENCES industry_research_topics(id) ON DELETE CASCADE,
+  status TEXT NOT NULL,
+  payload_json TEXT NOT NULL,
+  started_at TEXT NOT NULL,
+  completed_at TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_industry_research_versions_topic
+  ON industry_research_versions(topic_id, sequence DESC);
+CREATE INDEX IF NOT EXISTS idx_industry_research_runs_topic
+  ON industry_research_runs(topic_id, started_at DESC);
+
+-- Concept discovery keeps the provider directory history separate from research
+-- evidence.  The first complete import is a baseline; later additions can then
+-- be surfaced without presenting every existing concept as newly created.
+CREATE TABLE IF NOT EXISTS industry_concept_discovery (
+  provider TEXT NOT NULL,
+  provider_id TEXT NOT NULL,
+  name TEXT NOT NULL,
+  classification TEXT,
+  first_seen_at TEXT NOT NULL,
+  last_seen_at TEXT NOT NULL,
+  source_fetched_at TEXT,
+  catalog_rank INTEGER NOT NULL DEFAULT 0,
+  baseline INTEGER NOT NULL DEFAULT 0,
+  active INTEGER NOT NULL DEFAULT 1,
+  payload_json TEXT NOT NULL DEFAULT '{}',
+  PRIMARY KEY(provider, provider_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_industry_concept_discovery_active
+  ON industry_concept_discovery(active, catalog_rank, name);

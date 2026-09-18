@@ -162,6 +162,11 @@ test('market endpoints keep one frontend attempt because the server owns retries
     maxRetries: 4, retryDelayMs: 0
   }), /network disconnected/);
   assert.equal(fetchCount, 1);
+
+  await assert.rejects(api.fetchJsonData('/api/market/comparison-intraday?keys=index%3Asse%2Cindex%3Astar50', {
+    maxRetries: 4, retryDelayMs: 0
+  }), /network disconnected/);
+  assert.equal(fetchCount, 2);
 });
 
 test('market consumers can retain explicit stale provenance', async () => {
@@ -176,4 +181,29 @@ test('market consumers can retain explicit stale provenance', async () => {
     data: [{ date: '2026-08-11', close: 10 }],
     meta: { dataSource: 'cache', stale: true, fetchedAt: '2026-08-11T07:00:00.000Z' }
   });
+});
+
+test('api client displays a structured API error message instead of object text', async () => {
+  const api = loadApiClient(function() {
+    return Promise.resolve({
+      ok: false,
+      status: 503,
+      statusText: 'Service Unavailable',
+      text: async function() {
+        return JSON.stringify({
+          success: false,
+          error: { code: 'INDUSTRY_CHAIN_UNAVAILABLE', message: '产业链资料暂时不可用，请稍后重试。' }
+        });
+      }
+    });
+  });
+
+  await assert.rejects(
+    api.fetchJsonData('/api/industry-chain?q=CPO', { maxRetries: 0 }),
+    function(error) {
+      assert.equal(error.message, '产业链资料暂时不可用，请稍后重试。');
+      assert.doesNotMatch(error.message, /\[object Object\]/);
+      return true;
+    }
+  );
 });

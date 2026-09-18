@@ -106,27 +106,35 @@ function extractEvidence(observation) {
   const explicitTranscriptionText = bodyText(transcription.asrText || transcription.transcript);
   const metadataTranscriptionText = bodyText(metadataTranscription.asrText || metadataTranscription.transcript);
   const metadataAsrText = bodyText(metadataAsr.asrText || metadataAsr.transcript || metadataAsr.text);
+  const transcriptionStatus = String(transcription.status).toLowerCase();
+  const metadataTranscriptionStatus = String(metadataTranscription.status).toLowerCase();
+  const metadataAsrStatus = String(metadataAsr.status).toLowerCase();
   let asrText = '';
   let asrSegments = [];
-  if (String(transcription.status).toLowerCase() === 'complete' && explicitTranscriptionText) {
+  let needsReview = false;
+  if (['complete', 'needs_review'].includes(transcriptionStatus) && explicitTranscriptionText) {
     asrText = explicitTranscriptionText;
     asrSegments = transcription.segments;
-  } else if (String(metadataTranscription.status).toLowerCase() === 'complete' && metadataTranscriptionText) {
+    needsReview = transcriptionStatus === 'needs_review';
+  } else if (['complete', 'needs_review'].includes(metadataTranscriptionStatus) && metadataTranscriptionText) {
     asrText = metadataTranscriptionText;
     asrSegments = metadataTranscription.segments;
-  } else if (String(metadataAsr.status).toLowerCase() === 'complete' && metadataAsrText) {
+    needsReview = metadataTranscriptionStatus === 'needs_review';
+  } else if (['complete', 'needs_review'].includes(metadataAsrStatus) && metadataAsrText) {
     asrText = metadataAsrText;
     asrSegments = metadataAsr.segments;
-  } else if (String(metadataAsr.status).toLowerCase() === 'complete' && bodyText(item.transcript)
+    needsReview = metadataAsrStatus === 'needs_review';
+  } else if (['complete', 'needs_review'].includes(metadataAsrStatus) && bodyText(item.transcript)
       && hasPersistedAsrProvenance(metadataAsr, bodyText(item.transcript))) {
     // Legacy rows store the ASR body in transcript_text; only promote it when provenance is still verifiable.
     asrText = bodyText(item.transcript);
     asrSegments = metadataAsr.segments;
+    needsReview = metadataAsrStatus === 'needs_review';
   }
   if (asrText) {
     return {
-      kind: 'asr',
-      label: '本地 ASR 完整逐字稿',
+      kind: needsReview ? 'asr_review' : 'asr',
+      label: needsReview ? '本地 ASR 待复核逐字稿' : '本地 ASR 完整逐字稿',
       text: asrText,
       segments: cleanSegments(asrSegments)
     };
@@ -268,6 +276,7 @@ function buildAnalysisPacket(channel, observations, options = {}) {
     : mode === 'date' ? ((from || '不限开始时间') + ' 至 ' + (to || '不限结束时间'))
       : '最近 ' + requestedLimit + ' 条视频';
   let asrCount = 0;
+  let reviewCount = 0;
   let visibleCount = 0;
   let missingCount = 0;
   let commentCount = 0;
@@ -276,7 +285,8 @@ function buildAnalysisPacket(channel, observations, options = {}) {
   const sections = items.map(function(entry, index) {
     const item = entry.observation;
     const evidence = extractEvidence(item);
-    if (evidence.kind === 'asr') asrCount += 1;
+    if (evidence.kind === 'asr' || evidence.kind === 'asr_review') asrCount += 1;
+    if (evidence.kind === 'asr_review') reviewCount += 1;
     if (evidence.kind === 'visible') visibleCount += 1;
     if (evidence.kind === 'missing') missingCount += 1;
     const title = inlineText(item.title) || '视频 ' + inlineText(item.externalContentId || index + 1);
@@ -323,6 +333,7 @@ function buildAnalysisPacket(channel, observations, options = {}) {
   });
 
   const warnings = [];
+  if (reviewCount) warnings.push(reviewCount + ' 条本地 ASR 结果置信度不足，等待复核，不应当作已确认的完整原话。');
   if (visibleCount) warnings.push(visibleCount + ' 条记录只有页面可见文本，不能当作完整逐字稿。');
   if (missingCount) warnings.push(missingCount + ' 条记录没有可用逐字稿或页面文字。');
   if (partialCommentItemCount) warnings.push(partialCommentItemCount + ' 条记录的评论仅覆盖采集时页面可见范围，不代表完整评论区。');
@@ -333,7 +344,7 @@ function buildAnalysisPacket(channel, observations, options = {}) {
     '- 筛选范围：' + rangeLabel,
     '- 分析目标：' + purposeConfig.label,
     '- 纳入视频：' + items.length + ' 条',
-    '- 证据规则：逐条区分本地 ASR 完整逐字稿、页面可见文本和公开评论；创作者回复另行标注身份核验方式；本数据包不包含模型推断。',
+    '- 证据规则：逐条区分本地 ASR 完整逐字稿、本地 ASR 待复核稿、页面可见文本和公开评论；创作者回复另行标注身份核验方式；本数据包不包含模型推断。',
     '',
     '请完成以下任务：' + purposeConfig.instruction,
     '请仅依据下列原始资料分析；引用观点时保留对应的视频标题、发布时间和原始链接。不要把页面摘要当成完整原话，也不要把程序提取标签写成本人观点。',

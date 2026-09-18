@@ -50,11 +50,15 @@ test('average line stays empty until observed volume establishes a real average'
 });
 
 test('refresh policy prioritizes the visible market, holdings and watchlist during China trading sessions', () => {
+  const auction = new Date('2026-08-12T01:20:00.000Z'); // 09:20 Asia/Shanghai
   const morning = new Date('2026-08-12T02:00:00.000Z'); // 10:00 Asia/Shanghai
   const lunch = new Date('2026-08-12T04:00:00.000Z'); // 12:00 Asia/Shanghai
   const weekend = new Date('2026-08-15T02:00:00.000Z');
 
   assert.equal(RealtimeChartModel.isChinaTradingSession(morning), true);
+  assert.equal(RealtimeChartModel.isChinaTradingSession(auction), false);
+  assert.equal(RealtimeChartModel.isChinaMarketDataSession(auction), true);
+  assert.equal(RealtimeChartModel.refreshDelayMs(auction), 3000);
   assert.equal(RealtimeChartModel.refreshDelayMs(morning), 3000);
   assert.equal(RealtimeChartModel.activeViewRefreshDelayMs('portfolio', morning), 3000);
   assert.equal(RealtimeChartModel.activeViewRefreshDelayMs('watchlist', morning), 3000);
@@ -101,11 +105,50 @@ test('compressed trading axis keeps every real sample and removes the lunch wall
   const axis = RealtimeChartModel.buildCompressedTradingAxis(rows, { intervalMinutes: 5 });
   const morningEnd = axis.times.indexOf('11:30');
 
-  assert.equal(axis.times[morningEnd + 1], '13:05');
+  assert.equal(axis.times[morningEnd + 1], '13:00');
   assert.equal(axis.times.includes('12:00'), false);
-  assert.equal(axis.times.includes('13:00'), false);
+  assert.equal(axis.times.includes('13:00'), true);
   assert.deepEqual(axis.observedTimes, ['11:25', '11:30', '13:05', '13:10']);
   assert.equal(axis.firstAfternoonIndex, morningEnd + 1);
+});
+
+test('intraday axis keeps the complete fixed trading-day frame for sparse live samples', () => {
+  const rows = [
+    { time: '2026-09-01 09:45:05', price: 10 },
+    { time: '2026-09-01 10:30:00', price: 10.2 }
+  ];
+  const axis = RealtimeChartModel.buildCompressedTradingAxis(rows, {
+    intervalSeconds: 5,
+    intervalMinutes: 5 / 60
+  });
+
+  assert.equal(axis.times[0], '09:30');
+  assert.equal(axis.times[axis.times.length - 1], '15:00');
+  assert.equal(axis.times.includes('13:00'), true);
+  assert.deepEqual(RealtimeChartModel.buildFixedTradingViewport(), {
+    start: 0, end: 100, focused: false
+  });
+});
+
+test('opening-auction frame is optional and remains separate from continuous trading', () => {
+  const rows = [
+    { time: '2026-09-01 09:15:00', price: 9.9 },
+    { time: '2026-09-01 09:25:00', price: 10 },
+    { time: '2026-09-01 09:31:00', price: 10.1 }
+  ];
+  const hidden = RealtimeChartModel.buildCompressedTradingAxis(rows, { intervalSeconds: 60 });
+  const visible = RealtimeChartModel.buildCompressedTradingAxis(rows, {
+    intervalSeconds: 60,
+    includeAuction: true
+  });
+
+  assert.equal(hidden.times[0], '09:30');
+  assert.equal(hidden.times.includes('09:15'), false);
+  assert.equal(visible.times[0], '09:15');
+  assert.equal(visible.times.includes('09:25'), true);
+  assert.equal(visible.times.includes('09:26'), false);
+  assert.equal(visible.times.includes('09:30'), true);
+  assert.equal(visible.times[visible.times.length - 1], '15:00');
 });
 
 test('sampling metadata reports the real provider interval without inventing one-minute points', () => {
@@ -171,4 +214,99 @@ test('price range is expressed against the real previous close for compact label
     lowPercent: -1
   });
   assert.equal(RealtimeChartModel.priceRangePercent([], 10), null);
+});
+
+test('readable price domain keeps yesterday close visible without mirroring a large decline into empty upside space', () => {
+  const domain = RealtimeChartModel.buildReadablePriceDomain([152, 147, 144, 146], 153.4);
+
+  assert.ok(domain.min < 144);
+  assert.ok(domain.max > 153.4);
+  assert.ok(domain.max - 153.4 < 2, 'upside padding stays compact instead of mirroring the full decline');
+  assert.ok(153.4 - domain.min > domain.max - 153.4);
+});
+
+test('stale quote is aligned to the trading date and previous close carried by minute data', () => {
+  const rows = [
+    { time: '2026-08-26 09:30:00', price: 11.55, volume: 100, amount: 1155 },
+    { time: '2026-08-26 15:00:00', price: 11.73, volume: 200, amount: 2346 }
+  ];
+  const staleQuote = {
+    code: '000001', name: '平安银行', price: 11.27, prevClose: 11.27,
+    change: 0, tradeDate: '2026-08-20', stale: false, quoteStatus: 'latest-close'
+  };
+
+  const aligned = RealtimeChartModel.alignQuoteToMinute(staleQuote, rows, {
+    dataSource: 'tencent-1m', tradingDate: '2026-08-26', previousClose: 11.59,
+    latestPrice: 11.73, openPrice: 11.55, highPrice: 11.75, lowPrice: 11.52
+  });
+
+  assert.equal(aligned.price, 11.73);
+  assert.equal(aligned.prevClose, 11.59);
+  assert.equal(aligned.change, 1.21);
+  assert.equal(aligned.tradeDate, '2026-08-26');
+  assert.equal(aligned.open, 11.55);
+  assert.equal(aligned.high, 11.75);
+  assert.equal(aligned.low, 11.52);
+  assert.equal(aligned.minuteAligned, true);
+});
+
+test('same-day live quote is not replaced by an older minute sample', () => {
+  const liveQuote = {
+    code: '000001', price: 11.76, prevClose: 11.59, change: 1.47,
+    tradeDate: '2026-08-26', quoteStatus: 'live', stale: false
+  };
+  const aligned = RealtimeChartModel.alignQuoteToMinute(liveQuote, [
+    { time: '2026-08-26 14:59:00', price: 11.73 }
+  ], { tradingDate: '2026-08-26', previousClose: 11.59, latestPrice: 11.73 });
+
+  assert.equal(aligned.price, 11.76);
+  assert.equal(aligned.minuteAligned, undefined);
+});
+
+test('daily chart appends the current trading-day minute bar without pretending it is closed', () => {
+  const daily = [
+    { date: '2026-09-01', open: 9.8, high: 10.2, low: 9.7, close: 10, volume: 1000, amount: 10000 }
+  ];
+  const minute = [
+    { time: '2026-09-02 09:30:00', open: 10.1, price: 10.1, high: 10.2, low: 10, volume: 100, amount: 1010 },
+    { time: '2026-09-02 09:31:00', open: 10.1, price: 10.5, high: 10.8, low: 10.1, volume: 200, amount: 2100 }
+  ];
+
+  const merged = RealtimeChartModel.mergeCurrentDailyBar(daily, minute, {
+    tradingDate: '2026-09-02', previousClose: 10, latestPrice: 10.5,
+    openPrice: 10.1, highPrice: 10.8, lowPrice: 10,
+    dataSource: 'tencent-1m', marketState: 'live', stale: false
+  });
+
+  assert.equal(merged.length, 2);
+  assert.deepEqual(merged[0], daily[0]);
+  assert.deepEqual(merged[1], {
+    date: '2026-09-02', open: 10.1, close: 10.5, high: 10.8, low: 10,
+    volume: 300, amount: 3110, intraday: true, incomplete: true,
+    observedAt: '2026-09-02 09:31:00', dataSource: 'tencent-1m', stale: false
+  });
+});
+
+test('daily chart does not append an older minute session over newer historical bars', () => {
+  const daily = [{ date: '2026-09-02', open: 10, high: 11, low: 9.8, close: 10.8, volume: 1000, amount: 10000 }];
+  const merged = RealtimeChartModel.mergeCurrentDailyBar(daily, [
+    { time: '2026-09-01 15:00:00', price: 9.9, volume: 100, amount: 990 }
+  ], { tradingDate: '2026-09-01', dataSource: 'cache' });
+
+  assert.deepEqual(merged, daily);
+  assert.notEqual(merged, daily);
+});
+
+test('daily tooltip metrics expose price change percentage and amplitude against prior close', () => {
+  const metrics = RealtimeChartModel.dailyBarMetrics([
+    { date: '2026-09-01', close: 10 },
+    { date: '2026-09-02', open: 10.1, high: 10.8, low: 9.9, close: 10.5 }
+  ], 1);
+
+  assert.deepEqual(metrics, {
+    previousClose: 10,
+    changeAmount: 0.5,
+    changePercent: 5,
+    amplitudePercent: 9
+  });
 });

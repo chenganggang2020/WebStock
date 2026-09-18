@@ -1,7 +1,7 @@
 const express = require('express');
 const path = require('path');
 const routes = require('./routes');
-const { requireLanPairing, resolveSafeListenHost } = require('./services/lanAccessService');
+const { requireLanPairing, requireMobileReadOnly, externalRequestProtocol, resolveSafeListenHost } = require('./services/lanAccessService');
 
 const { getAIEnabled, getAIConfig } = require('./routes/ai');
 const database = require('./db');
@@ -18,7 +18,7 @@ function rejectCrossOriginMutation(req, res, next) {
   let sameOrigin = req.get('sec-fetch-site') !== 'cross-site';
   if (origin) {
     try {
-      sameOrigin = sameOrigin && new URL(origin).origin === req.protocol + '://' + host;
+      sameOrigin = sameOrigin && new URL(origin).origin === externalRequestProtocol(req) + '://' + host;
     } catch (error) {
       sameOrigin = false;
     }
@@ -33,6 +33,7 @@ function rejectCrossOriginMutation(req, res, next) {
 }
 
 app.use(requireLanPairing);
+app.use(requireMobileReadOnly);
 app.use(rejectCrossOriginMutation);
 app.use(express.json({ limit: '25mb' }));
 app.use(express.urlencoded({ extended: true }));
@@ -118,8 +119,30 @@ const PORT = process.env.PORT || 3000;
 
 if (require.main === module) {
   const host = resolveSafeListenHost(process.env.WEBSTOCK_HOST, process.env.WEBSTOCK_LAN_TOKEN);
-  app.listen(PORT, host, function () {
+  const server = app.listen(PORT, host, function () {
     console.log('Server started: http://' + host + ':' + PORT);
+  });
+  const scheduler = require('./services/paperMonitorScheduler').createPaperMonitorScheduler();
+  const tonghuashunHoldingScheduler = require('./services/tonghuashunHoldingScheduler').createTonghuashunHoldingScheduler();
+  const industryResearchScheduler = require('./services/industryResearchScheduler').createIndustryResearchScheduler({ service: require('./services/industryResearchService') });
+  const etfCore = require('./services/eastmoneyEtfDailyService');
+  const etfDailyService = etfCore.getEastmoneyEtfDailyService();
+  const etfDailyScheduler = require('./services/eastmoneyEtfDailyScheduler').createEastmoneyEtfDailyScheduler({ service: etfDailyService });
+  scheduler.start();
+  tonghuashunHoldingScheduler.start();
+  industryResearchScheduler.start();
+  etfDailyScheduler.start();
+  const sectorRotation = require('./services/capitalFlow/sectorRotationService').getSectorRotationService();
+  if (process.env.WEBSTOCK_BUILD_SMOKE_TEST !== '1') sectorRotation.start();
+  const localQuoteSampler = require('./routes/market').localQuoteSampler;
+  if (process.env.WEBSTOCK_BUILD_SMOKE_TEST !== '1' && process.env.WEBSTOCK_LOCAL_SAMPLING_AUTO !== '0') localQuoteSampler.start();
+  server.on('close', function() {
+    scheduler.stop();
+    tonghuashunHoldingScheduler.stop();
+    industryResearchScheduler.stop();
+    etfDailyScheduler.stop();
+    sectorRotation.stop();
+    localQuoteSampler.stop();
   });
 }
 

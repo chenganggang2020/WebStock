@@ -17,6 +17,7 @@ function isExternalDisabled() {
 }
 
 function round(value, digits) {
+  if (value == null || typeof value === 'boolean' || String(value).trim() === '') return null;
   const n = Number(value);
   if (!Number.isFinite(n)) return null;
   return Number(n.toFixed(digits == null ? 2 : digits));
@@ -38,12 +39,12 @@ function parseVixHistory(csvText) {
     const [date, open, high, low, close] = parseCsvLine(line);
     return {
       date,
-      open: Number(open),
-      high: Number(high),
-      low: Number(low),
-      close: Number(close)
+      open: round(open, 2),
+      high: round(high, 2),
+      low: round(low, 2),
+      close: round(close, 2)
     };
-  }).filter(row => row.date && Number.isFinite(row.close));
+  }).filter(row => row.date && Number.isFinite(row.close) && row.close > 0);
   const latest = rows[rows.length - 1] || null;
   const previous = rows[rows.length - 2] || null;
   if (!latest) throw new Error('VIX history is empty');
@@ -57,7 +58,7 @@ function parseVixHistory(csvText) {
 }
 
 function labelVix(value) {
-  const n = Number(value);
+  const n = round(value, 2);
   if (!Number.isFinite(n)) return '未知';
   if (n >= 30) return '高度恐慌';
   if (n >= 20) return '风险升温';
@@ -66,7 +67,7 @@ function labelVix(value) {
 }
 
 function labelScore(score) {
-  const n = Number(score);
+  const n = round(score, 2);
   if (!Number.isFinite(n)) return '未知';
   if (n < 25) return '极度恐慌';
   if (n < 45) return '偏恐慌';
@@ -137,7 +138,7 @@ async function fetchAshareSnapshot() {
     price: round(row.f2, 3),
     changePct: round(row.f3, 2),
     amount: round(row.f6, 0)
-  })).filter(item => item.code && Number.isFinite(Number(item.changePct)));
+  })).filter(item => item.code && Number.isFinite(item.changePct));
 }
 
 async function fetchSinaAshareSnapshot() {
@@ -168,22 +169,11 @@ async function fetchSinaAshareSnapshot() {
     price: round(row.trade, 3),
     changePct: round(row.changepercent, 2),
     amount: round(row.amount, 0)
-  })).filter(item => item.code && Number.isFinite(Number(item.changePct)));
-}
-
-function fallbackAshareSnapshot() {
-  return [
-    { code: '000001', name: '样本银行', changePct: -0.8, amount: 900000000 },
-    { code: '300308', name: '样本科技', changePct: 3.2, amount: 1200000000 },
-    { code: '688981', name: '样本芯片', changePct: 1.5, amount: 1600000000 },
-    { code: '600519', name: '样本消费', changePct: -1.2, amount: 1500000000 },
-    { code: '002230', name: '样本算力', changePct: 5.4, amount: 1100000000 },
-    { code: '600030', name: '样本券商', changePct: -3.1, amount: 1000000000 }
-  ];
+  })).filter(item => item.code && Number.isFinite(item.changePct));
 }
 
 function calcAshareSentiment(stocks, sourceStatus) {
-  const items = (stocks || []).filter(item => Number.isFinite(Number(item.changePct)));
+  const items = (stocks || []).filter(item => item && round(item.changePct, 2) !== null);
   const total = items.length;
   if (!total) throw new Error('A-share snapshot is empty');
   const advancing = items.filter(item => Number(item.changePct) > 0).length;
@@ -230,7 +220,8 @@ function calcAshareSentiment(stocks, sourceStatus) {
 }
 
 async function buildOverview(options = {}) {
-  if (!options.refresh && cachedOverview && Date.now() - cachedOverview.ts < CACHE_TTL_MS) {
+  const cacheTtl = cachedOverview && cachedOverview.data.aShare.sourceStatus === 'unavailable' ? 30000 : CACHE_TTL_MS;
+  if (!options.refresh && cachedOverview && Date.now() - cachedOverview.ts < cacheTtl) {
     return Object.assign({}, cachedOverview.data, { cached: true });
   }
 
@@ -240,31 +231,37 @@ async function buildOverview(options = {}) {
   let sourceStatus = 'live';
 
   try {
-    vix = isExternalDisabled()
-      ? { name: 'Cboe VIX', date: 'sample', value: 18.6, change: -0.4, changePct: -2.1, label: '中性波动', source: '测试样本', meaning: 'VIX 用标普 500 指数期权价格估算未来 30 天预期波动率。' }
-      : await fetchVix();
+    if (isExternalDisabled()) throw new Error('external sentiment fetch disabled');
+    vix = await fetchVix();
   } catch (error) {
     errors.push('VIX: ' + error.message);
   }
 
   try {
     stocks = await fetchAshareSnapshot();
+    if (!stocks.length) throw new Error('A-share snapshot is empty');
   } catch (error) {
     errors.push('A-share breadth: ' + error.message);
     try {
       sourceStatus = 'sina';
       stocks = await fetchSinaAshareSnapshot();
+      if (!stocks.length) throw new Error('Sina A-share snapshot is empty');
     } catch (sinaError) {
-      sourceStatus = 'fallback';
+      sourceStatus = 'unavailable';
       errors.push('Sina A-share breadth: ' + sinaError.message);
-      stocks = fallbackAshareSnapshot();
+      stocks = [];
     }
   }
 
-  const aShare = calcAshareSentiment(stocks, sourceStatus);
+  const aShare = stocks.length ? calcAshareSentiment(stocks, sourceStatus) : {
+    name: 'A股情绪分', score: null, label: '数据不足', sourceStatus: 'unavailable',
+    total: null, advancing: null, declining: null, breadthPct: null, avgChangePct: null,
+    strongCount: null, weakCount: null, limitUpLike: null, sharpDown: null, components: [],
+    source: '公开行情暂不可用', meaning: '缺少有效市场样本，不计算情绪分；不使用内置样本代替当前市场。'
+  };
   const data = {
     updatedAt: new Date().toISOString(),
-    tradeDate: aShare.sourceStatus === 'fallback' ? 'sample' : new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Shanghai' }).format(new Date()),
+    tradeDate: aShare.sourceStatus === 'unavailable' ? null : new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Shanghai' }).format(new Date()),
     aShare,
     vix,
     fearGreed: {

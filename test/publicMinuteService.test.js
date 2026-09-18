@@ -12,6 +12,11 @@ function tencentPayload(date = '20260814') {
     code: 0,
     data: {
       sz000001: {
+        qt: {
+          sz000001: [51, '平安银行', '000001', '11.73', '11.59', '11.55', '', '', '', '',
+            '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',
+            '20260826150000', '0.14', '1.21', '11.75', '11.52']
+        },
         data: {
           date,
           data: [
@@ -47,6 +52,12 @@ test('public minute service prefers Tencent one-minute bars and derives interval
   assert.equal(result.meta.stale, false);
   assert.equal(result.meta.derived, false);
   assert.equal(result.meta.exchangeGroundTruth, false);
+  assert.equal(result.meta.previousClose, 11.59);
+  assert.equal(result.meta.latestPrice, 11.73);
+  assert.equal(result.meta.changePercent, 1.21);
+  assert.equal(result.meta.openPrice, 11.55);
+  assert.equal(result.meta.highPrice, 11.75);
+  assert.equal(result.meta.lowPrice, 11.52);
   assert.equal(result.rows.length, 2);
   assert.deepEqual(result.rows[0], {
     time: '2026-08-14 09:30:00',
@@ -81,7 +92,7 @@ test('latest public bars are stale only while the market is trading', async () =
   assert.equal(liveResult.meta.stale, true);
 });
 
-test('public minute service falls back to the existing Sina five-minute source', async () => {
+test('public minute service refuses five-minute fallback when one-minute providers fail', async () => {
   const calls = [];
   const service = createPublicMinuteService({
     now: function() { return new Date('2026-08-14T07:00:00.000Z').getTime(); },
@@ -89,24 +100,15 @@ test('public minute service falls back to the existing Sina five-minute source',
       get: async function(key) {
         calls.push(key);
         if (key.startsWith('minute-1m-')) throw Object.assign(new Error('one-minute failed'), { code: 'ECONNRESET' });
-        return {
-          data: [
-            { day: '2026-08-14 09:35:00', close: '10.00', volume: '100', amount: '1000' },
-            { day: '2026-08-14 09:40:00', close: '10.10', volume: '120', amount: '1212' }
-          ]
-        };
+        return { data: [] };
       }
     }
   });
 
-  const result = await service.fetch('002565');
-
-  assert.deepEqual(calls, ['minute-1m-tencent:002565', 'minute-1m-eastmoney:002565', 'minute-5m:002565']);
-  assert.equal(result.meta.dataSource, 'sina-5m');
-  assert.equal(result.meta.fallbackFrom, 'public-1m');
-  assert.equal(result.meta.reason, 'one-minute-providers-unavailable');
-  assert.equal(result.meta.sampling.intervalMinutes, 5);
-  assert.equal(result.rows.length, 2);
+  await assert.rejects(service.fetch('002565'), function(error) {
+    return error && error.code === 'PROVIDER_REQUEST_FAILED';
+  });
+  assert.deepEqual(calls, ['minute-1m-tencent:002565', 'minute-1m-eastmoney:002565']);
 });
 
 test('Tencent normalization filters after-hours rows and keeps cumulative averages', () => {
@@ -123,6 +125,7 @@ test('Eastmoney normalization selects the latest trading day and rejects invalid
   const result = normalizeEastmoneyTrends({
     rc: 0,
     data: {
+      preClose: 9.95,
       trends: [
         '2026-08-13 15:00,10.00,10.00,10.00,10.00,10,10000,10.00',
         '2026-08-14 09:30,10.00,0,10.00,9.99,20,20000,10.00',
@@ -134,4 +137,5 @@ test('Eastmoney normalization selects the latest trading day and rejects invalid
   assert.equal(result.tradingDate, '2026-08-14');
   assert.equal(result.rows.length, 1);
   assert.equal(result.rows[0].time, '2026-08-14 09:31:00');
+  assert.equal(result.previousClose, 9.95);
 });

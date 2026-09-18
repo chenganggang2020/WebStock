@@ -79,12 +79,18 @@ function renderHotHeatmap(boards, limit) {
 function hotSyncSearchMode() {
   const input = document.getElementById('searchInput');
   const wrap = document.querySelector('.stock-table-wrap');
-  const panel = document.getElementById('hotSidebarPanel');
-  if (!wrap || !panel) return;
+  const newsPanel = document.getElementById('hotSidebarPanel');
+  const marketPanel = document.getElementById('marketSidebarPanel');
+  if (!wrap || !newsPanel) return;
   const searching = Boolean(input && input.value.trim());
-  const hasSidebarNews = panel.dataset.sidebarNewsReady === '1' || panel.dataset.sidebarNewsLoading === '1';
-  wrap.classList.toggle('hot-hidden-default', hasSidebarNews && !searching);
-  panel.style.display = hasSidebarNews && !searching ? '' : 'none';
+  const currentView = window.State && window.State.currentMainView || 'dashboard';
+  const hasSidebarNews = newsPanel.dataset.sidebarNewsReady === '1' || newsPanel.dataset.sidebarNewsLoading === '1';
+  const showNews = currentView === 'dashboard' && hasSidebarNews && !searching;
+  const showMarket = currentView === 'market' && Boolean(marketPanel) && !searching;
+  wrap.classList.toggle('hot-hidden-default', showNews || showMarket);
+  newsPanel.hidden = !showNews;
+  newsPanel.style.display = showNews ? '' : 'none';
+  if (marketPanel) marketPanel.hidden = !showMarket;
 }
 
 function renderHotStatus(target, text, isError) {
@@ -237,7 +243,7 @@ function renderHotBoard() {
   const monthBoards = (hotMarketOverview.boards && hotMarketOverview.boards.month) || [];
   const hotStocks = hotMarketOverview.hotStocks || [];
   const errorLine = hotMarketOverview.degraded
-    ? '<div class="provider-status">部分外部接口降级：' + hotEscape((hotMarketOverview.errors || []).join(' | ') || '请人工复核数据') + '</div>'
+    ? '<div class="provider-status">部分行情源暂不可用，以下仅展示当前仍可核验的数据。</div>'
     : '';
   box.innerHTML = '<div class="hot-board-head">' +
     '<div><h3>今日热点</h3><p>热力图按日涨跌幅、成交额、活跃度和可用资金流综合绘制；点板块后右侧显示相关个股。</p></div>' +

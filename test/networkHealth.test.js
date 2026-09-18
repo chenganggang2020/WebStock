@@ -44,6 +44,17 @@ function healthyResponse() {
   };
 }
 
+test('health timeout includes a stalled response body and allows a later recovery',async()=>{
+  const timers=createTimers();let stall=true;
+  const monitor=createNetworkHealthMonitor({fetch:async()=>stall?{ok:true,json:()=>new Promise(()=>{})}:healthyResponse(),
+    setTimeout:timers.setTimeout,clearTimeout:timers.clearTimeout});
+  const check=monitor.check();await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(timers.nextDelay(),10000,'body read must still be protected by the deadline');
+  await timers.runNext();await check;
+  assert.equal(monitor.getState().status,'retrying');
+  stall=false;await monitor.check();assert.equal(monitor.getState().status,'online');monitor.stop();
+});
+
 test('network health uses 30 second foreground and 120 second hidden intervals', async () => {
   const timers = createTimers();
   let hidden = false;

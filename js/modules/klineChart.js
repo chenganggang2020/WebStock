@@ -102,6 +102,16 @@ function renderKlineChart(rawData, indicator) {
       })
     };
   }
+  const localSignalMarks = Array.isArray(State.currentKlineSignalMarks)
+    ? State.currentKlineSignalMarks : [];
+  if (isDaily && localSignalMarks.length) {
+    baseSeries[0].markPoint = {
+      symbol: 'pin',
+      symbolSize: 42,
+      label: { color: '#ffffff', fontWeight: 700, fontSize: 11 },
+      data: localSignalMarks
+    };
+  }
 
   let needThreeGrids = false;
   let legendData = ['K线'];
@@ -334,8 +344,23 @@ function renderKlineChart(rawData, indicator) {
         const idx = params[0].dataIndex;
         const day = rawData[idx];
         if (!day) return '';
+        const metrics = window.RealtimeChartModel && window.RealtimeChartModel.dailyBarMetrics
+          ? window.RealtimeChartModel.dailyBarMetrics(rawData, idx)
+          : { changeAmount: null, changePercent: null, amplitudePercent: null };
+        const signed = function(value, suffix) {
+          return value === null || value === undefined ? '--' : (value > 0 ? '+' : '') + Number(value).toFixed(2) + (suffix || '');
+        };
         let html = '<strong>' + day.date + '</strong><br/>';
+        if (day.intraday) {
+          html += '<span style="color:' + (day.stale ? '#f59e0b' : '#2563eb') + '">' +
+            (day.incomplete ? '盘中K线 · 未收盘' : '分钟行情合成收盘K线') +
+            (day.observedAt ? ' · 截至 ' + String(day.observedAt).slice(11, 16) : '') + '</span><br/>';
+        }
         html += '开: ' + day.open.toFixed(2) + ' &nbsp; 高: ' + day.high.toFixed(2) + ' &nbsp; 低: ' + day.low.toFixed(2) + ' &nbsp; 收: ' + day.close.toFixed(2) + '<br/>';
+        if (metrics.changePercent !== null) {
+          html += '涨跌额: ' + signed(metrics.changeAmount) + ' &nbsp; 涨跌幅: ' + signed(metrics.changePercent, '%') +
+            ' &nbsp; 振幅: ' + signed(metrics.amplitudePercent, '%').replace(/^\+/, '') + '<br/>';
+        }
         params.forEach(function(p) {
           if (p.seriesName === 'K线') return;
           if (p.seriesName === '成交量(万手)') {
@@ -413,7 +438,247 @@ function applyMASettings() {
   closeMASettings();
 }
 
+function renderAvailableKlineHeader(State, data, meta) {
+  if (State.currentView !== 'kline' || !State.currentStock || !Array.isArray(data) || !data.length) return;
+  const latest = data[data.length - 1];
+  const metrics = window.RealtimeChartModel && window.RealtimeChartModel.dailyBarMetrics
+    ? window.RealtimeChartModel.dailyBarMetrics(data, data.length - 1) : {};
+  const change = metrics.changePercent === null || metrics.changePercent === undefined ? null : metrics.changePercent;
+  const chartColors = window.ChartTheme.get(document.body.classList.contains('dark')).colors;
+  const color = change === null ? chartColors.text : change > 0 ? chartColors.up : change < 0 ? chartColors.down : chartColors.text;
+  const periodLabel = { day: '日线', week: '周线', month: '月线' }[State.currentPeriod] || 'K线';
+  const sourceLabel = {
+    'sina-day': '新浪日线',
+    'eastmoney-day': '东方财富日线（新浪不可用时）',
+    cache: '本地历史缓存'
+  }[meta && meta.dataSource] || '公开历史行情';
+  const chartTitle = document.getElementById('chartTitle');
+  const priceInfo = document.getElementById('priceInfo');
+  if (chartTitle) {
+    chartTitle.textContent = (State.currentStock.name || '未知') + ' (' + State.currentStock.code + ') ' +
+      periodLabel + ' · 截至 ' + latest.date + (latest.incomplete ? '（盘中）' : '');
+  }
+  if (priceInfo) {
+    const stateLabel = latest.incomplete ? '盘中K线' : latest.intraday ? '分钟合成收盘K线' : 'K线收盘';
+    const observed = latest.intraday && latest.observedAt ? '（截至 ' + String(latest.observedAt).slice(11, 16) + '）' : '';
+    const minuteSource = {
+      'tencent-1m': '腾讯公开1分钟',
+      'eastmoney-1m': '东方财富公开1分钟',
+      'sina-1m': '新浪公开分钟'
+    }[latest.dataSource] || '公开分钟行情';
+    priceInfo.innerHTML = latest.date + ' ' + stateLabel + observed + ' <span style="color:' + color + ';font-weight:600">' +
+      Number(latest.close).toFixed(2) + '</span>' +
+      (change === null ? '' : ' | 涨跌幅 <span style="color:' + color + ';font-weight:600">' +
+        (change >= 0 ? '+' : '') + change.toFixed(2) + '%</span>') +
+      ' | 来源：' + (latest.intraday ? minuteSource + '；历史：' + sourceLabel : sourceLabel);
+  }
+}
+
+function metricText(value, suffix, signed) {
+  if (value === null || value === undefined || !Number.isFinite(Number(value))) return '--';
+  const number = Number(value);
+  return (signed && number > 0 ? '+' : '') + number.toFixed(2) + (suffix || '');
+}
+
+function compactVolume(value) {
+  const number = Number(value);
+  if (!Number.isFinite(number) || number < 0) return '--';
+  if (number >= 100000000) return (number / 100000000).toFixed(2) + '亿股';
+  if (number >= 10000) return (number / 10000).toFixed(2) + '万股';
+  return number.toFixed(0) + '股';
+}
+
+function appendMetric(container, label, value, note, tone) {
+  const item = document.createElement('div');
+  item.className = 'kline-metric';
+  if (tone) item.dataset.tone = tone;
+  const title = document.createElement('span');
+  title.textContent = label;
+  const strong = document.createElement('b');
+  strong.textContent = value;
+  const detail = document.createElement('small');
+  detail.textContent = note || '';
+  item.append(title, strong, detail);
+  container.appendChild(item);
+}
+
+function setAuctionCard(targetId, lines) {
+  const target = document.getElementById(targetId);
+  if (!target) return;
+  target.innerHTML = '';
+  lines.forEach(function(line, index) {
+    const paragraph = document.createElement('p');
+    if (index === 0) {
+      const strong = document.createElement('strong');
+      strong.textContent = line;
+      paragraph.appendChild(strong);
+    } else {
+      paragraph.textContent = line;
+    }
+    target.appendChild(paragraph);
+  });
+}
+
+function hideKlineInsights(State) {
+  State.currentKlineSignalMarks = [];
+  const panel = document.getElementById('klineInsights');
+  const placeholder = document.getElementById('marketSidebarPlaceholder');
+  if (panel) panel.hidden = true;
+  if (placeholder) placeholder.hidden = false;
+}
+
+function renderKlineInsights(State, data, minuteRows, minuteMeta, localRows, localMeta) {
+  const panel = document.getElementById('klineInsights');
+  const model = window.MarketSignalModel;
+  if (!panel || !model || State.currentPeriod !== 'day' || !Array.isArray(data) || !data.length) {
+    hideKlineInsights(State);
+    return;
+  }
+  const daily = model.analyzeDaily(data);
+  const nineTurn = model.calculateNineTurn(data);
+  const auction = model.analyzeAuction(data, minuteRows, minuteMeta, localRows, localMeta);
+  const signals = model.detectLocalSignals(data, minuteRows, minuteMeta);
+  const metricGrid = document.getElementById('klineMetricGrid');
+  const signalList = document.getElementById('klineSignalList');
+  const asOf = document.getElementById('klineInsightsAsOf');
+  if (!daily.available || !metricGrid || !signalList) {
+    hideKlineInsights(State);
+    return;
+  }
+
+  panel.hidden = false;
+  const placeholder = document.getElementById('marketSidebarPlaceholder');
+  if (placeholder) placeholder.hidden = true;
+  metricGrid.innerHTML = '';
+  const changeTone = daily.changePercent > 0 ? 'up' : daily.changePercent < 0 ? 'down' : '';
+  appendMetric(metricGrid, '今日涨跌', metricText(daily.changePercent, '%', true),
+    '收盘 ' + metricText(daily.close, ''), changeTone);
+  appendMetric(metricGrid, '开盘跳空', metricText(daily.gapPercent, '%', true), '相对昨收',
+    daily.gapPercent > 0 ? 'up' : daily.gapPercent < 0 ? 'down' : '');
+  appendMetric(metricGrid, '日内振幅', metricText(daily.amplitudePercent, '%'), '高低价/昨收');
+  appendMetric(metricGrid, '5日量比', metricText(daily.volumeRatio5, '×'), '今日量/此前5日均量');
+  appendMetric(metricGrid, 'MA5', metricText(daily.ma5, ''), '短期均价');
+  appendMetric(metricGrid, 'MA10', metricText(daily.ma10, ''), '中短期均价');
+  appendMetric(metricGrid, 'MA20', metricText(daily.ma20, ''), '月度均价');
+  appendMetric(metricGrid, '均线状态', daily.trend, '仅描述，不是预测');
+  if (asOf) asOf.textContent = '截至 ' + daily.date + ' · 公开日线与分钟行情';
+
+  signalList.innerHTML = '';
+  const displaySignals = [{
+    label: nineTurn.label,
+    active: nineTurn.completed,
+    reason: nineTurn.rule || '样本不足',
+    rule: nineTurn.rule || ''
+  }].concat(signals);
+  displaySignals.forEach(function(signal) {
+    const chip = document.createElement('span');
+    chip.className = 'kline-signal-chip' + (signal.active ? ' active' : '');
+    chip.textContent = signal.active ? signal.label : signal.label + '·未触发';
+    chip.title = (signal.reason || '') + (signal.rule ? '\n' + signal.rule : '');
+    signalList.appendChild(chip);
+  });
+
+  const opening = auction.opening;
+  const openingLines = [
+    '形态数据等级：' + opening.dataLevel + ' · ' + (opening.process ? opening.process.reason : '缺少过程数据，不能判定'),
+    opening.dataStatus === 'local-public-auction-observed'
+      ? '数据状态：已保存竞价时段公开报价快照'
+      : opening.dataStatus === 'public-minute-proxy'
+        ? '数据状态：仅有公开分钟替代数据'
+        : '数据状态：竞价数据不可用',
+    '开盘 ' + metricText(opening.openPrice, '') + ' · 高低开 ' + metricText(opening.gapPercent, '%', true),
+    opening.localObserved
+      ? '本机竞价快照 ' + opening.localObservedFrom + '—' + opening.localObservedTo + ' · ' +
+        opening.localSampleCount + '点 · 报价变化 ' + metricText(opening.localObservedChangePercent, '%', true)
+      : '本机未采到当日09:15—09:25快照（需程序当时运行并刷新该股票）',
+    opening.localObserved
+      ? '本机观测增量 ' + compactVolume(opening.localObservedVolume) + '（仅采样窗口）'
+      : '09:30首分钟量 ' + compactVolume(opening.firstMinuteVolume) + '（非纯竞价量）',
+    opening.interpretation
+  ];
+  if (opening.indicativePrice !== null || opening.indicativeMatchedVolume !== null) {
+    openingLines.splice(3, 0,
+      '竞价专用字段：参考价 ' + metricText(opening.indicativePrice, '') + ' · 匹配量 ' +
+      compactVolume(opening.indicativeMatchedVolume),
+      '未匹配 买 ' + compactVolume(opening.indicativeUnmatchedBuyVolume) +
+      ' / 卖 ' + compactVolume(opening.indicativeUnmatchedSellVolume));
+  }
+  if (opening.localObserved) {
+    openingLines.splice(openingLines.length - 1, 0,
+      '09:30首分钟量 ' + compactVolume(opening.firstMinuteVolume) + '（非纯竞价量）');
+  }
+  setAuctionCard('openingAuctionSummary', openingLines);
+  const closing = auction.closing;
+  setAuctionCard('closingAuctionSummary', [
+    '形态数据等级：' + closing.dataLevel + ' · ' + (closing.process ? closing.process.reason : '缺少过程数据，不能判定'),
+    closing.dataStatus === 'public-minute-interval'
+      ? '数据状态：公开分钟区间（' + closing.sampleCount + '点）'
+      : '数据状态：尾盘竞价分钟数据不可用',
+    (closing.from && closing.to ? closing.from + '—' + closing.to : '14:57—15:00') +
+      ' 涨跌 ' + metricText(closing.returnPercent, '%', true),
+    '区间量 ' + compactVolume(closing.volume) + ' · 占全天 ' + metricText(closing.volumeSharePercent, '%'),
+    closing.interpretation
+  ]);
+  if (window.AuctionRules) {
+    ['opening','closing'].forEach(function(phase) {
+      const process=auction[phase].process, target=document.getElementById(phase+'AuctionProcessChart');
+      const labels=document.getElementById(phase+'AuctionPatterns');
+      if(labels)labels.textContent=process && process.patterns.length?process.patterns.map(p=>p.label+'：'+p.explanation).join('\n'):'尚无可验证的形态结论';
+      if(target) {
+        const chart=window.echarts && window.echarts.getInstanceByDom(target);
+        target.hidden=!(process && process.dataLevel==='D2' && process.points.length);
+        if(target.hidden) {if(chart)chart.clear();}
+        else if(window.echarts) {const instance=chart||window.echarts.init(target);instance.setOption(window.AuctionRules.chartOption(process,auction.tradingDate),true);instance.resize();}
+      }
+    });
+    const guide=document.getElementById('auctionRuleGuide');
+    if(guide) {guide.innerHTML='';window.AuctionRules.descriptions.forEach(function(rule) {
+      const item=document.createElement('p');item.textContent=rule.label+'：'+rule.explanation;guide.appendChild(item);
+    });}
+  }
+  const limitation = document.getElementById('auctionDataLimitation');
+  if (limitation) limitation.textContent = auction.limitation + ' 数据源：' + auction.source + '。';
+
+  const latest = data[data.length - 1];
+  const marks = [];
+  if (nineTurn.completed) {
+    marks.push({
+      name: nineTurn.label,
+      coord: [latest.date, Number(latest.close)],
+      value: '9',
+      symbolOffset: [0, nineTurn.direction === 'up' ? '-65%' : '65%'],
+      itemStyle: { color: nineTurn.direction === 'up' ? '#f59e0b' : '#2563eb' },
+      signal: {
+        label: nineTurn.label,
+        detail: nineTurn.rule,
+        limitations: ['简化计数观察，不代表趋势必然反转。'],
+        triggerUsesFutureData: false
+      }
+    });
+  }
+  signals.filter(function(signal) {
+    return signal.active && signal.key !== 'intraday-breakout';
+  }).forEach(function(signal, index) {
+    marks.push({
+      name: signal.label,
+      coord: [latest.date, Number(latest.close)],
+      value: signal.key === 'breakout' ? '突' : '积',
+      symbolOffset: [(index + 1) * -32, '-65%'],
+      itemStyle: { color: signal.key === 'breakout' ? '#dc2626' : '#7c3aed' },
+      signal: {
+        label: signal.label,
+        detail: signal.reason,
+        basis: signal.rule,
+        limitations: ['本地透明规则，不等同于同花顺专有Level-2信号。'],
+        triggerUsesFutureData: false
+      }
+    });
+  });
+  State.currentKlineSignalMarks = marks;
+}
+
 function showUnavailableKline(State, code, period, meta, message) {
+  hideKlineInsights(State);
   State.currentRawData = [];
   State.klineSnapshots[code] = [];
   State.currentKlineMeta = Object.assign({}, meta || {}, { code, period, hasData: false });
@@ -440,28 +705,51 @@ async function loadKlineData(code, period) {
   const Indicators = window.Indicators;
   const requestId = ++klineRequestSequence;
   try {
-    const envelope = await window.ApiClient.fetchApiEnvelope('/api/kline?code=' + code + '&period=' + period);
+    const minutePromise = period === 'day'
+      ? window.ApiClient.fetchApiEnvelope('/api/minute?code=' + code + '&resolution=1m')
+        .catch(function() { return { data: [], meta: { dataSource: 'unavailable' } }; })
+      : Promise.resolve({ data: [], meta: {} });
+    const localAuctionPromise = period === 'day'
+      ? window.ApiClient.fetchApiEnvelope('/api/minute?code=' + code + '&resolution=30s')
+        .catch(function() { return { data: [], meta: { dataSource: 'local-30s-unavailable' } }; })
+      : Promise.resolve({ data: [], meta: {} });
+    const results = await Promise.all([
+      window.ApiClient.fetchApiEnvelope('/api/kline?code=' + code + '&period=' + period),
+      minutePromise,
+      localAuctionPromise
+    ]);
+    const envelope = results[0];
+    const minuteEnvelope = results[1];
     const data = Array.isArray(envelope.data) ? envelope.data : [];
     const meta = envelope.meta || {};
+    const minuteRows = Array.isArray(minuteEnvelope.data) ? minuteEnvelope.data : [];
+    const minuteMeta = minuteEnvelope.meta || {};
+    const localEnvelope = results[2];
+    const localRows = Array.isArray(localEnvelope.data) ? localEnvelope.data : [];
+    const localMeta = localEnvelope.meta || {};
     if (requestId !== klineRequestSequence || !State.currentStock || State.currentStock.code !== code || State.currentPeriod !== period) return;
-    State.currentKlineMeta = Object.assign({}, meta, { code, period, hasData: data.length > 0 });
-    if (Array.isArray(data) && data.length > 0) {
-      State.currentRawData = data;
-      State.klineSnapshots[code] = data.slice(-80);
+    const chartData = period === 'day' && window.RealtimeChartModel && window.RealtimeChartModel.mergeCurrentDailyBar
+      ? window.RealtimeChartModel.mergeCurrentDailyBar(data, minuteRows, minuteMeta)
+      : data;
+    State.currentKlineMeta = Object.assign({}, meta, { code, period, hasData: chartData.length > 0 });
+    if (Array.isArray(chartData) && chartData.length > 0) {
+      State.currentRawData = chartData;
+      State.klineSnapshots[code] = chartData.slice(-80);
       Indicators.calcMAFromData(State.currentRawData, State.maPeriods);
+      renderAvailableKlineHeader(State, chartData, meta);
+      renderKlineInsights(State, chartData, minuteRows, minuteMeta, localRows, localMeta);
       renderKlineChart(State.currentRawData, State.currentIndicator);
       if (meta.stale && State.currentView === 'kline') {
         const priceInfo = document.getElementById('priceInfo');
         const chartTitle = document.getElementById('chartTitle');
         if (chartTitle && State.currentStock) {
-          chartTitle.textContent = (State.currentStock.name || '未知') + ' (' + State.currentStock.code +
-            ') 历史数据（缓存）';
+          chartTitle.textContent += '（缓存）';
         }
         if (priceInfo) {
           const fetchedAt = meta.fetchedAt && window.WebStockTime
             ? window.WebStockTime.formatDateTime(meta.fetchedAt) : meta.fetchedAt || '';
-          priceInfo.innerHTML = '<span class="market-source-warning">历史K线使用缓存数据' +
-            (fetchedAt ? '（截至 ' + fetchedAt + '）' : '') + '</span>';
+          priceInfo.insertAdjacentHTML('beforeend', ' <span class="market-source-warning">· 历史K线使用缓存数据' +
+            (fetchedAt ? '（缓存时间 ' + fetchedAt + '）' : '') + '</span>');
         }
       }
     } else if (meta.dataSource === 'unavailable') {

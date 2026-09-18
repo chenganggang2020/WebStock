@@ -386,8 +386,16 @@ function failRun(runId, error) {
 
 function listRuns(channelId, options = {}) {
   const limit = Math.min(Math.max(Number(options.limit) || 10, 1), 100);
-  const rows = db.prepare(`SELECT * FROM expert_sync_runs WHERE channel_id = ?
-    ORDER BY datetime(started_at) DESC, id DESC LIMIT ?`).all(Number(channelId), limit);
+  const date = options.date;
+  if (date != null && (typeof date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(date) ||
+      !Number.isFinite(Date.parse(date)) || new Date(date + 'T00:00:00Z').toISOString().slice(0, 10) !== date)) {
+    throw new Error('任务日期必须是有效的 YYYY-MM-DD 北京时间日期');
+  }
+  // A task day is its Beijing start day, not the video's publication/last-seen day.
+  const dateClause = date == null ? '' : " AND date(started_at, '+8 hours') = ?";
+  const params = date == null ? [Number(channelId), limit] : [Number(channelId), date, limit];
+  const rows = db.prepare(`SELECT * FROM expert_sync_runs WHERE channel_id = ?${dateClause}
+    ORDER BY datetime(started_at) DESC, id DESC LIMIT ?`).all(...params);
   const includeItems = options.includeItems === true;
   const itemsByRun = new Map();
   if (includeItems && rows.length) {
@@ -415,21 +423,38 @@ function getPlanningState(channelId) {
     ORDER BY datetime(item.updated_at) DESC, item.id DESC LIMIT 10000`).all(Number(channelId));
   const states = {};
   const stopped = new Set();
+  const transcriptionStopped = new Set();
+  function sqliteUtc(value) {
+    const raw = String(value || '');
+    return /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(?:\.\d+)?$/.test(raw)
+      ? new Date(raw.replace(' ', 'T') + 'Z').toISOString() : raw;
+  }
   rows.forEach(function(row) {
     const contentId = String(row.content_id || '');
-    if (!contentId || stopped.has(contentId)) return;
+    if (!contentId) return;
     const detailStatus = String(row.detail_status || '');
     if (!['complete', 'error', 'rejected'].includes(detailStatus)) return;
     const state = states[contentId] || {
-      lastDetailCheckedAt: row.updated_at || '',
+      lastDetailCheckedAt: sqliteUtc(row.updated_at),
       lastFailureAt: '',
-      failureCount: 0
+      failureCount: 0,
+      lastTranscriptionFailureAt: '',
+      transcriptionFailureCount: 0
     };
-    if (detailStatus === 'complete') {
-      stopped.add(contentId);
-    } else {
-      if (!state.lastFailureAt) state.lastFailureAt = row.updated_at || '';
-      state.failureCount += 1;
+    if (!stopped.has(contentId)) {
+      if (detailStatus === 'complete') stopped.add(contentId);
+      else {
+        if (!state.lastFailureAt) state.lastFailureAt = sqliteUtc(row.updated_at);
+        state.failureCount += 1;
+      }
+    }
+    if (!transcriptionStopped.has(contentId)) {
+      if (['complete', 'needs_review', 'no_speech'].includes(row.transcription_status)) {
+        transcriptionStopped.add(contentId);
+      } else if (['error', 'media_missing', 'archive_missing', 'archive_error'].includes(row.transcription_status)) {
+        if (!state.lastTranscriptionFailureAt) state.lastTranscriptionFailureAt = sqliteUtc(row.updated_at);
+        state.transcriptionFailureCount += 1;
+      }
     }
     states[contentId] = state;
   });

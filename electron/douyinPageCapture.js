@@ -195,6 +195,10 @@ function parseVisibleMetricCount(value) {
 function inferVisibleLoggedIn(value, hasVisibleLoginControl) {
   if (hasVisibleLoginControl) return false;
   const text = String(value || '').replace(/\s+/g, ' ').trim();
+  // The logged-out page retains the navigation and old video cards. Those are not proof of authentication.
+  if (/看更多\s*最新作品|登录后免费畅享高清(?:视频)?/.test(text)) return false;
+  if (/扫码登录/.test(text) && /验证码登录|密码登录/.test(text)) return false;
+  if (/最新作品\s+登录(?=\s|$)/.test(text)) return false;
   if (/通知\s+消息\s+投稿/.test(text)) return true;
   return !/(^|\s)登录(?:后查看)?(?=\s|$)/.test(text);
 }
@@ -472,14 +476,15 @@ function douyinVisiblePageSnapshot(parseWorkCount, parseMetricCount, inferLogged
       const identity = itemIdentity(anchor.href || anchor.getAttribute('href'));
       if (!identity || itemsById.has(identity.contentId)) return;
       const container = anchor.closest('li, article, [data-e2e], div');
-      const image = anchor.querySelector('img[alt]');
+      const image = anchor.querySelector('img');
       const title = compact(
         anchor.getAttribute('aria-label') || anchor.getAttribute('title') ||
         (image && image.getAttribute('alt')) || anchor.textContent || (container && container.textContent),
         300
       );
       itemsById.set(identity.contentId, Object.assign(identity, {
-        title
+        title,
+        coverUrl: image && (image.currentSrc || image.src) || ''
       }));
     });
   }
@@ -550,7 +555,7 @@ function douyinVisiblePageSnapshot(parseWorkCount, parseMetricCount, inferLogged
       summary: chapterMatch ? compact(chapterMatch[1], 20000) : '',
       hashtags: hashtagValues,
       engagement,
-      coverUrl: firstAttribute(['meta[property="og:image"]'], 'content', 2000),
+      coverUrl: firstAttribute(['meta[property="og:image"]'], 'content', 2000) || (video && video.poster) || '',
       durationSeconds: Number(durationRaw) || 0,
       mediaUrl: compact(video && (video.currentSrc || video.src), 4000),
       comments,

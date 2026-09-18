@@ -37,6 +37,8 @@ function classifyChinaQuoteStatus(tradeDate, timestamp = Date.now()) {
     return 'latest-close';
   }
   const minuteOfDay = Number(parts.hour) * 60 + Number(parts.minute);
+  const auction = minuteOfDay >= 9 * 60 + 15 && minuteOfDay <= 9 * 60 + 25;
+  if (auction) return 'auction';
   const trading = (minuteOfDay >= 9 * 60 + 30 && minuteOfDay <= 11 * 60 + 30)
     || (minuteOfDay >= 13 * 60 && minuteOfDay < 15 * 60);
   return trading ? 'live' : 'latest-close';
@@ -79,6 +81,16 @@ function nextChinaUpstreamAt(timestamp, activeIntervalMs) {
     if (candidateDay >= 1 && candidateDay <= 5) return candidateDate + 60 * 60 * 1000;
   }
   return timestamp + activeIntervalMs;
+}
+
+function persistedQuoteNeedsRevalidation(quote, timestamp) {
+  const parts = beijingParts(timestamp);
+  const marketDate = parts.year + '-' + parts.month + '-' + parts.day;
+  const minuteOfDay = Number(parts.hour) * 60 + Number(parts.minute);
+  const dateUtc = Date.UTC(Number(parts.year), Number(parts.month) - 1, Number(parts.day));
+  const weekday = new Date(dateUtc).getUTCDay();
+  return weekday >= 1 && weekday <= 5 && minuteOfDay >= 9 * 60 &&
+    String(quote && quote.tradeDate || '') !== marketDate;
 }
 
 function unavailableQuote(code, source, reason, nextRefreshAt) {
@@ -130,13 +142,17 @@ function createQuoteSnapshotService(options = {}) {
     delete quoteValue.fetchedAt;
     delete quoteValue.changedAt;
     delete quoteValue.updatedAt;
+    const currentTimestamp = now();
+    const needsRevalidation = persistedQuoteNeedsRevalidation(quoteValue, currentTimestamp);
     states.set(code, {
       quote: quoteValue,
       fingerprint: quoteFingerprint(quoteValue),
       fetchedAtMs: Number.isFinite(fetchedAtMs) ? fetchedAtMs : now(),
       changedAtMs: Number.isFinite(fetchedAtMs) ? fetchedAtMs : now(),
       lastAttemptAtMs: Number.isFinite(fetchedAtMs) ? fetchedAtMs : null,
-      nextRefreshAtMs: nextChinaUpstreamAt(now(), minRefreshMs),
+      nextRefreshAtMs: needsRevalidation
+        ? currentTimestamp : nextChinaUpstreamAt(currentTimestamp, minRefreshMs),
+      needsRevalidation,
       lastError: null
     });
   });
@@ -150,6 +166,7 @@ function createQuoteSnapshotService(options = {}) {
         changedAtMs: null,
         lastAttemptAtMs: null,
         nextRefreshAtMs: null,
+        needsRevalidation: false,
         lastError: null
       });
     }
@@ -190,6 +207,7 @@ function createQuoteSnapshotService(options = {}) {
             state.changedAtMs = completedAt;
           }
           state.fingerprint = fingerprint;
+          state.needsRevalidation = false;
           state.lastError = null;
         });
       } catch (error) {
@@ -239,7 +257,8 @@ function createQuoteSnapshotService(options = {}) {
     }
     const ageMs = Math.max(0, timestamp - state.fetchedAtMs);
     const latestClose = state.quote.quoteStatus === 'latest-close';
-    const stale = !!state.lastError || (!latestClose && ageMs > staleAfterMs);
+    const stale = !!state.lastError || !!state.needsRevalidation ||
+      (!latestClose && ageMs > staleAfterMs);
     return Object.assign({}, state.quote, {
       quoteStatus: stale ? 'stale' : state.quote.quoteStatus || 'live',
       fetchedAt: iso(state.fetchedAtMs),
@@ -247,7 +266,9 @@ function createQuoteSnapshotService(options = {}) {
       nextRefreshAt,
       stale,
       source,
-      reason: state.lastError || (stale ? 'snapshot-expired' : null)
+      reason: state.lastError || (state.needsRevalidation
+        ? 'persisted-snapshot-revalidation-pending'
+        : stale ? 'snapshot-expired' : null)
     });
   }
 

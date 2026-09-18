@@ -1,10 +1,13 @@
 const fs = require('node:fs');
 const path = require('node:path');
+const crypto = require('node:crypto');
+const calendar = require('./marketTradingCalendar');
 
 const VAPID_FILE = 'mobile-push-vapid.json';
-const CHECK_INTERVAL_MS = 5 * 60 * 1000;
+const CHECK_INTERVAL_MS = 60 * 1000;
 
 function finite(value) {
+  if (value == null || value === '') return null;
   const number = Number(value);
   return Number.isFinite(number) ? number : null;
 }
@@ -13,7 +16,8 @@ function accountMap(snapshot) {
   return new Map((Array.isArray(snapshot && snapshot.accounts) ? snapshot.accounts : []).map(function(account) {
     return [String(account.id), {
       totalAssets: finite(account.summary && account.summary.totalAssets),
-      positionCount: finite(account.summary && account.summary.positionCount)
+      positionCount: finite(account.summary && account.summary.positionCount),
+      positionSignature: account.positionSignature || ''
     }];
   }));
 }
@@ -24,6 +28,8 @@ function researchCount(snapshot) {
 
 function detectSnapshotChange(previous, next) {
   if (!previous || !next) return null;
+  const previousAlerts = new Map((previous.priceAlerts || []).map(item => [item.key, item.active]));
+  if ((next.priceAlerts || []).some(item => item.active && !previousAlerts.get(item.key))) return { kind: 'price-alert' };
   if (researchCount(next) > researchCount(previous)) return { kind: 'research' };
 
   const before = accountMap(previous);
@@ -32,6 +38,7 @@ function detectSnapshotChange(previous, next) {
   for (const [id, account] of after.entries()) {
     const old = before.get(id);
     if (!old || old.positionCount !== account.positionCount) return { kind: 'portfolio' };
+    if (old.positionSignature && account.positionSignature && old.positionSignature !== account.positionSignature) return { kind: 'portfolio' };
     if (old.totalAssets !== null && old.totalAssets > 0 && account.totalAssets !== null) {
       if (Math.abs(account.totalAssets - old.totalAssets) / old.totalAssets >= 0.03) return { kind: 'portfolio' };
     }
@@ -45,22 +52,49 @@ function buildPrivateNotification(change) {
   }
   return {
     title: 'WebStock 有新的数据变化',
-    body: change && change.kind === 'research' ? '研究资料有更新，打开应用查看。' : '工作台状态有明显变化，打开应用查看。',
+    body: change && change.kind === 'research' ? '研究资料有更新，打开应用查看。' : change && change.kind === 'price-alert' ? '关注标的触发预警点位，打开应用查看。' : '工作台状态有明显变化，打开应用查看。',
     url: '/mobile.html'
   };
 }
 
-function comparisonSnapshot(snapshot) {
+function priceAlertStates(snapshot, previous) {
+  if (!snapshot.watchlist) return snapshot.priceAlerts || [];
+  const old = new Map((previous && previous.priceAlerts || []).map(item => [item.key, item]));
+  const result = new Map();
+  const now = new Date(snapshot.generatedAt);
+  for (const item of (snapshot.watchlist.items || []).slice(0, 1000)) {
+    const observed = Date.parse(item.quoteDate + 'T' + item.quoteTime + '+08:00');
+    const price = finite(item.currentPrice);
+    const fresh = calendar.isContinuousSession(now) && item.quoteStatus === 'live' && price > 0 && Number.isFinite(observed) && observed <= now.getTime() + 5000 && now.getTime() - observed <= 5 * 60000;
+    for (const [side, level] of [['high', finite(item.alertHigh)], ['low', finite(item.alertLow)]]) {
+      if (!(level > 0)) continue;
+      const key = item.code + ':' + side + ':' + level;
+      if (fresh) result.set(key, { key, active: side === 'high' ? price >= level : price <= level });
+      else if (old.has(key)) result.set(key, old.get(key));
+    }
+  }
+  return Array.from(result.values());
+}
+
+function comparisonSnapshot(snapshot, previous) {
+  const old = accountMap(previous);
   return {
     accounts: (Array.isArray(snapshot && snapshot.accounts) ? snapshot.accounts : []).map(function(account) {
+      let positionSignature = account.positionSignature || old.get(String(account.id))?.positionSignature || '';
+      if (Array.isArray(account.positions) && !['saved-snapshot', 'unavailable'].includes(account.valuationStatus)) {
+        const holdings = account.positions.map(item => [String(item.code), finite(item.quantity)]).sort((a, b) => a[0].localeCompare(b[0]));
+        positionSignature = crypto.createHash('sha256').update(JSON.stringify(holdings)).digest('hex');
+      }
       return {
         id: account.id,
+        positionSignature,
         summary: {
           totalAssets: finite(account.summary && account.summary.totalAssets),
           positionCount: finite(account.summary && account.summary.positionCount)
         }
       };
     }),
+    priceAlerts: priceAlertStates(snapshot || {}, previous),
     research: { totals: { observationCount: researchCount(snapshot) } }
   };
 }
@@ -169,12 +203,14 @@ function createMobilePushService(options = {}) {
     if (running) return { skipped: true };
     running = true;
     try {
+      if (!listSubscriptions().length) return { skipped: true, reason: 'no-subscribers' };
       const snapshot = await loadSnapshot();
       const previous = readPrevious();
-      const next = comparisonSnapshot(snapshot);
-      savePrevious(next);
+      const next = comparisonSnapshot(snapshot, previous);
       const change = detectSnapshotChange(previous, next);
-      return change ? { change, ...(await broadcast(change)) } : { change: null, attempted: 0, delivered: 0 };
+      const delivery = change ? await broadcast(change) : { attempted: 0, delivered: 0 };
+      if (!change || delivery.delivered > 0 || delivery.attempted === 0) savePrevious(next);
+      return { change, ...delivery };
     } finally {
       running = false;
     }

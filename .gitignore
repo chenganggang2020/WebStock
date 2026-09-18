@@ -16,6 +16,15 @@ output/
 data/*.db
 data/*.db-*
 data/level2-config.json
+# Local account data, collection evidence, and machine-specific recovery records.
+/data/
+/WebStockData/
+/artifacts/
+/.playwright-cli/
+/_ths_migration_test_20260825_safe/
+/_ths_second_pc_bundle_20260825/
+/market-board-catalog.json
+/docs/SYNC_RECOVERY_20260910.md
 quant/.venv/
 quant/asr-models/
 quant/asr-temp/
