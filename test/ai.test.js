@@ -46,6 +46,23 @@ test('buildChatCompletionPayload uses OpenAI Chat Completions fields', () => {
   assert.equal('temperature' in payload, false);
 });
 
+test('buildChatCompletionPayload forwards a strict JSON Schema response format', () => {
+  const responseFormat = {
+    type: 'json_schema',
+    json_schema: {
+      name: 'paper_decision',
+      strict: true,
+      schema: { type: 'object', additionalProperties: false, properties: {}, required: [] }
+    }
+  };
+  const payload = ai.buildChatCompletionPayload('paper monitor', {
+    config: { model: 'gpt-5-mini', maxCompletionTokens: 256 },
+    responseFormat
+  });
+
+  assert.deepEqual(payload.response_format, responseFormat);
+});
+
 test('buildHeaders returns bearer authorization when a key is configured', () => {
   const headers = ai.buildHeaders({ apiKey: 'sk-proj-abcdefghijklmnopqrstuvwxyz1234567890' });
 
@@ -74,6 +91,25 @@ test('callAIModel posts to OpenAI chat completions and returns message content',
   assert.equal(captured.body.messages[0].content, 'ping');
   assert.equal(captured.body.max_completion_tokens, 32);
   assert.equal(captured.options.headers.Authorization, 'Bearer sk-proj-abcdefghijklmnopqrstuvwxyz1234567890');
+});
+
+test('callAIModel sends the requested structured output contract', async () => {
+  process.env.OPENAI_API_KEY = 'sk-proj-abcdefghijklmnopqrstuvwxyz1234567890';
+  ai.loadAIConfig();
+  let capturedBody = null;
+  axios.post = async (_url, body) => {
+    capturedBody = body;
+    return { data: { choices: [{ message: { content: '{"ok":true}' } }] } };
+  };
+  const responseFormat = {
+    type: 'json_schema',
+    json_schema: { name: 'paper_decision', strict: true, schema: { type: 'object' } }
+  };
+
+  const result = await ai.callAIModel('paper monitor', { responseFormat });
+
+  assert.equal(result, '{"ok":true}');
+  assert.deepEqual(capturedBody.response_format, responseFormat);
 });
 
 test('callAIModel surfaces OpenAI error messages', async () => {

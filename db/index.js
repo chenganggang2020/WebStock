@@ -2,16 +2,67 @@ const path = require('path');
 const fs = require('fs');
 const Database = require('better-sqlite3');
 
-const dataDir = path.join(__dirname, '..', 'data');
-if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
-
-const dbPath = process.env.WEBSTOCK_DB_PATH || path.join(dataDir, 'webstock.db');
+const defaultDataDir = path.join(__dirname, '..', 'data');
+const dbPath = process.env.WEBSTOCK_DB_PATH || path.join(defaultDataDir, 'webstock.db');
+const dbDir = path.dirname(dbPath);
+if (!fs.existsSync(dbDir)) fs.mkdirSync(dbDir, { recursive: true });
 
 let db;
 try {
   db = new Database(dbPath);
+  require('../services/runtimeDiagnostics').instrumentDatabase(db);
+  db.pragma('foreign_keys = ON');
   const initSql = fs.readFileSync(path.join(__dirname, 'init.sql'), 'utf8');
   db.exec(initSql);
+  // Failed attempts remain audited but must not occupy a slot's one valid decision.
+  db.exec('DROP INDEX IF EXISTS idx_paper_decision_schedule_slot');
+  const ensureColumn = (table, column, definition) => {
+    const columns = db.prepare('PRAGMA table_info(' + table + ')').all();
+    if (!columns.some(item => item.name === column)) {
+      db.exec('ALTER TABLE ' + table + ' ADD COLUMN ' + column + ' ' + definition);
+    }
+  };
+  ensureColumn('expert_channels', 'subject_type', "TEXT NOT NULL DEFAULT 'creator'");
+  ensureColumn('expert_channels', 'description', "TEXT DEFAULT ''");
+  ensureColumn('expert_channels', 'collection_media_type', "TEXT NOT NULL DEFAULT 'all'");
+  ensureColumn('expert_channels', 'industry_analysis_enabled', 'INTEGER NOT NULL DEFAULT 0');
+  ensureColumn('expert_sync_jobs', 'progress_json', "TEXT DEFAULT '{}'");
+  ensureColumn('expert_comments', 'versions_json', "TEXT NOT NULL DEFAULT '[]'");
+  ensureColumn('expert_observations', 'published_time_precision', "TEXT NOT NULL DEFAULT 'unknown'");
+  ensureColumn('expert_observations', 'media_type', "TEXT NOT NULL DEFAULT 'text'");
+  ensureColumn('expert_observations', 'archive_status', "TEXT NOT NULL DEFAULT 'linked'");
+  ensureColumn('expert_observations', 'rights_basis', "TEXT NOT NULL DEFAULT 'quotation_only'");
+  ensureColumn('expert_observations', 'local_asset_path', "TEXT DEFAULT ''");
+  ensureColumn('expert_observations', 'curve_data_json', "TEXT DEFAULT '[]'");
+  ensureColumn('expert_observations', 'analysis_notes', "TEXT DEFAULT ''");
+  ensureColumn('expert_observations', 'description_text', "TEXT DEFAULT ''");
+  ensureColumn('expert_observations', 'transcript_text', "TEXT DEFAULT ''");
+  ensureColumn('expert_observations', 'engagement_json', "TEXT DEFAULT '{}'");
+  ensureColumn('expert_observations', 'media_metadata_json', "TEXT DEFAULT '{}'");
+  ensureColumn('expert_observations', 'signal_json', "TEXT DEFAULT '{}'");
+  ensureColumn('expert_backtests', 'run_id', "TEXT DEFAULT ''");
+  ensureColumn('expert_backtests', 'dataset_id', "TEXT DEFAULT ''");
+  ensureColumn('expert_backtests', 'result_path', "TEXT DEFAULT ''");
+  ensureColumn('expert_backtests', 'result_sha256', "TEXT DEFAULT ''");
+  ensureColumn('trades', 'account_id', 'INTEGER NOT NULL DEFAULT 1');
+  ensureColumn('trades', 'source_type', "TEXT NOT NULL DEFAULT 'manual'");
+  ensureColumn('portfolio_snapshots', 'account_id', 'INTEGER NOT NULL DEFAULT 1');
+  ensureColumn('portfolio_snapshots', 'cash_balance', 'REAL DEFAULT 0');
+  ensureColumn('portfolio_snapshots', 'total_assets', 'REAL DEFAULT 0');
+  ensureColumn('portfolio_snapshots', 'today_pnl', 'REAL DEFAULT 0');
+  ensureColumn('portfolio_snapshots', 'source_label', "TEXT DEFAULT ''");
+  ensureColumn('portfolio_snapshots', 'holdings_json', "TEXT DEFAULT '[]'");
+  ensureColumn('watchlist', 'auto_d1_low', 'REAL');
+  ensureColumn('watchlist', 'auto_d1_high', 'REAL');
+  ensureColumn('watchlist', 'auto_d2', 'REAL');
+  ensureColumn('watchlist', 'auto_r1', 'REAL');
+  ensureColumn('watchlist', 'auto_confirm', 'REAL');
+  ensureColumn('watchlist', 'auto_levels_date', "TEXT DEFAULT ''");
+  ensureColumn('watchlist', 'auto_levels_updated_at', "TEXT DEFAULT ''");
+  ensureColumn('watchlist', 'auto_levels_method', "TEXT DEFAULT ''");
+  db.exec('CREATE INDEX IF NOT EXISTS idx_trades_account_date ON trades(account_id, trade_date, id)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_portfolio_snapshots_account_date ON portfolio_snapshots(account_id, snapshot_date, id)');
+  db.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_expert_backtests_run_id ON expert_backtests(run_id) WHERE run_id <> ''");
 } catch (error) {
   console.error('[DB] SQLite 初始化失败：' + error.message);
   throw error;

@@ -99,6 +99,9 @@ function buildChatCompletionPayload(prompt, options = {}) {
   if (shouldSendTemperature(config)) {
     body.temperature = config.temperature;
   }
+  if (options.responseFormat && typeof options.responseFormat === 'object') {
+    body.response_format = options.responseFormat;
+  }
 
   return body;
 }
@@ -130,14 +133,18 @@ function createAIModelStream(prompt) {
   });
 }
 
-async function callAIModel(prompt) {
+async function callAIModel(prompt, options = {}) {
   assertReady();
-  const body = buildChatCompletionPayload(prompt, { stream: false });
+  const body = buildChatCompletionPayload(prompt, {
+    stream: false,
+    responseFormat: options.responseFormat
+  });
 
   try {
     const resp = await axios.post(aiConfig.apiUrl, body, {
       headers: buildHeaders(aiConfig),
-      timeout: aiConfig.timeoutMs
+      timeout: Number(options.timeoutMs) > 0 ? Number(options.timeoutMs) : aiConfig.timeoutMs,
+      ...(options.signal ? { signal: options.signal } : {})
     });
     const content = resp.data && resp.data.choices && resp.data.choices[0] && resp.data.choices[0].message && resp.data.choices[0].message.content;
     if (content) return content;

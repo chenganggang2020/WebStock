@@ -1,10 +1,16 @@
 const express = require('express');
-const axios = require('axios');
 const iconv = require('iconv-lite');
 const router = express.Router();
 
 const portfolio = require('../services/portfolioService');
+const tonghuashunWatchlist = require('../services/tonghuashunWatchlistService');
+const tonghuashunHoldings = require('../services/tonghuashunHoldingService');
+const watchlistLevels = require('../services/watchlistLevelService');
 const { isValidApiKey, getAIConfig, callAIModel } = require('./ai');
+const { toSinaSymbol } = require('../utils/market');
+const { appendOneClickOutputInstructions } = require('../services/handoffFormat');
+const marketData = require('../services/marketDataService');
+const { classifyChinaQuoteStatus } = require('../services/quoteSnapshotService');
 
 function ok(res, data) {
   res.json({ success: true, data });
@@ -17,11 +23,10 @@ function fail(res, error, status = 400) {
 async function fetchQuotesSafe(codes) {
   if (!codes.length) return {};
   try {
-    const sinaCodes = codes.map(code => (code.startsWith('6') ? 'sh' : 'sz') + code).join(',');
-    const resp = await axios.get('https://hq.sinajs.cn/list=' + sinaCodes, {
+    const sinaCodes = codes.map(toSinaSymbol).join(',');
+    const resp = await marketData.get('quote:' + sinaCodes, 'https://hq.sinajs.cn/list=' + sinaCodes, {
       headers: { Referer: 'https://finance.sina.com.cn' },
-      responseType: 'arraybuffer',
-      timeout: 6000
+      responseType: 'arraybuffer'
     });
     const rawData = iconv.decode(Buffer.from(resp.data), 'gbk');
     const map = {};
@@ -31,10 +36,26 @@ async function fetchQuotesSafe(codes) {
       const code = match[1].replace(/^sh|^sz/, '');
       const fields = match[2].split(',');
       const price = parseFloat(fields[3]) || 0;
-      const prevClose = parseFloat(fields[2]) || price;
+      const prevClose = parseFloat(fields[2]) || null;
+      const tradeDate = fields[30] || '';
+      const tradeTime = fields[31] || '';
+      const observedAt = Date.parse(tradeDate + 'T' + tradeTime + '+08:00');
+      const checkedAt = Date.now();
+      let quoteStatus = price > 0 ? classifyChinaQuoteStatus(tradeDate, checkedAt) : 'unavailable';
+      if (quoteStatus !== 'unavailable' && (!Number.isFinite(observedAt) || observedAt > checkedAt + 5000 ||
+          (['live', 'auction'].includes(quoteStatus) && checkedAt - observedAt > 5 * 60000))) quoteStatus = 'stale';
       map[code] = {
         price,
-        change: prevClose ? Number(((price - prevClose) / prevClose * 100).toFixed(2)) : 0
+        open: parseFloat(fields[1]) || 0,
+        high: parseFloat(fields[4]) || 0,
+        low: parseFloat(fields[5]) || 0,
+        prevClose,
+        volume: parseFloat(fields[8]) || 0,
+        amount: parseFloat(fields[9]) || 0,
+        tradeDate,
+        tradeTime,
+        change: prevClose ? Number(((price - prevClose) / prevClose * 100).toFixed(2)) : null,
+        quoteStatus
       };
     });
     return map;
@@ -44,11 +65,129 @@ async function fetchQuotesSafe(codes) {
   }
 }
 
-async function getPositionsWithQuotes() {
-  const rawPositions = portfolio.getPositions({});
-  const quoteMap = await fetchQuotesSafe(rawPositions.map(pos => pos.code));
-  return portfolio.getPositions(quoteMap);
+function requestAccountId(req) {
+  return Number((req.body && req.body.accountId) || req.query.accountId || 1);
 }
+
+function tonghuashunHoldingSyncOptions(body = {}) {
+  return {
+    accountId: body.accountId,
+    snapshotDate: body.snapshotDate,
+    cashBalance: body.cashBalance,
+    totalMarketValue: body.totalMarketValue,
+    totalAssets: body.totalAssets,
+    todayPnl: body.todayPnl,
+    totalPnl: body.totalPnl
+  };
+}
+
+async function getPositionsWithQuotes(accountId = 1) {
+  const rawPositions = portfolio.getPositions({}, { accountId });
+  const quoteMap = await fetchQuotesSafe(rawPositions.map(pos => pos.code));
+  return portfolio.getPositions(quoteMap, { accountId });
+}
+
+async function getAccountOverviews() {
+  const accounts = portfolio.listAccounts();
+  const rawPositions = new Map(accounts.map(account => [
+    account.id,
+    portfolio.getPositions({}, { accountId: account.id })
+  ]));
+  const codes = Array.from(new Set(Array.from(rawPositions.values()).flat().map(position => position.code)));
+  const quoteMap = await fetchQuotesSafe(codes);
+  return accounts.map(function(account) {
+    const positions = portfolio.getPositions(quoteMap, { accountId: account.id });
+    return {
+      ...account,
+      summary: portfolio.getSummary(positions, { accountId: account.id }),
+      latestSnapshot: portfolio.getLatestSnapshot(account.id)
+    };
+  });
+}
+
+router.get('/accounts/overview', async function(req, res) {
+  try {
+    ok(res, await getAccountOverviews());
+  } catch (error) {
+    fail(res, error);
+  }
+});
+
+router.get('/accounts', function(req, res) {
+  try {
+    ok(res, portfolio.listAccounts());
+  } catch (error) {
+    fail(res, error);
+  }
+});
+
+router.post('/accounts', function(req, res) {
+  try {
+    ok(res, portfolio.createAccount(req.body));
+  } catch (error) {
+    fail(res, error);
+  }
+});
+
+router.put('/accounts/:id', function(req, res) {
+  try {
+    ok(res, portfolio.updateAccount(Number(req.params.id), req.body));
+  } catch (error) {
+    fail(res, error);
+  }
+});
+
+router.delete('/accounts/:id', function(req, res) {
+  try {
+    ok(res, { deleted: portfolio.deleteAccount(Number(req.params.id)) });
+  } catch (error) {
+    fail(res, error);
+  }
+});
+
+router.post('/accounts/:id/import-holdings', function(req, res) {
+  try {
+    ok(res, portfolio.importHoldingSnapshot(Number(req.params.id), req.body));
+  } catch (error) {
+    fail(res, error);
+  }
+});
+
+router.post('/accounts/:id/sync-holdings', function(req, res) {
+  try {
+    ok(res, portfolio.syncHoldingSnapshot(Number(req.params.id), req.body));
+  } catch (error) {
+    fail(res, error);
+  }
+});
+
+router.get('/snapshots', function(req, res) {
+  try {
+    ok(res, portfolio.listSnapshots({
+      accountId: requestAccountId(req),
+      limit: req.query.limit
+    }));
+  } catch (error) {
+    fail(res, error);
+  }
+});
+
+// Read persisted holdings independently of upstream quote availability.
+router.get('/holding-snapshot', function(req, res) {
+  try {
+    const accountId = requestAccountId(req);
+    const account = portfolio.getAccount(accountId);
+    const positions = portfolio.getPositions({}, { accountId });
+    const latestSnapshot = portfolio.getLatestSnapshot(accountId);
+    const version = require('node:crypto').createHash('sha256')
+      .update(JSON.stringify({ account, positions, latestSnapshot })).digest('hex');
+    ok(res, { account, positions, latestSnapshot, version,
+      summary: portfolio.getSummary(positions, { accountId }),
+      allocation: portfolio.getAllocation(positions) });
+  } catch (error) {
+    fail(res, error);
+  }
+});
 
 router.get('/watchlist', function (req, res) {
   try {
@@ -61,6 +200,98 @@ router.get('/watchlist', function (req, res) {
 router.post('/watchlist', function (req, res) {
   try {
     ok(res, portfolio.addWatchlistItem(req.body));
+  } catch (error) {
+    fail(res, error);
+  }
+});
+
+router.get('/tonghuashun-watchlist/status', function(req, res) {
+  try {
+    ok(res, tonghuashunWatchlist.getStatus());
+  } catch (error) {
+    fail(res, error);
+  }
+});
+
+router.get('/tonghuashun-watchlist/catalog', function(req, res) {
+  try {
+    ok(res, tonghuashunWatchlist.readLocalCatalog());
+  } catch (error) {
+    fail(res, error);
+  }
+});
+
+router.get('/tonghuashun-watchlist/diff', function(req, res) {
+  try {
+    ok(res, tonghuashunWatchlist.previewLocalDiff({ groupId: req.query.groupId }));
+  } catch (error) {
+    fail(res, error);
+  }
+});
+
+router.post('/tonghuashun-watchlist/sync', function(req, res) {
+  try {
+    ok(res, tonghuashunWatchlist.syncLocalSelfStock());
+  } catch (error) {
+    fail(res, error);
+  }
+});
+
+router.get('/tonghuashun-holdings/status', function(req, res) {
+  try {
+    ok(res, tonghuashunHoldings.getStatus());
+  } catch (error) {
+    fail(res, error);
+  }
+});
+
+router.get('/tonghuashun-holdings/preview-local', function(req, res) {
+  try {
+    ok(res, tonghuashunHoldings.previewLocalHolding());
+  } catch (error) {
+    fail(res, error);
+  }
+});
+
+router.post('/tonghuashun-holdings/preview', function(req, res) {
+  try {
+    ok(res, tonghuashunHoldings.previewHoldingText(req.body && req.body.text));
+  } catch (error) {
+    fail(res, error);
+  }
+});
+
+router.post('/tonghuashun-holdings/sync-local', function(req, res) {
+  try {
+    ok(res, tonghuashunHoldings.syncLocalHolding(tonghuashunHoldingSyncOptions(req.body)));
+  } catch (error) {
+    fail(res, error);
+  }
+});
+
+router.post('/tonghuashun-holdings/sync-text', function(req, res) {
+  try {
+    ok(res, tonghuashunHoldings.syncHoldingText(
+      req.body && req.body.text,
+      tonghuashunHoldingSyncOptions(req.body)
+    ));
+  } catch (error) {
+    fail(res, error);
+  }
+});
+
+router.post('/watchlist/refresh-levels', async function(req, res) {
+  try {
+    const requestedCodes = Array.from(new Set((Array.isArray(req.body && req.body.codes) ? req.body.codes : [])
+      .map(function(code) { return String(code || '').trim(); })
+      .filter(function(code) { return /^\d{6}$/.test(code); }))).slice(0, 200);
+    const includeSaved = req.body && req.body.includeSaved !== false;
+    const saved = includeSaved ? portfolio.listWatchlist() : [];
+    const byCode = new Map(saved.map(function(item) { return [item.code, item]; }));
+    requestedCodes.forEach(function(code) {
+      if (!byCode.has(code)) byCode.set(code, { code, name: code, readOnly: true });
+    });
+    ok(res, await watchlistLevels.refreshWatchlistLevels({ items: Array.from(byCode.values()) }));
   } catch (error) {
     fail(res, error);
   }
@@ -93,6 +324,7 @@ router.delete('/watchlist/code/:code', function (req, res) {
 router.get('/trades', function (req, res) {
   try {
     ok(res, portfolio.listTrades({
+      accountId: requestAccountId(req),
       code: req.query.code,
       side: req.query.side,
       startDate: req.query.startDate,
@@ -129,7 +361,7 @@ router.delete('/trades/:id', function (req, res) {
 
 router.get('/trades/export', function (req, res) {
   try {
-    const trades = portfolio.listTrades(req.query);
+    const trades = portfolio.listTrades({ ...req.query, accountId: requestAccountId(req) });
     const rows = [['日期', '类型', '代码', '名称', '价格', '数量', '手续费', '印花税', '金额', '备注']];
     trades.forEach(trade => {
       rows.push([trade.tradeDate, trade.side, trade.code, trade.name, trade.price, trade.quantity, trade.fee, trade.tax, trade.amount, trade.note]);
@@ -145,7 +377,15 @@ router.get('/trades/export', function (req, res) {
 
 router.get('/positions', async function (req, res) {
   try {
-    ok(res, await getPositionsWithQuotes());
+    ok(res, await getPositionsWithQuotes(requestAccountId(req)));
+  } catch (error) {
+    fail(res, error);
+  }
+});
+
+router.get('/closed-positions', function (req, res) {
+  try {
+    ok(res, portfolio.getClosedPositions({ accountId: requestAccountId(req) }));
   } catch (error) {
     fail(res, error);
   }
@@ -153,8 +393,9 @@ router.get('/positions', async function (req, res) {
 
 router.get('/summary', async function (req, res) {
   try {
-    const positions = await getPositionsWithQuotes();
-    ok(res, portfolio.getSummary(positions));
+    const accountId = requestAccountId(req);
+    const positions = await getPositionsWithQuotes(accountId);
+    ok(res, portfolio.getSummary(positions, { accountId }));
   } catch (error) {
     fail(res, error);
   }
@@ -162,7 +403,7 @@ router.get('/summary', async function (req, res) {
 
 router.get('/allocation', async function (req, res) {
   try {
-    const positions = await getPositionsWithQuotes();
+    const positions = await getPositionsWithQuotes(requestAccountId(req));
     ok(res, portfolio.getAllocation(positions));
   } catch (error) {
     fail(res, error);
@@ -171,11 +412,20 @@ router.get('/allocation', async function (req, res) {
 
 router.post('/recalculate', async function (req, res) {
   try {
-    const positions = await getPositionsWithQuotes();
+    const accountId = requestAccountId(req);
+    const positions = await getPositionsWithQuotes(accountId);
     ok(res, {
+      account: portfolio.getAccount(accountId),
+      latestSnapshot: portfolio.getLatestSnapshot(accountId),
       positions,
-      summary: portfolio.getSummary(positions),
-      allocation: portfolio.getAllocation(positions)
+      summary: portfolio.getSummary(positions, { accountId }),
+      allocation: portfolio.getAllocation(positions),
+      marketData: {
+        source: 'sina-quote',
+        observedAt: positions.map(function(position) {
+          return [position.quoteDate, position.quoteTime].filter(Boolean).join(' ');
+        }).filter(Boolean).sort().pop() || null
+      }
     });
   } catch (error) {
     fail(res, error);
@@ -189,11 +439,12 @@ router.post('/ai-analysis', async function (req, res) {
       throw new Error('AI 未配置，请先配置 OpenAI API Key');
     }
 
-    const positions = await getPositionsWithQuotes();
-    const summary = portfolio.getSummary(positions);
+    const accountId = requestAccountId(req);
+    const positions = await getPositionsWithQuotes(accountId);
+    const summary = portfolio.getSummary(positions, { accountId });
     const allocation = portfolio.getAllocation(positions);
-    const trades = portfolio.listTrades().slice(0, 20);
-    const prompt = `你是一名谨慎的投资组合分析助手。请根据以下持仓、盈亏和交易记录，对该投资组合进行结构性分析。请注意：
+    const trades = portfolio.listTrades({ accountId }).slice(0, 20);
+    const prompt = appendOneClickOutputInstructions(`你是一名谨慎的投资组合分析助手。请根据以下持仓、盈亏和交易记录，对该投资组合进行结构性分析。请注意：
 1. 不要承诺收益；
 2. 不要给出绝对化买入或卖出指令；
 3. 只能给出风险提示、观察建议和仓位结构建议；
@@ -218,7 +469,16 @@ ${JSON.stringify(trades, null, 2)}
 四、主要风险
 五、后续观察重点
 六、仓位结构建议
-七、免责声明`;
+七、免责声明`, {
+      title: '组合诊断结果',
+      sections: [
+        '组合结论：仓位、集中度、收益来源和主要问题。',
+        '持仓拆解：每个重点持仓的风险、观察点和处理优先级。',
+        '结构建议：只给研究型仓位结构建议，不给下单指令。',
+        '下一步验证：需要跟踪的价格、量能、板块和交易记录。',
+        '免责声明：仅供研究复盘，不构成投资建议。'
+      ]
+    });
 
     ok(res, { report: await callAIModel(prompt) });
   } catch (error) {

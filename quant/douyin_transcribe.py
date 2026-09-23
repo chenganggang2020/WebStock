@@ -1,0 +1,101 @@
+import argparse
+import gc
+import importlib.metadata
+import json
+import sys
+import time
+
+from faster_whisper import WhisperModel
+
+
+def optional_segment_metric(segment, attribute):
+    value = getattr(segment, attribute, None)
+    try:
+        return round(float(value), 6)
+    except (TypeError, ValueError):
+        return None
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--media", required=True)
+    parser.add_argument("--model-root", required=True)
+    parser.add_argument("--model", default="small")
+    parser.add_argument("--model-source", default="")
+    parser.add_argument("--prompt", default="")
+    parser.add_argument("--hotwords", default="")
+    args = parser.parse_args()
+
+    started = time.perf_counter()
+    model = None
+    segments_iter = None
+    try:
+        model = WhisperModel(
+            args.model_source or args.model,
+            device="cpu",
+            compute_type="int8",
+            download_root=args.model_root,
+            cpu_threads=2,
+            num_workers=1,
+        )
+        segments_iter, info = model.transcribe(
+            args.media,
+            language="zh",
+            beam_size=5,
+            vad_filter=True,
+            condition_on_previous_text=False,
+            initial_prompt=args.prompt[:1000] or None,
+            hotwords=args.hotwords[:500] or None,
+        )
+        segments = []
+        last_progress = -30.0
+        for segment in segments_iter:
+            text = str(segment.text or "").strip()
+            if text:
+                segments.append({
+                    "start": round(float(segment.start), 3),
+                    "end": round(float(segment.end), 3),
+                    "text": text,
+                    "avgLogProbability": optional_segment_metric(segment, "avg_logprob"),
+                    "noSpeechProbability": optional_segment_metric(segment, "no_speech_prob"),
+                    "compressionRatio": optional_segment_metric(segment, "compression_ratio"),
+                })
+            if float(segment.end) - last_progress >= 30:
+                last_progress = float(segment.end)
+                print('ASR_PROGRESS ' + json.dumps({
+                    'stage': 'transcribing',
+                    'message': '本地识别已处理 %.0f / %.0f 秒音频（非剩余耗时）' % (segment.end, info.duration or 0),
+                    'processedSeconds': round(float(segment.end), 1),
+                    'durationSeconds': round(float(info.duration or 0), 1),
+                }, ensure_ascii=False), file=sys.stderr, flush=True)
+
+        result = {
+            "engine": "faster-whisper",
+            "engineVersion": importlib.metadata.version("faster-whisper"),
+            "model": args.model,
+            "device": "cpu",
+            "computeType": "int8",
+            "language": str(info.language or ""),
+            "languageProbability": round(float(info.language_probability or 0), 6),
+            "durationSeconds": round(float(info.duration or 0), 3),
+            "elapsedSeconds": round(time.perf_counter() - started, 3),
+            "transcript": "".join(item["text"] for item in segments),
+            "segments": segments,
+        }
+    finally:
+        close_segments = getattr(segments_iter, "close", None)
+        if callable(close_segments):
+            close_segments()
+        backend = getattr(model, "model", None)
+        unload_model = getattr(backend, "unload_model", None)
+        if callable(unload_model):
+            unload_model()
+        segments_iter = None
+        model = None
+        gc.collect()
+
+    print(json.dumps(result, ensure_ascii=False))
+
+
+if __name__ == "__main__":
+    main()

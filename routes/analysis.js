@@ -7,6 +7,8 @@ const fs = require('fs');
 
 const { isValidApiKey, createAIModelStream, callAIModel, getAIConfig } = require('./ai');
 const { klineCache } = require('./cache');
+const { toSinaSymbol, getEastmoneyMarketId } = require('../utils/market');
+const { appendOneClickOutputInstructions } = require('../services/handoffFormat');
 
 let promptTemplate = '';
 
@@ -62,12 +64,20 @@ function loadPromptTemplate() {
 }
 loadPromptTemplate();
 
+function ok(res, data) {
+  res.json({ success: true, data });
+}
+
+function fail(res, error, status = 400) {
+  res.status(status).json({ success: false, error: error.message || String(error) });
+}
+
 router.get('/reload-prompt', function (req, res) {
   try {
     loadPromptTemplate();
-    res.json({ success: true, length: promptTemplate.length });
+    ok(res, { length: promptTemplate.length });
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    fail(res, e, 500);
   }
 });
 
@@ -132,11 +142,21 @@ function buildPrompt(stockName, code, quote, tech, macd, stockInfo, financial, i
     });
   }
 
-  return promptTemplate
+  const prompt = promptTemplate
     .replace(/\{\{STOCK_NAME\}\}/g, stockName)
     .replace(/\{\{STOCK_CODE\}\}/g, code)
     .replace(/\{\{DATA_TIME\}\}/g, now)
     .replace(/\{\{DATA_SUMMARY\}\}/g, dataSummary);
+  return appendOneClickOutputInstructions(prompt, {
+    title: stockName + '（' + code + '）个股分析结果',
+    sections: [
+      '核心结论：3-5 条，说明当前强弱、位置、主要逻辑。',
+      '关键数据：行情、资金、技术、基本面的主要证据。',
+      '风险提示：短线风险、中线风险、数据缺口。',
+      '后续观察：支撑压力、量能、板块联动、公告或财报验证点。',
+      '免责声明：仅供研究复盘，不构成投资建议。'
+    ]
+  });
 }
 
 async function generateAIAnalysis(stockName, code, quote, tech, macd, stockInfo, financial, industry, klineData) {
@@ -162,7 +182,7 @@ async function generateAIAnalysis(stockName, code, quote, tech, macd, stockInfo,
 
 async function fetchStockInfo(code) {
   try {
-    const market = code.startsWith('6') ? '1' : '0';
+    const market = getEastmoneyMarketId(code);
     const url = `https://push2.eastmoney.com/api/qt/stock/get?fields=f57,f58,f84,f85,f116,f117,f162,f167,f168,f169,f170,f171,f172,f173,f62,f66,f69&fltt=2&invt=2&secid=${market}.${code}`;
     const resp = await axios.get(url, {
       headers: { 'Referer': 'https://www.eastmoney.com', 'User-Agent': 'Mozilla/5.0' },
@@ -230,7 +250,7 @@ function getTradeMarket(code) {
 
 async function fetchStockIndustry(code) {
   try {
-    const finUrl = `https://emweb.securities.eastmoney.com/PC_HSF10/NewFinanceAnalysis/ZYZBAjaxNew?type=0&code=${code.startsWith('6') ? 'sh' : 'sz'}${code}`;
+    const finUrl = `https://emweb.securities.eastmoney.com/PC_HSF10/NewFinanceAnalysis/ZYZBAjaxNew?type=0&code=${toSinaSymbol(code)}`;
     const finResp = await axios.get(finUrl, {
       headers: { 'Referer': 'https://emweb.securities.eastmoney.com', 'User-Agent': 'Mozilla/5.0' },
       timeout: 8000
@@ -257,7 +277,7 @@ async function fetchStockIndustry(code) {
 
 async function fetchFinancialData(code) {
   try {
-    const finUrl = `https://emweb.securities.eastmoney.com/PC_HSF10/NewFinanceAnalysis/ZYZBAjaxNew?type=0&code=${code.startsWith('6') ? 'sh' : 'sz'}${code}`;
+    const finUrl = `https://emweb.securities.eastmoney.com/PC_HSF10/NewFinanceAnalysis/ZYZBAjaxNew?type=0&code=${toSinaSymbol(code)}`;
     const finResp = await axios.get(finUrl, {
       headers: { 'Referer': 'https://emweb.securities.eastmoney.com', 'User-Agent': 'Mozilla/5.0' },
       timeout: 8000
@@ -449,19 +469,18 @@ function generateAnalysisReport(stockName, code, quote, tech, macd, stockInfo, f
 router.get('/analysis', async function (req, res) {
   const code = req.query.code;
   const name = req.query.name || code;
-  if (!code) return res.status(400).json({ error: '缺少股票代码' });
+  if (!code) return fail(res, '缺少股票代码');
 
   try {
     const [quoteResp, klineResp, stockInfo, financial, industry] = await Promise.allSettled([
-      axios.get(`https://hq.sinajs.cn/list=${(code.startsWith('6') ? 'sh' : 'sz') + code}`, {
+      axios.get(`https://hq.sinajs.cn/list=${toSinaSymbol(code)}`, {
         headers: { 'Referer': 'https://finance.sina.com.cn' }, timeout: 6000, responseType: 'arraybuffer'
       }),
       (async () => {
         const cacheKey = code + '_day';
         const cached = klineCache.get(cacheKey);
         if (cached && Date.now() - cached.ts < 30 * 60 * 1000) return cached.data;
-        const market = code.startsWith('6') ? 'sh' : 'sz';
-        const url = `https://money.finance.sina.com.cn/quotes_service/api/json_v2.php/CN_MarketData.getKLineData?symbol=${market}${code}&scale=240&ma=no&datalen=200&klt=100`;
+        const url = `https://money.finance.sina.com.cn/quotes_service/api/json_v2.php/CN_MarketData.getKLineData?symbol=${toSinaSymbol(code)}&scale=240&ma=no&datalen=200&klt=100`;
         const r = await axios.get(url, { headers: { 'Referer': 'https://finance.sina.com.cn' }, timeout: 8000 });
         if (Array.isArray(r.data) && r.data.length > 0) {
           const data = r.data.map(item => ({
@@ -515,7 +534,7 @@ router.get('/analysis', async function (req, res) {
     let promptText = '';
 
     if (!aiConfig) {
-      return res.json({ success: false, error: 'OpenAI 配置未加载，请检查 OPENAI_API_KEY / ai-config.json' });
+      return fail(res, 'OpenAI 配置未加载，请检查 OPENAI_API_KEY / ai-config.json');
     }
 
     try {
@@ -536,11 +555,10 @@ router.get('/analysis', async function (req, res) {
       }
     } catch (aiErr) {
       console.error('[AI] 大模型调用失败：', aiErr.message);
-      return res.json({ success: false, error: 'AI 分析失败：' + aiErr.message });
+      return fail(res, 'AI 分析失败: ' + aiErr.message);
     }
 
-    res.json({
-      success: true,
+    ok(res, {
       report,
       aiUsed: useAI,
       simulatedAI: simulatedAI,
@@ -550,14 +568,14 @@ router.get('/analysis', async function (req, res) {
     });
   } catch (e) {
     console.error('Analysis failed:', e.message);
-    res.status(500).json({ error: e.message });
+    fail(res, e, 500);
   }
 });
 
 router.get('/analysis-stream', async function (req, res) {
   const code = req.query.code;
   const name = req.query.name || code;
-  if (!code) return res.status(400).json({ error: '缺少股票代码' });
+  if (!code) return fail(res, '缺少股票代码');
 
   res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
   res.setHeader('Cache-Control', 'no-cache');
@@ -571,15 +589,14 @@ router.get('/analysis-stream', async function (req, res) {
 
   try {
     const [quoteResp, klineResp, stockInfo, financial, industry] = await Promise.allSettled([
-      axios.get(`https://hq.sinajs.cn/list=${(code.startsWith('6') ? 'sh' : 'sz') + code}`, {
+      axios.get(`https://hq.sinajs.cn/list=${toSinaSymbol(code)}`, {
         headers: { 'Referer': 'https://finance.sina.com.cn' }, timeout: 6000, responseType: 'arraybuffer'
       }),
       (async () => {
         const cacheKey = code + '_day';
         const cached = klineCache.get(cacheKey);
         if (cached && Date.now() - cached.ts < 30 * 60 * 1000) return cached.data;
-        const market = code.startsWith('6') ? 'sh' : 'sz';
-        const url = `https://money.finance.sina.com.cn/quotes_service/api/json_v2.php/CN_MarketData.getKLineData?symbol=${market}${code}&scale=240&ma=no&datalen=200&klt=100`;
+        const url = `https://money.finance.sina.com.cn/quotes_service/api/json_v2.php/CN_MarketData.getKLineData?symbol=${toSinaSymbol(code)}&scale=240&ma=no&datalen=200&klt=100`;
         const r = await axios.get(url, { headers: { 'Referer': 'https://finance.sina.com.cn' }, timeout: 8000 });
         if (Array.isArray(r.data) && r.data.length > 0) {
           const data = r.data.map(item => ({

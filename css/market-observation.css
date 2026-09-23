@@ -1,0 +1,59 @@
+/* Observation workspaces: bounded navigation, readable evidence, no global split layout. */
+#watchlistView.active { display: grid; grid-template-columns: 260px minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); overflow: hidden; }
+#watchlistView > .portfolio-watchlist-tabs { grid-column: 1; grid-row: 1; display: flex; flex-direction: column; align-items: stretch; overflow-x: hidden; overflow-y: auto; padding: 12px 8px; border-right: 1px solid var(--border); border-bottom: 0; white-space: normal; }
+#watchlistView > .portfolio-watchlist-panel { grid-column: 2; grid-row: 1; min-width: 0; }
+#watchlistView .portfolio-watchlist-tab { border-radius: 7px; padding: 10px; text-align: left; white-space: normal; overflow-wrap: anywhere; }
+#watchlistView .portfolio-watchlist-tab span { display: block; font-size: 14px; line-height: 1.5; padding-right: 28px; }
+#watchlistView .watchlist-tab-source { display: block; margin-top: 4px; color: var(--text-secondary); font-size: 11px; }
+#watchlistView .watchlist-group-tabs { display: flex; flex-direction: column; align-items: stretch; gap: 6px; min-width: 0; white-space: normal; }
+#watchlistView .portfolio-watchlist-tab { position: relative; width: 100%; }
+.watchlist-nav-search { font-size: 15px; font-weight: 600; padding: 4px 4px 10px; }
+.watchlist-nav-search input { display: block; box-sizing: border-box; width: 100%; margin-top: 10px; padding: 9px; color: var(--text); background: var(--card-bg); border: 1px solid var(--border); border-radius: 7px; font-size: 14px; }
+.watchlist-group-tabs details > summary { cursor: pointer; padding: 14px 6px 8px; font-size: 12px; color: var(--text-secondary); }
+.watchlist-group-tabs details > button { margin-bottom: 5px; }
+.watchlist-group-count { position: absolute; right: 10px; top: 11px; font-size: 12px; font-variant-numeric: tabular-nums; }
+.watchlist-nav-note { padding: 14px 6px; line-height: 1.6; color: var(--text-secondary); }
+.watchlist-selection-bar { padding: 10px 16px; border-bottom: 1px solid var(--border); display: flex; flex-wrap: wrap; gap: 8px 20px; font-size: 14px; }
+#watchlistActionStatus { color: var(--accent, #2563eb); }
+#watchlistActionStatus[data-state="error"], #watchlistAddError { color: #c24136; }
+#watchlistTbody tr.watchlist-located { outline: 2px solid var(--accent, #2563eb); outline-offset: -2px; background: rgba(70, 115, 240, .08); }
+.watchlist-add-dialog { box-sizing: border-box; width: min(480px, calc(100vw - 32px)); padding: 24px; border: 1px solid var(--border); border-radius: 14px; color: var(--text); background: var(--card-bg); }
+.watchlist-add-dialog::backdrop { background: rgba(10, 20, 40, .45); }
+.watchlist-add-dialog h3 { margin: 0 0 14px; font-size: 20px; }
+.watchlist-add-dialog p { line-height: 1.6; font-size: 14px; overflow-wrap: anywhere; }
+.watchlist-add-dialog input { box-sizing: border-box; width: 100%; padding: 11px; margin-top: 8px; font-size: 15px; border: 1px solid var(--border); border-radius: 7px; background: var(--card-bg); color: var(--text); }
+#watchlistAddError:empty, #watchlistActionStatus:empty { display: none; }
+.industry-research-workbench { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(250px, .8fr); gap: 14px; align-items: start; }
+.industry-research-workbench > * { min-width: 0; }
+.industry-research-panel { display: flex; flex-direction: column; }
+.industry-research-layout { order: 1; }
+.industry-research-panel > .industry-concept-radar { order: 2; margin-top: 18px; }
+.industry-research-view-actions button { border: 1px solid var(--border); background: var(--card-bg); color: var(--text); padding: 7px 12px; border-radius: 7px; cursor: pointer; }
+.industry-research-graph { width: 100%; height: 430px; background: #f5f7fb; border: 1px solid var(--border); border-radius: 10px; }
+.dark .industry-research-graph { background: #151c2b; }
+.industry-research-workbench table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.industry-research-workbench td, .industry-research-workbench th { text-align: left; padding: 8px 5px; border-bottom: 1px solid var(--border); overflow-wrap: anywhere; }
+.industry-research-workbench button { white-space: normal; }
+.industry-research-workbench .industry-research-review { flex-wrap: wrap; }
+.industry-research-workbench .industry-research-relation { margin-top: 0; padding: 10px; }
+.industry-chain-hero { padding: 16px 18px; }
+.industry-chain-hero h2 { font-size: 22px; }
+.industry-chain-stage-map { display: flex; flex-wrap: wrap; gap: 8px; }
+.industry-chain-stage-map button { flex: 0 1 auto; padding: 8px 14px; border-radius: 7px; }
+.industry-concept-radar-layout { grid-template-columns: minmax(0, 1.5fr) minmax(230px, 1fr); }
+.industry-concept-radar-list { max-height: none; overflow: visible; grid-template-columns: repeat(3, minmax(0, 1fr)); align-content: start; }
+.industry-concept-item { padding: 7px 9px; font-size: 12px; }
+.industry-concept-item small { font-size: 10px; line-height: 1.5; }
+.industry-concept-pagination { display: flex; align-items: center; gap: 8px; margin: 10px 0; }
+.industry-research-view-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 10px 0; }
+.industry-research-view-actions small { color: var(--text-secondary); }
+@media(max-width: 1100px) {
+  .industry-research-workbench { grid-template-columns: minmax(0, 1fr); }
+  .industry-concept-radar-list { grid-template-columns: repeat(2,minmax(0,1fr)); }
+}
+@media(max-width: 700px) {
+  #watchlistView.active { grid-template-columns: 170px minmax(0, 1fr); }
+  #watchlistView .portfolio-watchlist-tab { padding: 7px; }
+  .industry-concept-radar-layout { grid-template-columns: minmax(0, 1fr); }
+  .industry-concept-radar-list { grid-template-columns: repeat(2,minmax(0,1fr)); }
+}
