@@ -4791,6 +4791,8 @@ body.dark .dashboard-index-correlation td.correlation-missing {
   font-weight: 700;
 }
 
+.position-price-change { display: block; margin-top: 3px; font-size: 11px; white-space: nowrap; }
+
 .position-mini-chart,
 .holding-name-cell .stock-mini-chart {
   width: 168px;
@@ -6015,7 +6017,7 @@ body.dark .market-overview {
   font-weight: 600;
 }
 
-data-table tr:hover td {
+.data-table tr:hover td {
   background: var(--hover);
 }
 

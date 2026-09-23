@@ -21,13 +21,15 @@ test('parses only exact source identity and valid dated metadata, never executes
   assert.throws(() => parsePage(page(0, sample.replace('/11/1/', '/NaN/1/')), symbol, 0, '2026-09-18'));
 });
 
-test('combines same-date prices without overwriting newer local observations or mixing trading days', () => {
+test('combines same-date prices with observed local volume without overwriting remote prices or mixing days', () => {
   const local = { rows: [{ time: '2026-09-18 09:30:05', price: 10, volume: 20 }, { time: '2026-09-18 09:30:10', price: 12, volume: 30 }], meta: { tradingDate: '2026-09-18', dataSource: 'local-public-quote-5s' } };
   const remote = { rows: [{ time: '2026-09-18 09:30:05', price: 11, volume: null }], meta: { tradingDate: '2026-09-18', dataSource: 'tencent-public-detail', backfillState: 'ready' } };
   const merged = combinePriceSeries(local, remote);
   assert.deepEqual(merged.rows.map(row => row.price), [11, 12]);
-  assert.deepEqual(merged.rows.map(row => row.volume), [null, 30]);
+  assert.deepEqual(merged.rows.map(row => row.volume), [20, 30]);
   assert.equal(merged.meta.localSupplementPoints, 1);
+  assert.equal(merged.meta.localVolumeOverlayPoints, 1);
+  assert.equal(merged.rows[0].volumeSource, 'local-public-quote-5s');
   const tomorrow = { rows: [{ time: '2026-09-21 09:30:05', price: 13 }], meta: { tradingDate: '2026-09-21', dataSource: 'local-public-quote-5s' } };
   assert.deepEqual(combinePriceSeries(tomorrow, remote).rows, tomorrow.rows);
   const older = { rows: [{ time: '2026-09-17 09:30:05', price: 8 }], meta: { tradingDate: '2026-09-17' } };

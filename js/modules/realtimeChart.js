@@ -410,7 +410,14 @@ function loadRealtimeData(code) {
       }
       const samplingLabel = window.RealtimeChartModel.describeSampling(minuteData, minuteMeta).label ||
         realtimeResolutionLabel(requestedResolution);
+      const volumeCoveredPoints = requestedResolution === '1m' ? 0 : minuteData.filter(function(row) {
+        return row && row.volume !== null && row.volume !== undefined &&
+          Number.isFinite(Number(row.volume)) && Number(row.volume) >= 0;
+      }).length;
+      const volumeCoverageLabel = requestedResolution === '1m' ? '' :
+        ' · 量能有记录 ' + volumeCoveredPoints + '/' + minuteData.length + ' 点（仅本机连续报价，缺失不补零）';
       setRealtimeStatus(samplingLabel + ' · ' + realtimeSourceLabel(minuteMeta) +
+        volumeCoverageLabel +
         (minuteMeta.backfillState === 'loading' ? ' · 后台补取中' : minuteMeta.backfillState === 'failed' ? ' · 补取失败，保留已有记录' : '') +
         (changed ? ' · 曲线已更新' : ' · 数据未变化'), changed ? 'updated' : 'unchanged');
       return { changed };

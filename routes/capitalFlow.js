@@ -94,6 +94,11 @@ function createCapitalFlowRouter(options = {}) {
       const data=await darkStocks.get({date:state.dataDate,codes});
       try {data.historySaved=await darkHistory.append(data);}
       catch (_) {data.historySaved=false;data.historyWarning='历史写入未成功；当前报价仍可看，已有记录保留';}
+      data.comparisons={};
+      if(data.historySaved && typeof darkHistory.compare==='function') {
+        try {data.comparisons=await darkHistory.compare({codes,date:state.dataDate});}
+        catch (_) {data.historyWarning='历史对比读取未成功；当前净额仍可看，已有记录保留';}
+      }
       res.json({success:true,data});
     }
     catch (_) {res.status(502).json({success:false,error:{code:'DARK_STOCK_UNAVAILABLE',message:'个股明暗盘榜单匹配暂不可用；未以普通资金或零替代。稍后可重试。'}});}

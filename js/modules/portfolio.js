@@ -434,6 +434,9 @@ function renderPositions() {
     const todayReferencePnl = todayReferencePnlValue(pos);
     const floatingPnl = pos.unrealizedPnl;
     const realizedPnl = pos.realizedPnl;
+    const todayChange = pos.todayChange === null || pos.todayChange === undefined ? null : Number(pos.todayChange);
+    const changeLabel = todayChange !== null && Number.isFinite(todayChange)
+      ? (todayChange > 0 ? '+' : '') + fmt(todayChange) + '%' : '--';
     const minuteSeries = window.State.minuteSeriesByCode && window.State.minuteSeriesByCode[pos.code];
     const trendColor = window.MarketVisualModel
       ? window.MarketVisualModel.trendColor(pos.todayChange, document.body.classList.contains('dark'))
@@ -446,7 +449,7 @@ function renderPositions() {
       '<td><div class="holding-name-cell"><span>' + pos.name + '</span><span class="position-mini-chart" data-mini-chart-code="' + pos.code + '">' + miniChart + '</span></div></td>' +
       '<td>' + pos.quantity + '</td>' +
       '<td>' + fmt(pos.avgCost, 3) + '</td>' +
-      '<td>' + fmt(pos.currentPrice, 3) + '</td>' +
+      '<td><span>' + fmt(pos.currentPrice, 3) + '</span><small class="position-price-change ' + pnlClass(todayChange) + '">涨跌幅 ' + changeLabel + '</small></td>' +
       '<td>' + (window.EastmoneyDarkStocks ? window.EastmoneyDarkStocks.cell(pos) : '--') + '</td>' +
       '<td>' + fmt(pos.marketValue) + '</td>' +
       '<td class="' + pnlClass(floatingPnl) + '" title="浮动盈亏：当前市值 - 剩余持仓成本；买入手续费已计入剩余成本">' + fmt(floatingPnl) + '</td>' +

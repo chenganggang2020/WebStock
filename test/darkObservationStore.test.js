@@ -15,6 +15,18 @@ test('dark history validates identity and reports missing as empty, never zero',
  const r=await s.read({code:'sh600000',date:'2026-09-17'});assert.deepEqual(r.points,[]);assert.deepEqual(r.availableDates,[]);
 });
 
+test('two archived observations expose net changes without labeling them interval trades',async t=>{
+ const s=await store(t);await s.append(sample());
+ const next=sample();next.receivedAt='2026-09-17T01:40:00Z';next.rows[0].receivedAt='2026-09-17T01:39:59Z';
+ next.rows[0].darkNetCents='170';next.rows[0].visibleNetCents='-20';next.rows[0].combinedNetCents='150';
+ await s.append(next);
+ const result=await s.compare({codes:['sh600000'],date:'2026-09-17'});
+ assert.equal(result.sh600000.darkNetChangeCents,'70');
+ assert.equal(result.sh600000.visibleNetChangeCents,'10');
+ assert.equal(result.sh600000.fromAt,'2026-09-17T01:34:59Z');
+ assert.equal(result.sh600000.toAt,'2026-09-17T01:39:59Z');
+});
+
 test('skipped stale and empty snapshots do not claim a successful archive write',async t=>{
  const s=await store(t);assert.equal(await s.append({...sample(),stale:true}),false);
  assert.equal(await s.append({...sample(),rows:[]}),false);

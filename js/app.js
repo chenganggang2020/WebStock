@@ -35,7 +35,7 @@ function applyUiStyle(style, persist) {
   return normalized;
 }
 
-function setMarketDrawerOpen(open) {
+function setMarketDrawerOpen(open, focusClose = true) {
   const drawer = document.getElementById('marketDrawer');
   const toggle = document.getElementById('marketDrawerToggle');
   if (!drawer || !toggle) return;
@@ -45,7 +45,7 @@ function setMarketDrawerOpen(open) {
   drawer.inert = !open;
   toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
   toggle.setAttribute('aria-label', open ? '关闭行情与资讯' : '打开行情与资讯');
-  if (open) {
+  if (open && focusClose) {
     const close = document.getElementById('marketDrawerClose');
     if (close) setTimeout(function() {
       if (document.body.classList.contains('market-drawer-open')) close.focus();
@@ -77,7 +77,8 @@ function bindMarketDrawer() {
     }
   });
   const stockTable = document.getElementById('stockTbody');
-  if (stockTable) stockTable.addEventListener('click', function() {
+  if (stockTable) stockTable.addEventListener('click', function(event) {
+    if (event.target.closest('.star-btn')) return;
     setTimeout(function() { setMarketDrawerOpen(false); }, 0);
   });
 }
@@ -182,6 +183,7 @@ function bindButtons() {
   let historyTimer = null;
   let searchSeq = 0;
   function runSearch(keyword, seq) {
+    if (keyword.trim()) setMarketDrawerOpen(true, false);
     State.currentPage = 0;
     State.searchResults = keyword.trim() ? Search.searchStocks(keyword) : [];
     const source = keyword.trim() ? State.searchResults : State.allStocks;

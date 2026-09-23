@@ -55,6 +55,38 @@ function createDarkObservationStore(options={}) {
   }}finally{lines.close();stream.destroy();}
   output.points=[...points.values()].sort((a,b)=>a.receivedAt.localeCompare(b.receivedAt));return output;
  }
- return {append,read};
+ async function compare(input){
+  const codes=stockKeys(input.codes.join(',')),date=input.date;buildQuery({date});
+  await pending;
+  const file=path.join(directory,date+'.jsonl');
+  let size;try{size=(await fs.stat(file)).size;}catch(e){if(e.code==='ENOENT')return {};throw e;}
+  if(size>34*1024*1024)throw Error('Archive requires inspection');
+  const wanted=new Set(codes),latest=new Map(),stream=createReadStream(file,{encoding:'utf8'});
+  const lines=createInterface({input:stream,crlfDelay:Infinity});let count=0;
+  try{for await(const line of lines){
+   if(!line.trim())continue;
+   let record;try{record=JSON.parse(line);}catch(_){break;}
+   if(record.schema!=='webstock.dark-stock-observations/v1' || record.tradingDay!==date ||
+      record.source?.id!=='eastmoney-darktrade-rank' || !Array.isArray(record.rows) || record.rows.length>200)throw Error('Invalid archived identity');
+   for(const row of record.rows){
+    if(!wanted.has(row.key))continue;
+    if(!validMoney({...row,reconciled:true}) || !Number.isFinite(Date.parse(row.receivedAt)))throw Error('Invalid archived point');
+    const points=latest.get(row.key)||new Map();points.set(row.receivedAt,row);
+    if(points.size>2){const oldest=[...points.keys()].sort()[0];points.delete(oldest);}
+    latest.set(row.key,points);
+   }
+   if(++count%25===0)await new Promise(resolve=>setImmediate(resolve));
+  }}finally{lines.close();stream.destroy();}
+  const result={};
+  for(const [key,points] of latest){
+   if(points.size<2)continue;
+   const [from,to]=[...points.values()].sort((a,b)=>a.receivedAt.localeCompare(b.receivedAt));
+   result[key]={fromAt:from.receivedAt,toAt:to.receivedAt,
+    darkNetChangeCents:(BigInt(to.darkNetCents)-BigInt(from.darkNetCents)).toString(),
+    visibleNetChangeCents:(BigInt(to.visibleNetCents)-BigInt(from.visibleNetCents)).toString()};
+  }
+  return result;
+ }
+ return {append,read,compare};
 }
 module.exports={createDarkObservationStore};

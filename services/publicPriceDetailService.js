@@ -210,7 +210,13 @@ function createPublicPriceDetailService(options = {}) {
     if (jobs.size >= 2) return Promise.reject(new Error('Public detail downloads busy'));
     const job = Promise.resolve().then(async () => {
       const previous = state.snapshot || (!state.loaded ? await read(code, request.tradingDate) : null);
+      if (previous && !state.snapshot) state.snapshot = previous;
       const snapshot = await download(code, { previous, tradingDate: request.tradingDate, now });
+      if (previous && snapshot.tradingDate === previous.tradingDate &&
+          (snapshot.records.length < previous.records.length ||
+           previous.paginationComplete && !snapshot.paginationComplete)) {
+        throw new Error('Incomplete or shorter detail refresh; cached history retained');
+      }
       const directory = path.join(cacheDir, code);
       await fs.mkdir(directory, { recursive: true });
       await writeJson(path.join(directory, snapshot.tradingDate + '.json'), snapshot);
@@ -283,17 +289,30 @@ function combinePriceSeries(local, remote) {
   if (!local.rows.length || local.meta.tradingDate !== remote.meta.tradingDate) return remote;
   const rows = new Map(remote.rows.map(row => [row.time, row]));
   let localSupplementPoints = 0;
+  let localVolumeOverlayPoints = 0;
   local.rows.forEach(row => {
     if (!rows.has(row.time)) {
       rows.set(row.time, Object.assign({}, row, { source: local.meta.dataSource }));
       localSupplementPoints++;
+    } else if (row.volume !== null && row.volume !== undefined &&
+        Number.isFinite(Number(row.volume)) && Number(row.volume) >= 0) {
+      const priceRow = rows.get(row.time);
+      rows.set(row.time, Object.assign({}, priceRow, {
+        volume: row.volume,
+        amount: row.amount,
+        volumeSource: local.meta.dataSource
+      }));
+      localVolumeOverlayPoints++;
     }
   });
+  const combinedRows = Array.from(rows.values()).sort((a, b) => a.time.localeCompare(b.time));
   return {
-    rows: Array.from(rows.values()).sort((a, b) => a.time.localeCompare(b.time)),
+    rows: combinedRows,
     meta: Object.assign({}, remote.meta, {
       localSupplementPoints, localDataSource: local.meta.dataSource,
-      volumeCoverage: localSupplementPoints ? 'local-supplement-only' : remote.meta.volumeCoverage
+      localVolumeOverlayPoints,
+      volumeCoverage: combinedRows.some(row => row.volume !== null && row.volume !== undefined)
+        ? 'local-observed-samples-only' : remote.meta.volumeCoverage
     })
   };
 }

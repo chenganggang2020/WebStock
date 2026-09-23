@@ -66,8 +66,23 @@
       const a=BigInt(row.darkNetCents),b=BigInt(row.visibleNetCents);
       relation=a===0n || b===0n?'一侧为零':(a>0n)===(b>0n)?'明暗同向':'明暗反向';
     }
+    const comparison=data.comparisons && data.comparisons[row.key];
+    let comparisonHtml='<small>暂无两次可比采集，暂不判断净额变化。</small>';
+    if(comparison && ['darkNetChangeCents','visibleNetChangeCents'].every(field=>/^-?\d+$/.test(comparison[field]||''))) {
+      const minutes=Math.round((Date.parse(comparison.toAt)-Date.parse(comparison.fromAt))/60000);
+      if(Number.isFinite(minutes) && minutes>0) {
+        function change(label,value) {
+          const amount=BigInt(value),direction=amount>0n?'增加':amount<0n?'减少':'不变';
+          const tone=amount>0n?'up':amount<0n?'down':'neutral';
+          return '<div><span>'+label+'较前次</span><strong class="dark-rank-'+tone+'">'+direction+' '+shared.formatMoney(value)+'</strong></div>';
+        }
+        comparisonHtml='<div class="dark-stock-amounts dark-stock-changes">'+change('暗盘',comparison.darkNetChangeCents)+change('明盘',comparison.visibleNetChangeCents)+'</div>'+
+          '<small>两次实际采集相隔 '+minutes+' 分钟；净额差不是该时段成交资金。</small>';
+      }
+    }
     return (detail?'<h4>'+escape(row.name)+' · '+escape(row.code)+'</h4>':'')+
       '<div class="dark-stock-amounts">'+amount('暗盘净额',row.darkNetCents)+amount('明盘净额',row.visibleNetCents)+(detail?amount('合计净额',row.combinedNetCents):'')+'</div>'+
+      comparisonHtml+
       '<small>活跃度 '+activity+' · '+relation+(row.reconciled===false?' · 合计待核验':'')+'</small>'+
       '<small>'+escape(data.tradingDay)+(data.stale?' · 旧快照':'')+'</small>'+
       (detail?'<small>东方财富模型估算 · 采集 '+escape(time(row.receivedAt))+' 北京时间；不是行情事件时间。</small>':'');
