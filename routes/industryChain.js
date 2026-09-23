@@ -57,6 +57,13 @@ function createIndustryChainRouter(options = {}) {
     }
     catch (error) { errorResponse(res, error); }
   });
+  router.post('/industry-chain/creators/:id/observations/:observationId/review', function(req, res) {
+    if (!writeAccessAllowed(req)) return res.status(403).json({ success: false, error: '仅允许本机复核' });
+    try {
+      const data = creatorService().reviewSource(req.params.id, req.params.observationId, req.body || {});
+      res.set('Cache-Control', 'no-store').json({ success: true, data });
+    } catch (error) { errorResponse(res, error); }
+  });
   router.post('/industry-chain/creators/:id/import', async function(req, res) {
     if (!writeAccessAllowed(req)) return res.status(403).json({ success: false, error: '仅允许本机导入' });
     try { res.json({ success: true, data: await creatorService().importReviews(req.params.id, req.body.items, { model: req.body.model }) }); }

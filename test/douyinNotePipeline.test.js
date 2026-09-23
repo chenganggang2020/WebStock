@@ -60,3 +60,24 @@ test('partial retries accumulate successful pages without claiming a wholly fres
   assert.equal(saved.mediaMetadata.note.status,'partial');
   assert.ok(saved.mediaMetadata.noteHistory.length>0);
 });
+
+test('an unchanged OCR refresh keeps a manual approval but changed image text requires review again',()=>{
+  const channel=channels.createChannel({channelKey:'reviewed-pages',platform:'douyin',displayName:'校对图文作者'});
+  const observation=channels.recordObservation(channel.id,{externalContentId:id,title:'图文校对',mediaType:'note',evidenceLevel:'primary'});
+  const page={index:1,status:'recognized',text:'保偏光纤用于光引擎，光引擎使用保偏光纤实现激光传输。',
+    localAssetPath:'archived.png',sha256:'d'.repeat(64),mimeType:'image/png',bytes:123};
+  sources.applyNoteResult(channel.id,id,{status:'needs_review',imageCount:1,pages:[page]});
+  let row=channels.getObservation(channel.id,observation.id);
+  const {createCreatorIndustryService,documentHash}=require('../services/creatorIndustryService');
+  const service=createCreatorIndustryService({directory:path.join(dir,'review-state'),channels,
+    media:{resolveNoteImage:()=>({})}});
+  service.reviewSource(channel.id,observation.id,{bodyHash:documentHash(row),confirmed:true,
+    pages:[{index:1,sha256:page.sha256,text:page.text}]});
+  assert.equal(channels.getObservation(channel.id,observation.id).mediaMetadata.note.status,'reviewed');
+  sources.applyNoteResult(channel.id,id,{status:'needs_review',imageCount:1,pages:[page]});
+  row=channels.getObservation(channel.id,observation.id);
+  assert.equal(row.mediaMetadata.note.status,'reviewed');
+  assert.equal(row.mediaMetadata.note.review.approvedBodyHash,documentHash(row));
+  sources.applyNoteResult(channel.id,id,{status:'needs_review',imageCount:1,pages:[{...page,sha256:'e'.repeat(64),text:page.text+' 新增内容'}]});
+  assert.equal(channels.getObservation(channel.id,observation.id).mediaMetadata.note.status,'needs_review');
+});

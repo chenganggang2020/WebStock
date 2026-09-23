@@ -4,9 +4,16 @@ const assert = require('node:assert/strict');
 const {
   materialFingerprint,
   materiallyEquivalent,
+  noteProcessingComplete,
   planDetailCandidates,
   summarizeDiscovery
 } = require('../services/douyinSyncPlanningService');
+
+test('approved OCR is complete for collection scheduling and is not repeatedly reprocessed',()=>{
+  const note={mediaType:'note',mediaMetadata:{note:{status:'reviewed',imageCount:1,
+    pages:[{index:1,status:'recognized',text:'已校对文字',localAssetPath:'archived.png'}]}}};
+  assert.equal(noteProcessingComplete(note),true);
+});
 
 test('material fingerprint ignores capture timestamps and expiring media URLs', () => {
   const before = {

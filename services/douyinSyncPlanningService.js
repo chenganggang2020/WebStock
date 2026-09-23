@@ -261,7 +261,7 @@ function planIncrementalCandidates(observations, state = {}, options = {}) {
 
 function noteProcessingComplete(observation) {
   const note = observation && observation.mediaMetadata && observation.mediaMetadata.note || {};
-  return ['needs_review', 'no_text', 'complete'].includes(note.status) && note.imageCount > 0 &&
+  return ['needs_review', 'reviewed', 'no_text', 'complete'].includes(note.status) && note.imageCount > 0 &&
     Array.isArray(note.pages) && note.pages.length === note.imageCount && note.pages.every((page, index) =>
       page.index === index + 1 && page.localAssetPath && ['recognized', 'no_text'].includes(page.status));
 }

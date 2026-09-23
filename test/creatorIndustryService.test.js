@@ -9,9 +9,16 @@ async function fixture(t) {
   t.after(() => fs.rm(directory, { recursive: true, force: true }));
   const channel = { id: 4, displayName: 'Fioona', industryAnalysisEnabled: true };
   const rows = [{ id: 1, mediaType: 'video', evidenceLevel: 'primary', transcript: '保偏光纤用于光引擎的激光传输。保偏光纤用于光引擎的激光传输。', mediaMetadata: { asr: { status: 'complete', segments: [{ text: '保偏光纤用于光引擎的激光传输。' }] } }, sourceUrl: 'https://www.douyin.com/video/1234567890123456789', publishedAt: '2026-09-18T00:00:00Z' }];
-  const channels = { getChannel: () => channel, listChannels: () => [channel], listCollectionObservations: () => rows };
+  const channels = { getChannel: () => channel, listChannels: () => [channel], listCollectionObservations: () => rows,
+    getObservation: (_id, observationId) => rows.find(row => row.id === Number(observationId)),
+    recordObservation: (_id, update) => {
+      const index = rows.findIndex(row => row.externalKey === update.externalKey);
+      rows[index] = { ...rows[index], ...update };
+      return rows[index];
+    } };
   const proposal = () => ({ observationId: 1, bodyHash: documentHash(rows[0]), summary: '光互联关系', relations: [{ topic: 'AI算力与CPO', from: '保偏光纤', to: '光引擎', relation: '使用', quote: '保偏光纤用于光引擎的激光传输。', polarity: 'supports' }] });
-  return { directory, channels, rows, proposal };
+  const media={resolveVideo:()=>({}),resolveNoteImage:()=>({})};
+  return { directory, channels, rows, proposal, media };
 }
 test('imports real cited relationships idempotently, with author/date and never verified status', async t => {
   const f = await fixture(t), service = createCreatorIndustryService(f);
@@ -19,6 +26,7 @@ test('imports real cited relationships idempotently, with author/date and never 
   await service.importReviews(4, [f.proposal()], { model: 'Codex direct review' });
   const result = await service.read(4);
   assert.equal(result.analyzedCount, 1); assert.equal(result.relations.length, 1);
+  assert.equal(result.reviewQueue[0].analysis.status,'complete');
   assert.equal(result.relations[0].status, 'author_claim');
   assert.equal(result.relations[0].publishedAt, f.rows[0].publishedAt);
   assert.equal(result.relations[0].author, 'Fioona');
@@ -147,7 +155,8 @@ test('stopping an active tick aborts the request and prevents further segments, 
   assert.equal(calls, 1);
   assert.equal((await service.read(4)).analyzedCount, 0);
   assert.equal((await service.read(5)).analyzedCount, 0);
-  assert.deepEqual(await fs.readdir(f.directory), []);
+  assert.deepEqual(await fs.readdir(f.directory), ['author-4-attempts.json']);
+  assert.equal((await service.read(4)).reviewQueue[0].analysis.status, 'interrupted');
   await service.tick();
   assert.equal(calls, 1, 'a stopped scheduler must not begin another tick');
 });
@@ -177,6 +186,37 @@ test('a failed newest document is cooled down while an older document can finish
   assert.equal(result.lastRun.status, 'complete');
   await service.tick();
   assert.equal(calls, 2, 'the failed unchanged document must not be retried during cooldown');
+});
+
+test('failed analysis remains cooled down after a service restart and retains its error state', async t => {
+  const f=await fixture(t);let calls=0;
+  const ai={getAIEnabled:()=>true,getAIConfig:()=>({model:'fixture'}),isValidApiKey:()=>true,
+    callAIModel:async()=>{calls++;throw new Error('model unavailable');}};
+  const first=createCreatorIndustryService({...f,ai});
+  await assert.rejects(first.run(4),/model unavailable/);
+  assert.equal(calls,1);
+  const restarted=createCreatorIndustryService({...f,ai});
+  assert.equal((await restarted.read(4)).reviewQueue[0].analysis.status,'failed');
+  assert.equal((await restarted.run(4)).status,'idle');
+  assert.equal(calls,1,'a restart must not immediately recharge the failed text');
+});
+
+test('an interrupted in-flight analysis leaves a resumable, cooldown-protected attempt record', async t => {
+  const f=await fixture(t);let release,entered;
+  const started=new Promise(resolve=>{entered=resolve;});
+  const response=new Promise(resolve=>{release=resolve;});
+  const ai={getAIEnabled:()=>true,getAIConfig:()=>({model:'fixture'}),isValidApiKey:()=>true,
+    callAIModel:async()=>{entered();return response;}};
+  const service=createCreatorIndustryService({...f,ai});
+  const running=service.run(4);await started;
+  const attemptFile=path.join(f.directory,'author-4-attempts.json');
+  const saved=JSON.parse(await fs.readFile(attemptFile,'utf8'));
+  assert.equal(Object.values(saved.attempts)[0].status,'running');
+  service.stop();release(JSON.stringify(f.proposal()));
+  await assert.rejects(running);
+  const restarted=createCreatorIndustryService({...f,ai});
+  assert.equal((await restarted.read(4)).reviewQueue[0].analysis.status,'interrupted');
+  assert.equal((await restarted.run(4)).status,'idle');
 });
 
 test('stop issued before the first request prevents a pending context read from starting AI work', async t => {
@@ -253,4 +293,43 @@ test('reads the original transcript and marks pre-gate records as legacy without
   assert.equal(document.transcript, f.rows[0].transcript);
   assert.equal(document.bodyHash, documentHash(f.rows[0]));
   assert.equal(document.segments.length, 1);
+});
+
+test('reviewing archived note OCR retains raw pages and admits only the approved text', async t => {
+  const f = await fixture(t);
+  f.rows[0] = { ...f.rows[0], externalKey:'douyin:note:1', mediaType:'note', transcript:'',
+    description:'作者配文', content:'作者配文：\n作者配文\n\n【图片 1 · OCR 待校对】\n保偏光纤用于光引擎的激光传输。',
+    mediaMetadata:{note:{status:'needs_review',imageCount:1,pages:[{index:1,status:'recognized',
+      text:'保偏光纤用于光引擎的激光传输。',rawText:'保偏光纤用于光引擎的激光传输。',
+      sha256:'a'.repeat(64),localAssetPath:'archived.png',mimeType:'image/png'}]}} };
+  const service = createCreatorIndustryService(f), before = documentHash(f.rows[0]);
+  f.media.resolveNoteImage=()=>{throw new Error('原图文件缺失');};
+  assert.throws(()=>service.reviewSource(4,1,{bodyHash:before,confirmed:true,pages:[{index:1,sha256:'a'.repeat(64),text:'保偏光纤用于光引擎的激光传输。'}]}),/原图/);
+  f.media.resolveNoteImage=()=>({});
+  assert.throws(()=>service.reviewSource(4,1,{bodyHash:before,confirmed:true,pages:[{index:1,sha256:'b'.repeat(64),text:'改写'}]}),/原图/);
+  assert.equal((await service.read(4)).readyCount,0);
+  const reviewed = await service.reviewSource(4,1,{bodyHash:before,confirmed:true,pages:[{index:1,sha256:'a'.repeat(64),text:'保偏光纤用于光引擎的激光传输。'}]});
+  assert.equal(reviewed.status,'ready');
+  assert.equal(f.rows[0].mediaMetadata.note.status,'reviewed');
+  assert.equal(f.rows[0].mediaMetadata.note.pages[0].rawText,'保偏光纤用于光引擎的激光传输。');
+  assert.equal(f.rows[0].mediaMetadata.note.review.sourceBodyHash,before);
+  assert.throws(()=>service.reviewSource(4,1,{bodyHash:before,confirmed:true,pages:[{index:1,sha256:'a'.repeat(64),text:'错误'}]}),/文稿已变化/);
+});
+
+test('reviewing an archived ASR correction preserves the machine transcript and releases only reviewed text', async t => {
+  const f = await fixture(t);
+  f.rows[0].externalKey='douyin:video:1';
+  f.rows[0].mediaMetadata.asr={status:'needs_review',rawTranscript:f.rows[0].transcript,
+    mediaSha256:'c'.repeat(64),localAssetPath:'archived.mp4',quality:{needsReview:true}};
+  const service=createCreatorIndustryService(f), before=documentHash(f.rows[0]);
+  assert.equal((await service.read(4)).readyCount,0);
+  assert.throws(()=>service.reviewSource(4,1,{bodyHash:before,confirmed:true,text:'没有原始媒体也可凭空审核'}),/原始媒体/);
+  const reviewed=await service.reviewSource(4,1,{bodyHash:before,confirmed:true,mediaSha256:'c'.repeat(64),
+    text:'保偏光纤用于光引擎的激光传输。保偏光纤用于光引擎的激光传输。'});
+  assert.equal(reviewed.status,'ready');
+  assert.equal(f.rows[0].mediaMetadata.asr.status,'needs_review');
+  assert.equal(f.rows[0].mediaMetadata.asr.manualReview.sourceBodyHash,before);
+  assert.equal((await service.read(4)).readyCount,1);
+  f.rows[0].transcript+=' 新的识别内容';
+  assert.equal((await service.read(4)).reviewQueue[0].status,'asr_review_required');
 });

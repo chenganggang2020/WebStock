@@ -221,6 +221,31 @@ test('low-confidence transcription persists raw evidence and review metadata', (
   assert.equal(saved.mediaMetadata.asr.segments[0].rawText, '宇宿科技上市一周國家搖轉。');
 });
 
+test('retranscribing the same archived video preserves a manual correction, but changed media revokes it', () => {
+  const profileUrl='https://www.douyin.com/user/manual-asr-source-test',contentId='7930000000000000099';
+  const channel=channels.createChannel({channelKey:'manual-asr-source-test',displayName:'ASR 校对作者',platform:'douyin',profileUrl});
+  importCapturedPage(channel.id,{pageType:'profile',pageUrl:profileUrl,loggedIn:true,
+    profile:{displayName:'ASR 校对作者',profileUrl,workCount:1},
+    items:[{contentId,sourceUrl:'https://www.douyin.com/video/'+contentId,title:'manual item'}]});
+  const input={status:'needs_review',transcript:'保偏光纤用于光引擎的激光传输。保偏光纤用于光引擎的激光传输。',
+    quality:{needsReview:true},localAssetPath:'D:/archive/'+contentId+'.mp4',mediaSha256:'c'.repeat(64),mediaBytes:900};
+  applyTranscription(channel.id,contentId,input);
+  let row=channels.findObservationByIdentity(channel.id,{externalContentId:contentId});
+  const {createCreatorIndustryService,documentHash}=require('../services/creatorIndustryService');
+  const service=createCreatorIndustryService({directory:path.join(os.tmpdir(),'unused-manual-asr'),channels,
+    media:{resolveVideo:()=>({})}});
+  const corrected='保偏光纤用于光引擎的激光传输，并用于稳定传递激光信号；这一用途仍需结合公司资料核对。';
+  service.reviewSource(channel.id,row.id,{bodyHash:documentHash(row),confirmed:true,mediaSha256:'c'.repeat(64),text:corrected});
+  applyTranscription(channel.id,contentId,{...input,transcript:input.transcript+' 自动重识别'});
+  row=channels.getObservation(channel.id,row.id);
+  assert.equal(row.transcript,corrected);
+  assert.equal(row.mediaMetadata.asr.manualReview.approvedBodyHash,documentHash(row));
+  applyTranscription(channel.id,contentId,{...input,mediaSha256:'d'.repeat(64),transcript:input.transcript+' 新媒体'});
+  row=channels.getObservation(channel.id,row.id);
+  assert.equal(row.mediaMetadata.asr.manualReview,undefined);
+  assert.equal(row.transcript,input.transcript+' 新媒体');
+});
+
 test('a no-speech ASR result preserves the archived video without inventing a transcript', () => {
   const profileUrl = 'https://www.douyin.com/user/no-speech-source-test';
   const contentId = '7930000000000000003';

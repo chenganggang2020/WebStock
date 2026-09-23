@@ -2,6 +2,7 @@ const expertChannels = require('./expertChannelService');
 const { normalizeDouyinPageSnapshot } = require('../electron/douyinPageCapture');
 const { analyzeInvestmentText } = require('./investmentSignalService');
 const { materialFingerprint } = require('./douyinSyncPlanningService');
+const crypto = require('node:crypto');
 
 const URL_PATTERN = /https?:\/\/[^\s<>"']+/gi;
 const TRAILING_PUNCTUATION = /[)\]}>，。；;！？!?、]+$/u;
@@ -562,6 +563,13 @@ function applyTranscription(channelId, contentId, result = {}) {
   const transcript = String(result.transcript || '').trim();
   if (!transcript) throw new Error('语音识别结果为空。');
   const asr = sanitizedAsrMetadata(result);
+  const reviewed = existing.mediaMetadata?.asr?.manualReview;
+  if (reviewed && reviewed.mediaSha256 === asr.mediaSha256 &&
+      reviewed.approvedBodyHash === crypto.createHash('sha256').update(existing.transcript || '').digest('hex')) {
+    // A repeat ASR pass over the same archived media is not allowed to replace a human correction.
+    return expertChannels.recordObservation(channel.id, { externalKey: existing.externalKey,
+      mediaMetadata: { ...existing.mediaMetadata, lastAsrAttempt: asr }, lastSeenAt: asr.transcribedAt });
+  }
   const transcriptHistory = [...(existing.mediaMetadata?.transcriptHistory || [])];
   if (existing.transcript && existing.transcript !== transcript) {
     transcriptHistory.push({ text: existing.transcript, asr: existing.mediaMetadata?.asr || {} });
@@ -644,6 +652,15 @@ function applyNoteResult(channelId, contentId, result = {}) {
   const previous = existing.mediaMetadata && existing.mediaMetadata.note;
   const previousPages = previous && previous.pages || [];
   const attempt = JSON.parse(JSON.stringify(note));
+  if (previous?.status === 'reviewed' && note.status === 'needs_review' &&
+      note.imageCount === previous.imageCount && note.pages.length === previousPages.length &&
+      note.pages.every((page, index) => page.index === previousPages[index].index &&
+        /^[a-f0-9]{64}$/.test(page.sha256) && page.sha256 === previousPages[index].sha256)) {
+    // Re-running OCR on the same archived images must not discard human corrections.
+    note.pages = previousPages;
+    note.status = 'reviewed';
+    note.review = previous.review;
+  }
   // An unsuccessful refresh must not erase earlier images or recognized text.
   if (previous && note.status==='partial') {
     note.imageCount=Math.max(note.imageCount,previous.imageCount||0);
@@ -656,7 +673,7 @@ function applyNoteResult(channelId, contentId, result = {}) {
     });
   }
   const content = [existing.description ? '作者配文：\n'+existing.description : '',
-    ...note.pages.filter(page=>page.text).map(page=>'【图片 '+page.index+' · OCR 待校对】\n'+page.text)].filter(Boolean).join('\n\n');
+    ...note.pages.filter(page=>page.text).map(page=>'【图片 '+page.index+' · OCR '+(note.status==='reviewed'?'已校对':'待校对')+'】\n'+page.text)].filter(Boolean).join('\n\n');
   const history = (existing.mediaMetadata && existing.mediaMetadata.noteHistory || []).slice();
   const pageSignature=pages=>JSON.stringify(pages.map(page=>[page.index,page.sha256,page.text]));
   if (previousPages.some(page=>page.text) && pageSignature(previousPages)!==pageSignature(note.pages)) history.push(previous);

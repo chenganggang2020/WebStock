@@ -57,12 +57,38 @@
   function creatorReviewRows(data) {
     return (data?.reviewQueue || []).slice().sort((a,b)=>(Date.parse(b.publishedAt)||0)-(Date.parse(a.publishedAt)||0));
   }
+  function creatorAttemptLabel(item) {
+    if(item.status!=='ready') return '待补原文';
+    const attempt=item.analysis || {};
+    if(attempt.status==='complete') return '候选已提取';
+    if(attempt.status==='running') return '后台分析中';
+    if(attempt.status==='failed' || attempt.status==='interrupted') return '等待重试'+(attempt.nextRetryAt?' · '+time(attempt.nextRetryAt):'');
+    return '待提取候选';
+  }
+  function creatorReviewRequest(document, edits) {
+    const request={bodyHash:document.bodyHash,confirmed:edits.confirmed===true};
+    if(document.mediaType==='note') request.pages=(document.note?.pages || []).map(page=>({index:page.index,
+      sha256:page.sha256,text:String(edits.pages?.find(item=>item.index===page.index)?.text || '')}));
+    else {request.mediaSha256=document.asr?.mediaSha256;request.text=String(edits.text || '');}
+    return request;
+  }
+  function companyFactView(code, profile, quote) {
+    const validProfile=profile?.code===code && profile.source==='Eastmoney F10';
+    const validQuote=quote?.code===code && Number(quote.price)>0 && Number(quote.prevClose)>0 && quote.quoteStatus!=='unavailable';
+    return {code,name:validProfile?profile.name || '':'',businessSummary:validProfile?profile.businessSummary || '':'',
+      mainBusinessItems:validProfile && Array.isArray(profile.mainBusinessItems)?profile.mainBusinessItems:[],
+      boards:validProfile && Array.isArray(profile.boards)?profile.boards:[],profileFetchedAt:validProfile?profile.fetchedAt || null:null,
+      profileUrl:validProfile?profile.sourceUrl || '':'',profileCoverage:validProfile?'partial-f10':'unavailable',
+      price:validQuote?Number(quote.price):null,changePct:validQuote?(Number(quote.price)/Number(quote.prevClose)-1)*100:null,
+      quoteStatus:validQuote?quote.quoteStatus:'unavailable',tradeDate:validQuote?quote.tradeDate || null:null,
+      quoteFetchedAt:validQuote?quote.fetchedAt || null:null,marketCap:null};
+  }
   function directoryEntries(catalog,topics,creators) {
     return (creators || []).map(item=>({key:'creator:'+item.id,id:item.id,name:item.displayName+' · 文稿关系',kind:'creator'}))
       .concat((catalog || []).map(item=>({key:'chain:'+item.id,id:item.id,name:item.name,kind:'chain'})))
       .concat((topics || []).map(item=>({key:'research:'+item.id,id:item.id,name:item.name,kind:'research',enabled:item.enabled})));
   }
-  const state = {mounted:false,catalog:[],topics:[],creators:[],entry:null,view:'graph',rows:[],selected:'',document:null,creatorChart:null,detail:null,result:null,loading:false,error:'',stage:'',management:false,sequence:0,drafts:new Map()};
+  const state = {mounted:false,catalog:[],topics:[],creators:[],entry:null,view:'graph',rows:[],selected:'',document:null,creatorChart:null,detail:null,result:null,loading:false,error:'',stage:'',management:false,sequence:0,drafts:new Map(),companyFacts:new Map()};
   const el = id => root?.document.getElementById(id);
   const time = value => {
     if (!value) return '时间未提供';
@@ -99,6 +125,19 @@
       else if (button.dataset.iwObservation) selectObservation(button.dataset.iwObservation).catch(showError);
       else if (button.dataset.iwView) setView(button.dataset.iwView);
       else if (button.dataset.iwAction) {
+        if (button.dataset.iwAction === 'approve-source') {
+          const document=state.document, key=state.entry?.key, channelId=state.entry?.id;
+          if (!document || state.entry?.kind!=='creator') return;
+          const panel=el('iwEvidence'), confirmed=panel.querySelector('[data-iw-review-confirm]')?.checked===true;
+          if (!confirmed) {showError(new Error('请先对照已归档的原始音视频或图片，勾选确认后再保存。'));return;}
+          const edits={confirmed,pages:Array.from(panel.querySelectorAll('[data-iw-review-page]')).map(field=>({index:Number(field.dataset.iwReviewPage),text:field.value})),
+            text:panel.querySelector('[data-iw-review-text]')?.value || ''};
+          button.disabled=true;
+          root.apiFetch('/api/industry-chain/creators/'+channelId+'/observations/'+document.observationId+'/review',{
+            method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(creatorReviewRequest(document,edits))
+          }).then(async()=>{if(state.entry?.key!==key)return;await selectEntry(key);await selectObservation(document.observationId);})
+            .catch(showError).finally(()=>{button.disabled=false;});return;
+        }
         if (button.dataset.iwAction === 'analyze-creator') {
           const key = state.entry.key;
           button.disabled = true;
@@ -150,7 +189,7 @@
         const data=await root.apiFetch('/api/industry-chain/creators/'+entry.id);
         if(sequence!==state.sequence) return;
         state.detail=data;state.rows=creatorRows(data);state.selected=state.rows[0]?.key || '';state.loading=false;
-        el('industryResearchStatus').textContent='新流程已分析 '+data.analyzedCount+' / 可提取候选文稿 '+data.readyCount+' / 待复核 '+data.blockedCount+' / 作品 '+data.totalCount+'；旧记录 '+data.legacyCount+' 篇保留待重审；'+(data.aiConfigured?'AI 接口已配置': 'AI 接口未配置，自动分析待配置')+(data.lastRun?'；'+({running:'后台分析中',failed:'上次分析失败，原文与已有关系保留',complete:'上次分析完成',idle:'本轮没有待处理正文',stopped:'分析已停止',ai_not_configured:'等待配置AI'}[data.lastRun.status] || data.lastRun.status):'');
+        el('industryResearchStatus').textContent='新流程已分析 '+data.analyzedCount+' / 可提取候选文稿 '+data.readyCount+' / 待复核 '+data.blockedCount+' / 作品 '+data.totalCount+'；旧记录 '+data.legacyCount+' 篇保留待重审；'+(data.aiConfigured?'AI 接口已配置': 'AI 接口未配置，自动分析待配置')+(data.lastRun?'；'+({running:'后台分析中',failed:'上次分析失败，原文与已有关系保留',interrupted:'上次分析中断，稍后可重试',complete:'上次分析完成',idle:'本轮没有待处理正文',stopped:'分析已停止',ai_not_configured:'等待配置AI'}[data.lastRun.status] || data.lastRun.status):'');
       }
       else if (entry.kind==='research') await root.IndustryChain.selectResearchTopic(entry.id);
       else {
@@ -227,7 +266,7 @@
     if(state.loading) {el('iwContent').innerHTML='<div class="iw-empty">正在读取当前主题…</div>';return;}
     if(state.entry?.kind==='creator' && state.view==='review') {
       const documents=creatorReviewRows(state.detail);
-      el('iwContent').innerHTML=documents.length?'<table class="iw-table"><thead><tr><th>作品 / 日期</th><th>媒介</th><th>准入状态</th></tr></thead><tbody>'+documents.map(item=>'<tr><td><button type="button" data-iw-observation="'+escape(item.observationId)+'"><strong>'+escape(item.title || '未命名作品')+'</strong><small>'+escape(time(item.publishedAt))+'</small></button></td><td>'+escape(item.mediaType==='note'?'图文':'视频')+'</td><td>'+escape(CREATOR_STATUS[item.status] || item.status)+'</td></tr>').join('')+'</tbody></table>':'<div class="iw-empty">尚无已采集作品</div>';
+      el('iwContent').innerHTML=documents.length?'<table class="iw-table"><thead><tr><th>作品 / 日期</th><th>媒介</th><th>准入状态</th><th>后台任务</th></tr></thead><tbody>'+documents.map(item=>'<tr><td><button type="button" data-iw-observation="'+escape(item.observationId)+'"><strong>'+escape(item.title || '未命名作品')+'</strong><small>'+escape(time(item.publishedAt))+'</small></button></td><td>'+escape(item.mediaType==='note'?'图文':'视频')+'</td><td>'+escape(CREATOR_STATUS[item.status] || item.status)+'</td><td>'+escape(creatorAttemptLabel(item))+'</td></tr>').join('')+'</tbody></table>':'<div class="iw-empty">尚无已采集作品</div>';
     } else if(state.entry?.kind==='creator' && state.view!=='graph' && rows.length) {
       el('iwContent').innerHTML='<table class="iw-table"><thead><tr><th>实体关系</th><th>主题</th><th>发布日期</th><th>状态</th></tr></thead><tbody>'+rows.map(row=>'<tr data-iw-selected="'+(row.key===state.selected)+'"><td><button type="button" data-iw-row="'+escape(row.key)+'"><strong>'+escape(row.from)+' → '+escape(row.to)+'</strong><small>'+escape(row.relation)+'</small></button></td><td>'+escape(row.topic)+'</td><td>'+escape(time(row.publishedAt))+'</td><td>'+escape(row.polarity==='contradicts'?'相反观点':'作者观点')+'</td></tr>').join('')+'</tbody></table>';
     } else if(state.entry?.kind==='creator') {
@@ -294,6 +333,32 @@
       '<details><summary>完整来源与引用详情</summary><p>'+escape(group.title)+'</p>'+group.fragments.map(fragment=>'<p>证据：'+escape(fragment.evidenceId || fragment.id || '未提供')+'<br>发布：'+escape(time(fragment.publishedAt || fragment.observedAt))+'<br>取回：'+escape(time(fragment.fetchedAt))+'<br>哈希：'+escape(fragment.contentSha256 || '未提供')+'</p>').join('')+
       (group.url?'<a href="'+escape(group.url)+'" target="_blank" rel="noopener noreferrer">打开来源原文 ↗</a>':'<p>未提供可用原文地址</p>')+'</details></details>';
   }
+  function companyFactsHtml(row) {
+    if(state.entry?.kind==='creator' || !/^\d{6}$/.test(row.code || '')) return '';
+    const code=row.code, cached=state.companyFacts.get(code);
+    if(!cached) {
+      state.companyFacts.set(code,{status:'loading'});
+      Promise.allSettled([
+        root.apiFetch('/api/stock-tags?codes='+encodeURIComponent(code)+'&detail=1'),
+        root.apiFetch('/api/quote/snapshot?codes='+encodeURIComponent(code))
+      ]).then(results=>{
+        const profile=results[0].status==='fulfilled'?results[0].value?.[0]:null;
+        const quote=results[1].status==='fulfilled'?results[1].value?.[0]:null;
+        state.companyFacts.set(code,{status:'complete',facts:companyFactView(code,profile,quote)});
+        if(state.rows.find(item=>item.key===state.selected)?.code===code) renderReader();
+      }).catch(()=>{state.companyFacts.set(code,{status:'error'});});
+      return '<section class="iw-company-facts"><h4>公司资料与行情快照</h4><p>正在读取已绑定证券资料…</p></section>';
+    }
+    if(cached.status==='loading') return '<section class="iw-company-facts"><h4>公司资料与行情快照</h4><p>正在读取已绑定证券资料…</p></section>';
+    if(cached.status!=='complete') return '<section class="iw-company-facts"><h4>公司资料与行情快照</h4><p>资料暂不可用。</p></section>';
+    const facts=cached.facts;
+    const business=facts.businessSummary?escape(facts.businessSummary):'主营业务资料缺失';
+    const items=facts.mainBusinessItems.length?facts.mainBusinessItems.map(item=>escape(item.name)+(Number.isFinite(Number(item.ratio))?' '+escape(item.ratio)+'%':'')+'（'+escape(item.reportDate || '报告日期未提供')+'）').join('、'):'主营构成未提供';
+    const boards=facts.boards.length?facts.boards.map(escape).join('、'):'概念标签未提供';
+    const quoteLabel={live:'盘中',auction:'竞价',stale:'可能过期','latest-close':'最近收盘'}[facts.quoteStatus] || '不可用';
+    const movement=facts.changePct===null?'涨跌幅不可用':escape(facts.price)+' · '+(facts.changePct>=0?'+':'')+facts.changePct.toFixed(2)+'% · '+escape(facts.tradeDate || '交易日未提供')+' · '+quoteLabel;
+    return '<section class="iw-company-facts"><h4>公司资料与行情快照</h4><p>主营：'+business+'</p><p>主营构成：'+items+'</p><p>已取得概念/板块：'+boards+'（现有 F10 缓存最多 24 项，非全量）</p><p>最近行情：'+movement+'</p><p>总市值：数据源未提供，暂不显示数值；产业梯队：未核定</p><small>公司资料：'+escape(facts.profileCoverage==='partial-f10'?'东方财富 F10':'未取得')+' · '+escape(time(facts.profileFetchedAt))+'；行情：'+escape(time(facts.quoteFetchedAt))+'。资料按当前代码展示，不代表产业关系已核验。</small></section>';
+  }
   function renderReader() {
     if(!state.mounted) return;
     el('iwEvidence').hidden=state.management;el('iwManagement').hidden=!state.management;el('iwCloseManage').hidden=!state.management;
@@ -305,10 +370,17 @@
     if(state.entry?.kind==='creator' && state.document) {
       const document=state.document;
       const url=safeUrl(document.sourceUrl);
+      const base='/api/expert/channels/'+encodeURIComponent(state.entry.id)+'/observations/'+encodeURIComponent(document.observationId);
+      const noteReview=document.status==='note_review_required' && document.note?.pages?.length && document.note.pages.every(page=>page.imageAvailable);
+      const videoReview=document.status==='asr_review_required' && document.mediaAvailable && document.asr?.mediaSha256;
+      const review=noteReview?'<details class="iw-source-review" open><summary>逐页校对图文原文</summary>'+
+        document.note.pages.map(page=>'<div><strong>图片 '+escape(page.index)+'</strong><img loading="lazy" src="'+base+'/images/'+encodeURIComponent(page.index)+'" alt="第 '+escape(page.index)+' 张归档原图"><textarea data-iw-review-page="'+escape(page.index)+'" aria-label="图片 '+escape(page.index)+' 校对文字">'+escape(page.text)+'</textarea></div>').join('')+
+        '<label><input type="checkbox" data-iw-review-confirm> 我已对照每张原图核对文字；这只批准文稿，不核实产业关系</label><button type="button" data-iw-action="approve-source">保存校对</button></details>':
+        videoReview?'<details class="iw-source-review" open><summary>校对音频转写</summary><video controls preload="none" src="'+base+'/media"></video><textarea data-iw-review-text aria-label="校对后的完整口播">'+escape(document.transcript)+'</textarea><label><input type="checkbox" data-iw-review-confirm> 我已对照归档视频核对口播；这只批准文稿，不核实产业关系</label><button type="button" data-iw-action="approve-source">保存校对</button></details>':'';
       el('iwEvidence').innerHTML='<h3>'+escape(document.title || '完整文稿')+'</h3><p>'+escape(CREATOR_STATUS[document.status] || document.status)+' · '+escape(time(document.publishedAt))+'</p><p>文稿哈希：'+escape(document.bodyHash)+'</p>'+
         (document.asr?'<p>转写：'+escape(document.asr.model || '模型未记录')+' · '+escape(time(document.asr.transcribedAt))+'；自动转写不等于人工听校。</p>':'')+
         (url?'<p><a href="'+escape(url)+'" target="_blank" rel="noopener noreferrer">打开作品原页 ↗</a></p>':'')+
-        '<pre class="iw-full-transcript">'+escape(document.transcript || '暂无可读正文')+'</pre>';
+        '<pre class="iw-full-transcript">'+escape(document.transcript || '暂无可读正文')+'</pre>'+review;
       return;
     }
     if(state.error) {el('iwEvidence').innerHTML='<div class="iw-empty">资料尚未读入，暂不能核对证据。</div>';el('iwManagementHint').textContent='当前主题读取失败，请重新读取后编辑来源。';return;}
@@ -326,7 +398,7 @@
     const original=row.original;
     const review=research && ['candidate','verified'].includes(row.status)?'<div class="industry-research-review"><label><input type="checkbox" data-research-read="'+escape(row.key)+'"> 我已阅读原文</label><textarea data-research-note="'+escape(row.key)+'" aria-label="核验说明" placeholder="核验说明（必填）"></textarea>'+(row.status==='candidate'?'<button type="button" data-research-review="'+escape(row.key)+'" data-research-decision="verify">通过核验</button>':'')+'<button type="button" data-research-review="'+escape(row.key)+'" data-research-decision="dispute">标记争议</button></div>':'';
     const metrics=(original.metrics || []).map(m=>'<p>'+escape(m.name)+'：'+escape(m.value==null?'待补充':m.value)+' '+escape(m.unit || '')+' · '+escape(m.scope || '范围未提供')+'</p>').join('');
-    el('iwEvidence').innerHTML='<h3>'+escape(state.entry?.kind==='creator'?row.from+' → '+row.to:row.product || row.company)+'</h3><p>'+escape(state.entry?.kind==='creator'?row.author:row.company+' '+row.code)+'</p><span class="iw-state '+row.status+'">'+STATUS[row.status]+'</span><p>'+escape(state.entry?.kind==='creator'?row.topic:STAGES[row.stage] || '环节待核验')+' · '+escape(time(row.observedAt))+'</p>'+
+    el('iwEvidence').innerHTML='<h3>'+escape(state.entry?.kind==='creator'?row.from+' → '+row.to:row.product || row.company)+'</h3><p>'+escape(state.entry?.kind==='creator'?row.author:row.company+' '+row.code)+'</p><span class="iw-state '+row.status+'">'+STATUS[row.status]+'</span><p>'+escape(state.entry?.kind==='creator'?row.topic:STAGES[row.stage] || '环节待核验')+' · '+escape(time(row.observedAt))+'</p>'+companyFactsHtml(row)+
       (row.claim?'<p>'+escape(row.claim)+'</p>':'')+metrics+
       (row.reason?'<p>'+escape(root.IndustryChain.reasonLabel(row.reason))+'</p>':'')+
       (row.evidence.length?row.evidence.map(sourceHtml).join(''):'<p class="iw-empty">尚无可定位原文</p>')+
@@ -341,6 +413,6 @@
     const key=state.entry?.key || entries.find(e=>e.name===el('industryChainSearchInput')?.value)?.key || entries[0]?.key;
     if(key) await selectEntry(key);
   }
-  return {classificationRows,researchRows,creatorRows,creatorReviewRows,groupEvidence,stageLanes,directoryEntries,mount,setCatalog,setTopics,setResult,setDetail,setLoadError,loadSelected,
+  return {classificationRows,researchRows,creatorRows,creatorReviewRows,creatorAttemptLabel,creatorReviewRequest,companyFactView,groupEvidence,stageLanes,directoryEntries,mount,setCatalog,setTopics,setResult,setDetail,setLoadError,loadSelected,
     isMounted:()=>state.mounted, selectedKind:()=>state.entry?.kind,selectEntry};
 });

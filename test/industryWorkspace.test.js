@@ -62,3 +62,37 @@ test('creator review list exposes blocked source documents without treating them
   assert.equal(rows[0].status,'note_ocr_required');
   assert.equal(rows[1].status,'asr_review_required');
 });
+
+test('creator review request carries exact source identity and edited note pages, not an industry verdict', () => {
+  const document={mediaType:'note',bodyHash:'a'.repeat(64),note:{pages:[{index:1,sha256:'b'.repeat(64)}]}};
+  assert.deepEqual(workspace.creatorReviewRequest(document,{confirmed:true,pages:[{index:1,text:'人工校对文字'}]}),{
+    bodyHash:document.bodyHash,confirmed:true,pages:[{index:1,sha256:'b'.repeat(64),text:'人工校对文字'}]
+  });
+  assert.equal(workspace.creatorReviewRequest({mediaType:'video',bodyHash:'c'.repeat(64),asr:{mediaSha256:'d'.repeat(64)}},
+    {confirmed:true,text:'校对口播'}).mediaSha256,'d'.repeat(64));
+});
+
+test('creator attempt labels distinguish retry cooldown from completed source review', () => {
+  assert.match(workspace.creatorAttemptLabel({status:'ready',analysis:{status:'failed',nextRetryAt:'2026-09-23T04:00:00Z'}}),/重试/);
+  assert.equal(workspace.creatorAttemptLabel({status:'note_ocr_required',analysis:{status:'pending'}}),'待补原文');
+  assert.equal(workspace.creatorAttemptLabel({status:'ready',analysis:{status:'complete'}}),'候选已提取');
+});
+
+test('company facts expose only sourced business and dated quote fields', () => {
+  const view=workspace.companyFactView('600584',{
+    code:'600584',source:'Eastmoney F10',businessSummary:'集成电路封装测试',
+    boards:['半导体','先进封装'],mainBusinessItems:[{name:'封测',ratio:80,reportDate:'2026-06-30'}],
+    fetchedAt:'2026-09-20T01:00:00.000Z'
+  },{code:'600584',price:50,prevClose:48,quoteStatus:'latest-close',tradeDate:'2026-09-22',fetchedAt:'2026-09-22T07:00:00.000Z'});
+  assert.equal(view.businessSummary,'集成电路封装测试');
+  assert.ok(Math.abs(view.changePct-4.166666666666667)<1e-10);
+  assert.equal(view.marketCap,null);
+  assert.equal(view.profileCoverage,'partial-f10');
+  assert.equal(view.quoteStatus,'latest-close');
+  assert.deepEqual(view.boards,['半导体','先进封装']);
+  const missing=workspace.companyFactView('600584',{code:'600584',name:'长电科技'},
+    {code:'600584',price:0,prevClose:0,quoteStatus:'unavailable'});
+  assert.equal(missing.businessSummary,'');
+  assert.equal(missing.changePct,null);
+  assert.equal(missing.profileCoverage,'unavailable');
+});

@@ -44,6 +44,10 @@
 .iw-source {padding:8px 0;border-bottom:1px solid var(--border)}.iw-source summary {font-weight:600;cursor:pointer;overflow-wrap:anywhere}
 .iw-reader blockquote {border-left:3px solid var(--accent);background:var(--hover);padding:10px;margin:8px 0;font-size:12px}
 .iw-full-transcript {white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;line-height:1.7;background:var(--hover);border:1px solid var(--border);padding:10px;max-height:none}
+.iw-source-review {margin-top:12px;border-top:1px solid var(--border);padding-top:8px}.iw-source-review summary {font-weight:600;cursor:pointer}
+.iw-source-review>div {display:grid;gap:5px;margin:10px 0}.iw-source-review img,.iw-source-review video {display:block;width:100%;max-height:260px;object-fit:contain;background:var(--hover)}
+.iw-source-review textarea {display:block;width:100%;min-height:110px;resize:vertical;font:inherit}.iw-source-review label {display:block;margin:10px 0;color:var(--text-secondary)}
+.iw-company-facts {margin:10px 0;padding:9px;border:1px solid var(--border);background:var(--hover)}.iw-company-facts h4 {margin:0 0 6px}.iw-company-facts p {margin:5px 0;overflow-wrap:anywhere}.iw-company-facts small {color:var(--text-secondary)}
 #iwManagementFields {display:grid;gap:8px}#iwManagement textarea {width:100%;min-height:110px}#iwManagement .industry-research-actions {display:flex;flex-wrap:wrap;gap:5px}
 #iwAuxiliary {flex:1;min-height:0;overflow:auto;padding:8px}#iwFooter {font-size:11px;color:var(--text-secondary);padding:7px 9px;border-top:1px solid var(--border);flex:none}
 @media(max-width:1400px){.fixed-terminal #industryChainView.industry-workspace.active {grid-template-columns:165px minmax(0,1fr)}.fixed-terminal #industryResearchDetail.iw-body {grid-template-columns:minmax(0,1fr) 280px}.iw-lanes {gap:12px}.iw-lane:not(:last-child)>header:after {right:-10px}}
