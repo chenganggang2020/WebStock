@@ -47,7 +47,8 @@ function createDarkStockService(options = {}) {
     const {date}=input;buildQuery({date});
     const codes=stockKeys(input.codes.join(','));
     const fresh=snapshot && snapshot.tradingDay===date && now()-snapshot.savedAt<300000;
-    if(!fresh && !pending && now()-lastAttempt>=(lastFailed?60000:300000)) {
+    const changedDate=snapshot && snapshot.tradingDay!==date && !lastFailed;
+    if(!fresh && !pending && (changedDate || now()-lastAttempt>=(lastFailed?60000:300000))) {
       lastAttempt=now();pendingDate=date;
       pending=scan(date).then(value=>{snapshot=value;lastFailed=false;}).catch(()=>{lastFailed=true;})
         .finally(()=>{pending=null;pendingDate=null;});
@@ -58,7 +59,7 @@ function createDarkStockService(options = {}) {
     return {version:'webstock.eastmoney-dark-stocks/v1',automaticTrading:false,tradingDay:date,
       source:snapshot.source,receivedAt:snapshot.receivedAt,scanStartedAt:snapshot.scanStartedAt,
       refreshIntervalSeconds:300,stale,coverage:snapshot.coverage,
-      rows:codes.filter(key=>snapshot.byKey.has(key)).map(key=>({...snapshot.byKey.get(key),key})),
+      rows:(input.all ? Array.from(snapshot.byKey.keys()) : codes.filter(key=>snapshot.byKey.has(key))).map(key=>({...snapshot.byKey.get(key),key})),
       missing:codes.filter(key=>!snapshot.byKey.has(key)),
       note:stale?'更新未完成，下方是旧快照；采集时刻不是行情时刻。':'逐页采集，不是同一时刻的全市场快照；未匹配不代表资金为零。'};
   }

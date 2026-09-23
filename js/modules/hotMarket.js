@@ -3,6 +3,13 @@ let selectedHotBoardIndex = 0;
 let hotSectorFocused = false;
 let pendingHotPaste = false;
 let hotFullRefreshScheduled = false;
+let hotReadingMode = 'day';
+let hotReadingSort = 'dailyChangePct';
+let hotAllBoards = null;
+let hotUseAllBoards = false;
+let hotTrendChart = null;
+let hotTrendSequence = 0;
+let hotSelectedTrendCode = '';
 
 function hotEscape(value) {
   return String(value == null ? '' : value)
@@ -14,18 +21,21 @@ function hotEscape(value) {
 }
 
 function hotFmtPct(value) {
+  if (value == null || value === '') return '--';
   const n = Number(value);
   if (!Number.isFinite(n)) return '--';
   return (n >= 0 ? '+' : '') + n.toFixed(2) + '%';
 }
 
 function hotFmtYi(value) {
+  if (value == null || value === '') return '--';
   const n = Number(value);
   if (!Number.isFinite(n)) return '--';
-  return (n / 100000000).toFixed(2) + '亿';
+  return Math.abs(n)<1e8 ? (n/1e4).toFixed(1)+'万' : (n / 100000000).toFixed(2) + '亿';
 }
 
 function hotPnlClass(value) {
+  if (value == null || value === '') return '';
   const n = Number(value);
   if (!Number.isFinite(n)) return '';
   return n >= 0 ? 'pnl-up' : 'pnl-down';
@@ -43,9 +53,16 @@ function hotStockLookup(stock) {
 }
 
 function hotBoards() {
-  return hotMarketOverview && hotMarketOverview.boards && Array.isArray(hotMarketOverview.boards.day)
+  const rows = hotUseAllBoards && hotAllBoards ? hotAllBoards : hotMarketOverview && hotMarketOverview.boards && Array.isArray(hotMarketOverview.boards.day)
     ? hotMarketOverview.boards.day
     : [];
+  const key = hotReadingMode === 'month' ? 'monthChangePct' : hotReadingSort;
+  return rows.slice().sort((a,b) => (b[key] == null ? -Infinity : Number(b[key])) - (a[key] == null ? -Infinity : Number(a[key])));
+}
+
+function hotRankLabel(board, index) {
+  const key = hotReadingMode === 'month' ? 'monthChangePct' : hotReadingSort;
+  return board[key] == null ? '— ' : (index + 1) + '. ';
 }
 
 function hotMetric(board) {
@@ -116,16 +133,18 @@ async function hotLoad(options) {
   const params = new URLSearchParams();
   if (options.refresh) params.set('refresh', '1');
   if (options.fast) params.set('fast', '1');
-  const previousIndex = selectedHotBoardIndex;
+  const previousCode = hotBoards()[selectedHotBoardIndex]?.code;
   const previousFocused = hotSectorFocused;
-  hotMarketOverview = await window.ApiClient.fetchJsonData('/api/hot-market/overview' + (params.toString() ? '?' + params.toString() : ''));
+  hotMarketOverview = await window.ApiClient.fetchJsonData('/api/hot-market/overview' + (params.toString() ? '?' + params.toString() : ''),{timeoutMs:60000});
+  if(hotUseAllBoards && options.refresh)await hotLoadAllBoards(true);
   const nextBoards = hotBoards();
-  selectedHotBoardIndex = options.silent ? Math.min(previousIndex, Math.max(0, nextBoards.length - 1)) : 0;
+  selectedHotBoardIndex = options.silent ? Math.max(0,nextBoards.findIndex(board=>board.code===previousCode)) : 0;
   hotSectorFocused = options.silent ? previousFocused : false;
   renderHotSidebar();
   renderHotBoard();
   hotSyncSearchMode();
   if (window.updateSidebarWorkspace) window.updateSidebarWorkspace();
+  if(hotSelectedTrendCode && hotBoards()[selectedHotBoardIndex]?.stocks?.some(stock=>stock.code===hotSelectedTrendCode))hotLoadTrend(hotSelectedTrendCode);
   if (options.backgroundFull && options.fast && !hotFullRefreshScheduled) {
     hotFullRefreshScheduled = true;
     setTimeout(function() {
@@ -239,30 +258,79 @@ function renderHotBoard() {
     return;
   }
   const selected = boards[Math.min(selectedHotBoardIndex, boards.length - 1)] || boards[0];
-  const selectedStocks = (selected.stocks && selected.stocks.length ? selected.stocks : hotMarketOverview.hotStocks || []).slice(0, 14);
-  const monthBoards = (hotMarketOverview.boards && hotMarketOverview.boards.month) || [];
-  const hotStocks = hotMarketOverview.hotStocks || [];
+  const selectedStocks = selected.stocks || [];
+  hotTrendSequence++;
+  if(hotTrendChart){hotTrendChart.dispose();hotTrendChart=null;}
   const errorLine = hotMarketOverview.degraded
     ? '<div class="provider-status">部分行情源暂不可用，以下仅展示当前仍可核验的数据。</div>'
     : '';
   box.innerHTML = '<div class="hot-board-head">' +
-    '<div><h3>今日热点</h3><p>热力图按日涨跌幅、成交额、活跃度和可用资金流综合绘制；点板块后右侧显示相关个股。</p></div>' +
+    '<div><h3>板块观察</h3><p>读取时间 '+hotEscape(window.WebStockTime?.formatDateTime(hotMarketOverview.generatedAt) || '未提供')+' · 当前 '+boards.length+' 个板块 · '+(hotUseAllBoards?'来源可用目录':'热点候选范围')+'</p></div>' +
     '<div class="hot-board-actions">' +
       '<button class="small-btn" data-hot-action="refresh">刷新数据</button>' +
       '<button class="small-btn primary" data-hot-action="ai">复制 GPT 提示词</button>' +
     '</div>' +
     '</div>' + errorLine +
-    '<section class="hot-board-panel compact-panel"><div class="hot-sidebar-title">板块热力图 TOP 6</div>' + renderHotHeatmap(boards, 6) + '</section>' +
-    '<div class="hot-market-columns">' +
-      '<section><h3>' + hotEscape(selected.name) + ' 个股</h3><div class="hot-stock-lines">' + selectedStocks.map(renderHotStockLine).join('') + '</div></section>' +
-      '<section><h3>当月持续性</h3><div class="hot-rank-list">' +
-      monthBoards.slice(0, 8).map(function(board, index) {
-        return '<div class="hot-rank-row"><strong>' + (index + 1) + '. ' + hotEscape(board.name) + '</strong>' +
-          '<span class="' + hotPnlClass(board.monthChangePct) + '">' + hotFmtPct(board.monthChangePct) + '</span>' +
-          '<span>' + (board.sampleDays || 0) + '天样本</span></div>';
-      }).join('') + '</div><h3>热门个股</h3><div class="hot-stock-lines compact-list">' + hotStocks.slice(0, 8).map(renderHotStockLine).join('') + '</div></section>' +
+    '<div class="reading-toolbar"><button data-hot-mode="day" aria-pressed="'+(hotReadingMode==='day')+'">当日增强</button><button data-hot-mode="month" aria-pressed="'+(hotReadingMode==='month')+'">多日持续</button>'+
+    '<button data-hot-action="allBoards">'+(hotUseAllBoards?'返回热点候选':'全部板块')+'</button>'+
+    '<label>当日排序 <select id="hotReadingSort">'+[['dailyChangePct','涨幅'],['mainNetInflow','资金净流入'],['amount','成交额']].map(([key,label])=>'<option value="'+key+'"'+(hotReadingSort===key?' selected':'')+'>'+label+'</option>').join('')+'</select></label><span id="hotReadingStatus" role="status"></span></div>'+
+    '<div class="hot-reading-grid">' +
+      '<section><div class="reading-table-scroll"><table class="hot-board-table"><thead><tr><th>板块 / 排名</th><th>当日涨幅</th><th>资金净额</th><th>成交额</th><th>多日表现</th></tr></thead><tbody>'+
+      boards.map((board,index)=>'<tr data-active="'+(index===selectedHotBoardIndex)+'"><td><button data-hot-sector-index="'+index+'">'+hotRankLabel(board,index)+hotEscape(board.name)+'</button><small>'+hotEscape(board.provider || board.kind || board.taxonomy || '')+'</small></td><td class="'+hotPnlClass(board.dailyChangePct)+'">'+hotFmtPct(board.dailyChangePct)+'</td><td class="'+hotPnlClass(board.mainNetInflow)+'">'+hotFmtYi(board.mainNetInflow)+'</td><td>'+hotFmtYi(board.amount)+'</td><td class="'+hotPnlClass(board.monthChangePct)+'">'+hotFmtPct(board.monthChangePct)+'<small>'+(board.sampleDays ? board.sampleDays+' 个日样本':'尚无日序列')+'</small></td></tr>').join('')+
+      '</tbody></table></div><p class="hot-detail-reason">当日增强按所选指标排序；多日持续按已取得日样本的区间涨幅排序。缺失资金不记为零。</p></section>'+
+      '<section><div class="reading-toolbar"><strong>'+hotEscape(selected.name)+' · 成分股</strong><button data-hot-action="members">读取更多成分股</button></div>'+
+      '<p class="hot-detail-reason">'+hotEscape((selected.rankReason || '涨幅、资金、成交额分别展示').replace(/\bnull\b/g,'—'))+(selected.sampleDays?' · '+hotEscape(selected.monthStart || '')+' 至 '+hotEscape(selected.monthEnd || '')+' · 上涨 '+(selected.upDays ?? '—')+'/'+selected.sampleDays+' 个日样本':'')+'</p>'+
+      '<div class="reading-table-scroll hot-members-scroll"><table class="hot-board-table"><thead><tr><th>股票</th><th>涨跌幅</th><th>资金净额</th><th>成交额</th><th>查看</th></tr></thead><tbody>'+
+      selectedStocks.map(stock=>'<tr><td><button data-hot-trend="'+hotEscape(stock.code)+'">'+hotEscape(stock.name || stock.code)+'</button><small>'+hotEscape(stock.code)+'</small></td><td class="'+hotPnlClass(stock.changePct)+'">'+hotFmtPct(stock.changePct)+'</td><td class="'+hotPnlClass(stock.mainNetInflow)+'">'+hotFmtYi(stock.mainNetInflow)+'</td><td>'+hotFmtYi(stock.amount)+'</td><td><button data-hot-stock="'+hotEscape(stock.code)+'">详情</button></td></tr>').join('')+
+      '</tbody></table>'+(selectedStocks.length?'':'<p class="reading-empty">尚未取得该板块成分股。点击读取，不使用其他板块股票替代。</p>')+'</div>'+
+      '<p id="hotTrendStatus" class="hot-detail-reason">点击股票名称，在此查看分时走势。</p><div id="hotSelectedTrend" class="hot-mini-trend"></div></section>'+
     '</div>';
   bindHotContainer(box);
+  const sort=document.getElementById('hotReadingSort');
+  if(sort)sort.onchange=()=>{hotReadingSort=sort.value;selectedHotBoardIndex=0;renderHotBoard();};
+}
+
+async function hotLoadAllBoards(refreshOnly=false) {
+  if(hotUseAllBoards && !refreshOnly){hotUseAllBoards=false;selectedHotBoardIndex=0;renderHotBoard();return;}
+  const status=document.getElementById('hotReadingStatus');if(status)status.textContent='正在读取行业与概念目录…';
+  const groups=await Promise.all(['industry','concept'].map(taxonomy=>window.ApiClient.fetchJsonData('/api/market/boards/snapshot?taxonomy='+taxonomy+(refreshOnly?'&refresh=1':''),{timeoutMs:60000})));
+  const existing=new Map((hotMarketOverview.boards?.day || []).concat(hotAllBoards || []).map(board=>[board.code,board]));
+  hotAllBoards=groups.flatMap(group=>group.items || []).map(board=>Object.assign({},existing.get(board.code),board,{dailyChangePct:board.changePct}));
+  if(!hotAllBoards.length)throw Error('板块目录暂不可用，保留热点候选');
+  hotUseAllBoards=true;if(!refreshOnly){selectedHotBoardIndex=0;renderHotBoard();}
+}
+
+async function hotLoadMembers() {
+  const board=hotBoards()[selectedHotBoardIndex];if(!board)return;
+  document.getElementById('hotReadingStatus').textContent='正在读取 '+board.name+' 成分股…';
+  const taxonomy=board.taxonomy || board.kind || 'industry';
+  const result=await window.ApiClient.fetchJsonData('/api/market/boards/constituents?'+new URLSearchParams({code:board.code,taxonomy}));
+  if (!result.items?.length) {
+    if (hotBoards()[selectedHotBoardIndex]?.code === board.code) {
+      document.getElementById('hotReadingStatus').textContent = '本次未取得成分股，保留已有结果。';
+    }
+    return;
+  }
+  board.stocks=result.items || [];
+  if(hotBoards()[selectedHotBoardIndex]?.code===board.code)renderHotBoard();
+}
+
+async function hotLoadTrend(code) {
+  const ticket=++hotTrendSequence;hotSelectedTrendCode=code;
+  const status=document.getElementById('hotTrendStatus');if(!status)return;
+  status.textContent=code+' · 正在读取分钟行情…';
+  if(hotTrendChart){hotTrendChart.dispose();hotTrendChart=null;}
+  try {
+    const envelope=await window.ApiClient.fetchApiEnvelope('/api/minute?code='+encodeURIComponent(code));
+    if(ticket!==hotTrendSequence)return;
+    const rows=Array.isArray(envelope.data)?envelope.data:[], target=document.getElementById('hotSelectedTrend');
+    if(!target || !rows.length){status.textContent=code+' · 暂无分钟数据';return;}
+    const model=window.RealtimeChartModel,axis=model.buildCompressedTradingAxis(rows),series=model.buildMinuteSeries(axis.times,rows);
+    hotTrendChart=window.echarts.init(target);
+    const option={animation:false,grid:{left:48,right:12,top:8,bottom:22},tooltip:{trigger:'axis'},xAxis:{type:'category',data:axis.times,boundaryGap:false,axisLabel:{fontSize:10,interval:(_,value)=>/:00$|:30$/.test(value)}},yAxis:{type:'value',scale:true,splitNumber:3,axisLabel:{fontSize:10}},series:[{type:'line',data:series.prices,showSymbol:false,connectNulls:false,lineStyle:{width:1.2,color:'#52a7ff'}}]};
+    hotTrendChart.setOption(window.ChartTheme ? window.ChartTheme.applyToOption(option) : option);
+    status.textContent=code+' · 分钟数据 '+(envelope.meta?.tradeDate || String(rows.at(-1).time).slice(0,10))+' · '+rows.length+' 个观测点';
+  }catch(error){if(ticket===hotTrendSequence)status.textContent=code+' · '+error.message;}
 }
 
 function bindHotContainer(container) {
@@ -273,9 +341,23 @@ function bindHotContainer(container) {
     const newsBtn = event.target.closest('[data-hot-news-index]');
     const themeQuery = event.target.closest('[data-theme-query]');
     try {
+      const mode=event.target.closest('[data-hot-mode]');
+      if(mode){
+        hotReadingMode=mode.dataset.hotMode;selectedHotBoardIndex=0;renderHotBoard();
+        if(hotReadingMode==='month' && !hotBoards().some(board=>board.sampleDays>0)) {
+          document.getElementById('hotReadingStatus').textContent='正在补读多日日线样本…';
+          await hotLoad({refresh:true,silent:true});
+          if(!hotBoards().some(board=>board.sampleDays>0))document.getElementById('hotReadingStatus').textContent='日序列来源暂不可用，未生成多日排名。';
+        }
+        return;
+      }
+      const trend=event.target.closest('[data-hot-trend]');
+      if(trend){await hotLoadTrend(trend.dataset.hotTrend);return;}
       if (action) {
         const name = action.getAttribute('data-hot-action');
-        if (name === 'refresh') await hotLoad({ refresh: true });
+        if (name === 'refresh') await hotLoad({ refresh: true, silent:true });
+        if (name === 'allBoards') await hotLoadAllBoards();
+        if (name === 'members') await hotLoadMembers();
         if (name === 'ai') await openHotAIHandoff(true);
         if (name === 'themeSearch') await runThemeSearch();
         if (name === 'clearFocus') {
@@ -305,7 +387,9 @@ function bindHotContainer(container) {
         renderHotBoard();
       }
     } catch (error) {
-      alert(error.message || '热点操作失败');
+      const status=document.getElementById('hotReadingStatus');
+      if(status)status.textContent=error.message || '热点操作失败';
+      else console.warn(error.message);
     }
   };
 }
@@ -342,7 +426,7 @@ function openHotNews(index) {
   if (!item) return;
   const overlay = ensureHotNewsModal();
   overlay.querySelector('#hotNewsModalTitle').textContent = item.title || '资讯详情';
-  overlay.querySelector('#hotNewsModalMeta').textContent = (item.source || 'WebStock') + ' · ' + (
+  overlay.querySelector('#hotNewsModalMeta').textContent = (item.source || '来源未注明') + ' · ' + (
     window.WebStockTime && window.WebStockTime.formatDateTime ? window.WebStockTime.formatDateTime(item.time) : (item.time || '')
   );
   overlay.querySelector('#hotNewsModalSummary').textContent = item.summary || '该资讯没有摘要。';
@@ -492,7 +576,7 @@ function bindHotMarket() {
   const searchInput = document.getElementById('searchInput');
   if (searchInput) searchInput.addEventListener('input', hotSyncSearchMode);
   window.addEventListener('focus', function() {
-    if (pendingHotPaste) showHotPasteHint('回到 WebStock 了。若已复制 GPT 回答，按 Enter 导入并整理。');
+    if (pendingHotPaste) showHotPasteHint('已回到工作台。若已复制 GPT 回答，按 Enter 导入并整理。');
   });
   document.addEventListener('keydown', function(event) {
     const hint = document.getElementById('hotPasteHint');

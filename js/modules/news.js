@@ -12,6 +12,8 @@ let sidebarNewsResult = null;
 let sidebarNewsLoading = false;
 const SIDEBAR_NEWS_CACHE_KEY = 'webstock.sidebar-news.v1';
 const pendingDiscoveryRequests = new Map();
+let newsArticleSequence = 0;
+let newsArticleController = null;
 
 function newsAppendMeta(query) {
   const params = new URLSearchParams(query || '');
@@ -65,7 +67,7 @@ function newsRelativeTime(value, now) {
 }
 
 function newsSourceLabel(item) {
-  const source = item && item.source ? String(item.source) : 'WebStock';
+  const source = item && item.source ? String(item.source) : '来源未注明';
   const provider = item && item.provider ? String(item.provider) : '';
   return provider && provider !== source ? source + ' · 经 ' + provider : source;
 }
@@ -89,7 +91,7 @@ function showNewsDetail(item) {
   const overlay = document.getElementById('newsDetailOverlay');
   if (!overlay || !item) return;
   document.getElementById('newsDetailTitle').textContent = item.title || '资讯详情';
-  document.getElementById('newsDetailMeta').textContent = [item.source || 'WebStock', newsFormatTime(item.time)].filter(Boolean).join(' | ');
+  document.getElementById('newsDetailMeta').textContent = [item.source || '来源未注明', newsFormatTime(item.time)].filter(Boolean).join(' | ');
   document.getElementById('newsDetailSummary').textContent = item.summary || '该资讯没有摘要。';
   const tags = []
     .concat(item.relatedStocks || [])
@@ -99,7 +101,36 @@ function showNewsDetail(item) {
     .join('');
   document.getElementById('newsDetailTags').innerHTML = tags;
   updateNewsOriginalButton(item);
-  overlay.style.display = 'flex';
+  const inline = window.FixedWorkspace && window.FixedWorkspace.placeNewsDetail();
+  overlay.style.display = inline ? 'none' : 'flex';
+  return loadNewsArticle(item);
+}
+
+async function loadNewsArticle(item) {
+  const requestId = ++newsArticleSequence;
+  if (newsArticleController) newsArticleController.abort();
+  const status = document.getElementById('newsArticleStatus');
+  const body = document.getElementById('newsArticleBody');
+  if (!status || !body) return;
+  const summary = document.getElementById('newsDetailSummary');
+  summary.hidden = false;
+  body.innerHTML = '';
+  const url = newsOriginalUrl(item);
+  if (!url) { status.textContent = '仅有摘要 · 未提供可读取的原文链接'; return; }
+  status.textContent = '正在读取公开正文…';
+  newsArticleController = new AbortController();
+  try {
+    const article = await window.ApiClient.fetchJsonData('/api/news/article?url=' + encodeURIComponent(url), {signal:newsArticleController.signal,timeoutMs:15000});
+    if (requestId !== newsArticleSequence) return;
+    status.textContent = article.message + (article.cached ? ' · 缓存' : '') + (article.fetchedAt ? ' · 读取于 ' + newsFormatTime(article.fetchedAt) : '');
+    if (article.status === 'available' && Array.isArray(article.paragraphs) && article.paragraphs.length) {
+      summary.hidden = true;
+      body.innerHTML = article.paragraphs.map(text => '<p>' + newsEscapeHtml(text) + '</p>').join('');
+    }
+  } catch (error) {
+    if (requestId !== newsArticleSequence) return;
+    status.textContent = '正文暂不可用，当前仅显示摘要。可稍后重新选择此条资讯重试。';
+  }
 }
 
 function bindNewsLinks(box, items) {
@@ -108,7 +139,11 @@ function bindNewsLinks(box, items) {
     if (event.target.closest('details')) return;
     const card = event.target.closest('[data-news-index]');
     if (!card) return;
+    box.querySelectorAll('[data-news-index]').forEach(row => row.classList.toggle('is-selected', row === card));
     showNewsDetail((items || [])[Number(card.getAttribute('data-news-index'))]);
+  };
+  box.onkeydown = function(event) {
+    if ((event.key === 'Enter' || event.key === ' ') && event.target.matches('[data-news-index]')) { event.preventDefault(); event.target.click(); }
   };
 }
 
@@ -361,7 +396,7 @@ function renderDiscoveryCard(item, index, context) {
   const relevanceTitle = [item.relevance && item.relevance.method, discoveryReasons(item.relevance)].filter(Boolean).join(' | ');
   return '<article class="news-item clickable" data-news-discovery-card data-news-index="' + index + '" tabindex="0">' +
     renderDiscoveryImage(item) +
-    '<div class="news-meta"><span>' + newsEscapeHtml(item.source || 'WebStock') + stateHtml + '</span><span>' + newsEscapeHtml(newsFormatTime(item.time)) + '</span></div>' +
+    '<div class="news-meta"><span>' + newsEscapeHtml(item.source || '来源未注明') + stateHtml + '</span><span>' + newsEscapeHtml(newsFormatTime(item.time)) + '</span></div>' +
     '<h3>' + newsEscapeHtml(item.title) + '</h3>' +
     '<p>' + newsEscapeHtml(item.summary || '') + '</p>' +
     '<div class="tag-row">' + tags + '</div>' +
@@ -394,11 +429,12 @@ function renderDiscovery(result, containerId) {
   const meta = result && result.sourceMeta;
   if (meta && (containerId || 'newsList') === 'newsList') updateNewsSourceFilter(meta.sources || []);
   const coverage = renderDiscoveryCoverage(result && result.coverage);
+  const diagnostics = '<details class="news-feed-diagnostics"><summary>数据来源与覆盖 · 当前显示 ' + items.length + ' 条</summary>' + newsStatusHtml(meta) + coverage + '</details>';
   if (!items.length) {
-    box.innerHTML = newsStatusHtml(meta) + coverage + '<div class="empty-state">No news is available. If external providers fail, WebStock keeps the page usable with a friendly empty state.</div>';
+    box.innerHTML = diagnostics + '<div class="empty-state">当前没有可用资讯。请检查数据源状态，或稍后刷新。</div>';
     return;
   }
-  box.innerHTML = newsStatusHtml(meta) + coverage + items.map(function(item, index) {
+  box.innerHTML = diagnostics + items.map(function(item, index) {
     return renderDiscoveryCard(item, index, { degraded: Boolean(result.degraded || (meta && meta.degraded)) });
   }).join('');
   bindNewsLinks(box, items);
@@ -435,7 +471,7 @@ function renderNews(result, containerId) {
     updateNewsSourceFilter(meta.sources || []);
   }
   if (!items.length) {
-    box.innerHTML = newsStatusHtml(meta) + '<div class="empty-state">No news is available. If external providers fail, WebStock keeps the page usable with a friendly empty state.</div>';
+    box.innerHTML = newsStatusHtml(meta) + '<div class="empty-state">当前没有可用资讯。请检查数据源状态，或稍后刷新。</div>';
     return;
   }
   box.innerHTML = newsStatusHtml(meta) + items.map(function(item, index) {
@@ -446,7 +482,7 @@ function renderNews(result, containerId) {
       .map(tag => '<span class="tag">' + newsEscapeHtml(tag) + '</span>')
       .join('');
     return '<article class="news-item clickable" data-news-index="' + index + '" tabindex="0">' +
-      '<div class="news-meta"><span>' + newsEscapeHtml(item.source || 'WebStock') + '</span><span>' + newsEscapeHtml(newsFormatTime(item.time)) + '</span></div>' +
+      '<div class="news-meta"><span>' + newsEscapeHtml(item.source || '来源未注明') + '</span><span>' + newsEscapeHtml(newsFormatTime(item.time)) + '</span></div>' +
       '<h3>' + newsEscapeHtml(item.title) + '</h3>' +
       '<p>' + newsEscapeHtml(item.summary || '') + '</p>' +
       '<div class="tag-row">' + tags + '</div>' +

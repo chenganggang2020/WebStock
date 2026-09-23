@@ -73,36 +73,79 @@
     };
   }
 
-  function calculateNineTurn(input) {
-    const rows = validDailyRows(input);
-    if (rows.length < 5) {
-      return { available: false, direction: null, count: 0, stage: 0, completed: false, label: '样本不足' };
-    }
-    const lastIndex = rows.length - 1;
-    const lastDiff = finite(rows[lastIndex].close) - finite(rows[lastIndex - 4].close);
-    const direction = lastDiff > 0 ? 'up' : lastDiff < 0 ? 'down' : null;
+  const nineTurnRule = '简化九转：收盘价与4根日K线前收盘价同向比较，连续9次首次标记；不是完整TD Sequential，不代表必然反转。';
+
+  function nineTurnClose(row) {
+    const value = row && row.close;
+    return (typeof value === 'number' || typeof value === 'string') && finite(value) > 0
+      ? Number(value) : null;
+  }
+
+  function nineTurnRows(input, options) {
+    const rows = Array.isArray(input) ? input : [];
+    const timestamp = Date.parse(options && options.asOf);
+    if (!Number.isFinite(timestamp)) return rows;
+    const clock = new Date(timestamp + 8 * 3600000).toISOString();
+    return rows.map(function(row) {
+      const unfinished = row && (row.date > clock.slice(0, 10) ||
+        row.date === clock.slice(0, 10) && clock.slice(11, 16) < '15:01');
+      return unfinished ? Object.assign({}, row, { incomplete: true }) : row;
+    });
+  }
+
+  function calculateNineTurnSeries(input, options) {
+    const rows = nineTurnRows(input, options);
     let count = 0;
-    if (direction) {
-      for (let index = lastIndex; index >= 4; index -= 1) {
-        const diff = finite(rows[index].close) - finite(rows[index - 4].close);
-        if ((direction === 'up' && diff > 0) || (direction === 'down' && diff < 0)) count += 1;
-        else break;
-      }
-    }
-    const stage = Math.min(count, 9);
-    const completed = count >= 9;
-    const label = !direction ? '无连续序列' : direction === 'up'
-      ? (completed ? '高9观察' : '上行' + stage)
-      : (completed ? '低9观察' : '下行' + stage);
-    return {
-      available: true,
-      direction,
-      count,
-      stage,
-      completed,
-      label,
-      rule: '简化九转：当日收盘价与4个交易日前收盘价同向比较，连续计数至9。'
-    };
+    let previousDirection = null;
+    // Preserve missing bars and their positions; filtering them can manufacture a nine.
+    return rows.map(function(row, index) {
+      const available = index >= 4 && rows.slice(index - 4, index + 1).every(function(item, offset) {
+        return nineTurnClose(item) !== null && (offset === 4 || !item.incomplete);
+      });
+      const diff = available ? nineTurnClose(row) - nineTurnClose(rows[index - 4]) : 0;
+      const direction = diff > 0 ? 'up' : diff < 0 ? 'down' : null;
+      count = direction ? (direction === previousDirection ? count + 1 : 1) : 0;
+      previousDirection = direction;
+      const provisional = Boolean(row && row.incomplete);
+      const stage = Math.min(count, 9);
+      const completed = count >= 9 && !provisional;
+      let label = !available ? '样本不足' : !direction ? '无连续序列' : direction === 'up'
+        ? (completed ? '高9观察' : '上行' + stage)
+        : (completed ? '低9观察' : '下行' + stage);
+      if (provisional) label += '·未收盘';
+      return { index, date: String(row && row.date || ''), available, direction, count, stage,
+        completed, triggered: count === 9 && !provisional, provisional, label, rule: nineTurnRule };
+    });
+  }
+
+  function calculateNineTurn(input, options) {
+    const series = calculateNineTurnSeries(input, options);
+    return series[series.length - 1] || { available: false, direction: null, count: 0, stage: 0,
+      completed: false, triggered: false, provisional: false, label: '样本不足', rule: nineTurnRule };
+  }
+
+  function evaluateNineTurnHistory(input, options) {
+    const rows = nineTurnRows(input, options);
+    const events = calculateNineTurnSeries(rows).filter(function(item) { return item.triggered; })
+      .map(function(item) {
+        const close = nineTurnClose(rows[item.index]);
+        const outcomes = {};
+        [1, 5, 20].forEach(function(horizon) {
+          const following = rows.slice(item.index + 1, item.index + 1 + horizon);
+          const invalid = following.some(function(row) { return nineTurnClose(row) === null; });
+          const pending = following.length < horizon || following.some(function(row) { return row && row.incomplete; });
+          const status = invalid ? 'invalid' : pending ? 'pending' : 'available';
+          const last = following[following.length - 1];
+          outcomes[horizon] = { status, returnPct: status === 'available'
+            ? round((nineTurnClose(last) / close - 1) * 100, 2) : null,
+          endDate: status === 'available' ? String(last.date || '') : null };
+        });
+        return Object.assign({}, item, { close, outcomes });
+      });
+    return { events, barCount: rows.length, from: String(rows[0] && rows[0].date || ''),
+      to: String(rows[rows.length - 1] && rows[rows.length - 1].date || ''),
+      triggerUsesFutureData: false, validationUsesFutureData: true,
+      limitation: '仅按已加载日线做事件后收盘涨跌核对，不是交易回测；未计手续费、滑点、停牌、除权及复权影响，不能证明未来有效。' };
   }
 
   function timeLabel(row) {
@@ -380,6 +423,8 @@
   return {
     analyzeDaily,
     calculateNineTurn,
+    calculateNineTurnSeries,
+    evaluateNineTurnHistory,
     analyzeAuction,
     detectLocalSignals,
     buildIntradayMarkers

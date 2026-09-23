@@ -2,6 +2,12 @@ const express = require('express');
 const router = express.Router();
 const newsService = require('../services/newsService');
 const newsDiscoveryService = require('../services/newsDiscoveryService');
+const articleService = require('../services/newsArticleService').createNewsArticleService();
+
+router.get('/news/article', async function(req, res) {
+  try { ok(res, await articleService.read(req.query.url)); }
+  catch (error) { fail(res, error); }
+});
 
 function ok(res, data) {
   res.json({ success: true, data });

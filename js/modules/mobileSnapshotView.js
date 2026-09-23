@@ -197,7 +197,7 @@
           (item.imageUrl ? '<img class="news-thumbnail" src="' + escapeHtml(item.imageUrl) + '" alt="" loading="lazy" referrerpolicy="no-referrer">' : '') +
           '<div class="news-copy"><div class="news-meta-line"><span class="importance-tag ' +
           escapeHtml(importance.level || 'low') + '">' + escapeHtml(importance.label || '一般') +
-          (finite(importance.score) === null ? '' : ' ' + escapeHtml(numberText(importance.score, 0))) + '</span><span>' + escapeHtml(item.source || 'WebStock') +
+          (finite(importance.score) === null ? '' : ' ' + escapeHtml(numberText(importance.score, 0))) + '</span><span>' + escapeHtml(item.source || '来源未注明') +
           '</span><time>' + escapeHtml(dateTimeText(item.time)) + '</time></div><h3>' + escapeHtml(item.title) + '</h3>' +
           (item.summary ? '<p>' + escapeHtml(item.summary) + '</p>' : '') + (association.length ? '<div class="association-line">关联：' +
             association.map(escapeHtml).join(' · ') + '</div>' : '') + (important ? '<div class="importance-reason">标识原因：' +

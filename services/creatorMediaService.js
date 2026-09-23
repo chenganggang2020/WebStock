@@ -24,6 +24,21 @@ function allowedCoverUrl(value) {
       ['douyinpic.com', 'byteimg.com', 'ibytedtos.com', 'douyin.com'].some(host => url.hostname === host || url.hostname.endsWith('.' + host));
   } catch (_) { return false; }
 }
+function resolveNoteImage(observation, index, root = archiveRoot()) {
+  const id=String(observation.externalContentId||'');
+  const author=String(observation.channelId||'');
+  if (observation.mediaType!=='note'||!/^\d{12,24}$/.test(id)||!/^[1-9]\d{0,9}$/.test(author)||
+      !/^\d{1,2}$/.test(String(index))) throw new Error('图文页面无效');
+  const page=((observation.mediaMetadata||{}).note||{}).pages?.find(page=>page.index===Number(index));
+  const extension=page&&{'image/jpeg':'jpg','image/png':'png','image/webp':'webp'}[page.mimeType];
+  if (!page||!extension||!/^[a-f0-9]{64}$/.test(page.sha256||'')) throw new Error('图片尚未归档');
+  const expected=path.join(root,'notes',author,id,String(index).padStart(3,'0')+'-'+page.sha256+'.'+extension);
+  if (path.resolve(page.localAssetPath||'')!==path.resolve(expected)) throw new Error('图片不属于当前作品');
+  const realRoot=fs.realpathSync(root), realFile=fs.realpathSync(expected);
+  const relative=path.relative(realRoot,realFile);
+  if (relative.startsWith('..')||path.isAbsolute(relative)||!fs.statSync(realFile).isFile()) throw new Error('图片不在归档目录');
+  return {filename:realFile,type:page.mimeType};
+}
 function imageType(buffer) {
   if (buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) return 'image/jpeg';
   if (buffer.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]))) return 'image/png';
@@ -55,4 +70,4 @@ async function getCover(observation) {
   try { return await task; } finally { coverTasks.delete(filename); }
 }
 
-module.exports = { archiveRoot, resolveVideo, allowedCoverUrl, getCover };
+module.exports = { archiveRoot, resolveVideo, resolveNoteImage, allowedCoverUrl, getCover, imageType };

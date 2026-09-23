@@ -7,6 +7,19 @@ const Database = require('better-sqlite3');
 
 const { detectSnapshotChange, buildPrivateNotification, createMobilePushService, comparisonSnapshot } = require('../services/mobilePushService');
 
+test('stop cancels the initial push check as well as repeated checks', t => {
+  t.mock.timers.enable({ apis: ['setTimeout', 'setInterval'] });
+  let queries = 0;
+  const service = createMobilePushService({
+    database: { prepare() { queries++; return { all: () => [] }; } },
+    dataDir: os.tmpdir(), webPush: {}, loadSnapshot: async () => ({})
+  });
+  service.start();
+  service.stop();
+  t.mock.timers.tick(60000);
+  assert.equal(queries, 0, 'shutdown must not start a new push job');
+});
+
 test('push detects a holding swap or quantity change even when count and assets are unchanged', () => {
   const first = snapshot();
   first.accounts[0].positions = [{ code: '600000', quantity: 100 }];
@@ -49,7 +62,7 @@ test('mobile push message never includes account names, stock codes, holdings or
   const payload = buildPrivateNotification({ kind: 'portfolio' });
   const text = JSON.stringify(payload);
 
-  assert.equal(payload.title, 'WebStock 有新的数据变化');
+  assert.equal(payload.title, '行情与研究 · 数据变化');
   assert.match(payload.body, /打开应用/);
   assert.doesNotMatch(text, /账户|持仓|\d{6}|10000|元/);
   assert.equal(payload.url, '/mobile.html');
@@ -95,6 +108,6 @@ test('mobile push stores a valid subscription locally and sends a private test m
   assert.equal(service.publicStatus().subscriptionCount, 1);
   assert.equal(result.delivered, true);
   assert.equal(sent.length, 1);
-  assert.equal(sent[0].payload.title, 'WebStock 通知已开启');
+  assert.equal(sent[0].payload.title, '行情与研究 · 通知已开启');
   assert.doesNotMatch(JSON.stringify(sent[0].payload), /subscription-1|iPhone/);
 });

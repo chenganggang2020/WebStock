@@ -64,3 +64,14 @@ test('first failure is throttled, total overflow and date drift are rejected',as
   const wrong=createDarkStockService({load:async input=>({...page(input,['600487'],1),tradingDay:'2026-09-16'})});
   await assert.rejects(wrong.get({date,codes:['sh600487']}));
 });
+
+test('switching historical date after a successful scan does not reuse the old-date cooldown',async()=>{
+  let calls=0;
+  const svc=createDarkStockService({now:()=>1,pause:async()=>{},load:async input=>{
+    calls++;
+    return {...page({...input,date},['600487'],1),tradingDay:input.date};
+  }});
+  await svc.get({date,codes:['sh600487']});
+  const next=await svc.get({date:'2026-09-18',codes:['sh600487']});
+  assert.equal(next.tradingDay,'2026-09-18');assert.equal(calls,2);
+});

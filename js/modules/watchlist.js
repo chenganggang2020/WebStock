@@ -249,9 +249,9 @@ function selectedWatchlistGroup(groups) {
   return available.find(function(group) { return group.key === selectedWatchlistGroupKey; }) || null;
 }
 
-function visibleWatchlistItems() {
+function getGroupItems(groupKey) {
   const State = window.State;
-  const selectedGroup = selectedWatchlistGroup();
+  const selectedGroup = groupKey === undefined ? selectedWatchlistGroup() : watchlistGroups().find(group => group.key === groupKey);
   const catalogGroup = selectedGroup && selectedGroup.source === 'ths'
     ? selectedGroup.catalogGroup : null;
   const savedByCode = new Map((State.watchlist || []).map(function(item) { return [item.code, item]; }));
@@ -270,6 +270,11 @@ function visibleWatchlistItems() {
       return (item.groupName || '默认分组') === selectedGroup.name;
     });
   }
+  return items;
+}
+
+function visibleWatchlistItems() {
+  let items = getGroupItems();
   const keyword = document.getElementById('watchlistSearchInput') ? document.getElementById('watchlistSearchInput').value.trim() : '';
   if (keyword) {
     const normalized = keyword.toLowerCase();
@@ -360,8 +365,8 @@ function renderPortfolioWatchlistTabs(groups) {
   }));
   const filtered = (groups || []).filter(function(group) { return group.name.toLowerCase().includes(query); });
   function groupButton(group) {
-    const sourceLabel = group.source === 'ths' ? '同花顺只读' : 'WebStock可编辑';
-    const title = group.source === 'ths' ? '同花顺本地只读分组：' : 'WebStock 可编辑分组：';
+    const sourceLabel = group.source === 'ths' ? '同花顺只读' : '本地可编辑';
+    const title = group.source === 'ths' ? '同花顺本地只读分组：' : '本地可编辑分组：';
     const count = group.source === 'ths' ? (group.catalogGroup.items || []).length :
       (window.State.watchlist || []).filter(function(item) { return (item.groupName || '默认分组') === group.name; }).length;
     return '<button type="button" class="portfolio-watchlist-tab" data-portfolio-watchlist-tab="watchlist" data-group="' +
@@ -503,7 +508,7 @@ async function saveWatchlistStock(stock, options) {
     }
     renderWatchlist();
     setWatchlistActionStatus((item.name || stock.name || stock.code) + (existing ? ' 已存在于【' : ' 已加入【') +
-      actualGroup + '】· WebStock 本地自选，未写回同花顺', 'ok');
+      actualGroup + '】· 本地自选，未写回同花顺', 'ok');
     if (options.reveal !== false && window.switchMainView) window.switchMainView('watchlist');
     if (window.StockList && window.StockList.renderStockTable) window.StockList.renderStockTable(window.State.filteredStocks);
     return item;
@@ -568,11 +573,11 @@ async function bulkSetVisibleGroup() {
     return;
   }
   if (items.some(function(item) { return item.tonghuashunReadOnly; })) {
-    alert('当前同花顺本地分组为只读，不能从 WebStock 批量移动；请在同花顺客户端修改后重新同步。');
+    alert('当前同花顺本地分组为只读，不能从本程序批量移动；请在同花顺客户端修改后重新同步。');
     return;
   }
   if (items.some(function(item) { return !Number.isInteger(Number(item.id)) || Number(item.id) <= 0; })) {
-    alert('当前列表含有未写入 WebStock 的项目，已取消批量修改以避免部分成功。');
+    alert('当前列表含有未写入本程序的项目，已取消批量修改以避免部分成功。');
     return;
   }
   const groupName = prompt('将当前可见自选股移动到分组', items[0].groupName || '默认分组');
@@ -606,7 +611,7 @@ function renderWatchlist() {
   if (groupFilter) {
     const current = selectedWatchlistGroupKey;
     groupFilter.innerHTML = groups.map(function(group) {
-      const sourceLabel = group.source === 'ths' ? '同花顺只读' : 'WebStock可编辑';
+      const sourceLabel = group.source === 'ths' ? '同花顺只读' : '本地可编辑';
       return '<option value="' + watchlistTabEscape(group.key) + '">' + watchlistTabEscape(group.name) +
         ' · ' + sourceLabel + '</option>';
     }).join('');
@@ -618,7 +623,7 @@ function renderWatchlist() {
   const selectionMeta = document.getElementById('watchlistSelectionMeta');
   const selected = selectedWatchlistGroup(groups);
   if (selectionMeta) selectionMeta.textContent = selected ? selected.name + ' · ' +
-    (selected.source === 'ths' ? '同花顺只读' : 'WebStock 本地可编辑') + ' · 当前显示 ' + items.length + ' 只' : '请选择分组';
+    (selected.source === 'ths' ? '同花顺只读' : '本地可编辑') + ' · 当前显示 ' + items.length + ' 只' : '请选择分组';
   empty.style.display = items.length ? 'none' : '';
   table.style.display = items.length ? 'table' : 'none';
   if (window.StockList && window.StockList.releaseMinuteRows) {
@@ -872,6 +877,7 @@ function openTradeByCode(code) {
 }
 
 window.Watchlist = {
+  getGroupItems,
   loadWatchlist,
   addCurrentStock,
   addStock,

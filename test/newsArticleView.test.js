@@ -1,0 +1,30 @@
+const test=require('node:test');
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const vm=require('node:vm');
+const path=require('node:path');
+test('switching stories cannot let a late body overwrite the selected news; text is escaped',async()=>{
+  const requests=[];
+  const nodes=Object.fromEntries(['newsDetailOverlay','newsDetailTitle','newsDetailMeta','newsDetailSummary','newsDetailTags','newsDetailOriginalBtn','newsArticleBody','newsArticleStatus'].map(id=>[id,{style:{},textContent:'',innerHTML:''}]));
+  const window={ApiClient:{fetchJsonData(url,options){return new Promise(resolve=>requests.push({url,options,resolve}));}},FixedWorkspace:{placeNewsDetail:()=>true}};
+  vm.runInNewContext(fs.readFileSync(path.join(__dirname,'../js/modules/news.js'),'utf8'),{window,document:{getElementById:id=>nodes[id]},AbortController,URLSearchParams,console});
+  const first=window.News.showNewsDetail({title:'旧文',link:'https://finance.sina.com.cn/old'});
+  const second=window.News.showNewsDetail({title:'新文',link:'https://finance.sina.com.cn/new'});
+  assert.equal(requests[0].options.signal.aborted,true);
+  requests[1].resolve({status:'available',message:'公开正文',paragraphs:['新文 <script>bad</script>']});await second;
+  requests[0].resolve({status:'available',message:'公开正文',paragraphs:['旧文']});await first;
+  assert.match(nodes.newsArticleBody.innerHTML,/新文 &lt;script&gt;/);
+  assert.doesNotMatch(nodes.newsArticleBody.innerHTML,/<script>|旧文/);
+  assert.equal(nodes.newsDetailSummary.hidden,true);
+  assert.equal(nodes.newsDetailOverlay.style.display,'none');
+});
+test('unavailable body retains an explicitly labelled summary',async()=>{
+  const nodes=Object.fromEntries(['newsDetailOverlay','newsDetailTitle','newsDetailMeta','newsDetailSummary','newsDetailTags','newsDetailOriginalBtn','newsArticleBody','newsArticleStatus'].map(id=>[id,{style:{},textContent:'',innerHTML:''}]));
+  const window={ApiClient:{fetchJsonData:async()=>({status:'unavailable',message:'仅有摘要',paragraphs:[]})}};
+  vm.runInNewContext(fs.readFileSync(path.join(__dirname,'../js/modules/news.js'),'utf8'),{window,document:{getElementById:id=>nodes[id]},AbortController,URLSearchParams,console});
+  await window.News.showNewsDetail({title:'新闻',summary:'这是摘要',link:'https://finance.sina.com.cn/a'});
+  assert.equal(nodes.newsDetailSummary.hidden,false);
+  assert.equal(nodes.newsDetailSummary.textContent,'这是摘要');
+  assert.equal(nodes.newsArticleStatus.textContent,'仅有摘要');
+  assert.equal(nodes.newsArticleBody.innerHTML,'');
+});

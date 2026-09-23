@@ -212,10 +212,11 @@ test('portable build smoke-tests the staged executable before promotion', () => 
 });
 
 test('desktop daily market sync is scheduled only outside package smoke tests and is stopped on exit', () => {
-  const source = fs.readFileSync(path.join(__dirname, '..', 'electron', 'main.js'), 'utf8');
-  const runtimeBlock = source.slice(source.indexOf("WEBSTOCK_BUILD_SMOKE_TEST !== '1'"));
+  const source = fs.readFileSync(path.join(__dirname, '..', 'electron', 'desktopBackendServices.js'), 'utf8');
+  const runtimeBlock = source.slice(source.indexOf('if (!smoke)'));
+  assert.match(source, /const smoke = process\.env\.WEBSTOCK_BUILD_SMOKE_TEST === '1'/);
   assert.match(runtimeBlock, /startFullMarketAutoSync\(\)/);
   assert.match(source, /runScheduledFullMarketSync\(\)/);
-  assert.match(source, /clearInterval\(fullMarketSyncTimer\)/);
+  assert.match(source, /timers\.forEach\(clearTimeout\)/);
   assert.match(source, /5 \* 60 \* 1000/);
 });

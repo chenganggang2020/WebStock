@@ -2,14 +2,15 @@
   const api=factory(root ? root.EastmoneyDarkRank : require('./eastmoneyDarkRank'));
   if(typeof module==='object' && module.exports) module.exports=api;
   if(root) {
-    const view=api.createDarkStockView({document:root.document,fetch:root.fetch.bind(root),echarts:root.echarts});
+    const view=api.createDarkStockView({document:root.document,fetch:root.fetch.bind(root),echarts:root.echarts,chartTheme:root.ChartTheme});
     root.EastmoneyDarkStocks=view;
     let timer=null,busy=false,queued=false,queuedForce=false,lastView='';
     async function sync(force=false) {
       if(busy) {queued=true;queuedForce=queuedForce || force;return;}
       clearTimeout(timer);
       const active=root.State && root.State.currentMainView;
-      if(root.document.hidden || !['capitalFlow','market','watchlist','portfolio'].includes(active)) return;
+      const homeDetail=active==='dashboard' && root.document.getElementById('homeStockMore')?.open;
+      if(root.document.hidden || (!homeDetail && !['capitalFlow','market','watchlist','portfolio'].includes(active))) return;
       busy=true;
       try {
         const response=await root.fetch('/api/capital-flow/dark-session');
@@ -17,7 +18,7 @@
         if(!response.ok || !payload.success) throw Error('交易时段状态暂不可用');
         if(root.document.hidden || active!==root.State.currentMainView) return;
         if(active==='capitalFlow') await root.EastmoneyDarkRank.autoTick(payload.data,active!==lastView);
-        else await view.load(payload.data,active,force);
+        else await view.load(payload.data,homeDetail?'market':active,force);
         lastView=active;
       } catch (_) {view.status('明暗盘更新失败，请手动重试；未显示为零。');}
       finally {
@@ -121,9 +122,11 @@
             rows.push(point);
           });
           historyChart=options.echarts.init(box);
-          historyChart.setOption({animation:false,legend:{data:['暗盘净额','明盘净额']},grid:{left:58,right:18,top:38,bottom:55},tooltip:{trigger:'axis'},
+          const option={animation:false,legend:{data:['暗盘净额','明盘净额']},grid:{left:58,right:18,top:38,bottom:55},tooltip:{trigger:'axis'},
             xAxis:{type:'category',name:'采集时刻',data:rows.map(row=>row?time(row.receivedAt):'断采')},yAxis:{type:'value',name:'万元'},
-            series:[['暗盘净额','darkNetCents','#9b7aff'],['明盘净额','visibleNetCents','#27a6c8']].map(([name,field,color])=>({name,type:'line',connectNulls:false,showSymbol:points.length<20,lineStyle:{color},itemStyle:{color},data:rows.map(row=>row?Number(row[field])/1000000:null)}))});
+            series:[['暗盘净额','darkNetCents','#9b7aff'],['明盘净额','visibleNetCents','#27a6c8']].map(([name,field,color])=>({name,type:'line',connectNulls:false,showSymbol:points.length<20,lineStyle:{color},itemStyle:{color},data:rows.map(row=>row?Number(row[field])/1000000:null)}))};
+          if(options.chartTheme)options.chartTheme.applyToOption(option,{dark:doc.body.classList.contains('dark')});
+          historyChart.setOption(option);
         }
       }catch(_){if(ticket===historySequence)hint.textContent='历史读取未成功；请稍后重试，已保存记录未删除。';}
       finally{clearTimeout(deadline);}

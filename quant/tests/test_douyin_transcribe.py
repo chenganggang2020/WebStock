@@ -75,6 +75,7 @@ class DouyinTranscribeResourceLimitsTests(unittest.TestCase):
         self.assertEqual(calls["model_kwargs"]["cpu_threads"], 2)
         self.assertEqual(calls["model_kwargs"]["num_workers"], 1)
         self.assertEqual(calls["transcribe_kwargs"]["beam_size"], 5)
+        self.assertFalse(calls["transcribe_kwargs"]["condition_on_previous_text"])
         self.assertTrue(calls.get("unloaded"))
         self.assertEqual(result["transcript"], "测试转写")
 

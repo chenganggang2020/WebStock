@@ -7,6 +7,7 @@ const { minuteCache, klineCache } = require('./cache');
 const marketData = require('../services/marketDataService');
 const { createLocalThirtySecondBarService, createLocalFiveSecondBarService } = require('../services/localThirtySecondBarService');
 const { createPublicMinuteService } = require('../services/publicMinuteService');
+const { createPublicPriceDetailService, combinePriceSeries, validDate: validPublicDetailDate } = require('../services/publicPriceDetailService');
 const { createQuoteSnapshotService, classifyChinaQuoteStatus } = require('../services/quoteSnapshotService');
 const { createQuoteSnapshotStore } = require('../services/quoteSnapshotStore');
 const marketOverviewService = require('../services/marketOverviewService');
@@ -18,6 +19,9 @@ const globalMarketSignalService = require('../services/globalMarketSignalService
 const { toSinaSymbol, getEastmoneyMarketId } = require('../utils/market');
 const localThirtySecondBars = createLocalThirtySecondBarService({ db });
 const localFiveSecondBars = createLocalFiveSecondBarService({ db });
+const publicPriceDetails = createPublicPriceDetailService({
+  cacheDir: require('node:path').join(require('node:path').dirname(db.dbPath), 'public-price-details')
+});
 const quoteSnapshotStore = createQuoteSnapshotStore(db);
 
 function ok(res, data, meta) {
@@ -287,6 +291,11 @@ router.get('/market/global-signals', async function(req, res) {
   }
 });
 
+router.get('/market/global-index-trends',async function(req,res){
+  try {res.setHeader('Cache-Control','no-store');ok(res,await require('../services/globalIndexTrendService').fetch());}
+  catch(error){fail(res,error,502);}
+});
+
 router.get('/market/comparison-history', async function(req, res) {
   try {
     res.setHeader('Cache-Control', 'no-store');
@@ -373,6 +382,20 @@ router.get('/minute', async function (req, res) {
   if (resolution === '5s' || resolution === '30s') {
     const localBars = resolution === '5s' ? localFiveSecondBars : localThirtySecondBars;
     const localResult = localBars.list(code, { tradingDate: req.query.date });
+    if (req.query.source === 'public-detail') {
+      try {
+        const remote = await publicPriceDetails.list(code, {
+          tradingDate: req.query.date, intervalSeconds: resolution === '5s' ? 5 : 30
+        });
+        const result = combinePriceSeries(localResult, remote);
+        return ok(res, result.rows, withMinuteSampling(result.meta, result.rows));
+      } catch (error) {
+        if (req.query.date && !validPublicDetailDate(req.query.date)) return fail(res, error);
+        return ok(res, localResult.rows, withMinuteSampling(Object.assign({}, localResult.meta, {
+          backfillState: 'unavailable', backfillError: error.message
+        }), localResult.rows));
+      }
+    }
     return ok(res, localResult.rows, withMinuteSampling(localResult.meta, localResult.rows));
   }
 

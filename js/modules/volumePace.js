@@ -44,6 +44,14 @@
       .includes(String(label || ''));
   }
 
+  function chartAxis(data) {
+    const minutes = Math.max(1, Math.round(Number(data && data.coverage && data.coverage.intervalSeconds || 60) / 60));
+    const axis = fixedMinuteAxis();
+    if (minutes === 1) return axis;
+    const observed = new Set((data.series || []).map(point => point.label));
+    return axis.filter(label => (Number(label.slice(3)) % minutes === 0 && !['09:30', '13:00'].includes(label)) || observed.has(label));
+  }
+
   function stateText(metrics) {
     if (!metrics || metrics.cumulativeState === 'unavailable') return '量能暂不可用';
     if (metrics.divergence === 'cumulative-up-short-down') return '累计放量 · 短时转缩';
@@ -67,7 +75,7 @@
     const number = finite(value);
     if (number === null) return '暂无';
     const absolute = Math.abs(number);
-    const unit = measure === 'amount' ? '' : '（量）';
+    const unit = measure === 'amount' ? '元' : '（量）';
     if (absolute >= 1000000000000) return (number / 1000000000000).toFixed(2) + ' 万亿' + unit;
     if (absolute >= 100000000) return (number / 100000000).toFixed(2) + ' 亿' + unit;
     if (absolute >= 10000) return (number / 10000).toFixed(0) + ' 万' + unit;
@@ -103,7 +111,7 @@
     delete target.dataset.empty;
     const text = '#94a3b8';
     const grid = '#263244';
-    const axis = fixedMinuteAxis();
+    const axis = chartAxis(data);
     const points = new Map(series.map(function(point) { return [point.label, point]; }));
     chart.setOption({
       animation: false,
@@ -129,9 +137,9 @@
           lineStyle: { width: 2.4 },
           markLine: {
             silent: true, symbol: 'none',
-            label: { formatter: '13:00 午后', color: text, fontSize: 10 },
+            label: { formatter: (axis.find(label => label >= '13:00') || '13:00') + ' 午后', color: text, fontSize: 10 },
             lineStyle: { color: grid, type: 'dashed', width: 1 },
-            data: [{ xAxis: '13:00' }]
+            data: [{ xAxis: axis.find(label => label >= '13:00') }]
           }
         },
         { name: '5分钟同比', type: 'line', showSymbol: false, connectNulls: true, data: axis.map(function(label) { const point = points.get(label); return point ? point.rolling5YoYPct : null; }), lineStyle: { width: 1.8 } },
@@ -143,6 +151,7 @@
 
   function render(data) {
     snapshot = data || null;
+    if (root.HomeTerminal) root.HomeTerminal.renderVolume(data);
     const metrics = data && data.metrics || null;
     const cumulativeUsable = !(data && data.quality && data.quality.usable === false);
     const status = element('volumePaceStatus');
@@ -224,7 +233,7 @@
     if (snapshot) render(snapshot);
   }
 
-  const api = { load, render, resize, rerender, formatPct, stateText, fixedMinuteAxis, visibleAxisLabel, formatMeasure };
+  const api = { load, render, resize, rerender, formatPct, stateText, fixedMinuteAxis, chartAxis, visibleAxisLabel, formatMeasure };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   if (root) root.VolumePace = api;
 })(typeof window !== 'undefined' ? window : globalThis);

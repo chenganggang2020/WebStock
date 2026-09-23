@@ -31,6 +31,9 @@
     lastResult: null,
     requestSequence: 0,
     catalogPromise: null,
+    loadPromise: null,
+    workspaceLoaded: false,
+    workspaceLoadedAt: 0,
     selectionTimer: null,
     researchTopics: [],
     researchTopicId: '',
@@ -163,6 +166,7 @@
 
   function renderCatalog(payload) {
     state.catalog = normalizeCatalog(payload);
+    if (root.IndustryWorkspace) root.IndustryWorkspace.setCatalog(state.catalog);
     const box = element('industryChainCatalog');
     if (!box) return;
     if (!state.catalog.length) {
@@ -283,6 +287,10 @@
   function renderResult(result) {
     const normalized = result && typeof result === 'object' ? result : {};
     state.lastResult = normalized;
+    if (root.IndustryWorkspace && root.IndustryWorkspace.isMounted()) {
+      root.IndustryWorkspace.setResult(Object.assign({}, normalized, { dataGaps: safeDataGaps(normalized, normalized.availability) }));
+      return;
+    }
     renderRelations(normalized.confirmed, 'confirmed', normalized.availability);
     renderRelations(normalized.candidates, 'candidate', normalized.availability);
     renderEvidenceState(normalized);
@@ -466,6 +474,7 @@
   function renderResearchTopics(topics) {
     const box = element('industryResearchTopics');
     state.researchTopics = Array.isArray(topics) ? topics : [];
+    if (root.IndustryWorkspace) root.IndustryWorkspace.setTopics(state.researchTopics);
     if (!box) return;
     box.innerHTML = state.researchTopics.length ? state.researchTopics.map(function(topic) {
       const active = topic.id === state.researchTopicId ? ' active' : '';
@@ -509,6 +518,11 @@
       if (enabled) enabled.checked = Boolean(topic.enabled);
       if (interval && topic.intervalMinutes != null) interval.value = topic.intervalMinutes;
       if (sourceUrls) sourceUrls.value = Array.isArray(topic.sourceUrls) ? topic.sourceUrls.join('\n') : '';
+    }
+    if (root.IndustryWorkspace && root.IndustryWorkspace.isMounted()) {
+      state.researchVersionId = version && version.id || '';
+      root.IndustryWorkspace.setDetail(detail);
+      return;
     }
     const evidenceById = new Map((version && Array.isArray(version.evidence) ? version.evidence : []).map(function(item) { return [item.id, item]; }));
     if (!version) {
@@ -603,12 +617,13 @@
     const topicRequestId = state.researchRequestSequence;
     const payload = await root.ApiClient.fetchJsonData(researchEndpoint('/topics/' + encodeURIComponent(topicId) + '/versions/' + encodeURIComponent(versionId)));
     const detail = responseData(payload);
-    if (requestId === state.researchVersionSequence && topicRequestId === state.researchRequestSequence && topicId === state.researchTopicId) renderResearchDetail({ topic: state.researchTopics.find(function(item) { return item.id === topicId; }), currentVersion: detail, versions: state.researchVersions });
+    if (requestId === state.researchVersionSequence && topicRequestId === state.researchRequestSequence && topicId === state.researchTopicId) renderResearchDetail({ topic: state.researchTopics.find(function(item) { return item.id === topicId; }), currentVersion: detail, versions: state.researchVersions }, true);
     return detail;
   }
 
   async function saveResearchConfig(topicId, config) {
     const target = topicId || state.researchTopicId;
+    const requestId = state.researchRequestSequence;
     const sourceInput = element('industryResearchSourceUrls');
     const nextConfig = Object.assign({}, config || {});
     if (sourceInput) nextConfig.sourceUrls = String(sourceInput.value || '').split(/\r?\n/).map(function(item) { return item.trim(); }).filter(Boolean);
@@ -616,7 +631,7 @@
     const data = responseData(payload);
     renderResearchTopics(state.researchTopics.map(function(topic) { return topic.id === target ? data : topic; }));
     const status = element('industryResearchStatus');
-    if (status) status.textContent = '配置已保存';
+    if (status && target === state.researchTopicId && requestId === state.researchRequestSequence) status.textContent = '配置已保存';
     return data;
   }
 
@@ -677,7 +692,27 @@
       renderResearchDetail(state.researchDetail, true);
     });
     if (detail) detail.addEventListener('change', function(event) { if (event.target && event.target.id === 'industryResearchVersionSelect') loadResearchVersion(event.target.value).catch(function() {}); });
-    if (detail) detail.addEventListener('click', function(event) { const target = closestWithAttribute(event.target, 'data-research-review'); if (!target) return; const relationId = target.getAttribute('data-research-review'); const decision = target.getAttribute('data-research-decision'); const note = detail.querySelector('[data-research-note="' + relationId + '"]'); reviewResearchRelation(relationId, note && note.value, decision).then(function() { return selectResearchTopic(state.researchTopicId); }).then(function() { const status = element('industryResearchStatus'); if (status) status.textContent = decision === 'dispute' ? '争议标记已保存' : '人工核验已保存'; }).catch(function(error) { const status = element('industryResearchStatus'); if (status) status.textContent = error.message || '核验失败'; }); });
+    if (detail) detail.addEventListener('click', async function(event) {
+      const target = closestWithAttribute(event.target, 'data-research-review');
+      if (!target) return;
+      const topicId = state.researchTopicId;
+      const requestId = state.researchRequestSequence;
+      const relationId = target.getAttribute('data-research-review');
+      const decision = target.getAttribute('data-research-decision');
+      const note = detail.querySelector('[data-research-note="' + relationId + '"]');
+      try {
+        await reviewResearchRelation(relationId, note && note.value, decision);
+        if (topicId !== state.researchTopicId || requestId !== state.researchRequestSequence) return;
+        const refresh = selectResearchTopic(topicId);
+        const refreshId = state.researchRequestSequence;
+        await refresh;
+        const status = element('industryResearchStatus');
+        if (status && topicId === state.researchTopicId && refreshId === state.researchRequestSequence) status.textContent = decision === 'dispute' ? '争议标记已保存' : '人工核验已保存';
+      } catch (error) {
+        const status = element('industryResearchStatus');
+        if (status && topicId === state.researchTopicId) status.textContent = error.message || '核验失败';
+      }
+    });
     const conceptInput = element('industryConceptSearchInput');
     const conceptRefresh = element('industryConceptRefreshBtn');
     const conceptList = element('industryConceptRadarList');
@@ -721,6 +756,13 @@
   }
 
   async function refresh() {
+    if (root.IndustryWorkspace && root.IndustryWorkspace.isMounted()) {
+      await Promise.all([loadCatalog({ force: true }), loadResearchTopics()]);
+      const result = await root.IndustryWorkspace.loadSelected();
+      state.workspaceLoaded = true;
+      state.workspaceLoadedAt = Date.now();
+      return result;
+    }
     setRefreshStatus('正在更新本地证据与外部研究…', 'loading');
     const results = await Promise.allSettled([
       loadCatalog({ force: true }),
@@ -798,6 +840,16 @@
     }, 100);
   }
 
+  function cancelPendingSelection() {
+    state.requestSequence += 1;
+    state.researchRequestSequence += 1;
+    state.researchVersionSequence += 1;
+    state.researchTopicId = '';
+    state.researchVersionId = '';
+    if (state.selectionTimer) clearTimeout(state.selectionTimer);
+    state.selectionTimer = null;
+  }
+
   function bind() {
     if (state.bound || typeof document === 'undefined') return;
     state.bound = true;
@@ -840,25 +892,44 @@
     });
   }
 
-  async function load() {
+  async function loadWorkspace() {
     bind();
     try {
       const catalog = await loadCatalog();
-      if (element('industryResearchTopics')) await loadResearchTopics();
-      if (element('industryConceptRadarList')) await loadConceptDiscovery();
+      if (root.IndustryWorkspace && root.IndustryWorkspace.isMounted()) {
+        await loadResearchTopics();
+        await root.IndustryWorkspace.loadSelected();
+        state.workspaceLoaded = true;
+        state.workspaceLoadedAt = Date.now();
+      } else {
+        if (element('industryResearchTopics')) await loadResearchTopics();
+        if (element('industryConceptRadarList')) await loadConceptDiscovery();
+      }
       return catalog;
     } catch (error) {
       const catalog = element('industryChainCatalog');
       if (catalog) catalog.innerHTML = '<div class="industry-chain-empty">' + escapeHtml(error.message || '产业链目录加载失败。') + '</div>';
-      showError(error);
+      if (root.IndustryWorkspace && root.IndustryWorkspace.isMounted()) root.IndustryWorkspace.setLoadError(error);
+      else showError(error);
       throw error;
     }
+  }
+
+  async function load() {
+    // Reuse a recent accepted selection; recheck stored data on a later visit.
+    if (state.loadPromise) return state.loadPromise;
+    if (root.IndustryWorkspace && root.IndustryWorkspace.isMounted() && state.workspaceLoaded &&
+        Date.now() - state.workspaceLoadedAt < 15000) return state.catalog;
+    if (!state.loadPromise) state.loadPromise = loadWorkspace().finally(function() { state.loadPromise = null; });
+    return state.loadPromise;
   }
 
   const api = {
     STAGES,
     DEFAULT_ENDPOINTS,
     configureEndpoints,
+    cancelPendingSelection,
+    reasonLabel,
     setSelection,
     buildDiscoverUrl,
     renderCatalog,

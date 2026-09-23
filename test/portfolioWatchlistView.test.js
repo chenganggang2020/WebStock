@@ -48,7 +48,7 @@ test('local editable groups remain reachable beside read-only Tonghuashun groups
   assert.match(watchlistSource, /key:\s*'ths:'\s*\+\s*id/);
   assert.match(watchlistSource, /key:\s*'local:'\s*\+\s*name/);
   assert.match(watchlistSource, /同花顺只读/);
-  assert.match(watchlistSource, /WebStock可编辑/);
+  assert.match(watchlistSource, /本地可编辑/);
 });
 
 test('watchlist escapes persisted text and blocks bulk writes for read-only catalog rows', () => {

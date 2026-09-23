@@ -31,7 +31,7 @@ test('latest external AI hotspots and industry chains render with provenance and
   vm.runInNewContext(source, context);
   await context.window.ExternalResearch.load();
   assert.match(elements.externalHotspotResearch.innerHTML, /算力/);
-  assert.match(elements.externalHotspotResearch.innerHTML, /2026-08-31 · Pro · 外部 AI 研究，未由 WebStock 独立验证/);
+  assert.match(elements.externalHotspotResearch.innerHTML, /2026-08-31 · Pro · 外部 AI 研究，未由本程序独立验证/);
   assert.doesNotMatch(elements.externalHotspotResearch.innerHTML, /<img\b|<[^>]+\sonerror=/i);
   assert.match(elements.externalIndustryChainResearch.innerHTML, /半导体设备/);
   assert.match(elements.externalIndustryChainResearch.innerHTML, /跟踪产业链/);

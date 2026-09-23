@@ -64,9 +64,13 @@
       try {
         const result = await root.apiFetch(refresh ? '/api/market/etf-daily-report/refresh' : '/api/market/etf-daily-report',
           { method: refresh ? 'POST' : 'GET', timeoutMs: 30000, maxRetries: 0, cache: 'no-store' });
-        render(result && result.success === true ? result.data : result);
+        if (result && result.success === false) throw new Error(result.error || '日报读取失败');
+        const data = result && result.success === true ? result.data : result;
+        render(data);
+        return { ok: !(refresh && data && data.lastError) };
       } catch (error) {
         box.querySelector('.eastmoney-etf-daily-status').textContent = '读取失败，保留已有数据：' + (error.message || error);
+        return { ok: false };
       } finally { button.disabled = false; }
     })().finally(function() { pending = null; });
     return pending;
@@ -76,10 +80,9 @@
     if (!box || box.dataset.bound) return;
     box.dataset.bound = '1';
     box.querySelector('button').addEventListener('click', function() { load(true); });
-    load(false);
     // Read the local cache only; source collection belongs to the backend scheduler.
     const timer = root.setInterval(function() {
-      if (document.visibilityState === 'visible' && (!root.State || root.State.currentMainView === 'dashboard')) load(false);
+      if (document.visibilityState === 'visible' && document.body.dataset.terminalPage === 'capitalDaily') load(false);
     }, 60000);
     root.addEventListener('pagehide', function() { root.clearInterval(timer); }, { once: true });
   }

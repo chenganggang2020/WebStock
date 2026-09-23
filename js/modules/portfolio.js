@@ -191,12 +191,18 @@ function renderAccountControls() {
   }
 }
 
+let portfolioInitialAccountResolved = false;
 async function loadAccounts() {
   const accounts = await portfolioApi('/accounts');
   const previous = new Map((window.State.portfolioAccounts || []).map(account => [Number(account.id), account]));
   window.State.portfolioAccounts = (accounts || []).map(account => Object.assign({}, previous.get(Number(account.id)) || {}, account));
   let preferred = activeAccountId();
   try { preferred = Number(localStorage.getItem('webstock.activePortfolioAccountId')) || preferred; } catch (error) {}
+  if (!portfolioInitialAccountResolved) {
+    const synced = window.State.portfolioAccounts.find(account => account.accountKey === 'tonghuashun-local-sync');
+    if (synced) preferred = synced.id;
+    portfolioInitialAccountResolved = true;
+  }
   if (!window.State.portfolioAccounts.some(account => Number(account.id) === preferred)) {
     const fallback = window.State.portfolioAccounts.find(account => account.isDefault) || window.State.portfolioAccounts[0];
     preferred = fallback ? fallback.id : 1;
@@ -738,7 +744,7 @@ async function refreshPortfolio() {
 }
 
 async function readTonghuashunHoldingClipboard() {
-  const message = '请先在同花顺电脑版持仓表中全选并复制。点击“确定”后，WebStock 只读取这一次剪贴板文本，不读取账号、密码，也不执行交易。';
+  const message = '请先在同花顺电脑版持仓表中全选并复制。点击“确定”后，本程序只读取这一次剪贴板文本，不读取账号、密码，也不执行交易。';
   if (!confirm(message)) return '';
   if (navigator.clipboard && navigator.clipboard.readText) {
     try {
@@ -966,17 +972,16 @@ async function runAIAnalysis() {
   } catch (error) {
     if (window.AIAssistant) {
       const promptText = [
-        '请对我的投资组合做风险诊断。要求：不承诺收益，不给真实下单指令，仅输出持仓结构、风险、观察点和免责声明。',
+        '请对我的投资组合做风险诊断。要求：不承诺收益，不给真实下单指令，仅输出持仓结构、风险和观察点。',
         '持仓数据：' + JSON.stringify(window.State.positions || [], null, 2),
         '',
-        '请在回答最后输出一个可直接复制回 WebStock 的结果块。不要把边界标记放进代码块；边界标记必须单独占一行。',
+        '请在回答最后输出一个可直接复制回本程序的结果块。不要把边界标记放进代码块；边界标记必须单独占一行。',
         'WEBSTOCK_RESULT_START',
         '# 组合诊断结果',
         '- 组合结论：仓位、集中度、收益来源和主要问题。',
         '- 持仓拆解：每个重点持仓的风险、观察点和处理优先级。',
         '- 结构建议：只给研究型仓位结构建议，不给下单指令。',
         '- 下一步验证：需要跟踪的价格、量能、板块和交易记录。',
-        '- 免责声明：仅供研究复盘，不构成投资建议。',
         'WEBSTOCK_RESULT_END'
       ].join('\n');
       window.AIAssistant.open({

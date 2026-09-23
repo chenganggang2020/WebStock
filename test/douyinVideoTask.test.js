@@ -33,3 +33,16 @@ test('single-video actions reject unsafe source identity and unknown stages befo
   await assert.rejects(runDouyinVideoTask(f.deps, 1, 7, 'delete'));
   assert.equal(f.calls.length, 0);
 });
+
+test('single-video retry forwards the chosen local model and real duration', async () => {
+  const f = fixture();
+  f.item.mediaMetadata.durationSeconds = 3800;
+  let input;
+  f.deps.transcriber.transcribe = async value => { input = value; return {transcript:'文本',status:'complete'}; };
+  const { runDouyinVideoTask } = require('../electron/douyinVideoTask');
+  await runDouyinVideoTask(f.deps, 1, 7, 'transcribe', () => {}, {model:'large-v3-turbo'});
+  assert.equal(input.model, 'large-v3-turbo');
+  assert.equal(input.provider, 'local');
+  assert.equal(input.durationSeconds, 3800);
+  await assert.rejects(runDouyinVideoTask(f.deps, 1, 7, 'transcribe', () => {}, {model:'unexpected'}), /不支持/);
+});

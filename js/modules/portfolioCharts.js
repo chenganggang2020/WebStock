@@ -4,7 +4,8 @@ let statsAllocationChart = null;
 let statsPnlChart = null;
 
 function chartTextColor() {
-  return document.body.classList.contains('dark') ? '#cbd5e1' : '#2c3e50';
+  const dark = document.body.classList.contains('dark');
+  return window.ChartTheme ? window.ChartTheme.get(dark).colors.text : (dark ? '#91a7bd' : '#586c81');
 }
 
 function chartNumber(value) {
@@ -17,7 +18,7 @@ function renderPie(el, data) {
   if (!el || !window.echarts) return null;
   const chart = echarts.init(el);
   const complete = data.every(item => chartNumber(item.marketValue) !== null && chartNumber(item.ratio) !== null);
-  chart.setOption({
+  const option = {
     tooltip: { trigger: 'item', formatter: '{b}<br/>{c} ({d}%)' },
     legend: { bottom: 0, textStyle: { color: chartTextColor() } },
     graphic: complete ? [] : [{
@@ -33,7 +34,9 @@ function renderPie(el, data) {
       data: complete ? data.map(item => ({ name: item.name + '(' + item.code + ')', value: chartNumber(item.marketValue) })) : [],
       label: { color: chartTextColor() }
     }]
-  });
+  };
+  if (window.ChartTheme) window.ChartTheme.applyToOption(option, {dark:document.body.classList.contains('dark')});
+  chart.setOption(option);
   return chart;
 }
 
@@ -47,7 +50,7 @@ function renderBar(el, positions) {
     if (right === null) return -1;
     return right - left;
   });
-  chart.setOption({
+  const option = {
     tooltip: { trigger: 'axis' },
     grid: { left: 48, right: 20, top: 30, bottom: 48 },
     xAxis: {
@@ -67,7 +70,9 @@ function renderBar(el, positions) {
         }
       }
     }]
-  });
+  };
+  if (window.ChartTheme) window.ChartTheme.applyToOption(option, {dark:document.body.classList.contains('dark')});
+  chart.setOption(option);
   return chart;
 }
 

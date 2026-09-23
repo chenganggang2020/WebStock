@@ -8,15 +8,14 @@ const {
   registerPortableDataDirectory
 } = require('./dataMigration');
 const { resolveRuntimeConfig } = require('./runtimeConfig');
-const { createLanServerController } = require('./lanServerController');
+const { createDesktopBackend } = require('./desktopBackend');
 const { createDouyinSessionManager } = require('./douyinSessionManager');
-const { createDouyinAutoSync, ensureDouyinSyncJobs } = require('./douyinAutoSync');
+const runtimeTrace = require('../services/runtimeDiagnostics');
+const { startRuntimeDiagnostics } = require('./runtimeDiagnostics');
 const { createBackgroundMode } = require('./backgroundMode');
 const { createLoginStartup } = require('./loginStartup');
-const { createDouyinTranscriptService } = require('../services/douyinTranscriptService');
 const { inspectNetworkRoute } = require('./networkRoute');
 const { loadMainWindow } = require('./mainWindowLoader');
-const { readLanEnabled } = require('../services/lanHostService');
 const { ensurePairingToken } = require('../services/lanHostService');
 const {
   DOWNLOAD_URL: TAILSCALE_DOWNLOAD_URL,
@@ -25,20 +24,12 @@ const {
 } = require('../services/tailscaleAccessService');
 
 let mainWindow = null;
-let serverController = null;
+let runtimeObserver = null;
+let desktopBackend = null;
+let shutdownTask = null;
 let douyinSessionManager = null;
-let douyinAutoSync = null;
 let backgroundMode = null;
 let tailscaleAccess = null;
-let mobilePushService = null;
-let fullMarketSyncTimer = null;
-let fullMarketInitialTimer = null;
-let paperMonitorScheduler = null;
-let tonghuashunHoldingScheduler = null;
-let industryResearchScheduler = null;
-let etfDailyScheduler = null;
-let sectorRotation = null;
-let localQuoteSampler = null;
 let servicesStopped = false;
 
 app.setName('WebStock');
@@ -109,7 +100,7 @@ function createChildWindow(title, webPreferences) {
     height: 820,
     minWidth: 900,
     minHeight: 620,
-    title: title || 'WebStock',
+    title: title || '研究资料',
     parent: mainWindow || undefined,
     icon: appIcon,
     backgroundColor: '#ffffff',
@@ -135,7 +126,7 @@ function openInternalWindow(url) {
     shell.openExternal(url);
     return;
   }
-  const child = createChildWindow('WebStock');
+  const child = createChildWindow('研究资料');
   child.loadURL(url);
 }
 
@@ -146,7 +137,7 @@ function createWindow(url) {
     height: 900,
     minWidth: 1100,
     minHeight: 720,
-    title: 'WebStock',
+    title: '行情与研究',
     show: process.env.WEBSTOCK_BUILD_SMOKE_TEST !== '1' && !process.argv.includes('--background'),
     icon: appIcon,
     backgroundColor: '#ffffff',
@@ -165,6 +156,10 @@ function createWindow(url) {
   loadMainWindow(mainWindow, url, { log }).catch(function(error) {
     log('Unexpected main window startup navigation failure', error);
   });
+  mainWindow.on('unresponsive', () => runtimeTrace.emit({type:'renderer-unresponsive',label:'main-window'}));
+  mainWindow.on('responsive', () => runtimeTrace.emit({type:'renderer-responsive',label:'main-window'}));
+  mainWindow.on('hide', () => runtimeTrace.emit({type:'renderer',visible:false,page:''}));
+  mainWindow.webContents.on('render-process-gone', (_event, details) => runtimeTrace.emit({type:'renderer-exit',label:details.reason}));
   if (backgroundMode) mainWindow.on('close', backgroundMode.handleWindowClose);
   mainWindow.on('closed', function() {
     mainWindow = null;
@@ -181,6 +176,23 @@ function getDouyinSessionManager() {
   });
   return douyinSessionManager;
 }
+
+function isMainDiagnosticSender(event) {
+  return Boolean(mainWindow && event.sender === mainWindow.webContents && event.senderFrame === mainWindow.webContents.mainFrame);
+}
+ipcMain.on('webstock:runtime-diagnostic', function(event, data) {
+  if(!isMainDiagnosticSender(event) || !data || typeof data !== 'object')return;
+  if(data.type === 'renderer')runtimeTrace.emit({type:'renderer',visible:data.visible===true,page:String(data.page || '').replace(/[^a-zA-Z0-9_-]/g,'').slice(0,60)});
+  if(data.type === 'interaction')runtimeTrace.emit({type:'interaction',label:String(data.label || '').replace(/[^a-zA-Z0-9_.:-]/g,'').slice(0,80)});
+});
+ipcMain.handle('webstock:runtime-diagnostics-status', function(event) {
+  if(!isMainDiagnosticSender(event))return {status:'unavailable'};
+  return {status:runtimeObserver?.status() || 'unavailable'};
+});
+ipcMain.handle('webstock:open-runtime-diagnostics', function(event) {
+  if(!isMainDiagnosticSender(event) || !runtimeObserver?.directory)return;
+  return shell.openPath(runtimeObserver.directory);
+});
 
 function assertMainWindowSender(event) {
   if (!mainWindow || event.sender !== mainWindow.webContents) {
@@ -205,94 +217,32 @@ async function startServer() {
   log('Using WebStock database: ' + (process.env.WEBSTOCK_DB_PATH || runtimeConfig.dbPath));
   configureEnvironment();
   log('Starting local WebStock server');
-  const expressApp = require('../server');
   const port = runtimeConfig.port;
   if (!await canListen(port)) {
     throw new Error('WebStock fixed local port ' + port + ' is already in use. Close the other local service and start WebStock again.');
   }
-  serverController = createLanServerController({
-    expressApp,
-    port,
-    userDataDir: runtimeConfig.userDataDir,
-    log
-  });
-  await serverController.start(readLanEnabled(runtimeConfig.userDataDir));
-  const researchService = require('../services/industryResearchService');
-  const { createIndustryResearchScheduler } = require('../services/industryResearchScheduler');
-  industryResearchScheduler = createIndustryResearchScheduler({ service: researchService });
-  industryResearchScheduler.start();
-  const etfCore = require('../services/eastmoneyEtfDailyService');
-  const etfDailyService = etfCore.getEastmoneyEtfDailyService();
-  etfDailyScheduler = require('../services/eastmoneyEtfDailyScheduler').createEastmoneyEtfDailyScheduler({ service: etfDailyService });
-  if (process.env.WEBSTOCK_BUILD_SMOKE_TEST !== '1') etfDailyScheduler.start();
-  sectorRotation = require('../services/capitalFlow/sectorRotationService').getSectorRotationService();
-  if (process.env.WEBSTOCK_BUILD_SMOKE_TEST !== '1') sectorRotation.start();
-  localQuoteSampler = require('../routes/market').localQuoteSampler;
-  if (process.env.WEBSTOCK_BUILD_SMOKE_TEST !== '1' && process.env.WEBSTOCK_LOCAL_SAMPLING_AUTO !== '0') localQuoteSampler.start();
-  tailscaleAccess = createTailscaleAccessService({
-    userDataDir: runtimeConfig.userDataDir,
-    appPort: port
-  });
-  return 'http://127.0.0.1:' + port + '/';
-}
-
-function startDouyinAutoSync() {
-  const expertChannels = require('../services/expertChannelService');
-  const douyinSources = require('../services/douyinSourceService');
-  const syncState = require('../services/douyinSyncStateService');
-  ensureDouyinSyncJobs(expertChannels, syncState, { intervalMinutes: 10 });
-  douyinAutoSync = createDouyinAutoSync({
-    sessionManager: getDouyinSessionManager(),
-    channels: expertChannels,
-    sources: douyinSources,
-    transcriber: createDouyinTranscriptService(),
-    syncState,
-    maxTranscriptionsPerRun: 3,
-    log
-  });
-  douyinAutoSync.start();
-}
-
-function startFullMarketAutoSync() {
-  const quant = require('../services/quantService');
-  const check = function() {
-    try {
-      const result = quant.runScheduledFullMarketSync();
-      if (result.action === 'started') log('Started scheduled full-market daily increment: ' + result.job.id);
-    } catch (error) {
-      log('Scheduled full-market data check failed', error);
+  desktopBackend = createDesktopBackend({
+    getSessionManager: getDouyinSessionManager,
+    onLog: message => console.log('[data] ' + message.trimEnd()),
+    onExit: details => {
+      log('Data backend exited unexpectedly: ' + String(details.code));
+      runtimeTrace.emit({ type: 'backend-exit', label: String(details.code) });
     }
-  };
-  fullMarketInitialTimer = setTimeout(check, 15000);
-  if (fullMarketInitialTimer.unref) fullMarketInitialTimer.unref();
-  fullMarketSyncTimer = setInterval(check, 5 * 60 * 1000);
-  if (fullMarketSyncTimer.unref) fullMarketSyncTimer.unref();
-}
-
-function startPaperMonitorAutoSync() {
-  const { createPaperMonitorScheduler } = require('../services/paperMonitorScheduler');
-  const { createTonghuashunHoldingScheduler } = require('../services/tonghuashunHoldingScheduler');
-  paperMonitorScheduler = createPaperMonitorScheduler({ log });
-  tonghuashunHoldingScheduler = createTonghuashunHoldingScheduler({ log });
-  paperMonitorScheduler.start();
-  tonghuashunHoldingScheduler.start();
+  });
+  const result = await desktopBackend.start(runtimeConfig);
+  tailscaleAccess = createTailscaleAccessService({ userDataDir: runtimeConfig.userDataDir, appPort: port });
+  return result.url;
 }
 
 async function stopBackgroundServices() {
   if (servicesStopped) return;
-  servicesStopped = true;
-  if (douyinAutoSync) douyinAutoSync.stop();
-  if (fullMarketInitialTimer) clearTimeout(fullMarketInitialTimer);
-  if (fullMarketSyncTimer) clearInterval(fullMarketSyncTimer);
-  if (paperMonitorScheduler) paperMonitorScheduler.stop();
-  if (tonghuashunHoldingScheduler) tonghuashunHoldingScheduler.stop();
-  if (industryResearchScheduler) industryResearchScheduler.stop();
-  if (etfDailyScheduler) etfDailyScheduler.stop();
-  if (sectorRotation) sectorRotation.stop();
-  if (localQuoteSampler) localQuoteSampler.stop();
-  if (mobilePushService) mobilePushService.stop();
-  if (douyinSessionManager) douyinSessionManager.dispose();
-  if (serverController) await serverController.stop();
+  if (shutdownTask) return shutdownTask;
+  shutdownTask = (async function() {
+    if (douyinSessionManager) douyinSessionManager.dispose();
+    if (desktopBackend) await desktopBackend.stop();
+    servicesStopped = true;
+  })().finally(function() { shutdownTask = null; });
+  return shutdownTask;
 }
 
 function createBackgroundController() {
@@ -303,24 +253,25 @@ function createBackgroundController() {
     iconPath: path.join(__dirname, '..', 'icons', process.platform === 'win32' ? 'webstock.ico' : 'webstock-512.png'),
     getMainWindow: function() { return mainWindow; },
     onSyncAll: async function() {
-      if (!douyinAutoSync) throw new Error('抖音自动同步服务尚未启动');
-      return douyinAutoSync.syncAll();
+      if (!desktopBackend) throw new Error('后台数据服务尚未启动');
+      return desktopBackend.call('syncAll', [], { timeoutMs: 0 });
     },
     onExit: stopBackgroundServices,
+    onExitError: error => dialog.showErrorBox('后台尚未退出', '未强制关闭或清空数据。请稍后再次完全退出。\n' + error.message),
     log
   });
   backgroundMode.attach();
 }
 
 ipcMain.handle('webstock:lan-access-status', function() {
-  return serverController
-    ? serverController.status()
+  return desktopBackend
+    ? desktopBackend.call('lanStatus')
     : { supported: false, enabled: false, pairingUrls: [] };
 });
 
 ipcMain.handle('webstock:set-lan-access', async function(_event, enabled) {
-  if (!serverController) throw new Error('WebStock local server is not ready');
-  const result = await serverController.setEnabled(enabled === true);
+  if (!desktopBackend) throw new Error('WebStock local server is not ready');
+  const result = await desktopBackend.call('setLanEnabled', [enabled === true]);
   if (!enabled && readTailscaleEnabled(runtimeConfig.userDataDir)) {
     process.env.WEBSTOCK_LAN_TOKEN = ensurePairingToken(runtimeConfig.userDataDir);
   }
@@ -339,6 +290,7 @@ ipcMain.handle('webstock:set-ios-access', async function(event, enabled) {
   if (!tailscaleAccess) throw new Error('WebStock local server is not ready');
   if (enabled) {
     process.env.WEBSTOCK_LAN_TOKEN = ensurePairingToken(runtimeConfig.userDataDir);
+    await desktopBackend.call('setPairingToken', [process.env.WEBSTOCK_LAN_TOKEN]);
     try {
       return await tailscaleAccess.enable();
     } catch (error) {
@@ -352,7 +304,10 @@ ipcMain.handle('webstock:set-ios-access', async function(event, enabled) {
     }
   }
   const result = await tailscaleAccess.disable();
-  if (!serverController || !serverController.status().enabled) delete process.env.WEBSTOCK_LAN_TOKEN;
+  if (!desktopBackend || !(await desktopBackend.call('lanStatus')).enabled) {
+    delete process.env.WEBSTOCK_LAN_TOKEN;
+    if (desktopBackend) await desktopBackend.call('setPairingToken', ['']);
+  }
   return result;
 });
 
@@ -410,24 +365,25 @@ ipcMain.handle('webstock:collect-douyin-page', async function(event) {
 
 ipcMain.handle('webstock:sync-douyin-channel', async function(event, channelId) {
   assertMainWindowSender(event);
-  if (!douyinAutoSync) throw new Error('抖音自动同步服务尚未启动');
-  return douyinAutoSync.syncChannel(Number(channelId), { trigger: 'manual' });
+  if (!desktopBackend) throw new Error('后台数据服务尚未启动');
+  return desktopBackend.call('syncChannel', [Number(channelId), { trigger: 'manual' }], { timeoutMs: 0 });
 });
 
-ipcMain.handle('webstock:douyin-video-task', function(event, channelId, observationId, stage) {
+ipcMain.handle('webstock:douyin-video-task', function(event, channelId, observationId, stage, settings = {}) {
   assertMainWindowSender(event);
-  if (!douyinAutoSync) throw new Error('后台采集服务尚未启动');
-  return douyinAutoSync.runVideo(Number(channelId), Number(observationId), String(stage));
+  if (!desktopBackend) throw new Error('后台采集服务尚未启动');
+  if (settings.model && !['small','large-v3-turbo','large-v3'].includes(settings.model)) throw new Error('不支持的本地转写模型');
+  return desktopBackend.call('runVideo', [Number(channelId), Number(observationId), String(stage), {model:settings.model}], { timeoutMs: 0 });
 });
 
 ipcMain.handle('webstock:archive-douyin-channel', async function(event, channelId) {
   assertMainWindowSender(event);
-  if (!douyinAutoSync) throw new Error('抖音自动同步服务尚未启动');
-  return douyinAutoSync.syncChannel(Number(channelId), {
+  if (!desktopBackend) throw new Error('后台数据服务尚未启动');
+  return desktopBackend.call('syncChannel', [Number(channelId), {
     trigger: 'archive',
     mode: 'archive',
     archiveOptions: { maxScrolls: 80, stableRounds: 3 }
-  });
+  }], { timeoutMs: 0 });
 });
 
 const gotLock = app.requestSingleInstanceLock();
@@ -441,36 +397,31 @@ if (!gotLock) {
   app.whenReady().then(async function() {
     Menu.setApplicationMenu(null);
     log('Electron app ready');
+    runtimeObserver = startRuntimeDiagnostics({directory:path.join(runtimeConfig.userDataDir,'diagnostics'),
+      port:runtimeConfig.port,version:require('../package.json').version,
+      onWarning:code=>log('Automatic hang diagnostics unavailable: '+code)});
     const url = await startServer();
     if (process.env.WEBSTOCK_BUILD_SMOKE_TEST !== '1') {
-      mobilePushService = require('../services/mobilePushService').getMobilePushService();
-      mobilePushService.start();
-      startDouyinAutoSync();
-      startFullMarketAutoSync();
-      startPaperMonitorAutoSync();
       createBackgroundController();
     }
     createWindow(url);
   }).catch(function(error) {
     log('WebStock startup failed', error);
-    dialog.showErrorBox('WebStock startup failed', error.stack || error.message || String(error));
+    dialog.showErrorBox('程序启动失败', error.stack || error.message || String(error));
     app.quit();
   });
 
-  app.on('before-quit', function() {
-    if (backgroundMode) backgroundMode.setQuitting(true);
-    if (douyinAutoSync) douyinAutoSync.stop();
-    if (fullMarketInitialTimer) clearTimeout(fullMarketInitialTimer);
-    if (fullMarketSyncTimer) clearInterval(fullMarketSyncTimer);
-    if (paperMonitorScheduler) paperMonitorScheduler.stop();
-    if (tonghuashunHoldingScheduler) tonghuashunHoldingScheduler.stop();
-    if (industryResearchScheduler) industryResearchScheduler.stop();
-    if (etfDailyScheduler) etfDailyScheduler.stop();
-    if (sectorRotation) sectorRotation.stop();
-    if (localQuoteSampler) localQuoteSampler.stop();
-    if (douyinSessionManager) douyinSessionManager.dispose();
-    if (!servicesStopped && serverController) serverController.stop().catch(function(error) {
-      log('Failed to stop local WebStock server cleanly', error);
+  app.on('before-quit', function(event) {
+    if (servicesStopped) {
+      if (runtimeObserver) runtimeObserver.stop();
+      if (backgroundMode) backgroundMode.setQuitting(true);
+      return;
+    }
+    event.preventDefault();
+    stopBackgroundServices().then(() => app.quit()).catch(function(error) {
+      log('Backend shutdown did not finish; application was not force-closed', error);
+      if (backgroundMode) backgroundMode.setQuitting(false);
+      dialog.showErrorBox('后台尚未退出', '未强制关闭或清空数据。请稍后再次完全退出。\n' + error.message);
     });
   });
 }

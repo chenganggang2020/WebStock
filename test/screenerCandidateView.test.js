@@ -150,7 +150,7 @@ test('coverage view reports technical exclusion count instead of hiding missing 
   assert.match(html, /缺技术数据已排除[^]*6/);
 });
 
-test('an empty technical candidate set still shows the research-only disclaimer', () => {
+test('empty candidates retain missing-data explanation without repeating disclaimers', () => {
   const loaded = loadViewWithResultsBox();
   loaded.view.render({
     candidates: [],
@@ -159,7 +159,8 @@ test('an empty technical candidate set still shows the research-only disclaimer'
   });
 
   assert.match(loaded.resultsBox.innerHTML, /暂无合格候选/);
-  assert.match(loaded.resultsBox.innerHTML, /不构成投资建议/);
+  assert.doesNotMatch(loaded.resultsBox.innerHTML, /不构成投资建议/);
+  assert.match(loaded.resultsBox.innerHTML, /缺少技术数据/);
 });
 
 test('screener keeps the newest run as the rendered and exported result', async () => {

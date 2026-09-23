@@ -2,6 +2,8 @@ const tagEnrichingCodes = new Set();
 let tagEnrichTimer = null;
 let suppressTagSchedule = false;
 let stockSelectionSequence = 0;
+let stockPageLoading = false;
+let quoteRefreshSequence = 0;
 const minutePrefetchRequests = new Map();
 const minutePrefetchQueue = [];
 const minutePrefetchQueuedCodes = new Set();
@@ -250,17 +252,21 @@ function updateVisibleQuoteRows(quoteMap) {
 }
 
 async function loadMoreStocks() {
-  const State = window.State;
-  State.currentPage++;
-  const start = State.currentPage * State.PAGE_SIZE;
-  const end = start + State.PAGE_SIZE;
-  const sourceData = State.searchResults.length > 0 ? State.searchResults : State.allStocks;
-  const newStocks = sourceData.slice(start, end);
-  if (newStocks.length > 0) {
-    State.filteredStocks = State.filteredStocks.concat(newStocks);
-    await refreshQuotes(newStocks);
-    renderStockTable(State.filteredStocks);
-  }
+  if (stockPageLoading) return;
+  stockPageLoading = true;
+  try {
+    const State = window.State;
+    State.currentPage++;
+    const start = State.currentPage * State.PAGE_SIZE;
+    const end = start + State.PAGE_SIZE;
+    const sourceData = State.searchResults.length > 0 ? State.searchResults : State.allStocks;
+    const newStocks = sourceData.slice(start, end);
+    if (newStocks.length > 0) {
+      State.filteredStocks = State.filteredStocks.concat(newStocks);
+      renderStockTable(State.filteredStocks);
+      await refreshQuotes(newStocks);
+    }
+  } finally { stockPageLoading = false; }
 }
 
 function setupInfiniteScroll() {
@@ -280,48 +286,71 @@ function setupInfiniteScroll() {
 async function refreshQuotes(stocks) {
   const State = window.State;
   if (!stocks || !stocks.length) return { ok: true, count: 0 };
-  const codes = stocks.map(s => s.code).join(',');
-  try {
-    const quotes = await window.ApiClient.fetchJsonData('/api/quote?codes=' + codes);
-    if (!Array.isArray(quotes)) throw new Error('行情接口返回格式异常');
-    const map = {};
-    quotes.forEach(q => map[q.code] = q);
-    stocks.forEach(s => {
-      if (map[s.code]) applyQuote(s, map[s.code]);
-    });
-    State.allStocks.forEach(s => {
-      if (map[s.code]) applyQuote(s, map[s.code]);
-    });
-    if (State.searchResults.length > 0) {
-      State.searchResults.forEach(s => {
+  const sequence = ++quoteRefreshSequence;
+  const codes = Array.from(new Set(stocks.map(s => s.code).filter(Boolean)));
+  const received = [];
+  let lastError = null;
+  let failedCount = 0;
+  for (let start = 0; start < codes.length; start += 50) {
+    const batch = codes.slice(start, start + 50);
+    try {
+      const response = await window.ApiClient.fetchJsonData('/api/quote?codes=' + batch.join(','));
+      if (!Array.isArray(response)) throw new Error('行情接口返回格式异常');
+      const quotes = response.filter(q => batch.includes(q.code) && Number(q.price) > 0 && q.quoteStatus !== 'unavailable');
+      received.push(...quotes);
+      failedCount += batch.length - new Set(quotes.map(q => q.code)).size;
+      const map = {};
+      quotes.forEach(q => map[q.code] = q);
+      stocks.forEach(s => {
         if (map[s.code]) applyQuote(s, map[s.code]);
       });
-    }
-    updateVisibleQuoteRows(map);
-    if (State.currentStock && map[State.currentStock.code]) {
-      const q = map[State.currentStock.code];
-      const activeMeta = State.currentView === 'kline' ? State.currentKlineMeta : State.currentMinuteMeta;
-      const sameSnapshot = activeMeta && activeMeta.code === State.currentStock.code &&
-        (State.currentView !== 'kline' || activeMeta.period === State.currentPeriod);
-      const preserveSourceNotice = sameSnapshot &&
-        (activeMeta.stale || activeMeta.dataSource === 'unavailable' || activeMeta.quoteStatus === 'unavailable');
-      const price = Number(q.price) || 0;
-      const change = Number(q.change) || 0;
-      const pColor = price > 0 ? (change >= 0 ? 'var(--up)' : 'var(--down)') : '#999';
-      if (!preserveSourceNotice) {
-        document.getElementById('priceInfo').innerHTML = '最新价 <span style="color:' + pColor + ';font-weight:600">' + (price > 0 ? price.toFixed(2) : '--') + '</span> | 涨跌幅 <span style="color:' + pColor + ';font-weight:600">' + (price > 0 ? (change >= 0 ? '+' : '') + change.toFixed(2) + '%' : '--') + '</span>';
+      State.allStocks.forEach(s => {
+        if (map[s.code]) applyQuote(s, map[s.code]);
+      });
+      if (State.searchResults.length > 0) {
+        State.searchResults.forEach(s => {
+          if (map[s.code]) applyQuote(s, map[s.code]);
+        });
       }
+      updateVisibleQuoteRows(map);
+      if (State.currentStock && map[State.currentStock.code]) {
+        const q = map[State.currentStock.code];
+        const activeMeta = State.currentView === 'kline' ? State.currentKlineMeta : State.currentMinuteMeta;
+        const sameSnapshot = activeMeta && activeMeta.code === State.currentStock.code &&
+          (State.currentView !== 'kline' || activeMeta.period === State.currentPeriod);
+        const preserveSourceNotice = sameSnapshot &&
+          (State.currentView === 'kline' || activeMeta.quoteAlignedFromMinute || activeMeta.stale || activeMeta.dataSource === 'unavailable' || activeMeta.quoteStatus === 'unavailable');
+        if (window.RealtimeChart && window.RealtimeChart.updateOrderBook) {
+          window.RealtimeChart.updateOrderBook(q);
+          if (State.currentView === 'kline') window.RealtimeChart.updateStockInfo(q, [], {});
+        }
+        const price = Number(q.price) || 0;
+        const change = Number(q.change) || 0;
+        const pColor = price > 0 ? (change >= 0 ? 'var(--up)' : 'var(--down)') : '#999';
+        if (!preserveSourceNotice) {
+          document.getElementById('priceInfo').innerHTML = '最新价 <span style="color:' + pColor + ';font-weight:600">' + (price > 0 ? price.toFixed(2) : '--') + '</span> | 涨跌幅 <span style="color:' + pColor + ';font-weight:600">' + (price > 0 ? (change >= 0 ? '+' : '') + change.toFixed(2) + '%' : '--') + '</span>';
+        }
+      }
+    } catch (e) {
+      console.warn('行情分批刷新未完成', e.message);
+      lastError = e;
+      failedCount += batch.length;
     }
-    const observedAt = quotes.map(function(quote) {
+  }
+  const observedAt = received.map(function(quote) {
       return [quote.tradeDate, quote.tradeTime].filter(Boolean).join(' ');
     }).filter(Boolean).sort().pop();
-    return { ok: true, count: quotes.length, observedAt };
-  } catch (e) {
-    console.error(e);
-    const hint = document.getElementById('stockListStatus');
-    if (hint) hint.textContent = '行情刷新失败，已保留本地列表：' + e.message;
-    return { ok: false, error: e };
+  const hint = document.getElementById('stockListStatus');
+  if (hint && sequence === quoteRefreshSequence) {
+    const timeout = lastError && /超时|timeout|timed out/i.test(lastError.message || '');
+    const reason = timeout ? '报价请求超时' : '部分报价暂不可用';
+    hint.textContent = failedCount
+      ? (received.length ? '部分行情已更新；' : '') + reason + '。已保留已有报价，缺失项显示“--”；可稍后重试。'
+      : '行情快照 ' + received.length + ' 只' + (observedAt ? ' · 数据时间 ' + observedAt : '') +
+        (received.some(q => q.quoteStatus === 'stale') ? ' · 含旧快照，非实时' : received.some(q => q.quoteStatus === 'latest-close') ? ' · 最近收盘' : '');
   }
+  return { ok: failedCount === 0, partial: failedCount > 0 && received.length > 0,
+    count: received.length, failedCount, observedAt, error: lastError };
 }
 
 function refreshVisibleMinuteCharts(codes) {
@@ -725,6 +754,7 @@ async function selectStock(stock) {
   const isCurrentSelection = function() {
     return selectionId === stockSelectionSequence && State.currentStock && State.currentStock.code === stock.code;
   };
+  if ((!State.currentStock || State.currentStock.code !== stock.code) && RealtimeChart.beginStockSelection) RealtimeChart.beginStockSelection(stock.code);
   State.currentStock = stock;
   if (window.DecisionGuide) window.DecisionGuide.refreshForStock(stock).catch(function(error) { console.warn(error.message || error); });
   if (window.RecentStocks) window.RecentStocks.record(stock).catch(function(error) { console.warn(error.message); });
@@ -742,7 +772,7 @@ async function selectStock(stock) {
   }
 
   renderStockTable(State.filteredStocks);
-  await refreshQuotes([stock]);
+  const quoteUpdate = refreshQuotes([stock]).catch(function(error) { console.warn(error.message || error); });
   if (!isCurrentSelection()) return;
   if (window.Dashboard) Promise.resolve(window.Dashboard.refreshCards()).catch(function(error) { console.warn(error.message); });
 
@@ -756,6 +786,7 @@ async function selectStock(stock) {
       }
     }, 250);
   }
+  await quoteUpdate;
 }
 
 window.StockList = {

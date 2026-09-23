@@ -13,6 +13,14 @@ process.env.WEBSTOCK_DB_PATH = testDbPath;
 const db = require('../db');
 const experts = require('../services/expertChannelService');
 
+test('collection media preference is author-scoped, persistent and validated', () => {
+  const first = experts.createChannel({ displayName: '图文作者', platform: 'douyin', collectionMediaType: 'note' });
+  const second = experts.createChannel({ displayName: '视频作者', platform: 'douyin' });
+  assert.equal(experts.getChannel(first.id).collectionMediaType, 'note');
+  assert.equal(experts.getChannel(second.id).collectionMediaType, 'all');
+  assert.throws(() => experts.createChannel({ ...first, collectionMediaType: 'invalid' }), /类型/);
+});
+
 test('expert channel keeps primary content and deleted traces at distinct evidence levels', () => {
   const channel = experts.createChannel({
     channelKey: 'douyin-model-mr',

@@ -48,10 +48,10 @@ function detectSnapshotChange(previous, next) {
 
 function buildPrivateNotification(change) {
   if (change && change.kind === 'test') {
-    return { title: 'WebStock 通知已开启', body: '以后有重要数据变化时会在这里提醒。', url: '/mobile.html' };
+    return { title: '行情与研究 · 通知已开启', body: '以后有重要数据变化时会在这里提醒。', url: '/mobile.html' };
   }
   return {
-    title: 'WebStock 有新的数据变化',
+    title: '行情与研究 · 数据变化',
     body: change && change.kind === 'research' ? '研究资料有更新，打开应用查看。' : change && change.kind === 'price-alert' ? '关注标的触发预警点位，打开应用查看。' : '工作台状态有明显变化，打开应用查看。',
     url: '/mobile.html'
   };
@@ -118,6 +118,7 @@ function createMobilePushService(options = {}) {
   const dataDir = options.dataDir || path.dirname(database.dbPath || require('../db').dbPath);
   const intervalMs = Number(options.intervalMs) || CHECK_INTERVAL_MS;
   let timer = null;
+  let initialTimer = null;
   let running = false;
   let vapid = null;
 
@@ -220,12 +221,15 @@ function createMobilePushService(options = {}) {
     if (timer) return;
     timer = setInterval(function() { checkNow().catch(function() {}); }, intervalMs);
     if (typeof timer.unref === 'function') timer.unref();
-    setTimeout(function() { checkNow().catch(function() {}); }, 15000).unref?.();
+    initialTimer = setTimeout(function() { initialTimer = null; checkNow().catch(function() {}); }, 15000);
+    initialTimer.unref?.();
   }
 
   function stop() {
     if (timer) clearInterval(timer);
+    if (initialTimer) clearTimeout(initialTimer);
     timer = null;
+    initialTimer = null;
   }
 
   function publicStatus() {

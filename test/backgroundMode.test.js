@@ -3,6 +3,30 @@ const assert = require('node:assert/strict');
 
 const { createBackgroundMode } = require('../electron/backgroundMode');
 
+test('failed shutdown preserves the tray, shows the window and allows a later retry', async () => {
+  let stops = 0, destroyed = 0, shown = 0, quit = 0, notified = 0;
+  class Tray {
+    setToolTip() {} setContextMenu() {} on() {} destroy() { destroyed++; }
+  }
+  const controller = createBackgroundMode({
+    app: { quit() { quit++; } }, Tray, Menu: { buildFromTemplate: items => items },
+    getMainWindow: () => ({ isDestroyed: () => false, show() { shown++; } }),
+    async onExit() { if (++stops === 1) throw new Error('still draining'); },
+    onExitError() { notified++; }
+  });
+  controller.attach();
+  await controller.exit();
+  assert.equal(destroyed, 0);
+  assert.equal(quit, 0);
+  assert.equal(shown, 1);
+  assert.equal(notified, 1);
+  assert.equal(controller.isQuitting(), false);
+  await controller.exit();
+  assert.equal(stops, 2);
+  assert.equal(destroyed, 1);
+  assert.equal(quit, 1);
+});
+
 test('background mode hides the main window and keeps the process alive', () => {
   const menuTemplates = [];
   const trays = [];
@@ -38,9 +62,9 @@ test('background mode hides the main window and keeps the process alive', () => 
   assert.equal(prevented, true);
   assert.equal(window.hidden, true);
   assert.equal(trays.length, 1);
-  assert.equal(trays[0].tooltip, 'WebStock 后台采集');
+  assert.equal(trays[0].tooltip, '盯盘终端 · 后台采集');
   assert.deepEqual(menuTemplates[0].map(item => item.label || item.type), [
-    '打开 WebStock', '立即检查全部创作者', 'separator', '完全退出'
+    '打开盯盘终端', '立即检查全部创作者', 'separator', '完全退出'
   ]);
   trays[0].handlers.click();
   assert.equal(window.shown, true);

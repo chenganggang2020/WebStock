@@ -62,7 +62,9 @@ test('intraday price and volume charts share a fixed full-session viewport with 
   assert.match(chartSource, /dataZoom:\s*\[/);
   assert.match(chartSource, /showSymbol:\s*sampling\.intervalSeconds\s*<\s*60/);
   assert.match(chartSource, /symbolSize:\s*3/);
-  assert.match(chartSource, /lineStyle\.width\s*=\s*2\.2/);
+  assert.match(chartSource, /lineStyle\.width\s*=\s*chartTheme\.widths\.main/);
+  assert.match(chartSource, /zoomOnMouseWheel:\s*'ctrl'/);
+  assert.match(chartSource, /ChartTheme\.renderTo/);
   assert.match(chartSource, /axisLabel:\s*\{\s*color:\s*textColor,\s*fontSize:\s*12/);
 });
 
@@ -76,7 +78,7 @@ test('intraday view lets the user choose truthful one-minute or derived thirty-s
   assert.match(indexSource, /id="realtimeResolutionToggle"/);
   assert.match(indexSource, /data-resolution="1m"/);
   assert.match(indexSource, /data-resolution="30s"/);
-  assert.match(indexSource, /本地30秒快照/);
+  assert.match(indexSource, /30秒分时/);
   assert.match(chartSource, /resolution=30s/);
   assert.match(chartSource, /local-public-quote-30s/);
   assert.match(chartSource, /tencent-1m/);
@@ -96,7 +98,8 @@ test('intraday view offers an optional locally observed opening-auction layer', 
 
 test('intraday view offers honest local five-second sampling without relabelling it as exchange ticks', () => {
   assert.match(indexSource, /data-resolution="5s"/);
-  assert.match(indexSource, /本地5秒派生/);
+  assert.match(indexSource, /5秒分时/);
+  assert.match(chartSource, /source=public-detail/);
   assert.match(indexSource, /不是交易所逐笔/);
   assert.match(chartSource, /resolution=5s/);
   assert.match(chartSource, /local-public-quote-5s/);
@@ -142,7 +145,7 @@ test('K-line header uses the loaded bar date and close instead of a stale realti
 
 test('daily chart merges the current minute session, explains its live state and refreshes it automatically', () => {
   assert.match(klineSource, /mergeCurrentDailyBar\(data, minuteRows, minuteMeta\)/);
-  assert.match(klineSource, /dailyBarMetrics\(rawData, idx\)/);
+  assert.match(klineSource, /bindReadout\([\s\S]*textAt\(index\)\s*\{[\s\S]*dailyBarMetrics\(rawData, index\)/);
   assert.match(klineSource, /涨跌额/);
   assert.match(klineSource, /涨跌幅/);
   assert.match(klineSource, /振幅/);
@@ -162,7 +165,8 @@ test('daily view renders transparent metrics, auction cards and local signal rul
   assert.match(indexSource, /尾盘竞价观察/);
   assert.match(indexSource, /上交所集合竞价说明/);
   assert.match(klineSource, /analyzeDaily\(data\)/);
-  assert.match(klineSource, /calculateNineTurn\(data\)/);
+  assert.match(klineSource, /calculateNineTurn\(data, nineTurnContext\)/);
+  assert.match(klineSource, /evaluateNineTurnHistory\(data, nineTurnContext\)/);
   assert.match(klineSource, /analyzeAuction\(data, minuteRows, minuteMeta, localRows, localMeta\)/);
   assert.match(klineSource, /detectLocalSignals\(data, minuteRows, minuteMeta\)/);
   assert.match(klineSource, /\/api\/minute\?code=/);

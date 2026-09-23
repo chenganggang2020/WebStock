@@ -11,6 +11,31 @@ const {
   transcriptionReadiness
 } = require('../electron/douyinAutoSync');
 
+test('stopping a scheduled scan lets its current failure persist but never starts the next author', async () => {
+  let release;
+  const capture = new Promise((_, reject) => { release = reject; });
+  const opened = [], failed = [];
+  const sync = createDouyinAutoSync({
+    sessionManager: { captureUrl(url) {
+      opened.push(url);
+      return opened.length === 1 ? capture : Promise.reject(new Error('unexpected second author'));
+    } },
+    channels: { listChannels: () => [], listObservations: () => [],
+      getChannel: id => ({ id, platform: 'douyin', profileUrl: 'https://www.douyin.com/user/' + id }) },
+    sources: {}, syncState: { listDue: () => [{ channelId: 1 }, { channelId: 2 }],
+      markRunning() {}, markCompleted() {}, markFailed(id) { failed.push(id); } }
+  });
+  const task = sync.runDue();
+  await new Promise(resolve => setImmediate(resolve));
+  sync.stop();
+  release(new Error('window closed for shutdown'));
+  await task;
+  assert.deepEqual(opened, ['https://www.douyin.com/user/1']);
+  assert.deepEqual(failed, [1]);
+  await assert.rejects(sync.syncChannel(3), /stopping/);
+  await assert.rejects(sync.runVideo(3, 1, 'transcribe'), /stopping/);
+});
+
 test('missing local transcription runtime is a deferred setup state instead of a collection failure', () => {
   const readiness = transcriptionReadiness({
     readiness() {
@@ -18,6 +43,18 @@ test('missing local transcription runtime is a deferred setup state instead of a
     }
   });
   assert.deepEqual(readiness, { available: false, status: 'runtime_missing', message: '安装后继续补转写' });
+});
+
+test('scheduled polling defers authors with an explicit model batch queued', async () => {
+  let opened = 0;
+  const auto = createDouyinAutoSync({
+    channels: { listChannels:() => [], getChannel:() => ({enabled:true}) },
+    sources: {}, sessionManager: {captureUrl:async () => { opened++; }},
+    syncState: {listDue:() => [{channelId:1}]},
+    shouldDeferChannel: id => id === 1
+  });
+  await auto.runDue();
+  assert.equal(opened, 0);
 });
 
 test('detail queue accepts only direct Douyin works with matching numeric ids', () => {

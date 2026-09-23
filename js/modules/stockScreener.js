@@ -686,8 +686,7 @@ function renderFilteredScreenerResults(result) {
   const allCandidates = (result && Array.isArray(result.candidates)) ? result.candidates : [];
   if (!allCandidates.length) {
     box.innerHTML = renderCoverage(result && result.coverage) +
-      '<div class="empty-state">暂无合格候选。技术策略会默认排除缺少技术数据的股票。</div>' +
-      '<div class="disclaimer">' + screenerEscapeHtml((result && result.disclaimer) || '本地筛选结果仅供研究，不构成投资建议。') + '</div>';
+      '<div class="empty-state">暂无合格候选。技术策略会默认排除缺少技术数据的股票。</div>';
     return;
   }
   const candidates = filterResultCandidates(allCandidates);

@@ -10,6 +10,7 @@ if (!fs.existsSync(dbDir)) fs.mkdirSync(dbDir, { recursive: true });
 let db;
 try {
   db = new Database(dbPath);
+  require('../services/runtimeDiagnostics').instrumentDatabase(db);
   db.pragma('foreign_keys = ON');
   const initSql = fs.readFileSync(path.join(__dirname, 'init.sql'), 'utf8');
   db.exec(initSql);
@@ -23,6 +24,8 @@ try {
   };
   ensureColumn('expert_channels', 'subject_type', "TEXT NOT NULL DEFAULT 'creator'");
   ensureColumn('expert_channels', 'description', "TEXT DEFAULT ''");
+  ensureColumn('expert_channels', 'collection_media_type', "TEXT NOT NULL DEFAULT 'all'");
+  ensureColumn('expert_channels', 'industry_analysis_enabled', 'INTEGER NOT NULL DEFAULT 0');
   ensureColumn('expert_sync_jobs', 'progress_json', "TEXT DEFAULT '{}'");
   ensureColumn('expert_comments', 'versions_json', "TEXT NOT NULL DEFAULT '[]'");
   ensureColumn('expert_observations', 'published_time_precision', "TEXT NOT NULL DEFAULT 'unknown'");

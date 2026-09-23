@@ -200,7 +200,7 @@ test('low-confidence transcription persists raw evidence and review metadata', (
     rawTranscript: '宇宿科技上市一周國家搖轉。',
     transcript: '宇宿科技上市一周国家摇转。',
     normalization: { script: 'zh-Hans', sourceHadTraditional: true, converter: 'opencc-js/tw-to-cn' },
-    quality: { needsReview: true, reasons: ['low_log_probability'], averageLogProbability: -1.3 },
+    quality: { needsReview: true, reasons: ['low_log_probability'], averageLogProbability: -1.3, averageNoSpeechProbability: null },
     segments: [{
       start: 0, end: 4,
       rawText: '宇宿科技上市一周國家搖轉。',
@@ -216,6 +216,7 @@ test('low-confidence transcription persists raw evidence and review metadata', (
   assert.equal(saved.mediaMetadata.asr.status, 'needs_review');
   assert.equal(saved.mediaMetadata.asr.rawTranscript, '宇宿科技上市一周國家搖轉。');
   assert.deepEqual(saved.mediaMetadata.asr.quality.reasons, ['low_log_probability']);
+  assert.equal(saved.mediaMetadata.asr.quality.averageNoSpeechProbability, null);
   assert.equal(saved.mediaMetadata.asr.normalization.script, 'zh-Hans');
   assert.equal(saved.mediaMetadata.asr.segments[0].rawText, '宇宿科技上市一周國家搖轉。');
 });

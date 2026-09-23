@@ -123,6 +123,7 @@ function transcriptionPending(observation) {
   const metadata = observation && observation.mediaMetadata && typeof observation.mediaMetadata === 'object'
     ? observation.mediaMetadata : {};
   const asr = metadata.asr && typeof metadata.asr === 'object' ? metadata.asr : {};
+  if (observation.mediaType === 'note') return !noteProcessingComplete(observation);
   return Boolean(metadata.detailCapturedAt && !['complete', 'needs_review'].includes(asr.status));
 }
 
@@ -234,7 +235,7 @@ function planIncrementalCandidates(observations, state = {}, options = {}) {
     const metadata = observation.mediaMetadata || {};
     if (metadata.incrementalPending !== true) return false;
     const status = metadata.asr && metadata.asr.status;
-    const complete = status === 'no_speech' ||
+    const complete = observation.mediaType === 'note' ? noteProcessingComplete(observation) : status === 'no_speech' ||
       (['complete', 'needs_review'].includes(status) && String(observation.transcript || '').trim());
     if (complete && metadata.incrementalReason !== 'changed') return false;
     const previous = state[contentId(observation)] || {};
@@ -258,7 +259,15 @@ function planIncrementalCandidates(observations, state = {}, options = {}) {
   });
 }
 
+function noteProcessingComplete(observation) {
+  const note = observation && observation.mediaMetadata && observation.mediaMetadata.note || {};
+  return ['needs_review', 'no_text', 'complete'].includes(note.status) && note.imageCount > 0 &&
+    Array.isArray(note.pages) && note.pages.length === note.imageCount && note.pages.every((page, index) =>
+      page.index === index + 1 && page.localAssetPath && ['recognized', 'no_text'].includes(page.status));
+}
+
 module.exports = {
+  noteProcessingComplete,
   discoveryFingerprint,
   planIncrementalCandidates,
   materialFingerprint,

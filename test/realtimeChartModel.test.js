@@ -1,6 +1,19 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
+test('bar-end axes do not invent an empty session-start bucket or a lunch gap', () => {
+  const model = require('../js/modules/realtimeChartModel');
+  for (const seconds of [5,30]) {
+    const axis=model.buildCompressedTradingAxis([], {intervalSeconds:seconds,timestampMeaning:'bar-end'});
+    assert.equal(axis.times.includes('09:30'),false);
+    assert.equal(axis.times.includes('13:00'),false);
+    const noon=axis.times.indexOf('11:30');
+    assert.equal(axis.times[noon+1],seconds===5?'13:00:05':'13:00:30');
+    // Real intraday gaps remain on the expected axis.
+    assert.ok(axis.times.includes(seconds===5?'13:46:20':'13:46:30'));
+  }
+});
+
 const RealtimeChartModel = require('../js/modules/realtimeChartModel');
 
 test('minute series keeps missing provider samples empty instead of carrying prices forward', () => {

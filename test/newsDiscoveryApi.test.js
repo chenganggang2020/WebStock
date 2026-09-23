@@ -100,6 +100,13 @@ test('GET /api/news/discovery returns source-grounded images, explainable signal
   assert.equal(Object.prototype.hasOwnProperty.call(response.json.data.items[0], 'globalHeat'), false);
   assert.equal(externalRequests, 0);
 
+  const unavailableBody = await requestJson(server, '/api/news/article?url=' + encodeURIComponent('https://127.0.0.1/private'));
+  assert.equal(unavailableBody.statusCode, 200);
+  assert.equal(unavailableBody.json.success, true);
+  assert.equal(unavailableBody.json.data.status, 'unavailable');
+  assert.deepEqual(unavailableBody.json.data.paragraphs, []);
+  assert.equal(externalRequests, 0);
+
   const empty = await requestJson(server, '/api/news/discovery?keywords=definitely-no-match&cacheBust=news-discovery-empty');
   assert.equal(empty.statusCode, 200);
   assert.equal(empty.json.success, true);

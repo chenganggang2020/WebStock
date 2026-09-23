@@ -96,19 +96,19 @@ test('buildChartOption creates flow, speed, and acceleration panels without chan
 test('describeSource exposes provenance tier and the non-exchange-truth warning', () => {
   const description = describeSource(sampleResult().source);
 
-  assert.match(description.title, /供应商分类/);
-  assert.match(description.detail, /Eastmoney/);
+  assert.match(description.title, /东方财富资金分类/);
+  assert.match(description.detail, /大单、小单/);
   assert.match(description.warning, /不等于交易所真值/);
   assert.equal(description.tier, 'provider-classified');
 });
 
 test('describeObservation renders fresh, stale, and unavailable as explicit text', () => {
-  assert.match(describeObservation(sampleResult().observation).label, /新鲜/);
+  assert.match(describeObservation(sampleResult().observation).label, /数据时间/);
   assert.match(describeObservation(Object.assign({}, sampleResult().observation, {
     isStale: true,
     state: 'stale',
     reason: 'age-exceeds-threshold'
-  })).label, /已过期/);
+  })).label, /数据时间/);
   assert.match(describeObservation({
     observedAt: null,
     checkedAt: '2026-08-12T05:10:00.000Z',
@@ -160,11 +160,12 @@ test('an unavailable API result also hides raw network implementation errors', a
   assert.equal(elements.capitalFlowChart.dataset.empty, 'true');
 });
 
-test('opening the capital-flow view is on-demand and does not auto-fetch the single-stock series', () => {
+test('opening the capital-flow view loads the selected series without forcing an upstream refresh', () => {
   const appSource = fs.readFileSync(path.join(__dirname, '..', 'js', 'app.js'), 'utf8');
   const branch = appSource.match(/if \(view === 'capitalFlow' && window\.CapitalFlow\) \{([\s\S]*?)\n  \}/);
   assert.ok(branch, 'capital-flow view branch should exist');
-  assert.doesNotMatch(branch[1], /ensureLoaded|\.load\(/);
+  assert.match(branch[1], /activePage === 'capitalFlow'[\s\S]*ensureLoaded/);
+  assert.doesNotMatch(branch[1], /refresh: true/);
   assert.match(branch[1], /\.resize\(\)/);
 });
 

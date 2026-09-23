@@ -324,7 +324,7 @@ test('news, sector and screener APIs return unified success envelopes', async (t
   });
   assert.equal(screener.json.success, true);
   assert.ok(screener.json.data.candidates.length > 0);
-  assert.match(screener.json.data.disclaimer, /不构成投资建议/);
+  assert.equal(screener.json.data.disclaimer, '');
   assert.match(JSON.stringify(screener.json.data.candidates), /本地行情|当前价/);
   assert.match(JSON.stringify(screener.json.data.candidates), /MA5|20 日/);
   assert.match(JSON.stringify(screener.json.data.candidates), /MA60|5d trend|60d trend|volume trend/);

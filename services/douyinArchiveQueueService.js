@@ -1,4 +1,4 @@
-const { planDetailCandidates } = require('./douyinSyncPlanningService');
+const { planDetailCandidates, noteProcessingComplete } = require('./douyinSyncPlanningService');
 
 const CONTENT_ID_PATTERN = /^\d{12,24}$/;
 
@@ -11,7 +11,7 @@ function canonicalDouyinContentId(value) {
     const parsed = new URL(normalizedText(value));
     const hostname = parsed.hostname.toLowerCase();
     if (parsed.protocol !== 'https:' || (hostname !== 'douyin.com' && !hostname.endsWith('.douyin.com'))) return '';
-    const match = parsed.pathname.match(/^\/video\/(\d{12,24})\/?$/);
+    const match = parsed.pathname.match(/^\/(?:video|note)\/(\d{12,24})\/?$/);
     return match ? match[1] : '';
   } catch (error) {
     return '';
@@ -35,6 +35,11 @@ function observationContentId(observation) {
 function archiveQueueState(observation) {
   const metadata = observation && observation.mediaMetadata && typeof observation.mediaMetadata === 'object'
     ? observation.mediaMetadata : {};
+  if (observation.mediaType === 'note') {
+    const completed = noteProcessingComplete(observation);
+    return { transcribed: false, noSpeech: false, unavailable: false, archived: completed,
+      completed, archivePending: false, transcriptionPending: !completed };
+  }
   const asr = metadata.asr && typeof metadata.asr === 'object' ? metadata.asr : {};
   const archive = metadata.archive && typeof metadata.archive === 'object' ? metadata.archive : {};
   const remote = metadata.remote && typeof metadata.remote === 'object' ? metadata.remote : {};
@@ -61,15 +66,22 @@ function videoObservations(observations) {
   });
 }
 
+function noteObservations(observations) {
+  return (observations||[]).filter(observation=>observation && observation.mediaType==='note' &&
+    (!observation.evidenceLevel||observation.evidenceLevel==='primary') && Boolean(verifiedContentId(observation)));
+}
+
 function summarizeArchiveQueue(observations) {
   const videos = videoObservations(observations);
-  const states = videos.map(archiveQueueState);
+  const notes = noteObservations(observations);
+  const states = videos.concat(notes).map(archiveQueueState);
   const transcribedCount = states.filter(state => state.transcribed).length;
   const archivedCount = states.filter(state => state.archived).length;
   const completedCount = states.filter(state => state.completed).length;
   const unavailableCount = states.filter(state => state.unavailable).length;
-  const pendingCount = videos.length - completedCount - unavailableCount;
-  return {
+  const workCount = videos.length + notes.length;
+  const pendingCount = workCount - completedCount - unavailableCount;
+  const result = {
     videoCount: videos.length,
     transcribedCount,
     noSpeechCount: states.filter(state => state.noSpeech).length,
@@ -78,13 +90,18 @@ function summarizeArchiveQueue(observations) {
     completedCount,
     pendingCount,
     archivePendingCount: states.filter(state => state.archivePending).length,
-    transcriptionPendingCount: states.filter(state => state.transcriptionPending).length,
-    completionRate: videos.length ? Number(((completedCount + unavailableCount) / videos.length).toFixed(4)) : 0
+    transcriptionPendingCount: videos.map(archiveQueueState).filter(state => state.transcriptionPending).length,
+    completionRate: workCount ? Number(((completedCount + unavailableCount) / workCount).toFixed(4)) : 0
   };
+  if (notes.length) Object.assign(result,{workCount,noteCount:notes.length,
+    noteCompletedCount:notes.filter(noteProcessingComplete).length,
+    notePendingCount:notes.filter(note=>!noteProcessingComplete(note)).length});
+  return result;
 }
 
 function planFullArchiveQueue(observations, state = {}, options = {}) {
-  const incomplete = videoObservations(observations).filter(function(observation) {
+  const works = videoObservations(observations).concat(noteObservations(observations));
+  const incomplete = works.filter(function(observation) {
     const state = archiveQueueState(observation);
     return !state.completed && !state.unavailable;
   });

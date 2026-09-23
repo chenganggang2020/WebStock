@@ -319,7 +319,7 @@ test('chart coach renders daily GPT, news and capital-flow evidence as separate 
 
   assert.match(gptHtml, /手动 GPT 研究记录/);
   assert.match(gptHtml, /估值修复/);
-  assert.match(gptHtml, /未由 WebStock 验证/);
+  assert.match(gptHtml, /未由本程序验证/);
   assert.doesNotMatch(gptHtml, /自动交易|买入信号/);
   assert.match(newsHtml, /业绩预告/);
   assert.match(newsHtml, /本地重要性/);

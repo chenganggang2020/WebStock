@@ -3,6 +3,46 @@ const assert = require('node:assert/strict');
 
 const ChartTheme = require('../js/modules/chartTheme');
 
+test('Compact palette matches panel colors and keeps neutral axes readable in both themes', () => {
+  for (const dark of [false, true]) {
+    const colors = ChartTheme.get(dark).colors;
+    assert.equal(colors.background, dark ? '#191919' : '#ffffff');
+    const option = ChartTheme.applyToOption({legend:{textStyle:{color:'#333'}},
+      xAxis:{axisLabel:{color:'#333',formatter:'{value}元'}}, series:[]}, {dark});
+    assert.equal(option.legend.textStyle.color, colors.text);
+    assert.equal(option.xAxis.axisLabel.color, colors.text);
+    assert.equal(option.xAxis.axisLabel.formatter, '{value}元');
+  }
+});
+
+test('theme refresh merges presentation only and preserves data, zoom and legend selection', () => {
+  const patches=[];
+  const chart={isDisposed:()=>false,getOption:()=>({xAxis:[{}],yAxis:[{},{}],legend:[{selected:{A:false}}]}),
+    setOption:(option,settings)=>patches.push({option,settings})};
+  const doc={body:{classList:{contains:()=>true}},querySelectorAll:()=>[{}]};
+  ChartTheme.refreshExisting({getInstanceByDom:()=>chart},doc);
+  assert.equal(patches.length,1);
+  assert.equal(patches[0].option.backgroundColor,'#191919');
+  assert.equal(patches[0].option.yAxis.length,2);
+  for (const key of ['series','dataZoom','dataset']) assert.equal(key in patches[0].option,false);
+  assert.equal('selected' in patches[0].option.legend[0],false);
+  assert.equal(patches[0].settings.notMerge,false);
+});
+
+test('semantic axis color callbacks survive a theme application', () => {
+  const color=value=>value>0?'red':'green';
+  const option=ChartTheme.applyToOption({yAxis:{axisLabel:{color}}},{dark:true});
+  assert.equal(option.yAxis.axisLabel.color,color);
+});
+
+test('theme switching skips a cleared or not-yet-populated chart', () => {
+  let updates=0;
+  const chart={isDisposed:()=>false,getOption:()=>undefined,setOption:()=>updates++};
+  ChartTheme.refreshExisting({getInstanceByDom:()=>chart},
+    {body:{classList:{contains:()=>true}},querySelectorAll:()=>[{}]});
+  assert.equal(updates,0);
+});
+
 test('chart option styling keeps lines delicate and moving averages unsmoothed', () => {
   const option = ChartTheme.applyToOption({
     xAxis: {

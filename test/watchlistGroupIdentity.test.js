@@ -85,7 +85,7 @@ test('same-name Tonghuashun and WebStock groups retain separate stable identitie
   assert.match(tabs, /data-group="ths:42"/);
   assert.match(tabs, /data-group="local:重名分组"/);
   assert.match(tabs, /同花顺只读/);
-  assert.match(tabs, /WebStock可编辑/);
+  assert.match(tabs, /本地可编辑/);
   assert.match(filter, /value="ths:42"/);
   assert.match(filter, /value="local:重名分组"/);
 });

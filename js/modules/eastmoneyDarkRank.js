@@ -89,6 +89,10 @@
       } finally {if(ticket===generation) {busy=false;controls(false);}}
     }
     async function autoTick(session,enter=false) {
+      if(typeof window !== 'undefined' && window.DarkRankBoard) {
+        await window.DarkRankBoard.enter(session);
+        if(!el('darkRankDate').closest?.('details')?.open) return;
+      }
       const enabled=el('darkRankAuto').checked;
       const defaultDate=session.dataDate || session.today;
       if(followDate && el('darkRankDate').value!==defaultDate) {

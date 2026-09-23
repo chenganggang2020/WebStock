@@ -26,7 +26,7 @@
   function metaHtml(artifact) {
     const model = artifact && artifact.source && artifact.source.model || '未标注模型';
     return '<div class="external-research-meta">' + escapeHtml(artifact && artifact.marketDate || '--') + ' · ' +
-      escapeHtml(model) + ' · 外部 AI 研究，未由 WebStock 独立验证</div>';
+      escapeHtml(model) + ' · 外部 AI 研究，未由本程序独立验证</div>';
   }
 
   function listText(label, values) {

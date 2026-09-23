@@ -120,6 +120,7 @@ function dashboardMarketSourceLabel(value) {
 
 function dashboardRenderMarketCockpit(snapshot) {
   snapshot = snapshot || {};
+  if (window.HomeTerminal) window.HomeTerminal.renderMarket(snapshot);
   const indicesBox = document.getElementById('dashboardMarketIndices');
   const sectorsBox = document.getElementById('dashboardMarketSectors');
   const flowBox = document.getElementById('dashboardMarketFlow');
@@ -326,9 +327,6 @@ async function dashboardLoad(options) {
       dashboardMarketSnapshot = { error: error && error.message ? error.message : '市场驾驶舱加载失败' };
     })
   ];
-  if (window.EastmoneyEtfDaily && typeof window.EastmoneyEtfDaily.load === 'function') {
-    tasks.push(window.EastmoneyEtfDaily.load(Boolean(options.force)).catch(function(error) { console.warn(error && error.message ? error.message : error); }));
-  }
   if (window.VolumePace && typeof window.VolumePace.load === 'function') {
     tasks.push(window.VolumePace.load({ refresh: Boolean(options.force) }).catch(function(error) {
       console.warn(error && error.message ? error.message : error);

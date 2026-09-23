@@ -9,7 +9,7 @@ const stockProfile = require('./stockProfileService');
 const { appendOneClickOutputInstructions } = require('./handoffFormat');
 const db = require('../db');
 
-const DISCLAIMER = '仅供研究和学习，不构成投资建议；市场有风险，决策需自行验证。';
+const DISCLAIMER = '';
 const TECHNICAL_REQUIRED_STRATEGIES = new Set(['breakout', 'pullback', 'short-strong']);
 
 function loadStocks() {

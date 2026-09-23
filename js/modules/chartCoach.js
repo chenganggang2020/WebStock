@@ -207,7 +207,7 @@
           '<p><b>理由</b>' + escapeHtml(candidate.reason || '未提供') + '</p>' +
           '<p><b>风险</b>' + escapeHtml(candidate.risk || '未提供') + '</p>' +
           (candidate.originalAnalysis ? '<p><b>原分析</b>' + escapeHtml(candidate.originalAnalysis) + '</p>' : '') + '</article>';
-      }).join('') + '</div><small>来源为用户粘贴的 ChatGPT 对话，未由 WebStock 验证；仅作人工研究记录，不触发任何交易操作。</small></section>';
+      }).join('') + '</div><small>来源为用户粘贴的 ChatGPT 对话，未由本程序验证；仅作人工研究记录，不触发任何交易操作。</small></section>';
   }
 
   function renderNewsEvidence(result) {
@@ -233,7 +233,10 @@
     const observations = Array.isArray(result && result.observations) ? result.observations : [];
     const byId = {};
     evidence.forEach(function(item) { if (item && item.id) byId[item.id] = item; });
-    const marks = { markLine: { silent: true, symbol: 'none', data: [] }, markPoint: { data: [] }, markArea: { silent: true, data: [] } };
+    const marks = { markLine: { silent: true, symbol: 'none', data: [] },
+      markPoint: { data: [], tooltip: { trigger: 'item', showContent: true,
+        formatter: params => signalTooltip(params.data && params.data.signal) } },
+      markArea: { silent: true, data: [] } };
     const annotations = result && result.chartAnnotations;
     const keyLevels = annotations && annotations.keyLevels;
     const pivotLevels = annotations && annotations.currentLevels;

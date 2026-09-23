@@ -566,7 +566,7 @@ function createCapitalFlowService(dependencies = {}) {
     throw new Error('Minute-bar adapter is not configured');
   };
 
-  async function getSeries(input = {}) {
+  async function fetchSeries(input = {}) {
     const scope = String(input.scope || '').trim().toLowerCase();
     const code = String(input.code || '').trim();
     const sourceClass = String(input.source || '').trim().toLowerCase();
@@ -684,6 +684,50 @@ function createCapitalFlowService(dependencies = {}) {
     throw error;
   }
 
+  const history = dependencies.historyDirectory
+    ? require('./historyStore').createHistoryStore(dependencies.historyDirectory) : null;
+  const pending = new Map();
+  async function readSeries(input = {}) {
+    if (input.date && input.source === SOURCE_MODES.AUTHORIZED_LEVEL2) {
+      throw Object.assign(new Error('授权逐笔来源尚不支持历史日期查询'), { statusCode: 400 });
+    }
+    if (!history || input.source === SOURCE_MODES.AUTHORIZED_LEVEL2) return fetchSeries(input);
+    const { tradingDay, validDate } = require('./historyStore');
+    if (input.date && !validDate(input.date)) throw Object.assign(new Error('历史日期无效'), { statusCode: 400 });
+    const checkedAt = isoTime(now());
+    let availableDates = await history.dates(input);
+    // Opening the page is a local historical read; the refresh button explicitly
+    // requests the provider. This keeps saved data usable during an outage.
+    let data = input.refresh !== true ? await history.read(input, input.date || availableDates[0]) : null;
+    let refreshError = null;
+    let fromCache = Boolean(data);
+    if (!data && (!input.date || input.refresh === true)) {
+      const fresh = await fetchSeries(input);
+      if (fresh.availability === 'available' && fresh.points.length) {
+        const freshDate = tradingDay(fresh.observation.observedAt);
+        fresh.points = deriveKinematics(fresh.points.filter(point => tradingDay(point.timestamp) === freshDate));
+        fresh.latest = fresh.points.at(-1);
+        try { await history.save(input, fresh); availableDates = await history.dates(input); }
+        catch (_) { fresh.historyWarning = '历史保存失败；当前数据仍可查看，原文件保留'; }
+        if (!input.date || tradingDay(fresh.observation.observedAt) === input.date) data = fresh.historyWarning ? fresh : await history.read(input, tradingDay(fresh.observation.observedAt));
+      } else refreshError = fresh.error || { code: 'CAPITAL_FLOW_EMPTY', message: '本次未取得有效数据' };
+    }
+    const date = input.date || (data && tradingDay(data.observation.observedAt)) || availableDates[0] || null;
+    if (!data && date) { data = await history.read(input, date); fromCache = Boolean(data); }
+    if (!data) data = unavailableResult({ scope: input.scope, code: input.code, checkedAt,
+      source: input.source === SOURCE_MODES.LOCAL_ESTIMATE ? localEstimateSource() : vendorSource(),
+      metricContract: input.source === SOURCE_MODES.LOCAL_ESTIMATE ? localEstimateMetricContract() : vendorMetricContract(),
+      errorCode: 'CAPITAL_FLOW_HISTORY_MISSING', message: '该日期尚无已保存数据。' });
+    else data.observation = assessStaleness(data.observation.observedAt, checkedAt, DEFAULT_STALE_AFTER_MS[input.source]);
+    return { ...data, history: { tradingDay: date, availableDates, fromCache }, refreshError };
+  }
+  function getSeries(input = {}) {
+    const key = JSON.stringify(input);
+    if (pending.has(key)) return pending.get(key);
+    const task = readSeries(input).finally(() => pending.delete(key));
+    pending.set(key, task);
+    return task;
+  }
   return { getSeries };
 }
 

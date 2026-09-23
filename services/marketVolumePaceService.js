@@ -60,6 +60,33 @@ function normalizeSinaVolumeDays(payload) {
   });
 }
 
+function normalizeTencentAmountDays(payload, symbol) {
+  const days = payload && payload.code === 0 && payload.data && payload.data[symbol] && payload.data[symbol].data;
+  const rows = new Map();
+  (Array.isArray(days) ? days : []).forEach(function(day) {
+    const date = String(day.date || '').replace(/^(\d{4})(\d{2})(\d{2})$/, '$1-$2-$3');
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
+    const snapshots = new Map();
+    (Array.isArray(day.data) ? day.data : []).forEach(function(line) {
+      const fields = String(line || '').trim().split(/\s+/);
+      const label = String(fields[0]).replace(/^(\d{2})(\d{2})$/, '$1:$2');
+      const cumulative = finiteNonNegative(fields[3]);
+      if (isTradingLabel(label) && Number(fields[1]) > 0 && cumulative !== null) snapshots.set(label, cumulative);
+    });
+    let previous = null;
+    Array.from(snapshots).sort((a, b) => tradingSlot(a[0]) - tradingSlot(b[0])).forEach(function([label, cumulative]) {
+      // Do not assign a multi-minute delta to one minute when the source has a gap.
+      const contiguous = previous && tradingSlot(label) - tradingSlot(previous.label) === 1;
+      const amount = previous ? cumulative - previous.cumulative : cumulative;
+      if ((contiguous || (!previous && label === '09:30')) && amount >= 0) {
+        rows.set(date + ' ' + label, { date, label, amount });
+      }
+      previous = { label, cumulative };
+    });
+  });
+  return Array.from(rows.values()).sort((a, b) => a.date.localeCompare(b.date) || tradingSlot(a.label) - tradingSlot(b.label));
+}
+
 function groupDateRows(rows, cutoff) {
   const grouped = new Map();
   (Array.isArray(rows) ? rows : []).forEach(function(row) {
@@ -226,7 +253,7 @@ function buildVolumePace(shanghaiRows, shenzhenRows, options) {
   const asOfSlot = tradingSlot(labels[labels.length - 1]);
   const expectedAlignedPoints = expectedTradingPoints(asOfSlot, intervalMinutes, currentMap, previousMap);
   const alignedCoveragePct = Number((labels.length / Math.max(1, expectedAlignedPoints) * 100).toFixed(2));
-  const coverageUsable = alignedCoveragePct >= 98;
+  const coverageUsable = labels.length === expectedAlignedPoints;
   const cumulative = coverageUsable
     ? cumulativeState(series.map(function(point) { return point.cumulativeYoYPct; })) : 'unavailable';
   const shortTerm = coverageUsable
@@ -329,8 +356,31 @@ function createMarketVolumePaceService(options) {
     return rows;
   }
 
+  async function requestTencentPair(fallbackReason) {
+    const results = await Promise.all(SINA_INDEX_SYMBOLS.map(async function(symbol) {
+      const response = await client.get('market-volume-pace-tencent:' + symbol,
+        'https://web.ifzq.gtimg.cn/appstock/app/day/query?code=' + encodeURIComponent(symbol), {
+          headers: { Referer: 'https://gu.qq.com/', 'User-Agent': 'Mozilla/5.0' }
+        });
+      const rows = normalizeTencentAmountDays(response && response.data, symbol);
+      if (!rows.length) throw new Error('Tencent returned no usable minute amount for ' + symbol);
+      return rows;
+    }));
+    if (buildVolumePace(results[0], results[1], { asOf: now() }).status === 'unavailable') {
+      throw new Error('Tencent minute amount does not cover two aligned trading days');
+    }
+    return { results, options: { intervalSeconds: 60, measure: 'amount' }, source: {
+      id: 'tencent-public-index-minute-amount', label: '腾讯公开指数1分钟成交额', measure: 'amount',
+      fallbackFrom: 'eastmoney-public-index-minute-amount', fallbackReason,
+      amountMethod: 'adjacent-cumulative-difference', rawAmountUnit: 'CNY'
+    } };
+  }
+
   async function requestEastmoneyPair() {
     const results = await Promise.all(INDEX_SECIDS.map(requestEastmoneyIndex));
+    if (buildVolumePace(results[0], results[1], { asOf: now() }).status === 'unavailable') {
+      throw new Error('Eastmoney minute amount does not cover two aligned trading days');
+    }
     return {
       results,
       options: { intervalSeconds: 60, measure: 'amount' },
@@ -363,10 +413,11 @@ function createMarketVolumePaceService(options) {
     } catch (error) {
       const eastmoneyReason = error && error.message || String(error);
       try {
-        return await requestSinaPair(eastmoneyReason);
+        return await requestTencentPair(eastmoneyReason);
       } catch (fallbackError) {
-        throw new Error('1分钟成交额不可用：' + eastmoneyReason + '；5分钟成交量降级也不可用：' +
-          (fallbackError && fallbackError.message || String(fallbackError)));
+        const reason = eastmoneyReason + '；腾讯1分钟：' + (fallbackError.message || String(fallbackError));
+        try { return await requestSinaPair(reason); }
+        catch (lastError) { throw new Error('1分钟成交额不可用：' + reason + '；5分钟成交量降级也不可用：' + lastError.message); }
       }
     }
   }
@@ -442,6 +493,7 @@ const defaultService = createMarketVolumePaceService();
 module.exports = {
   normalizeEastmoneyMinuteDays,
   normalizeSinaVolumeDays,
+  normalizeTencentAmountDays,
   buildVolumePace,
   createMarketVolumePaceService,
   fetch: defaultService.fetch

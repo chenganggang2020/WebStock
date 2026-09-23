@@ -1,0 +1,37 @@
+const test=require('node:test');
+const assert=require('node:assert/strict');
+const fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
+test('switching authors requests exact identity and ignores a late previous author response',async()=>{
+  const nodes={knowledgeSourceSearchInput:{value:''},knowledgeAuthorFilter:{value:'模型先生'}};
+  const pending=[],renders=[],clears=[];
+  const context=vm.createContext({window:{EvidenceLibrary:{beginLoading:()=>clears.push(true),setAuthors:()=>{}}},document:{getElementById:id=>nodes[id]},console});
+  vm.runInContext(fs.readFileSync(path.join(__dirname,'../js/modules/aiResearch.js'),'utf8'),context);
+  context.aiResearchApi=async url=>url==='/api/knowledge/authors'?[{author:'模型先生'},{author:'Fioona'}]:new Promise(resolve=>pending.push({url,resolve}));
+  context.aiResearchRenderSources=()=>renders.push(vm.runInContext('aiResearchSources',context));
+  const first=context.aiResearchLoadSources();await new Promise(resolve=>setImmediate(resolve));
+  nodes.knowledgeAuthorFilter.value='Fioona';
+  const second=context.aiResearchLoadSources();await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(pending.length,2);
+  assert.equal(new URL(pending[0].url,'http://localhost').searchParams.get('authorExact'),'模型先生');
+  assert.equal(new URL(pending[1].url,'http://localhost').searchParams.get('authorExact'),'Fioona');
+  pending[1].resolve([{id:2,author:'Fioona'}]);await second;
+  pending[0].resolve([{id:1,author:'模型先生'}]);await first;
+  assert.equal(renders.length,1);assert.equal(renders[0][0].author,'Fioona');assert.equal(clears.length,2);
+});
+test('empty author selection cannot silently search all authors and late evidence cannot cross authors',async()=>{
+  const nodes={knowledgeQuestionInput:{value:'产业逻辑'},knowledgeSourceFilter:{value:''}};
+  const context=vm.createContext({window:{EvidenceLibrary:{}},document:{getElementById:id=>nodes[id]},console});
+  vm.runInContext(fs.readFileSync(path.join(__dirname,'../js/modules/aiResearch.js'),'utf8'),context);
+  const requests=[],rendered=[];
+  context.aiResearchSetStatus=()=>{};
+  context.aiResearchApi=()=>new Promise(resolve=>requests.push(resolve));
+  context.aiResearchRenderEvidence=value=>rendered.push(value);
+  const empty=context.aiResearchSearchEvidence();
+  assert.equal(requests.length,0);
+  await empty;
+  nodes.knowledgeSourceFilter.value='1';
+  const pending=context.aiResearchSearchEvidence();
+  vm.runInContext('aiResearchSourceLoadSequence++',context);
+  requests[0]({items:[{author:'old'}]});await pending;
+  assert.equal(rendered.length,0);
+});

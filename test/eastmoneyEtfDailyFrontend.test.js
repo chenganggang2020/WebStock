@@ -6,15 +6,16 @@ const vm = require('node:vm');
 const source = fs.readFileSync(path.join(__dirname, '..', 'js/modules/eastmoneyEtfDaily.js'), 'utf8');
 function setup(apiFetch = async () => ({})) {
   const nodes = new Map(), events = {};
+  let interval;
   const node = selector => {
     if (!nodes.has(selector)) nodes.set(selector, { textContent: '', innerHTML: '', hidden: false, href: '', disabled: false, dataset: {}, addEventListener() {} });
     return nodes.get(selector);
   };
   const box = node('box'); box.querySelector = node;
-  const document = { getElementById: () => box, querySelector: selector => selector.includes('button') ? node('button') : node('.eastmoney-etf-daily-status'), addEventListener: (name, fn) => { events[name] = fn; }, readyState: 'loading' };
-  const window = { apiFetch, setInterval: () => 1, clearInterval() {}, addEventListener() {} };
+  const document = { body: { dataset: { terminalPage: 'dashboard' } }, visibilityState: 'visible', getElementById: () => box, querySelector: selector => selector.includes('button') ? node('button') : node('.eastmoney-etf-daily-status'), addEventListener: (name, fn) => { events[name] = fn; }, readyState: 'loading' };
+  const window = { apiFetch, setInterval: fn => { interval = fn; return 1; }, clearInterval() {}, addEventListener() {} };
   vm.runInNewContext(source, { window, document, URL, Date, setTimeout, clearTimeout });
-  return { ui: window.EastmoneyEtfDaily, node, events };
+  return { ui: window.EastmoneyEtfDaily, node, events, document, tick: () => interval() };
 }
 const report = { availability: 'available', status: 'current', isCurrent: true, asOf: '2026-09-09', publishedAt: '2026-09-10T08:00:59+08:00', checkedAt: '2026-09-10T00:50:00Z',
   totalNetFlow: 33.83, stockEtfNetFlow: -19.87, subscriptions: [{code:'588000', name:'科创50ETF华夏', value:6.49}], redemptions: [],
@@ -44,11 +45,13 @@ test('manual success is shown as verified and cached errors remain visible', () 
   ui.render({ ...report, status:'stale',lastError:'源站暂不可用' });
   assert.match(node('.eastmoney-etf-daily-status').textContent, /源站暂不可用/);
 });
-test('initial bind reads the cache and concurrent refresh requests are deduplicated', async () => {
+test('binding does not fetch a hidden daily page and explicit concurrent reads are deduplicated', async () => {
   let calls = 0, resolve;
   const { ui, node, events } = setup(() => { calls++; return new Promise(r => { resolve = r; }); });
   events.DOMContentLoaded();
+  assert.equal(calls, 0);
   const second = ui.load(false);
+  ui.load(false);
   assert.equal(calls, 1); assert.equal(node('button').disabled, true);
   resolve(report); await second;
   assert.match(node('.eastmoney-etf-daily-total').innerHTML, /33.83/);
@@ -56,7 +59,24 @@ test('initial bind reads the cache and concurrent refresh requests are deduplica
 });
 test('read failure preserves rendered amounts', async () => {
   const { ui, node } = setup(async () => { throw new Error('断网'); });
-  ui.render(report); await ui.load(true);
+  ui.render(report); const result = await ui.load(true);
   assert.match(node('.eastmoney-etf-daily-total').innerHTML, /33.83/);
   assert.match(node('.eastmoney-etf-daily-status').textContent, /保留.*断网/);
+  assert.equal(result.ok, false);
+});
+
+test('daily report background reads require the visible daily funds page', async () => {
+  const calls = [];
+  const { ui, events, document, tick } = setup(async (...args) => { calls.push(args); return report; });
+  events.DOMContentLoaded();
+  tick();
+  document.body.dataset.terminalPage = 'etf'; tick();
+  document.body.dataset.terminalPage = 'capitalDaily';
+  document.visibilityState = 'hidden'; tick();
+  assert.equal(calls.length, 0);
+  document.visibilityState = 'visible'; tick();
+  await ui.load(false);
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0][0], '/api/market/etf-daily-report');
+  assert.equal(calls[0][1].method, 'GET');
 });

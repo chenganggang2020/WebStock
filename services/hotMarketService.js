@@ -36,6 +36,7 @@ function currentMonthKey() {
 }
 
 function numberOrNull(value) {
+  if (value == null || String(value).trim() === '') return null;
   const n = Number(value);
   return Number.isFinite(n) ? n : null;
 }
@@ -47,6 +48,7 @@ function round(value, digits) {
 }
 
 function formatPct(value) {
+  if (value == null || String(value).trim() === '') return '--';
   const n = Number(value);
   if (!Number.isFinite(n)) return '--';
   return (n >= 0 ? '+' : '') + n.toFixed(2) + '%';
@@ -64,9 +66,9 @@ function calcHeatScore(metrics) {
   const activeStocks = Number(metrics.activeStocks) || 0;
   const strongStocks = Number(metrics.strongStocks) || 0;
   const limitUpLike = Number(metrics.limitUpLike) || 0;
-  const mainNetInflow = Math.max(Math.abs(Number(metrics.mainNetInflow) || 0), 1);
+  const mainNetInflow = Number(metrics.mainNetInflow) || 0;
   const amountScore = Math.log10(Math.max(amount, 1));
-  const flowScore = metrics.mainNetInflow == null ? 0 : Math.log10(mainNetInflow);
+  const flowScore = metrics.mainNetInflow == null ? 0 : Math.sign(mainNetInflow) * Math.log10(Math.abs(mainNetInflow) + 1);
   return round(dailyChange * 4 + amountScore * 1.6 + activeStocks * 0.8 + strongStocks * 1.2 + limitUpLike * 2 + flowScore * 0.8, 2);
 }
 
@@ -635,7 +637,7 @@ function buildPrompt(snapshot) {
     '2. 对每个重点板块写：触发因素、领涨股/核心股、成交额/资金流是否匹配、持续性观察点、风险点。',
     '3. 从资讯中提取可能的催化，但要标注“数据支持/仅资讯线索/需要验证”。',
     '4. 最后给一个观察清单：重点板块、重点个股、明天需要验证的数据、回避条件。',
-    '5. 加上免责声明：仅供复盘研究，不构成投资建议。',
+    '5. 标明数据日期、缺失信息与结论依据。',
     '',
     '快照时间：' + (snapshot.generatedAt || ''),
     '交易日期：' + (snapshot.tradeDate || ''),

@@ -1049,7 +1049,7 @@ test('main stock actions and workspace navigation do not throw', async ({ page }
   await expect(page.locator('#newsProviderStatus')).toContainText(/News provider|fallback|新闻加载回退|新闻来源/i);
   await page.fill('#newsKeywordInput', 'definitely-no-news-match');
   await page.press('#newsKeywordInput', 'Enter');
-  await expect(page.locator('#newsList')).toContainText('No news is available');
+  await expect(page.locator('#newsList')).toContainText('当前没有可用资讯');
   await page.fill('#newsKeywordInput', 'Workbench');
   await page.click('#refreshNewsBtn');
   await expect(page.locator('#newsList')).toContainText('Workbench checklist');
@@ -1792,22 +1792,25 @@ test('market charts resize after viewport and orientation changes', async ({ pag
   expect(counts).toEqual({ kline: 1, time: 1, volume: 1 });
 });
 
-test('homepage owns market overview while stock detail stays an internal homepage mode', async ({ page }) => {
+test('homepage shares its chart with detail and preserves expanded market panorama', async ({ page }) => {
   await page.goto(baseURL + '/#dashboard', { waitUntil: 'domcontentloaded' });
   await page.waitForSelector('#stockTbody tr', { state: 'attached' });
 
   await expect(page.locator('.main-tab[data-main-view="dashboard"]')).toHaveCount(1);
   await expect(page.locator('.main-tab[data-main-view="market"]')).toHaveCount(0);
   await expect(page.locator('#dashboardView')).toBeVisible();
+  await expect(page.locator('#homeIndicators')).toBeVisible();
+  await page.locator('#homeMarketMore > summary').click();
   await expect(page.locator('#dashboardMarketCockpit')).toBeVisible();
 
   await page.locator('#stockTbody tr:first-child').evaluate(row => row.click());
   await expect(page.locator('#marketView')).toBeVisible();
-  await expect(page.locator('.main-tab[data-main-view="dashboard"]')).toHaveClass(/active/);
+  await expect(page.locator('#mainTabs [data-terminal-page="market"]')).toHaveClass(/active/);
   await expect(page.locator('#chartTitle')).not.toHaveText('请选择股票');
 
   await page.click('#backToMarketOverviewBtn');
   await expect(page.locator('#dashboardView')).toBeVisible();
+  await expect(page.locator('#homeChartHost #stockWorkspace')).toBeVisible();
   await expect(page.locator('#dashboardMarketCockpit')).toBeVisible();
 });
 

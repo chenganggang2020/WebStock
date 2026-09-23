@@ -9,10 +9,10 @@ const HANDOFF_PROMPT_STYLES = {
   'deep-research': [
     '请在 ChatGPT 中使用 Deep Research（如当前会话可用）完成本任务。',
     '先确认分析截止时间并按北京时间列出；联网核对公司公告、交易所披露、权威财经数据和产业一手来源。',
-    '严格区分“WebStock 随提示词提供的证据”和“本次联网新增证据”，新增事实逐项附可打开链接、发布日期与访问日期。',
+    '严格区分“本程序随提示词提供的证据”和“本次联网新增证据”，新增事实逐项附可打开链接、发布日期与访问日期。',
     '对来源冲突、发布时间不确定、转述材料和缺失数据单独降级；不得把搜索摘要、第三方转述或模型推断写成作者原话。',
     '涉及回测或历史判断时，只使用信号当时已经公开的数据，明确说明可能的幸存者偏差、复权、交易成本和未来数据泄漏风险。',
-    '完成核验后，仍严格按照提示词末尾的 WebStock 结果块格式输出，便于一键导回软件。'
+    '完成核验后，仍严格按照提示词末尾的标准结果块格式输出，便于一键导回软件。'
   ].join('\n'),
   technical: '请切换为“技术走势专家模式”：重点分析趋势结构、K线位置、均线系统、成交量、分时承接、支撑压力、突破/回踩/破位条件，并给出明确的强弱判断。',
   'sector-chain': '请切换为“板块产业链选股模式”：重点分析所属板块、产业链位置、上下游、龙头与补涨关系、板块热度、题材持续性，并在候选中做优先级排序。',
@@ -137,7 +137,7 @@ async function aiAssistantImportClipboard() {
   }
   const parsed = aiAssistantExtractResultBlock(text);
   document.getElementById('handoffResultText').value = parsed.text;
-  aiAssistantSetStatus(parsed.extracted ? '已从剪贴板识别并提取 WebStock 结果块。' : '已从剪贴板导入文本。', true);
+  aiAssistantSetStatus(parsed.extracted ? '已从剪贴板识别并提取标准结果块。' : '已从剪贴板导入文本。', true);
 }
 
 function aiAssistantLooksLikeResult(text) {

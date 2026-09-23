@@ -45,6 +45,27 @@ function createIndustryChainRouter(options = {}) {
   const service = options.service || defaultService;
   const researchService = options.researchService || (options.service && typeof options.service.listTopics === 'function' ? options.service : defaultResearchService);
   const conceptDiscoveryService = options.conceptDiscoveryService || defaultConceptDiscoveryService;
+  const creatorService = () => options.creatorService || require('../services/creatorIndustryService').getCreatorIndustryService();
+  router.get('/industry-chain/creators/:id', async function(req, res) {
+    try { res.json({ success: true, data: await creatorService().read(req.params.id) }); }
+    catch (error) { errorResponse(res, error); }
+  });
+  router.post('/industry-chain/creators/:id/import', async function(req, res) {
+    if (!writeAccessAllowed(req)) return res.status(403).json({ success: false, error: '仅允许本机导入' });
+    try { res.json({ success: true, data: await creatorService().importReviews(req.params.id, req.body.items, { model: req.body.model }) }); }
+    catch (error) { errorResponse(res, error); }
+  });
+  router.post('/industry-chain/creators/:id/analyze', async function(req, res) {
+    if (!writeAccessAllowed(req)) return res.status(403).json({ success: false, error: '仅允许本机分析' });
+    try {
+      const service = creatorService();
+      const state = await service.read(req.params.id);
+      if (!state.aiConfigured) return res.json({ success: true, data: { status: 'ai_not_configured' } });
+      service.run(req.params.id).catch(() => {}); // Run state and failure are reported by GET, not a long-held HTTP request.
+      res.status(202).json({ success: true, data: { status: 'queued' } });
+    }
+    catch (error) { errorResponse(res, error); }
+  });
 
   router.get('/industry-chain/research/concepts', async function(req, res) {
     try {

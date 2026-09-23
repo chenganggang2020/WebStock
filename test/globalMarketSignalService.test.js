@@ -58,3 +58,10 @@ test('cross-market service reports partial availability instead of fabricating m
   assert.equal(result.items[1].status, 'unavailable');
   assert.match(result.source.note, /公开行情快照/);
 });
+
+test('unavailable snapshot feed returns dated-unavailable slots so independent index history can still render',async()=>{
+  const service=createGlobalMarketSignalService({marketData:{get:async()=>{throw Error('offline');}}});
+  const result=await service.fetch();
+  assert.equal(result.items.length,7);assert.equal(result.status,'unavailable');
+  assert.ok(result.items.every(item=>item.value===null && item.observedAt===''));
+});

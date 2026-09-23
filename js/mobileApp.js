@@ -186,7 +186,7 @@
       if (saved) render(saved, 'saved');
       else {
         setConnection('offline', error.message || '无法连接 Windows 主机', '');
-        element('mobileSnapshotRoot').innerHTML = '<div class="mobile-error">请确认 Windows WebStock 和 Tailscale 正在运行</div>';
+        element('mobileSnapshotRoot').innerHTML = '<div class="mobile-error">请确认 Windows 桌面程序和 Tailscale 正在运行</div>';
       }
     }
   }

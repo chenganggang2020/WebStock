@@ -114,6 +114,7 @@ function rowToSource(row, includeContent = false) {
     sourceKey: row.source_key,
     sourceType: row.source_type,
     title: row.title,
+    contentPreview: String(row.original_content || '').slice(0, 240),
     author: row.author || '',
     sourceUrl: row.source_url || '',
     publishedAt: row.published_at || '',
@@ -247,6 +248,12 @@ function updateSource(id, input = {}) {
   return db.inTransaction ? action() : db.transaction(action)();
 }
 
+function listAuthors() {
+  return db.prepare(`SELECT COALESCE(author, '') AS author, COUNT(*) AS count,
+    MAX(published_at) AS latestPublishedAt FROM knowledge_sources
+    GROUP BY COALESCE(author, '') ORDER BY latestPublishedAt DESC, author ASC`).all();
+}
+
 function listSources(options = {}) {
   const conditions = [];
   const params = {};
@@ -263,7 +270,10 @@ function listSources(options = {}) {
     conditions.push('source.source_type = @sourceType');
     params.sourceType = String(options.sourceType);
   }
-  if (options.author) {
+  if (Object.prototype.hasOwnProperty.call(options, 'authorExact')) {
+    conditions.push("COALESCE(source.author, '') = @authorExact");
+    params.authorExact = cleanText(options.authorExact, 160);
+  } else if (options.author) {
     conditions.push('source.author LIKE @author');
     params.author = '%' + cleanText(options.author, 160) + '%';
   }
@@ -461,6 +471,7 @@ module.exports = {
   updateSource,
   getSource,
   listSources,
+  listAuthors,
   search,
   buildAnalysisContext,
   deleteSource,

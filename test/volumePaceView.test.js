@@ -72,8 +72,9 @@ test('volume pace chart joins valid minutes across lunch and isolated missing sn
   const source = fs.readFileSync(path.join(root, 'js/modules/volumePace.js'), 'utf8');
   const joinedSeries = source.match(/connectNulls:\s*true/g) || [];
   assert.equal(joinedSeries.length, 3);
-  assert.match(source, /xAxis:\s*'13:00'/);
-  assert.match(source, /formatter:\s*'13:00 午后'/);
+  const api = require('../js/modules/volumePace');
+  assert.equal(api.chartAxis({ coverage: { intervalSeconds: 60 } }).find(label => label >= '13:00'), '13:00');
+  assert.equal(api.chartAxis({ coverage: { intervalSeconds: 300 } }).find(label => label >= '13:00'), '13:05');
   assert.match(cssSource, /\.volume-pace-chart\s*\{[^}]*height:\s*260px/s);
 });
 

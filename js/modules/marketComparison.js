@@ -181,7 +181,7 @@
     if (!box) return;
     const items = payload && Array.isArray(payload.items) ? payload.items : [];
     const signature = JSON.stringify(items.map(function(item) {
-      return [item.key, item.status, item.value, item.changePct, item.observedAt];
+      return [item.key, item.status, item.value, item.changePct, item.observedAt,item.trend];
     }));
     if (signature === globalSignalsSignature) return;
     globalSignalsSignature = signature;
@@ -194,11 +194,16 @@
       const available = item.status === 'available';
       const observed = item.observedAt ? '更新 ' + item.observedAt :
         (available ? '来源未提供更新时间' : (item.reason || '当前无返回值'));
+      const trend=Array.isArray(item.trend)?item.trend:[],values=trend.map(point=>point.close).filter(value=>value!=null);
+      const min=Math.min(...values),span=Math.max(...values)-min || 1;
+      let path='',connected=false;
+      trend.forEach((point,index)=>{if(point.close==null){connected=false;return;}path+=(connected?'L':'M')+(index/Math.max(1,trend.length-1)*160).toFixed(2)+','+(24-(point.close-min)/span*21).toFixed(2)+' ';connected=true;});
+      const spark=trend.length>1?'<svg class="global-daily-spark" viewBox="0 0 160 27" preserveAspectRatio="none" role="img" aria-label="最近一个月日线走势"><path d="'+path+'" fill="none" stroke="currentColor" stroke-width="1.1" vector-effect="non-scaling-stroke"/></svg>':'';
       return '<article class="dashboard-global-signal" data-direction="' + display.direction + '" data-state="' +
-        (available ? 'available' : 'unavailable') + '" title="' + escapeHtml(observed) + '">' +
+        (available ? 'available' : 'unavailable') + '" title="' + escapeHtml(observed+' · '+(item.source || '新浪公开快照 · 延迟未确定')) + '">' +
         '<header><strong>' + escapeHtml(item.name || item.key) + '</strong><small>' + escapeHtml(item.group || '') + '</small></header>' +
         '<div><b>' + display.value + '</b><span>' + display.change + '</span></div>' +
-        '<p>' + escapeHtml(item.relevance || observed) + '</p></article>';
+        spark+'<p>' + escapeHtml(observed) + '</p></article>';
     }).join('') + '<p class="dashboard-global-signals-note">' + escapeHtml(payload.source && payload.source.note ||
       '跨市场信号只作联动观察，相关不代表因果。') + '</p>';
   }
@@ -207,7 +212,12 @@
     if (!root || !root.ApiClient) return null;
     options = options || {};
     try {
-      const data = await root.ApiClient.fetchJsonData('/api/market/global-signals' + (options.force ? '?refresh=1' : ''));
+      const [data,trends] = await Promise.all([
+        root.ApiClient.fetchJsonData('/api/market/global-signals' + (options.force ? '?refresh=1' : '')),
+        root.ApiClient.fetchJsonData('/api/market/global-index-trends',{maxRetries:0}).catch(()=>({items:[]}))
+      ]);
+      const byKey=new Map((trends.items || []).map(item=>[item.key,item]));
+      data.items=(data.items || []).map(item=>byKey.has(item.key)?Object.assign({},item,byKey.get(item.key)):item);
       renderGlobalSignals(data);
       return data;
     } catch (error) {
@@ -879,6 +889,7 @@
 
   function renderIndexCards(indicesData, dailyHistory, intradayData) {
     if (!root || !root.document) return;
+    if (root.HomeTerminal) root.HomeTerminal.renderIndices(indicesData, intradayData);
     const box = root.document.getElementById('dashboardMarketIndices');
     if (!box) return;
     const indices = indicesData && Array.isArray(indicesData.indices) ? indicesData.indices : [];

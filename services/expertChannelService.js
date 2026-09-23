@@ -115,6 +115,8 @@ function rowToChannel(row) {
     aliases: parseJson(row.aliases_json, []),
     discoveryQueries: parseJson(row.discovery_queries_json, []),
     enabled: Boolean(row.enabled),
+    collectionMediaType: row.collection_media_type || 'all',
+    industryAnalysisEnabled: row.industry_analysis_enabled === 1,
     observationCount: Number(row.observation_count || 0),
     primaryCount: Number(row.primary_count || 0),
     directDouyinCount: Number(row.direct_douyin_count || 0),
@@ -217,11 +219,15 @@ function createChannel(input = {}) {
   const aliases = normalizeArray(input.aliases, { maxLength: 160 });
   const discoveryQueries = normalizeArray(input.discoveryQueries, { maxLength: 300, limit: 30 });
   const enabled = input.enabled === false ? 0 : 1;
+  const priorOptions = db.prepare('SELECT collection_media_type, industry_analysis_enabled FROM expert_channels WHERE channel_key = ?').get(channelKey);
+  const collectionMediaType = input.collectionMediaType === undefined ? priorOptions?.collection_media_type || 'all' : input.collectionMediaType;
+  const industryAnalysisEnabled = input.industryAnalysisEnabled === undefined ? priorOptions?.industry_analysis_enabled || 0 : input.industryAnalysisEnabled === true ? 1 : 0;
+  if (!['all', 'video', 'note'].includes(collectionMediaType)) throw new Error('采集作品类型无效');
   db.prepare(`
     INSERT INTO expert_channels (
       channel_key, display_name, subject_type, platform, profile_url, description,
-      aliases_json, discovery_queries_json, enabled
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      aliases_json, discovery_queries_json, enabled, collection_media_type, industry_analysis_enabled
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(channel_key) DO UPDATE SET
       display_name = excluded.display_name,
       subject_type = excluded.subject_type,
@@ -231,10 +237,12 @@ function createChannel(input = {}) {
       aliases_json = excluded.aliases_json,
       discovery_queries_json = excluded.discovery_queries_json,
       enabled = excluded.enabled,
+      collection_media_type = excluded.collection_media_type,
+      industry_analysis_enabled = excluded.industry_analysis_enabled,
       updated_at = CURRENT_TIMESTAMP
   `).run(
     channelKey, displayName, subjectType, platform, profileUrl, description,
-    JSON.stringify(aliases), JSON.stringify(discoveryQueries), enabled
+    JSON.stringify(aliases), JSON.stringify(discoveryQueries), enabled, collectionMediaType, industryAnalysisEnabled
   );
   const row = db.prepare('SELECT id FROM expert_channels WHERE channel_key = ?').get(channelKey);
   return getChannel(row.id);
@@ -275,7 +283,14 @@ function buildExternalKey(channel, input) {
 }
 
 function syncKnowledgeSource(channel, observation, existing) {
-  const evidenceText = observation.transcript || observation.content || observation.description || observation.summary;
+  const evidenceText = observation.mediaType==='note'
+    ? observation.content || observation.description || observation.summary || observation.transcript
+    : observation.transcript || observation.content || observation.description || observation.summary;
+  const automaticNotes = Boolean(observation.mediaMetadata && observation.mediaMetadata.captureSchemaVersion) &&
+    /自动提取要点：|分析方法：本地规则提取/.test(observation.analysisNotes || '');
+  // Discovery titles and machine-generated method text are not the author's original evidence.
+  // Preserve an existing complete source when a later capture has no body.
+  if (automaticNotes && evidenceText.trim().length < 10) return existing && existing.knowledge_source_id || null;
   const sourceText = [evidenceText.length >= 10 ? evidenceText : '',
     observation.analysisNotes ? '图形 / 方法分析记录：\n' + observation.analysisNotes : '']
     .filter(Boolean).join('\n\n');
@@ -467,6 +482,14 @@ function listObservations(channelId, options = {}) {
   return db.prepare(`SELECT * FROM expert_observations WHERE ${conditions.join(' AND ')}
     ORDER BY COALESCE(NULLIF(published_at, ''), first_seen_at) DESC, id DESC LIMIT @limit`)
     .all(params).map(rowToObservation);
+}
+
+// Background collection must account for every stored work, independently of UI page limits.
+function listCollectionObservations(channelId) {
+  getChannel(channelId);
+  return db.prepare(`SELECT * FROM expert_observations WHERE channel_id = ?
+    ORDER BY COALESCE(NULLIF(published_at, ''), first_seen_at) DESC, id DESC`)
+    .all(Number(channelId)).map(rowToObservation);
 }
 
 function analysisBoundary(value, endOfDay) {
@@ -852,6 +875,24 @@ function restoreChannels(channels) {
   });
 }
 
+async function recordObservationsAsync(channelId, inputs) {
+  const saved = [];
+  for (let offset = 0; offset < inputs.length; offset += 10) {
+    await new Promise(resolve => setImmediate(resolve));
+    saved.push(...require('./runtimeDiagnostics').traceSync('douyin.metadata.persist-batch', () =>
+      db.transaction(() => inputs.slice(offset, offset + 10).map(input => {
+        if (input.mediaMetadataPatch) {
+          // Refresh after yielding: a transcription/archive may have just finished.
+          const row = observationRow(channelId, input.externalKey);
+          const previous = row ? rowToObservation(row).mediaMetadata : {};
+          input = { ...input, mediaMetadata: { ...previous, ...input.mediaMetadataPatch } };
+        }
+        return recordObservation(channelId, input);
+      }))()));
+  }
+  return saved;
+}
+
 module.exports = {
   EVIDENCE_LEVELS,
   AVAILABILITY_STATUSES,
@@ -867,7 +908,9 @@ module.exports = {
   getObservation,
   listChannels,
   recordObservation,
+  recordObservationsAsync,
   listObservations,
+  listCollectionObservations,
   listAnalysisObservations,
   findObservationByIdentity,
   listObservationMetrics,

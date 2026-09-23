@@ -1,7 +1,7 @@
 {
-  "name": "WebStock 移动工作台",
-  "short_name": "WebStock",
-  "description": "WebStock 持仓、行情快照与研究资料移动端",
+  "name": "行情与研究移动工作台",
+  "short_name": "移动工作台",
+  "description": "持仓、行情快照与研究资料移动端",
   "lang": "zh-CN",
   "id": "/mobile.html",
   "start_url": "/mobile.html",

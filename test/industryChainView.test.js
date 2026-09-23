@@ -61,8 +61,34 @@ function loadModule(fetchJsonData) {
   context.globalThis = context;
   vm.createContext(context);
   vm.runInContext(moduleSource, context);
-  return { api: context.window.IndustryChain, elements };
+  return { api: context.window.IndustryChain, elements, window: context.window };
 }
+
+test('workspace initial loading is single-flight and navigation does not redraw accepted selection', async () => {
+  let selectedLoads=0, release;
+  const {api,window}=loadModule(async url=>url.endsWith('/taxonomy')?[{id:'semiconductor',name:'半导体'}]:{data:[]});
+  window.IndustryWorkspace={isMounted:()=>true,setCatalog(){},setTopics(){},
+    loadSelected(){selectedLoads++;return new Promise(resolve=>{release=resolve;});}};
+  const first=api.load(),second=api.load();
+  await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(selectedLoads,1);
+  release();await Promise.all([first,second]);
+  await api.load();
+  assert.equal(selectedLoads,1,'late startup hash restoration must not reload the selected graph');
+});
+
+test('failed workspace initialization can retry and reports an explicit failure', async () => {
+  let fail=true, failures=0, loaded=0;
+  const {api,window}=loadModule(async url=>{
+    if(fail)throw Error('目录读取失败');
+    return url.endsWith('/taxonomy')?[{id:'semiconductor',name:'半导体'}]:{data:[]};
+  });
+  window.IndustryWorkspace={isMounted:()=>true,setCatalog(){},setTopics(){},
+    setResult(){},setLoadError(){failures++;},loadSelected:async()=>{loaded++;}};
+  await assert.rejects(api.load(),/目录读取失败/);
+  assert.equal(failures,1);
+  fail=false;await api.load();assert.equal(loaded,1);
+});
 
 test('industry-chain catalog and discover requests use one configurable endpoint contract', async () => {
   const calls = [];
@@ -392,6 +418,53 @@ test('stale research detail response cannot overwrite the latest topic selection
   await first;
   assert.match(elements.industryResearchDetail.innerHTML, /金刚石散热/);
   assert.doesNotMatch(elements.industryResearchDetail.innerHTML, /波纹管/);
+});
+
+test('moving from research to industry cancels a pending topic response', async () => {
+  let release;
+  const {api,elements}=loadModule(()=>new Promise(resolve=>{release=resolve;}));
+  const pending=api.selectResearchTopic('bellows');
+  api.cancelPendingSelection();
+  release({data:{topic:{id:'bellows',name:'旧主题'},currentVersion:null}});
+  await pending;
+  assert.doesNotMatch(elements.industryResearchDetail.innerHTML,/旧主题/);
+});
+
+test('moving from industry to research cancels pending classification results', async () => {
+  let release;
+  const {api,elements}=loadModule(()=>new Promise(resolve=>{release=resolve;}));
+  const pending=api.discover('旧查询');
+  api.cancelPendingSelection();
+  release({confirmed:[{stock:{name:'旧结果'},evidence:[]}],candidates:[]});
+  await pending;
+  assert.doesNotMatch(elements.industryChainConfirmed.innerHTML,/旧结果/);
+});
+
+test('late config save cannot overwrite a different topic status', async () => {
+  let release;
+  const {api,elements}=loadModule(async (url,options)=>{
+    if(options?.method==='PUT')return new Promise(resolve=>{release=resolve;});
+    const id=url.split('/').pop();return {data:{topic:{id,name:id},currentVersion:null}};
+  });
+  await api.selectResearchTopic('A');const save=api.saveResearchConfig('A',{});
+  await api.selectResearchTopic('B');release({data:{id:'A',name:'A'}});await save;
+  assert.equal(elements.industryResearchStatus.textContent,'已加载研究主题：B');
+});
+
+test('late review completion cannot refresh or relabel a different topic', async () => {
+  let release;const calls=[];
+  const {api,elements}=loadModule(async (url,options)=>{
+    calls.push(url);
+    if(url.endsWith('/review'))return new Promise(resolve=>{release=resolve;});
+    const id=url.split('/').pop();return {data:{topic:{id,name:id},currentVersion:{id:'v1',relations:[],evidence:[]}}};
+  });
+  await api.selectResearchTopic('A');api.bind();
+  elements.industryResearchDetail.querySelector=selector=>selector.includes('data-research-read')?{checked:true}:{value:'已核对'};
+  const target={'data-research-review':'r1',getAttribute:name=>name==='data-research-review'?'r1':name==='data-research-decision'?'verify':null};
+  elements.industryResearchDetail.listeners.click({target});
+  await api.selectResearchTopic('B');release({data:{}});await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(elements.industryResearchStatus.textContent,'已加载研究主题：B');
+  assert.equal(calls.filter(url=>url.endsWith('/topics/B')).length,1);
 });
 
 test('concept radar discovers unknown concepts, previews constituents and adds a research topic', async () => {

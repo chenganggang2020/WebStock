@@ -37,6 +37,10 @@ function validateQuery(query) {
   if (!VALID_SOURCES.has(source)) {
     throw apiError('CAPITAL_FLOW_SOURCE_INVALID', 'unsupported capital-flow source');
   }
+  if (query.date !== undefined && !require('../services/capitalFlow/historyStore').validDate(query.date)) {
+    throw apiError('CAPITAL_FLOW_DATE_INVALID', '请选择有效历史日期');
+  }
+  if (query.refresh !== undefined && !['0', '1'].includes(query.refresh)) throw apiError('CAPITAL_FLOW_REFRESH_INVALID', 'refresh must be 0 or 1');
   if (scope === 'sector' && source !== SOURCE_MODES.VENDOR_CLASSIFIED) {
     throw apiError(
       'CAPITAL_FLOW_SOURCE_SCOPE_UNSUPPORTED',
@@ -46,22 +50,37 @@ function validateQuery(query) {
   return {
     scope,
     code: scope === 'stock' ? code.replace(/^(?:sh|sz)/i, '') : code.toUpperCase(),
-    source
+    source,
+    ...(query.date ? { date: query.date } : {}),
+    ...(query.refresh !== undefined ? { refresh: query.refresh === '1' } : {})
   };
 }
 
 function createCapitalFlowRouter(options = {}) {
   const service = options.service || createCapitalFlowService(
-    options.adapters || createCapitalFlowAdapters(options.adapterOptions)
+    Object.assign({}, options.adapters || createCapitalFlowAdapters(options.adapterOptions), {
+      historyDirectory: options.historyDirectory || require('node:path').join(require('node:path').dirname(
+        process.env.WEBSTOCK_DB_PATH || require('node:path').join(__dirname, '../data/webstock.db')), 'capital-flow-history')
+    })
   );
   const router = express.Router();
   const darkRank = require('../services/capitalFlow/darkRankService').createDarkRankService({load:options.darkRankLoader});
   const {createDarkStockService,darkSession,stockKeys} = require('../services/capitalFlow/darkStockService');
   const darkStocks = createDarkStockService({load:options.darkStockLoader});
+  const darkBoard = require('../services/capitalFlow/darkRankBoard').createDarkRankBoard({darkStocks,loadCaps:options.darkCapLoader});
   const darkHistory = options.darkHistory || require('../services/capitalFlow/darkObservationStore').createDarkObservationStore();
   const session = () => darkSession(options.now ? options.now() : new Date());
   router.get('/capital-flow/dark-session', function(req,res) {
     res.set('Cache-Control','no-store').json({success:true,data:session()});
+  });
+  router.get('/capital-flow/dark-rank-board', async function(req,res) {
+    res.set('Cache-Control','no-store');
+    try {
+      if(typeof req.query.date !== 'string' || !['amount','ratio','visible','combined'].includes(req.query.metric || 'amount')) throw Error('query');
+      require('../services/capitalFlow/eastmoneyDarkRank').buildQuery({date:req.query.date});
+    } catch (_) { return res.status(400).json({success:false,error:{message:'请选择有效日期和排序口径。'}}); }
+    try { res.json({success:true,data:await darkBoard.get({date:req.query.date,metric:req.query.metric || 'amount'})}); }
+    catch (_) { res.status(502).json({success:false,error:{message:'暗盘双向榜读取失败，请稍后重试。'}}); }
   });
   router.get('/capital-flow/dark-stocks', async function(req,res) {
     res.set('Cache-Control','no-store');

@@ -2,7 +2,7 @@
   const api=factory(root ? root.EastmoneyDarkRank : require('./eastmoneyDarkRank'));
   if(typeof module==='object' && module.exports) module.exports=api;
   if(root) {
-    root.SectorRotation=api.createRotationView({document:root.document,fetch:root.fetch.bind(root),echarts:root.echarts});
+    root.SectorRotation=api.createRotationView({document:root.document,fetch:root.fetch.bind(root),echarts:root.echarts,chartTheme:root.ChartTheme});
     root.SectorRotation.bind();
     root.setInterval(()=>{
       if(!root.document.hidden && root.State && root.State.currentMainView==='capitalFlow') root.SectorRotation.run();
@@ -88,7 +88,9 @@
         el('rotationDetailTime').textContent=(detail.startAt?'区间：'+time(detail.startAt)+' → '+time(detail.endAt)+'；实际 '+detail.elapsedMinutes.toFixed(1)+' 分钟。':'窗口样本不足。')+' 曲线横轴为本机采样时间，不是源行情事件时间。';
         if(options.echarts) {
           if(!chart) chart=options.echarts.init(el('rotationChart'));
-          chart.setOption(chartOption(detail.series||[]),true);chart.resize();
+          const option=chartOption(detail.series||[]);
+          if(options.chartTheme) options.chartTheme.applyToOption(option,{dark:options.document.body.classList.contains('dark')});
+          chart.setOption(option,true);chart.resize();
         }
       }
     }

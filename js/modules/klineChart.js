@@ -1,4 +1,17 @@
 let klineRequestSequence = 0;
+let maLegendSelection = {};
+function parseMAPeriods(input) {
+  const values = String(input).trim().split(/[,，\s]+/);
+  if (!values.length || values.some(value=>!/^\d+$/.test(value))) throw Error('请输入1–1000的整数周期，用逗号分隔');
+  const periods = [...new Set(values.map(Number))];
+  if (periods.length>8 || periods.some(value=>value<1 || value>1000)) throw Error('周期范围1–1000，最多8条均线');
+  return periods;
+}
+try {
+  const saved=JSON.parse(localStorage.getItem('webstock.maPeriods') || 'null');
+  if (Array.isArray(saved)) window.State.maPeriods=parseMAPeriods(saved.join(','));
+  maLegendSelection=JSON.parse(localStorage.getItem('webstock.maLegend') || '{}') || {};
+} catch (_) { /* Invalid or unavailable preferences leave the existing defaults. */ }
 
 function renderKlineChart(rawData, indicator) {
   const State = window.State;
@@ -53,7 +66,7 @@ function renderKlineChart(rawData, indicator) {
   });
   const volumes = rawData.map(d => {
     if (typeof d.volume === 'number') return +(d.volume / 10000).toFixed(0);
-    return 0;
+    return null;
   });
 
   const baseSeries = [{
@@ -108,6 +121,8 @@ function renderKlineChart(rawData, indicator) {
     baseSeries[0].markPoint = {
       symbol: 'pin',
       symbolSize: 42,
+      tooltip: { trigger: 'item', showContent: true, formatter: params =>
+        window.ChartCoach ? window.ChartCoach.signalTooltip(params.data && params.data.signal) : '' },
       label: { color: '#ffffff', fontWeight: 700, fontSize: 11 },
       data: localSignalMarks
     };
@@ -295,7 +310,8 @@ function renderKlineChart(rawData, indicator) {
   const option = {
     backgroundColor: bgColor,
     legend: {
-      data: legendData, orient: 'horizontal', left: 'center', top: 0,
+      selected: maLegendSelection,
+      data: legendData, type: 'scroll', orient: 'horizontal', left: 48, right: 30, top: 0,
       itemGap: 10, textStyle: { color: textColor, fontSize: 11 },
       padding: [5, 0, 2, 0], itemWidth: 14, itemHeight: 8
     },
@@ -304,6 +320,7 @@ function renderKlineChart(rawData, indicator) {
     yAxis: yAxes,
     tooltip: {
       trigger: 'axis',
+      showContent: true,
       backgroundColor: tooltipBg,
       borderColor: tooltipBorder,
       textStyle: {
@@ -340,57 +357,54 @@ function renderKlineChart(rawData, indicator) {
         if (signalParam && window.ChartCoach && typeof window.ChartCoach.signalTooltip === 'function') {
           return window.ChartCoach.signalTooltip(signalParam.data.signal);
         }
-        if (!params || params.length === 0) return '';
-        const idx = params[0].dataIndex;
-        const day = rawData[idx];
-        if (!day) return '';
-        const metrics = window.RealtimeChartModel && window.RealtimeChartModel.dailyBarMetrics
-          ? window.RealtimeChartModel.dailyBarMetrics(rawData, idx)
-          : { changeAmount: null, changePercent: null, amplitudePercent: null };
-        const signed = function(value, suffix) {
-          return value === null || value === undefined ? '--' : (value > 0 ? '+' : '') + Number(value).toFixed(2) + (suffix || '');
-        };
-        let html = '<strong>' + day.date + '</strong><br/>';
-        if (day.intraday) {
-          html += '<span style="color:' + (day.stale ? '#f59e0b' : '#2563eb') + '">' +
-            (day.incomplete ? '盘中K线 · 未收盘' : '分钟行情合成收盘K线') +
-            (day.observedAt ? ' · 截至 ' + String(day.observedAt).slice(11, 16) : '') + '</span><br/>';
-        }
-        html += '开: ' + day.open.toFixed(2) + ' &nbsp; 高: ' + day.high.toFixed(2) + ' &nbsp; 低: ' + day.low.toFixed(2) + ' &nbsp; 收: ' + day.close.toFixed(2) + '<br/>';
-        if (metrics.changePercent !== null) {
-          html += '涨跌额: ' + signed(metrics.changeAmount) + ' &nbsp; 涨跌幅: ' + signed(metrics.changePercent, '%') +
-            ' &nbsp; 振幅: ' + signed(metrics.amplitudePercent, '%').replace(/^\+/, '') + '<br/>';
-        }
-        params.forEach(function(p) {
-          if (p.seriesName === 'K线') return;
-          if (p.seriesName === '成交量(万手)') {
-            html += p.marker + p.seriesName + ': ' + p.value + '<br/>';
-          } else {
-            const val = p.value;
-            html += p.marker + p.seriesName + ': ' + (val !== null && val !== undefined ? (typeof val === 'number' ? val.toFixed(2) : val) : '--') + '<br/>';
-          }
-        });
-        return html;
+        return '';
       }
     },
     dataZoom: [
-      { type: 'inside', xAxisIndex: zoomX, start: calcStartPercent(), end: 100 },
+      { type: 'inside', xAxisIndex: zoomX, start: calcStartPercent(), end: 100, zoomOnMouseWheel: 'ctrl', moveOnMouseWheel: false },
       { type: 'slider', xAxisIndex: zoomX, start: calcStartPercent(), end: 100, height: 20, bottom: 20, textStyle: { color: textColor } }
     ],
     series: baseSeries
   };
   window.ChartTheme.applyToOption(option, { dark: isDark });
 
-  if (State.klineChart) State.klineChart.dispose();
   const dom = document.getElementById('chartContainer');
-  dom.innerHTML = '';
-  State.klineChart = echarts.init(dom);
-  State.klineChart.setOption(option);
+  const frameKey = (State.currentStock && State.currentStock.code || '') + ':' + State.currentPeriod;
+  State.klineChart = window.ChartTheme.renderTo(echarts, dom, State.klineChart, option, frameKey);
+  const number = value => value == null || !Number.isFinite(Number(value)) ? '--' : Number(value).toFixed(2);
+  window.ChartTheme.bindReadout(State.klineChart, {
+    labels: dates, color: textColor,
+    textAt(index) {
+      const day = rawData[index];
+      const metrics = window.RealtimeChartModel.dailyBarMetrics(rawData, index);
+      return day.date + '   开 ' + number(day.open) + '   高 ' + number(day.high) +
+        '   低 ' + number(day.low) + '   收 ' + number(day.close) +
+        '   涨跌额 ' + number(metrics.changeAmount) + '   涨跌幅 ' + number(metrics.changePercent) + '%   振幅 ' + number(metrics.amplitudePercent) +
+        '%   成交量 ' + number(volumes[index]) + ' 万手' +
+        (day.intraday ? (day.incomplete ? '   盘中 · 未收盘' : '   分钟合成') +
+          (day.observedAt ? ' · ' + String(day.observedAt).slice(11,16) : '') : '');
+    },
+    legendAt: index => name => {
+      if (name === 'K线') return name;
+      const series = baseSeries.find(item => item.name === name);
+      const item = series && series.data[index];
+      return name + ': ' + number(item && typeof item === 'object' ? item.value : item);
+    }
+  });
   if (window.ChartCoach && window.ChartCoach.refreshMarks) window.ChartCoach.refreshMarks();
 
   if (indicator === 'ma') {
     enableLegendDblClick();
   }
+  if (State.klineChart && State.klineChart.off && State.klineChart.on) {
+    State.klineChart.off('legendselectchanged', saveMALegend);
+    State.klineChart.on('legendselectchanged', saveMALegend);
+  }
+}
+
+function saveMALegend(event) {
+  maLegendSelection=Object.fromEntries(Object.entries(event.selected || {}).filter(([key])=>/^(?:VOL_)?MA\d+$/.test(key)));
+  try { localStorage.setItem('webstock.maLegend',JSON.stringify(maLegendSelection)); } catch (_) {}
 }
 
 function enableLegendDblClick() {
@@ -417,6 +431,7 @@ function openMASettings() {
   const State = window.State;
   document.getElementById('maPeriodsInput').value = State.maPeriods.join(',');
   document.getElementById('maModalOverlay').style.display = 'flex';
+  const error=document.getElementById('maSettingsError');if(error)error.textContent='';
 }
 
 function closeMASettings() {
@@ -427,12 +442,11 @@ function applyMASettings() {
   const State = window.State;
   const Indicators = window.Indicators;
   const input = document.getElementById('maPeriodsInput').value;
-  const periods = input.split(',').map(function(s) { return parseInt(s.trim()); }).filter(function(n) { return !isNaN(n) && n > 0; });
-  if (periods.length === 0) {
-    alert('请输入至少一个有效周期数字');
-    return;
-  }
+  let periods;
+  try { periods=parseMAPeriods(input); }
+  catch(error) { document.getElementById('maSettingsError').textContent=error.message; return; }
   State.maPeriods = periods;
+  try { localStorage.setItem('webstock.maPeriods',JSON.stringify(periods)); } catch (_) {}
   Indicators.calcMAFromData(State.currentRawData, State.maPeriods);
   renderKlineChart(State.currentRawData, 'ma');
   closeMASettings();
@@ -527,6 +541,38 @@ function hideKlineInsights(State) {
   if (placeholder) placeholder.hidden = false;
 }
 
+function nineTurnOutcomeText(outcome) {
+  return outcome.status === 'available' ? metricText(outcome.returnPct, '%', true)
+    : outcome.status === 'invalid' ? '数据缺口' : '待满窗口';
+}
+
+function renderNineTurnHistory(history, meta) {
+  const summary = document.getElementById('nineTurnHistorySummary');
+  const coverage = document.getElementById('nineTurnHistoryCoverage');
+  const target = document.getElementById('nineTurnHistoryEvents');
+  if (!summary || !coverage || !target) return;
+  summary.textContent = '简化九转 · 历史核对（' + history.events.length + '次）';
+  coverage.textContent = history.from + '—' + history.to + ' · 已加载' + history.barCount +
+    '根日线 · ' + (meta && meta.dataSource || '来源未标注') + '。仅覆盖当前加载范围，非全市场历史库。';
+  target.replaceChildren();
+  if (!history.events.length) target.textContent = '当前日线范围未出现确认九转。';
+  history.events.slice().reverse().forEach(function(event) {
+    const item = document.createElement('article');
+    const heading = document.createElement('b');
+    heading.textContent = event.date + ' · ' + event.label;
+    const results = document.createElement('div');
+    results.className = 'nine-turn-outcomes';
+    [1, 5, 20].forEach(function(horizon) {
+      const cell = document.createElement('span');
+      cell.textContent = horizon + '根后 ' + nineTurnOutcomeText(event.outcomes[horizon]);
+      cell.title = event.outcomes[horizon].endDate || '不把缺失数据或未收盘K线计为已完成结果';
+      results.appendChild(cell);
+    });
+    item.append(heading, results);
+    target.appendChild(item);
+  });
+}
+
 function renderKlineInsights(State, data, minuteRows, minuteMeta, localRows, localMeta) {
   const panel = document.getElementById('klineInsights');
   const model = window.MarketSignalModel;
@@ -535,7 +581,9 @@ function renderKlineInsights(State, data, minuteRows, minuteMeta, localRows, loc
     return;
   }
   const daily = model.analyzeDaily(data);
-  const nineTurn = model.calculateNineTurn(data);
+  const nineTurnContext = { asOf: new Date().toISOString() };
+  const nineTurn = model.calculateNineTurn(data, nineTurnContext);
+  const nineTurnHistory = model.evaluateNineTurnHistory(data, nineTurnContext);
   const auction = model.analyzeAuction(data, minuteRows, minuteMeta, localRows, localMeta);
   const signals = model.detectLocalSignals(data, minuteRows, minuteMeta);
   const metricGrid = document.getElementById('klineMetricGrid');
@@ -562,6 +610,7 @@ function renderKlineInsights(State, data, minuteRows, minuteMeta, localRows, loc
   appendMetric(metricGrid, 'MA20', metricText(daily.ma20, ''), '月度均价');
   appendMetric(metricGrid, '均线状态', daily.trend, '仅描述，不是预测');
   if (asOf) asOf.textContent = '截至 ' + daily.date + ' · 公开日线与分钟行情';
+  renderNineTurnHistory(nineTurnHistory, State.currentKlineMeta);
 
   signalList.innerHTML = '';
   const displaySignals = [{
@@ -641,21 +690,24 @@ function renderKlineInsights(State, data, minuteRows, minuteMeta, localRows, loc
 
   const latest = data[data.length - 1];
   const marks = [];
-  if (nineTurn.completed) {
+  nineTurnHistory.events.forEach(function(event) {
     marks.push({
-      name: nineTurn.label,
-      coord: [latest.date, Number(latest.close)],
+      name: event.label,
+      coord: [event.date, event.close],
       value: '9',
-      symbolOffset: [0, nineTurn.direction === 'up' ? '-65%' : '65%'],
-      itemStyle: { color: nineTurn.direction === 'up' ? '#f59e0b' : '#2563eb' },
+      symbolOffset: [0, event.direction === 'up' ? '-65%' : '65%'],
+      itemStyle: { color: event.direction === 'up' ? '#f59e0b' : '#2563eb' },
       signal: {
-        label: nineTurn.label,
-        detail: nineTurn.rule,
-        limitations: ['简化计数观察，不代表趋势必然反转。'],
+        label: event.date + ' · ' + event.label,
+        detail: event.rule,
+        basis: '事件后收盘涨跌（事后核对）：' + [1, 5, 20].map(function(horizon) {
+          return horizon + '根后 ' + nineTurnOutcomeText(event.outcomes[horizon]);
+        }).join('；'),
+        limitations: [nineTurnHistory.limitation],
         triggerUsesFutureData: false
       }
     });
-  }
+  });
   signals.filter(function(signal) {
     return signal.active && signal.key !== 'intraday-breakout';
   }).forEach(function(signal, index) {
@@ -713,12 +765,20 @@ async function loadKlineData(code, period) {
       ? window.ApiClient.fetchApiEnvelope('/api/minute?code=' + code + '&resolution=30s')
         .catch(function() { return { data: [], meta: { dataSource: 'local-30s-unavailable' } }; })
       : Promise.resolve({ data: [], meta: {} });
-    const results = await Promise.all([
-      window.ApiClient.fetchApiEnvelope('/api/kline?code=' + code + '&period=' + period),
-      minutePromise,
-      localAuctionPromise
-    ]);
-    const envelope = results[0];
+    const envelope = await window.ApiClient.fetchApiEnvelope('/api/kline?code=' + code + '&period=' + period);
+    if (requestId !== klineRequestSequence || !State.currentStock || State.currentStock.code !== code || State.currentPeriod !== period) return;
+    // Historical candles are the primary result. Do not hold them behind a
+    // slower optional minute/auction source; enrich only this same selection.
+    if (Array.isArray(envelope.data) && envelope.data.length) {
+      State.currentRawData = envelope.data;
+      State.currentKlineMeta = Object.assign({}, envelope.meta || {}, {code,period,hasData:true});
+      State.klineSnapshots[code] = envelope.data.slice(-80);
+      Indicators.calcMAFromData(State.currentRawData, State.maPeriods);
+      hideKlineInsights(State);
+      renderAvailableKlineHeader(State, envelope.data, envelope.meta || {});
+      renderKlineChart(State.currentRawData, State.currentIndicator);
+    }
+    const results = [envelope, ...await Promise.all([minutePromise, localAuctionPromise])];
     const minuteEnvelope = results[1];
     const data = Array.isArray(envelope.data) ? envelope.data : [];
     const meta = envelope.meta || {};
@@ -778,6 +838,7 @@ async function prefetchKlineSnapshot(code, period) {
 }
 
 window.KlineChart = {
+  parseMAPeriods,
   renderKlineChart,
   enableLegendDblClick,
   openMASettings,

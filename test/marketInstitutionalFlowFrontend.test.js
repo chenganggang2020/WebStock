@@ -5,6 +5,17 @@ const path = require('node:path');
 
 const ROOT = path.resolve(__dirname, '..');
 
+test('daily view renders the preserved CITIC all-contract aggregate without the removed dashboard', () => {
+  const box = {innerHTML: ''};
+  const api = require('../js/modules/marketInstitutionalFlow').createModule({
+    document: {getElementById: id => id === 'dashboardCiticAggregate' ? box : null}
+  });
+  api.render({futures: {availability: 'available', items: [{product: 'IC', contract: 'IC2612',
+    focusMembers: [{member: '中信期货', disclosedLong: 100, disclosedShort: 120,
+      rankedMemberImbalance: -20, rankedMemberImbalanceChange: -5}]}]}});
+  assert.ok(box.innerHTML.includes('中信全部可比合约'), 'CITIC summary must not depend on removed dashboard cards');
+});
+
 test('capital-flow page exposes source-backed ETF and CFFEX daily panels', () => {
   const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
   assert.match(html, /id="institutionalFlowRefreshBtn"/);
@@ -14,32 +25,26 @@ test('capital-flow page exposes source-backed ETF and CFFEX daily panels', () =>
   assert.match(html, /ETF日度申赎估算/);
   assert.match(html, /中金所会员持仓差/);
   assert.match(html, /js\/modules\/marketInstitutionalFlow\.js/);
-  assert.match(html, /id="dashboardInstitutionalFlow"/);
-  assert.match(html, /id="dashboardEtfFlowLeaders"/);
-  assert.match(html, /id="dashboardFuturesPositions"/);
-  assert.match(html, /id="dashboardCiticFuturesFocus"/);
-  assert.match(html, /id="dashboardCiticFuturesAsOf"/);
+  assert.doesNotMatch(html, /id="dashboardInstitutionalFlow"/);
   assert.match(html, /id="dashboardCiticAggregate"/);
-  assert.match(html, /id="dashboardCffexAggregate"/);
-  assert.match(html, /id="dashboardCiticMethodology"/);
   assert.match(html, /id="cffexCiticFocus"/);
   assert.match(html, /id="cffexAggregate"/);
   assert.match(html, /中信期货披露席位/);
-  assert.ok(html.indexOf('id="dashboardCiticFuturesFocus"') < html.indexOf('id="dashboardEtfIntraday"'));
-  assert.ok(html.indexOf('id="dashboardEtfFlowLeaders"') < html.indexOf('id="dashboardEtfIntraday"'));
+  assert.match(html, /id="eastmoneyEtfDailyReport"/);
   assert.doesNotMatch(html, /<details class="dashboard-daily-baseline"/);
 });
 
-test('homepage and capital-flow page expose truthful one-minute ETF and futures monitoring', () => {
+test('one canonical intraday view exposes ETF and futures monitoring', () => {
   const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
-  assert.match(html, /id="dashboardEtfIntraday"/);
-  assert.match(html, /id="dashboardFuturesIntraday"/);
+  assert.match(html, /id="etfView"/);
+  assert.doesNotMatch(html, /id="dashboardEtfIntraday"/);
+  assert.doesNotMatch(html, /id="dashboardFuturesIntraday"/);
   assert.match(html, /id="marketEtfIntraday"/);
   assert.match(html, /id="marketFuturesIntraday"/);
   assert.match(html, /ETF一分钟成交动量/);
   assert.match(html, /股指期货一分钟价量仓/);
-  assert.match(html, /不是ETF净申购赎回/);
-  assert.match(html, /不是净多净空/);
+  assert.match(html, /成交量与持仓量变化/);
+  assert.match(html, /不代表净多净空/);
 });
 
 test('frontend module selects one representative contract per futures product by disclosed positions', () => {

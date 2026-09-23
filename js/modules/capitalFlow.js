@@ -4,7 +4,7 @@
   if (root) root.CapitalFlow = api.createCapitalFlowModule();
 })(typeof window !== 'undefined' ? window : null, function() {
   const SOURCE_LABELS = {
-    'vendor-classified': '供应商分类口径',
+    'vendor-classified': '东方财富资金分类',
     'authorized-level2': '授权 Level-2 观察',
     'local-estimate': '本地启发式估算'
   };
@@ -44,7 +44,7 @@
     return {
       title,
       tier: source.provenanceTier || 'unknown',
-      detail: [source.provider, source.methodology].filter(Boolean).join(' · ') || '--',
+      detail: source.sourceClass === 'vendor-classified' ? '按来源的大单、小单等分类汇总净额；分类阈值未提供。' : [source.provider, source.methodology].filter(Boolean).join(' · ') || '--',
       warning: source.exchangeGroundTruth === false
         ? '来源等级仅说明可追溯性，不等于交易所真值。' + (source.truthStatement ? ' ' + source.truthStatement : '')
         : '来源真值边界未声明。'
@@ -55,8 +55,7 @@
     observation = observation || {};
     const state = observation.state || 'unavailable';
     let label = '不可用';
-    if (state === 'fresh' && !observation.isStale) label = '新鲜';
-    else if (state === 'stale') label = '已过期';
+    if (observation.observedAt && state !== 'unavailable') label = '数据时间已标注';
     return {
       state,
       label,
@@ -84,7 +83,18 @@
   }
 
   function buildChartOption(result, theme) {
-    const points = result && Array.isArray(result.points) ? result.points : [];
+    const rawPoints = result && Array.isArray(result.points) ? result.points : [];
+    // Keep lunch adjacent without connecting genuine missing trading minutes.
+    const byTime = new Map(rawPoints.map(point => [Date.parse(point.timestamp), point]));
+    const stamps = Array.from(byTime.keys()).filter(Number.isFinite).sort((a,b) => a-b);
+    if (stamps.length) for (let t = Math.ceil(stamps[0]/60000)*60000; t < stamps[stamps.length-1]; t += 60000) {
+      const date = new Date(t + 8*3600000), minute = date.getUTCHours()*60 + date.getUTCMinutes();
+      if ((minute >= 570 && minute <= 690 || minute >= 780 && minute <= 900) && !byTime.has(t)) byTime.set(t,{timestamp:new Date(t).toISOString()});
+    }
+    const points = Array.from(byTime.entries()).sort((a,b)=>a[0]-b[0]).filter(([t]) => {
+      const date = new Date(t+8*3600000), minute = date.getUTCHours()*60+date.getUTCMinutes();
+      return minute <= 690 || minute >= 780;
+    }).map(([,point])=>point);
     theme = theme || {};
     const textColor = theme.textColor || '#475569';
     const borderColor = theme.borderColor || '#e2e8f0';
@@ -113,9 +123,12 @@
       ],
       xAxis: [0, 1, 2].map(function(index) {
         return {
-          type: 'time',
+          type: 'category',
+          data: points.map(point=>point.timestamp),
+          boundaryGap: false,
           gridIndex: index,
-          axisLabel: { color: textColor, show: index === 2 },
+          axisLabel: { color: textColor, show: index === 2, hideOverlap:true,
+            formatter: value => new Date(Date.parse(value)+8*3600000).toISOString().slice(11,16) },
           axisLine: { lineStyle: { color: borderColor } },
           splitLine: { show: false }
         };
@@ -166,12 +179,14 @@
     return {
       scope: String(input.scope || 'stock').trim(),
       code: String(input.code || '').trim(),
-      source: String(input.source || '').trim()
+      source: String(input.source || '').trim(),
+      date: String(input.date || '').trim(),
+      refresh: input.refresh === true
     };
   }
 
   function queryKey(input) {
-    return [input.scope, input.code, input.source].join('|');
+    return [input.scope, input.code, input.source, input.date].join('|');
   }
 
   function formatCapitalFlowError(error) {
@@ -258,13 +273,13 @@
       if (element) element.textContent = value;
     };
     setText('capitalFlowSourceTitle', source.title);
-    setText('capitalFlowSourceTier', '来源等级：' + source.tier);
+    setText('capitalFlowSourceTier', data && data.source && data.source.provider || '--');
     setText('capitalFlowSourceDetail', source.detail);
-    setText('capitalFlowTruthWarning', source.warning);
-    setText('capitalFlowFreshness', loading ? '加载中' : observation.label);
+    setText('capitalFlowTruthWarning', '');
+    setText('capitalFlowFreshness', loading ? '加载中' : data?.history?.fromCache ? '历史记录 · ' + data.history.tradingDay : observation.label);
     setText('capitalFlowObservedAt', '观测时间：' + observation.observedAt);
     setText('capitalFlowCheckedAt', '检查时间：' + observation.checkedAt);
-    setText('capitalFlowExpiresAt', '过期时间：' + observation.expiresAt);
+    setText('capitalFlowExpiresAt', '');
     setText('capitalFlowState', state.label);
     setText('capitalFlowNetAmount', money(latest && latest.netAmount));
     setText('capitalFlowSpeed', money(latest && latest.netFlowSpeed) + ' ' + unitLabel(speedUnit));
@@ -288,16 +303,22 @@
       const truncated = coverage && (coverage.isComplete === false || Number(coverage.returnedCount) >= Number(coverage.requestedLimit || Infinity));
       historyStatus = '样本窗口 ' + count + ' 条，全天覆盖未知' + (truncated ? '，可能已截断' : '') + '。';
     }
+    if (data?.history?.tradingDay) historyStatus = data.history.tradingDay + ' · ' + historyStatus;
+    if (data?.history?.availableDates?.length) historyStatus += ' · 已存 ' + data.history.availableDates.length + ' 个交易日';
     setText('capitalFlowHistoryStatus', historyStatus);
     const errorBox = documentObject.getElementById('capitalFlowError');
     if (errorBox) {
-      errorBox.textContent = data && data.error ? formatCapitalFlowError(data.error) : '';
-      errorBox.hidden = !(data && data.error);
+      errorBox.textContent = data?.historyWarning || (data?.refreshError ? (data?.history?.fromCache ? '本次刷新未成功，已保留历史记录；数据日期见上方。' : '本次刷新未成功，且尚无该日期历史记录。') : data && data.error ? formatCapitalFlowError(data.error) : '');
+      errorBox.hidden = !(data && (data.error || data.refreshError || data.historyWarning));
     }
     const limitations = documentObject.getElementById('capitalFlowLimitations');
     if (limitations) {
       limitations.innerHTML = (data && data.limitations || []).map(function(item) {
-        return '<li>' + escapeHtml(item) + '</li>';
+        const labels={
+          'Inflow and outflow are the positive and negative portions of vendor net flow, not gross buys and sells.':'流入、流出为净额的正负部分，不是买入总额、卖出总额。',
+          'Provider bucket definitions and classification thresholds are not verified in this repository.':'大单、小单等分档阈值由来源定义，当前未提供阈值细节。'
+        };
+        return '<li>' + escapeHtml(labels[item] || item) + '</li>';
       }).join('');
     }
   }
@@ -310,6 +331,8 @@
     let bound = false;
     let lastResult = null;
     let lastQueryKey = null;
+    let lastLoadedAt = 0;
+    const now = dependencies.now || Date.now;
     let requestSequence = 0;
 
     function getChart() {
@@ -330,6 +353,7 @@
       if (activeChart && activeChart.clear) activeChart.clear();
       lastResult = null;
       lastQueryKey = null;
+      lastLoadedAt = 0;
       const pending = loadingResult(input);
       const onDemandStatus = documentObject && documentObject.getElementById('capitalFlowOnDemandStatus');
       if (onDemandStatus) onDemandStatus.textContent = '正在查询所选来源；旧读数已清除…';
@@ -337,7 +361,8 @@
       else defaultRenderMeta(pending, documentObject);
       const path = '/api/capital-flow/series?scope=' + encodeURIComponent(input.scope) +
         '&code=' + encodeURIComponent(input.code) +
-        '&source=' + encodeURIComponent(input.source);
+        '&source=' + encodeURIComponent(input.source) +
+        (input.date ? '&date=' + encodeURIComponent(input.date) : '') + (input.refresh ? '&refresh=1' : '');
       let data;
       try {
         data = await fetchData(path);
@@ -354,12 +379,13 @@
       if (sequence !== requestSequence) return data;
       lastResult = data;
       lastQueryKey = activeQueryKey;
+      lastLoadedAt = now();
       if (activeChart && activeChart.clear) activeChart.clear();
       if (dependencies.renderMeta) dependencies.renderMeta(data);
       else defaultRenderMeta(data, documentObject);
       if (onDemandStatus) {
         onDemandStatus.textContent = data && data.availability === 'available'
-          ? '已完成本次手动观测；页面不会自动重复采样。'
+          ? (data.historyWarning || (data.history?.fromCache ? '显示已保存的历史资金；可选择日期或刷新来源。' : '已取得来源数据；成功记录自动存档。'))
           : '所选来源未返回可用观测；未切换其他来源。';
       }
       if (data && data.availability === 'available' && data.points && data.points.length && activeChart) {
@@ -376,7 +402,8 @@
       return {
         scope: scope ? scope.value : 'stock',
         code: code ? code.value.trim() : '',
-        source: source ? source.value : 'vendor-classified'
+        source: source ? source.value : 'vendor-classified',
+        date: documentObject?.getElementById('capitalFlowDate')?.value || ''
       };
     }
 
@@ -385,7 +412,7 @@
       bound = true;
       const refresh = documentObject.getElementById('capitalFlowRefreshBtn');
       if (refresh) refresh.addEventListener('click', function() {
-        load(readControls()).catch(function(error) {
+        load({ ...readControls(), refresh: true }).catch(function(error) {
           const box = documentObject.getElementById('capitalFlowError');
           if (box) {
             box.hidden = false;
@@ -394,6 +421,11 @@
         });
       });
       const scope = documentObject.getElementById('capitalFlowScope');
+      documentObject.getElementById('capitalFlowDate')?.addEventListener('change', () => load(readControls()).catch(() => {}));
+      documentObject.getElementById('capitalFlowLatestBtn')?.addEventListener('click', () => {
+        documentObject.getElementById('capitalFlowDate').value = '';
+        load(readControls()).catch(() => {});
+      });
       if (scope) scope.addEventListener('change', function() {
         const source = documentObject.getElementById('capitalFlowSource');
         if (source && scope.value === 'sector' && source.value !== 'vendor-classified') source.value = 'vendor-classified';
@@ -403,7 +435,8 @@
     function ensureLoaded() {
       bind();
       const input = readControls();
-      if (lastResult && lastQueryKey === queryKey(normalizeInput(input))) return Promise.resolve(lastResult);
+      if (lastResult && lastResult.availability === 'available' &&
+          lastQueryKey === queryKey(normalizeInput(input)) && now() - lastLoadedAt < 15000) return Promise.resolve(lastResult);
       if (!input.code) return Promise.resolve(null);
       return load(input);
     }

@@ -21,6 +21,21 @@ test.after(() => {
   }
 });
 
+test('OCR failures back off and successful OCR terminates the earlier failure streak',()=>{
+  const channel=channels.createChannel({channelKey:'note-ocr-backoff',displayName:'图文退避测试',platform:'douyin'});
+  const contentId='7681478827298291658';
+  for(const status of ['ocr_error','ocr_partial']){
+    const run=syncState.startRun(channel.id,{trigger:'manual'});
+    syncState.upsertRunItem(run.id,{contentId,detailStatus:'complete',transcriptionStatus:status});
+    syncState.completeRun(run.id,{});
+  }
+  assert.equal(syncState.getPlanningState(channel.id)[contentId].transcriptionFailureCount,2);
+  const run=syncState.startRun(channel.id,{trigger:'manual'});
+  syncState.upsertRunItem(run.id,{contentId,detailStatus:'complete',transcriptionStatus:'ocr_complete'});
+  syncState.completeRun(run.id,{});
+  assert.equal(syncState.getPlanningState(channel.id)[contentId].transcriptionFailureCount,0);
+});
+
 test('sync audit persists run totals and per-video detail/transcription states', () => {
   const channel = channels.createChannel({
     channelKey: 'douyin-sync-audit-test',

@@ -353,6 +353,7 @@ test('service falls back to clearly labelled Sina five-minute volume when one-mi
     marketData: {
       async get(key) {
         if (key.startsWith('market-volume-pace:')) throw new Error('Eastmoney blocked');
+        if (key.startsWith('market-volume-pace-tencent:')) throw new Error('Tencent blocked');
         requestedSinaFallback += 1;
         return { data: fallbackRows };
       }

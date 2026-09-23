@@ -131,7 +131,9 @@
     const intervalSeconds = Number(settings.intervalSeconds) || intervalMinutes * 60;
     const includeAuction = settings.includeAuction === true;
     const observedTimes = observedTradingTimes(minuteData, { includeAuction });
-    const combined = new Set(buildExpectedTradingTimes(intervalMinutes, intervalSeconds, includeAuction));
+    const expected = buildExpectedTradingTimes(intervalMinutes, intervalSeconds, includeAuction)
+      .filter(time => settings.timestampMeaning !== 'bar-end' || (time !== '09:30' && time !== '13:00'));
+    const combined = new Set(expected);
     observedTimes.forEach(function(time) { combined.add(time); });
     const times = Array.from(combined).sort(function(left, right) {
       const coordinateDiff = tradingMinuteCoordinate(left) - tradingMinuteCoordinate(right);

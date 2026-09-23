@@ -121,7 +121,7 @@ function resolvePython(explicitPath) {
 }
 
 function downloadMediaFile(mediaUrl, target, options = {}) {
-  const maxBytes = Math.max(Number(options.maxBytes) || 250 * 1024 * 1024, 1024);
+  const maxBytes = Math.max(Number(options.maxBytes) || 1024 * 1024 * 1024, 1024);
   const timeoutMs = Math.max(Number(options.timeoutMs) || 120000, 1000);
 
   function request(currentUrl, redirectCount) {
@@ -244,12 +244,14 @@ function buildTranscriptionEnvironment(baseEnvironment = process.env) {
 }
 
 function resolveTranscriptionTimeout(options = {}) {
-  return Math.max(Number(options.timeoutMs) || 30 * 60 * 1000, 1000);
+  const durationMs = Math.max(Number(options.durationSeconds) || 0, 0) * 1000;
+  const adaptive = Math.min(6 * 60 * 60 * 1000, Math.max(30 * 60 * 1000, durationMs * 4 + 10 * 60 * 1000));
+  return Math.max(Number(options.timeoutMs) || adaptive, 1000);
 }
 
 function buildRecognitionPrompt(prompt, hotwords = []) {
   const context = String(prompt || '').replace(/\s+/g, ' ').trim();
-  const instruction = '以下是中国大陆普通话财经视频。请使用中国大陆简体中文逐字转写，不要改写、总结或补充原文。';
+  const instruction = '请使用中国大陆简体中文逐字转写视频中的普通话语音，不要改写、总结或补充原文。';
   const initialPrompt = (instruction + (context ? ' 上下文：' + context : '')).slice(0, 1000);
   const uniqueHotwords = [];
   (Array.isArray(hotwords) ? hotwords : String(hotwords || '').split(/[\s,，;；]+/)).forEach(function(value) {
@@ -339,7 +341,7 @@ async function runOpenAITranscription(input, options = {}) {
 }
 
 function runPythonTranscription(input, options = {}) {
-  const timeoutMs = resolveTranscriptionTimeout(options);
+  const timeoutMs = resolveTranscriptionTimeout(Object.assign({ durationSeconds: input.durationSeconds }, options));
   return new Promise(function(resolve, reject) {
     const args = [
       input.scriptPath || path.join(quantRoot(), 'douyin_transcribe.py'),
@@ -356,15 +358,27 @@ function runPythonTranscription(input, options = {}) {
     });
     let stdout = '';
     let stderr = '';
-    let timer = setTimeout(function() { child.kill(); }, timeoutMs);
+    let timedOut = false;
+    let progressBuffer = '';
+    let timer = setTimeout(function() { timedOut = true; child.kill(); }, timeoutMs);
     child.stdout.setEncoding('utf8');
     child.stderr.setEncoding('utf8');
     child.stdout.on('data', function(chunk) { stdout = (stdout + chunk).slice(-8 * 1024 * 1024); });
-    child.stderr.on('data', function(chunk) { stderr = (stderr + chunk).slice(-12000); });
+    child.stderr.on('data', function(chunk) {
+      stderr = (stderr + chunk).slice(-12000);
+      progressBuffer = (progressBuffer + chunk).slice(-24000);
+      const lines = progressBuffer.split(/\r?\n/);
+      progressBuffer = lines.pop();
+      lines.forEach(function(line) {
+        if (!line.startsWith('ASR_PROGRESS ')) return;
+        try { if (typeof input.onProgress === 'function') input.onProgress(JSON.parse(line.slice(13))); } catch (_) {}
+      });
+    });
     child.on('error', function(error) { clearTimeout(timer); timer = null; reject(error); });
     child.on('close', function(code) {
       if (timer) clearTimeout(timer);
       if (code !== 0) {
+        if (timedOut) { reject(new Error('本地转写超过 ' + Math.round(timeoutMs / 60000) + ' 分钟；视频已保留，可稍后重试。')); return; }
         reject(new Error(stderr.trim().split(/\r?\n/).filter(Boolean).slice(-1)[0] || '本地语音识别进程异常退出，代码：' + code));
         return;
       }
@@ -377,6 +391,7 @@ function runPythonTranscription(input, options = {}) {
 
 function normalizeResult(raw, download) {
   const source = raw && typeof raw === 'object' ? raw : {};
+  const metric = value => value == null || value === '' || !Number.isFinite(Number(value)) ? null : Number(value);
   const segments = (Array.isArray(source.segments) ? source.segments : []).map(function(segment) {
     const rawText = String(segment.text || '').trim().slice(0, 4000);
     return {
@@ -384,9 +399,9 @@ function normalizeResult(raw, download) {
       end: Math.max(Number(segment.end) || 0, 0),
       rawText,
       text: toSimplifiedChinese(rawText),
-      avgLogProbability: Number.isFinite(Number(segment.avgLogProbability)) ? Number(segment.avgLogProbability) : null,
-      noSpeechProbability: Number.isFinite(Number(segment.noSpeechProbability)) ? Number(segment.noSpeechProbability) : null,
-      compressionRatio: Number.isFinite(Number(segment.compressionRatio)) ? Number(segment.compressionRatio) : null
+      avgLogProbability: metric(segment.avgLogProbability),
+      noSpeechProbability: metric(segment.noSpeechProbability),
+      compressionRatio: metric(segment.compressionRatio)
     };
   }).filter(function(segment) { return segment.text && segment.end >= segment.start; }).slice(0, 10000);
   const rawTranscript = String(source.transcript || segments.map(function(item) { return item.rawText; }).join('')).trim().slice(0, 800000);
@@ -475,6 +490,10 @@ function createDouyinTranscriptService(options = {}) {
         : { available: false, provider, status: 'runtime_missing', message: 'GPT Transcribe 尚未配置 API Key，视频详情仍会保存。' };
     }
     try {
+      const model = String(input.model || options.model || process.env.WEBSTOCK_ASR_MODEL || 'small');
+      if (['turbo', 'large-v3-turbo', 'large-v3'].includes(model) && !resolveLocalModelSource(modelRoot, model)) {
+        return { available: false, provider, status: 'model_missing', message: model + ' 模型尚未完整安装；视频详情仍会保存，请安装模型或改选 small。' };
+      }
       return { available: true, provider, pythonPath: resolvePython(options.pythonPath) };
     } catch (error) {
       return {
@@ -577,18 +596,19 @@ function createDouyinTranscriptService(options = {}) {
     const model = String(input.model || (provider === 'openai'
       ? options.openAIModel || process.env.WEBSTOCK_ASR_OPENAI_MODEL || 'gpt-transcribe'
       : options.model || process.env.WEBSTOCK_ASR_MODEL || 'small'));
-    const recognitionPrompt = buildRecognitionPrompt(input.prompt,
-      Array.isArray(input.hotwords) && input.hotwords.length ? input.hotwords : DEFAULT_FINANCE_HOTWORDS);
+    const recognitionPrompt = buildRecognitionPrompt(input.prompt, input.hotwords || []);
     const transcriptionInput = {
       mediaPath: archiveEvidence.localAssetPath,
       model,
+      durationSeconds: input.durationSeconds,
+      onProgress: function(progress) { report(input, progress); },
       prompt: recognitionPrompt.initialPrompt + (recognitionPrompt.hotwords
         ? ' 重点术语：' + recognitionPrompt.hotwords : ''),
       hotwords: recognitionPrompt.hotwords
     };
     const localModelSource = provider === 'local' ? resolveLocalModelSource(modelRoot, model) : '';
-    if (provider === 'local' && ['turbo', 'large-v3-turbo'].includes(model) && !localModelSource) {
-      throw new Error('本地 large-v3-turbo 模型未完整下载；已停止识别，避免后台静默下载导致程序看似卡住。');
+    if (provider === 'local' && ['turbo', 'large-v3-turbo', 'large-v3'].includes(model) && !localModelSource) {
+      throw new Error('本地 ' + model + ' 模型未完整下载；已停止识别，避免后台静默下载导致程序看似卡住。');
     }
     const raw = provider === 'openai'
       ? await runOpenAI(transcriptionInput, options)

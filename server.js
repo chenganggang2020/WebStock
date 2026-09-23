@@ -9,6 +9,7 @@ const { latestCacheTimestamp } = require('./routes/cache');
 const packageInfo = require('./package.json');
 
 const app = express();
+app.use(require('./services/runtimeDiagnostics').middleware);
 
 function rejectCrossOriginMutation(req, res, next) {
   if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) return next();
@@ -131,6 +132,8 @@ if (require.main === module) {
   scheduler.start();
   tonghuashunHoldingScheduler.start();
   industryResearchScheduler.start();
+  const creatorIndustryService = require('./services/creatorIndustryService').getCreatorIndustryService();
+  if (process.env.WEBSTOCK_BUILD_SMOKE_TEST !== '1') creatorIndustryService.start();
   etfDailyScheduler.start();
   const sectorRotation = require('./services/capitalFlow/sectorRotationService').getSectorRotationService();
   if (process.env.WEBSTOCK_BUILD_SMOKE_TEST !== '1') sectorRotation.start();
@@ -140,6 +143,7 @@ if (require.main === module) {
     scheduler.stop();
     tonghuashunHoldingScheduler.stop();
     industryResearchScheduler.stop();
+    creatorIndustryService.stop();
     etfDailyScheduler.stop();
     sectorRotation.stop();
     localQuoteSampler.stop();

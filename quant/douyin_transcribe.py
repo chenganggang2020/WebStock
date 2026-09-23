@@ -2,6 +2,7 @@ import argparse
 import gc
 import importlib.metadata
 import json
+import sys
 import time
 
 from faster_whisper import WhisperModel
@@ -42,10 +43,12 @@ def main():
             language="zh",
             beam_size=5,
             vad_filter=True,
+            condition_on_previous_text=False,
             initial_prompt=args.prompt[:1000] or None,
             hotwords=args.hotwords[:500] or None,
         )
         segments = []
+        last_progress = -30.0
         for segment in segments_iter:
             text = str(segment.text or "").strip()
             if text:
@@ -57,6 +60,14 @@ def main():
                     "noSpeechProbability": optional_segment_metric(segment, "no_speech_prob"),
                     "compressionRatio": optional_segment_metric(segment, "compression_ratio"),
                 })
+            if float(segment.end) - last_progress >= 30:
+                last_progress = float(segment.end)
+                print('ASR_PROGRESS ' + json.dumps({
+                    'stage': 'transcribing',
+                    'message': '本地识别已处理 %.0f / %.0f 秒音频（非剩余耗时）' % (segment.end, info.duration or 0),
+                    'processedSeconds': round(float(segment.end), 1),
+                    'durationSeconds': round(float(info.duration or 0), 1),
+                }, ensure_ascii=False), file=sys.stderr, flush=True)
 
         result = {
             "engine": "faster-whisper",

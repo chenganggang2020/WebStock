@@ -1,4 +1,4 @@
-const CACHE_NAME = 'webstock-static-v30';
+const CACHE_NAME = 'webstock-static-v36';
 const CORE_ASSETS = [
   '/mobile.html',
   '/css/mobile.css',
@@ -13,6 +13,14 @@ const OPTIONAL_ASSETS = [
   '/',
   '/index.html',
   '/css/styles.css',
+  '/css/compact-terminal.css',
+  '/css/fixed-workspace.css',
+  '/css/industry-workspace.css',
+  '/js/modules/industryWorkspace.js',
+  '/js/modules/fixedWorkspace.js',
+  '/js/modules/compactTerminal.js',
+  '/js/modules/homeTerminal.js',
+  '/js/modules/runtimeDiagnostics.js',
   '/css/sector-rotation.css',
   '/js/modules/eastmoneyDarkRank.js',
   '/js/modules/sectorRotation.js',
@@ -98,7 +106,7 @@ self.addEventListener('fetch', function(event) {
 self.addEventListener('push', function(event) {
   let payload = {};
   try { payload = event.data ? event.data.json() : {}; } catch (_) {}
-  const title = payload.title || 'WebStock 有新的数据变化';
+  const title = payload.title || '行情与研究 · 数据变化';
   event.waitUntil(self.registration.showNotification(title, {
     body: payload.body || '打开应用查看最新状态。',
     icon: '/icons/webstock-192.png',

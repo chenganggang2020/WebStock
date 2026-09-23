@@ -115,7 +115,7 @@
     let codes = [];
     if (view === 'watchlist') codes = uniqueCodes(watchlist);
     else if (view === 'portfolio') codes = uniqueCodes(positions);
-    else if (view === 'dashboard') codes = uniqueCodes(watchlist.concat(positions));
+    else if (view === 'dashboard') codes = uniqueCodes((window.HomeTerminal ? window.HomeTerminal.groupItems() : []).concat(watchlist, positions));
     if (codes.length <= LOCAL_SNAPSHOT_BATCH_SIZE) return codes;
 
     const start = (snapshotBatchCursors.get(view) || 0) % codes.length;
@@ -152,6 +152,7 @@
       if ((view === 'portfolio' || view === 'dashboard') && window.Portfolio && window.Portfolio.applyQuoteSnapshot) {
         window.Portfolio.applyQuoteSnapshot(quotes, meta);
       }
+      if (view === 'dashboard' && window.HomeTerminal) window.HomeTerminal.renderWatchlist();
     }
 
     const usable = quotes.filter(function(quote) {

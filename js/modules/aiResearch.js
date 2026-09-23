@@ -1404,8 +1404,9 @@ function aiResearchRenderSourceOptions() {
   const select = document.getElementById('knowledgeSourceFilter');
   if (!select) return;
   const previous = select.value;
-  select.innerHTML = '<option value="">全部来源</option>' + aiResearchSources.map(function(source) {
-    return '<option value="' + source.id + '">' + aiResearchEscape(source.title) + (source.author ? ' · ' + aiResearchEscape(source.author) : '') + '</option>';
+  select.innerHTML = (window.EvidenceLibrary ? '' : '<option value="">全部来源</option>') + aiResearchSources.map(function(source) {
+    const title = window.EvidenceLibrary ? window.EvidenceLibrary.presentation(source).title : source.title;
+    return '<option value="' + source.id + '">' + aiResearchEscape(title) + (source.author ? ' · ' + aiResearchEscape(source.author) : '') + '</option>';
   }).join('');
   if (aiResearchSources.some(function(source) { return String(source.id) === previous; })) select.value = previous;
 }
@@ -1416,6 +1417,7 @@ function aiResearchRenderSources() {
   document.getElementById('knowledgeSourceCount').textContent = aiResearchSources.length + ' 个来源';
   if (window.updateSidebarWorkspace) window.updateSidebarWorkspace();
   aiResearchRenderSourceOptions();
+  if (window.EvidenceLibrary) { window.EvidenceLibrary.render(aiResearchSources); return; }
   if (!aiResearchSources.length) {
     target.innerHTML = '<div class="empty-state compact">尚未录入专家资料。</div>';
     return;
@@ -1475,7 +1477,8 @@ async function aiResearchSaveSource() {
     });
     aiResearchSetStatus('knowledgeSourceStatus', saved.duplicate ? '相同正文已经存在，未重复导入。' : '已保存并建立 ' + saved.chunkCount + ' 个证据块。');
     aiResearchClearSourceForm();
-    await aiResearchLoadSources();
+    await aiResearchLoadSources(saved.author || '');
+    if (window.EvidenceLibrary) await window.EvidenceLibrary.select(saved.id);
   } catch (error) {
     aiResearchSetStatus('knowledgeSourceStatus', error.message, true);
   } finally {
@@ -1497,6 +1500,7 @@ async function aiResearchEditSource(id) {
   document.getElementById('knowledgeSourceContent').value = source.content || '';
   document.getElementById('saveKnowledgeSourceBtn').textContent = '更新来源';
   aiResearchSetStatus('knowledgeSourceStatus', '正在编辑：' + source.title);
+  if (window.EvidenceLibrary) window.EvidenceLibrary.showTab('edit');
   document.getElementById('knowledgeSourceTitle').focus();
 }
 
@@ -1534,6 +1538,12 @@ function aiResearchSelectedSourceIds() {
 }
 
 async function aiResearchSearchEvidence() {
+  const sourceScope = aiResearchSourceLoadSequence;
+  const sourceIds = aiResearchSelectedSourceIds();
+  if (window.EvidenceLibrary && !sourceIds.length) {
+    aiResearchSetStatus('knowledgeSearchStatus', '请先在当前作者下选择一份资料。', true);
+    return null;
+  }
   const query = document.getElementById('knowledgeQuestionInput').value.trim();
   if (!query) {
     aiResearchSetStatus('knowledgeSearchStatus', '请先输入研究问题。', true);
@@ -1543,11 +1553,13 @@ async function aiResearchSearchEvidence() {
   try {
     const result = await aiResearchApi('/api/knowledge/search', {
       method: 'POST',
-      body: { query, sourceIds: aiResearchSelectedSourceIds(), limit: 12 }
+      body: { query, sourceIds, limit: 12 }
     });
+    if (sourceScope !== aiResearchSourceLoadSequence) return null;
     aiResearchRenderEvidence(result);
     return result;
   } catch (error) {
+    if (sourceScope !== aiResearchSourceLoadSequence) return null;
     aiResearchSetStatus('knowledgeSearchStatus', error.message, true);
     return null;
   }
@@ -1561,6 +1573,7 @@ function aiResearchRenderDirectResult(result) {
 }
 
 async function aiResearchAnalyze(requestOverride, displayOptions) {
+  const sourceScope = aiResearchSourceLoadSequence;
   const button = document.getElementById('analyzeKnowledgeBtn');
   const hasOverride = requestOverride && typeof requestOverride === 'object' && !requestOverride.preventDefault;
   const question = hasOverride
@@ -1577,6 +1590,10 @@ async function aiResearchAnalyze(requestOverride, displayOptions) {
     limit: 10
   };
   const display = displayOptions || {};
+  if (!hasOverride && window.EvidenceLibrary && !request.sourceIds.length) {
+    aiResearchSetStatus('knowledgeSearchStatus', '请先在当前作者下选择一份资料。', true);
+    return;
+  }
   if (button) button.disabled = true;
   aiResearchSetStatus('knowledgeSearchStatus', '正在整理证据...');
   try {
@@ -1585,6 +1602,7 @@ async function aiResearchAnalyze(requestOverride, displayOptions) {
       body: request,
       timeoutMs: 120000
     });
+    if (!hasOverride && sourceScope !== aiResearchSourceLoadSequence) return;
     aiResearchRenderEvidence({ items: result.evidence, engine: result.engine });
     if (!result.handoffMode) {
       aiResearchRenderDirectResult(result.report || '');
@@ -1620,11 +1638,12 @@ async function aiResearchAnalyze(requestOverride, displayOptions) {
           },
           timeoutMs: 30000
         });
-        aiResearchRenderDirectResult(savedResult);
+        if (hasOverride || sourceScope === aiResearchSourceLoadSequence) aiResearchRenderDirectResult(savedResult);
         await aiResearchLoadRuns();
       }
     });
   } catch (error) {
+    if (!hasOverride && sourceScope !== aiResearchSourceLoadSequence) return;
     aiResearchSetStatus('knowledgeSearchStatus', error.message, true);
   } finally {
     if (button) button.disabled = false;
@@ -1632,10 +1651,12 @@ async function aiResearchAnalyze(requestOverride, displayOptions) {
 }
 
 async function aiResearchReviewScreener(result, candidates) {
-  window.switchMainView('aiResearch');
+  window.switchMainView(window.EvidenceLibrary ? 'evidence' : 'aiResearch');
   await aiResearchEnsureLoaded();
+  if (window.EvidenceLibrary) window.EvidenceLibrary.showTab('analysis');
   if (!aiResearchSources.length) {
     aiResearchSetStatus('knowledgeSearchStatus', '请先导入至少一份书籍、博主文章、研报或笔记，再运行专家库复核。', true);
+    if (window.EvidenceLibrary) window.EvidenceLibrary.showTab('edit');
     document.getElementById('knowledgeSourceTitle').focus();
     return null;
   }
@@ -1648,7 +1669,7 @@ async function aiResearchReviewScreener(result, candidates) {
 
   const strategy = String(result && result.strategy || 'local-factor').trim();
   const demand = String(result && result.demand || '').trim();
-  const question = '请按照专家知识库中的选股框架，复核当前 WebStock 候选股，给出优先观察、等待确认和暂时剔除三组，并逐项引用证据。' +
+  const question = '请按照专家知识库中的选股框架，复核当前本地候选股，给出优先观察、等待确认和暂时剔除三组，并逐项引用证据。' +
     (demand ? ' 当前需求：' + demand : '') + ' 策略：' + strategy + '。';
   const searchQuery = [demand, strategy].concat(selected.flatMap(function(item) {
     return [item.code, item.name, item.industry].concat(item.themes || [], item.factorTags || []);
@@ -1713,7 +1734,7 @@ function aiResearchRenderGptPickImports() {
     const candidates = Array.isArray(item.candidates) ? item.candidates : [];
     const warnings = Array.isArray(item.warnings) ? item.warnings : [];
     const importLabel = item.source === 'external-chatgpt-batch'
-      ? '自动批次导入，WebStock 未独立验证，不自动交易'
+      ? '自动批次导入，本程序未独立验证，不自动交易'
       : '手动导入，不自动交易';
     return '<details class="gpt-pick-import-row"' + (itemIndex === 0 ? ' open' : '') + '>' +
       '<summary><span><strong>' + aiResearchEscape(item.title || 'ChatGPT 手动选股') + '</strong>' +
@@ -1728,7 +1749,7 @@ function aiResearchRenderGptPickImports() {
         '</article>';
       }).join('') + '</div>' +
       (warnings.length ? '<div class="gpt-pick-warnings">信息缺口：' + aiResearchEscape(warnings.slice(0, 8).join('；')) + '</div>' : '') +
-      '<div class="muted gpt-pick-boundary">来源：ChatGPT 对话手动粘贴 · 未由 WebStock 验证 · 仅作研究材料</div>' +
+      '<div class="muted gpt-pick-boundary">来源：ChatGPT 对话手动粘贴 · 未由本程序验证 · 仅作研究材料</div>' +
     '</details>';
   }).join('');
 }
@@ -1747,10 +1768,22 @@ function aiResearchPrefetchModels(force) {
   return aiResearchModelLoading;
 }
 
-async function aiResearchLoadSources() {
+let aiResearchSourceLoadSequence = 0;
+async function aiResearchLoadSources(preferredAuthor) {
+  const requestId = ++aiResearchSourceLoadSequence;
   const input = document.getElementById('knowledgeSourceSearchInput');
+  if (input && typeof preferredAuthor === 'string') input.value = '';
   const query = input ? input.value.trim() : '';
-  aiResearchSources = await aiResearchApi('/api/knowledge/sources' + (query ? '?query=' + encodeURIComponent(query) : ''));
+  const author = document.getElementById('knowledgeAuthorFilter');
+  if (window.EvidenceLibrary && author) {
+    window.EvidenceLibrary.beginLoading();
+    const authors = await aiResearchApi('/api/knowledge/authors');
+    if (requestId !== aiResearchSourceLoadSequence) return;
+    window.EvidenceLibrary.setAuthors(authors, preferredAuthor);
+  }
+  const result = await aiResearchApi('/api/knowledge/sources?limit=500' + (query ? '&query=' + encodeURIComponent(query) : '') + (author ? '&authorExact=' + encodeURIComponent(author.value) : ''));
+  if (requestId !== aiResearchSourceLoadSequence) return;
+  aiResearchSources = result;
   aiResearchRenderSources();
 }
 
@@ -1801,7 +1834,7 @@ function aiResearchEnsureLoaded(force) {
   if (aiResearchLoaded && !force) return Promise.resolve();
   aiResearchLoading = aiResearchPrefetchModels(force)
     .then(function() {
-      return Promise.all([aiResearchLoadSources(), aiResearchLoadRuns(), aiResearchLoadGptPickImports(), aiResearchLoadQuant(), aiResearchLoadPaperPortfolios()]);
+      return Promise.all([aiResearchLoadSources(), aiResearchLoadRuns(), aiResearchLoadGptPickImports(), aiResearchLoadQuant()]);
     })
     .then(function() { aiResearchLoaded = true; })
     .finally(function() { aiResearchLoading = null; });
@@ -1811,6 +1844,10 @@ function aiResearchEnsureLoaded(force) {
 function aiResearchBind() {
   if (aiResearchBound) return;
   aiResearchBound = true;
+  document.getElementById('refreshPaperPortfoliosBtn').addEventListener('click', function() {
+    aiResearchLoadPaperPortfolios().catch(function(error) { window.FixedWorkspace.reportError('paperPortfolio', error.message); });
+  });
+  if (window.EvidenceLibrary) window.EvidenceLibrary.bind({clear:aiResearchClearSourceForm,edit:aiResearchEditSource,delete:aiResearchDeleteSource,reload:aiResearchLoadSources,error:message => aiResearchSetStatus('knowledgeSourceStatus',message,true)});
   document.getElementById('refreshAiResearchBtn').addEventListener('click', function() {
     aiResearchEnsureLoaded(true).catch(function(error) { alert(error.message); });
   });
@@ -1950,7 +1987,7 @@ function aiResearchBind() {
   document.getElementById('installQuantRuntimeBtn').addEventListener('click', function() {
     const bytes = quantRuntime && quantRuntime.installer && Number(quantRuntime.installer.estimatedBytes || 0);
     const size = bytes > 0 ? (bytes / 1024 / 1024 / 1024).toFixed(1) + ' GB' : '较大';
-    if (!confirm('将下载并安装约 ' + size + ' 的独立量化环境。安装目录位于 WebStock 数据目录，不修改系统 Python。继续？')) return;
+    if (!confirm('将下载并安装约 ' + size + ' 的独立量化环境。安装目录位于本程序的数据目录，不修改系统 Python。继续？')) return;
     aiResearchStartQuant('/api/quant/runtime/install', {
       indexMode: document.getElementById('quantIndexModeSelect').value,
       force: false
@@ -2172,6 +2209,7 @@ function aiResearchBind() {
     }, 180);
   });
   document.getElementById('knowledgeSourceList').addEventListener('click', function(event) {
+    if (window.EvidenceLibrary) return;
     const button = event.target.closest('[data-knowledge-action]');
     const row = event.target.closest('[data-source-id]');
     if (!button || !row) return;
@@ -2203,6 +2241,8 @@ window.AIResearch = {
   bind: aiResearchBind,
   prefetchModels: aiResearchPrefetchModels,
   ensureLoaded: aiResearchEnsureLoaded,
+  loadPaperPortfolios: aiResearchLoadPaperPortfolios,
+  loadEvidence: function() { return Promise.all([aiResearchLoadSources(),aiResearchLoadRuns()]); },
   reload: function() { return aiResearchEnsureLoaded(true); },
   reviewScreener: aiResearchReviewScreener,
   getSourceCount: function() { return aiResearchSources.length; }

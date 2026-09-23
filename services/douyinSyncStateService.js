@@ -449,9 +449,9 @@ function getPlanningState(channelId) {
       }
     }
     if (!transcriptionStopped.has(contentId)) {
-      if (['complete', 'needs_review', 'no_speech'].includes(row.transcription_status)) {
+      if (['complete', 'needs_review', 'no_speech', 'ocr_complete'].includes(row.transcription_status)) {
         transcriptionStopped.add(contentId);
-      } else if (['error', 'media_missing', 'archive_missing', 'archive_error'].includes(row.transcription_status)) {
+      } else if (['error', 'media_missing', 'archive_missing', 'archive_error', 'ocr_error', 'ocr_partial'].includes(row.transcription_status)) {
         if (!state.lastTranscriptionFailureAt) state.lastTranscriptionFailureAt = sqliteUtc(row.updated_at);
         state.transcriptionFailureCount += 1;
       }

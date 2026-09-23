@@ -217,12 +217,19 @@ function selectVisibleProfileCandidate(links, currentPageUrl, isItemPage) {
     }
   }
 
-  const candidates = (Array.isArray(links) ? links : []).map(function(item) {
+  const itemMatch = String(currentPageUrl || '').match(/\/(?:video|note)\/(\d{12,24})(?:[/?#]|$)/);
+  const candidates = (Array.isArray(links) ? links : []).filter(function(item) {
+    // A global profile link (recommendations, comments or navigation) is not authorship evidence.
+    return !isItemPage || Boolean(itemMatch && item && item.contentId === itemMatch[1]);
+  }).map(function(item) {
     return {
       profileUrl: normalizedProfile(item && item.href),
       displayName: String(item && item.text || '').replace(/\s+/g, ' ').trim().slice(0, 160)
     };
   }).filter(function(item) { return item.profileUrl; });
+  if (isItemPage && new Set(candidates.map(item => item.profileUrl)).size !== 1) {
+    return { profileUrl: '', displayName: '' };
+  }
   const currentProfile = isItemPage ? '' : normalizedProfile(currentPageUrl);
   const profileUrl = currentProfile || (candidates[0] && candidates[0].profileUrl) || '';
   if (!profileUrl) return { profileUrl: '', displayName: '' };
@@ -230,6 +237,71 @@ function selectVisibleProfileCandidate(links, currentPageUrl, isItemPage) {
     return item.profileUrl === profileUrl && item.displayName;
   });
   return { profileUrl, displayName: named ? named.displayName : '' };
+}
+
+function extractDouyinDetail(payload, contentId) {
+  const id = String(contentId || '');
+  if (!/^\d{12,24}$/.test(id)) return null;
+  const candidates = [payload && payload.aweme_detail, payload && payload.data && payload.data.aweme_detail]
+    .concat(payload && payload.aweme_list || [], payload && payload.item_list || []);
+  const detail = candidates.find(item => item && String(item.aweme_id || item.aweme_id_str || item.awemeId || '') === id);
+  if (!detail) return null;
+  const author = detail.author || detail.authorInfo || {};
+  const secUid = String(author.sec_uid || author.secUid || '');
+  const profile = /^[A-Za-z0-9_-]{6,200}$/.test(secUid)
+    ? { profileUrl: 'https://www.douyin.com/user/' + secUid, displayName: cleanText(author.nickname, 160) } : null;
+  const imageList = Array.isArray(detail.images) ? detail.images : [];
+  const images = imageList.slice(0, 50).map(function(item, index) {
+    const urls = Array.isArray(item && item.url_list) ? item.url_list : Array.isArray(item && item.urlList) ? item.urlList : [];
+    const url = urls.find(isAllowedDouyinImageUrl) || '';
+    return { index: index + 1, url, width: Math.max(Number(item && item.width) || 0, 0), height: Math.max(Number(item && item.height) || 0, 0) };
+  });
+  const seconds = Number(detail.create_time || detail.createTime);
+  const publishedAt = Number.isFinite(seconds) && seconds > 946684800 && seconds < 4102444800
+    ? new Date(seconds * 1000).toISOString() : '';
+  return { contentId: id, profile, description: String(detail.desc || '').trim().slice(0, 200000),
+    publishedAt, images, imageCount: imageList.length,
+    mediaType: imageList.length || Number(detail.aweme_type || detail.awemeType) === 68 ? 'note' : 'video' };
+}
+
+// Parse the site's serialized page data as JSON, never execute embedded JavaScript.
+function extractDouyinEmbeddedDetail(scripts, contentId) {
+  let visited = 0;
+  function find(value, depth) {
+    if (!value || typeof value !== 'object' || depth > 16 || ++visited > 12000) return null;
+    if (String(value.aweme_id || value.awemeId || '') === String(contentId) &&
+        (value.author || value.authorInfo)) return extractDouyinDetail({ aweme_detail: value }, contentId);
+    for (const child of Object.values(value)) {
+      const result = find(child, depth + 1);
+      if (result) return result;
+    }
+    return null;
+  }
+  for (const text of (Array.isArray(scripts) ? scripts : []).slice(0, 150)) {
+    if (typeof text !== 'string' || text.length > 2000000 || !text.includes(String(contentId))) continue;
+    try {
+      let payload;
+      if (text.startsWith('self.__pace_f.push(')) {
+        const match = text.match(/^self\.__pace_f\.push\((\[[\s\S]*\])\);?\s*$/);
+        if (!match) continue;
+        const part = JSON.parse(match[1]);
+        if (part[0] !== 1 || typeof part[1] !== 'string') continue;
+        const serialized = part[1].replace(/^[0-9a-f]+:/i, '').trim();
+        payload = JSON.parse(serialized.startsWith('%') ? decodeURIComponent(serialized) : serialized);
+      } else payload = JSON.parse(text.startsWith('%') ? decodeURIComponent(text) : text);
+      const result = find(payload, 0);
+      if (result) return result;
+    } catch (_) { /* Other streaming frames are not detail records. */ }
+  }
+  return null;
+}
+
+function isAllowedDouyinImageUrl(value) {
+  try {
+    const url = new URL(String(value || ''));
+    return url.protocol === 'https:' && !url.username && !url.password &&
+      ['douyinpic.com', 'byteimg.com', 'ibytedtos.com'].some(host => url.hostname === host || url.hostname.endsWith('.' + host));
+  } catch (_) { return false; }
 }
 
 function normalizeVisibleUrl(value) {
@@ -345,6 +417,14 @@ function normalizeDouyinPageSnapshot(raw = {}) {
       coverUrl: normalizeHttpsUrl(source.coverUrl),
       durationSeconds: Math.min(Math.max(Number(source.durationSeconds) || 0, 0), 86400)
     };
+    if (parsed.mediaType === 'note') {
+      normalizedItem.transcript = '';
+      normalizedItem.images = (Array.isArray(source.images) ? source.images : []).slice(0, 50).map((image, index) => ({
+        index: index + 1, url: isAllowedDouyinImageUrl(image && image.url) ? image.url : '',
+        width: Math.max(Number(image && image.width) || 0, 0), height: Math.max(Number(image && image.height) || 0, 0)
+      }));
+      normalizedItem.imageCount = Math.max(normalizedItem.images.length, Math.min(Number(source.imageCount) || 0, 1000));
+    }
     normalizedItem.comments = normalizeVisibleComments(source.comments);
     const coverage = source.commentCoverage && typeof source.commentCoverage === 'object' ? source.commentCoverage : {};
     normalizedItem.commentCoverage = {
@@ -372,7 +452,7 @@ function normalizeDouyinPageSnapshot(raw = {}) {
   };
 }
 
-function douyinVisiblePageSnapshot(parseWorkCount, parseMetricCount, inferLoggedIn, selectProfile) {
+function douyinVisiblePageSnapshot(parseWorkCount, parseMetricCount, inferLoggedIn, selectProfile, embeddedDetail) {
   function compact(value, limit) {
     return String(value == null ? '' : value).replace(/\s+/g, ' ').trim().slice(0, limit);
   }
@@ -461,10 +541,18 @@ function douyinVisiblePageSnapshot(parseWorkCount, parseMetricCount, inferLogged
   const profileLinks = Array.from(document.querySelectorAll('a[href*="/user/"]')).map(function(anchor) {
     return { href: absoluteUrl(anchor.getAttribute('href')), text: compact(anchor.textContent, 160) };
   });
+  if (currentItem) {
+    // Only author-labelled elements belonging to the work can supply the DOM fallback.
+    document.querySelectorAll('[data-e2e="video-author-name"], [data-e2e="note-author-name"]').forEach(function(element) {
+      const anchor = element.closest('a[href*="/user/"]') || element.querySelector('a[href*="/user/"]');
+      if (anchor && visible(element)) profileLinks.push({ href: absoluteUrl(anchor.getAttribute('href')),
+        text: compact(element.textContent, 160), contentId: currentItem.contentId });
+    });
+  }
   const selectedProfile = selectProfile(profileLinks, href, Boolean(currentItem));
   const profileUrl = selectedProfile.profileUrl;
   const displayName = currentItem
-    ? selectedProfile.displayName || firstText(['[data-e2e="video-author-name"]', 'main header h2'], 160)
+    ? selectedProfile.displayName
     : firstText(['[data-e2e="user-title"]', 'h1', 'header h2'], 160) || selectedProfile.displayName;
   const idMatch = bodyText.match(/抖音号\s*[：:]\s*([A-Za-z0-9_.-]{2,160})/);
   const workCount = parseWorkCount(bodyText);
@@ -573,27 +661,43 @@ function douyinVisiblePageSnapshot(parseWorkCount, parseMetricCount, inferLogged
     return visible(element) && (/^登录$/.test(label) || /登录后查看/.test(label));
   });
 
+  const embedded = currentItem && embeddedDetail(Array.from(document.querySelectorAll('script'))
+    .filter(element => !element.src).map(element => element.textContent), currentItem.contentId);
+  const capturedItem = currentItem && itemsById.get(currentItem.contentId);
+  if (embedded && capturedItem) {
+    if (embedded.description) capturedItem.description = embedded.description;
+    if (embedded.publishedAt) capturedItem.publishedAt = embedded.publishedAt;
+    capturedItem.images = embedded.images;
+    capturedItem.imageCount = embedded.imageCount;
+    capturedItem.mediaType = embedded.mediaType;
+    capturedItem.sourceUrl = 'https://www.douyin.com/' + embedded.mediaType + '/' + currentItem.contentId;
+    if (embedded.profile) capturedItem.author = embedded.profile.displayName;
+  }
   return {
     pageType,
     pageUrl: href,
     loggedIn: inferLoggedIn(bodyText, loginRequired),
     loadError: /服务异常[，,]?\s*重新刷新拉取数据/.test(bodyText),
     capturedAt: new Date().toISOString(),
-    profile: { displayName, profileUrl, douyinId: idMatch ? idMatch[1] : '', workCount },
+    profile: Object.assign({ displayName, profileUrl, douyinId: idMatch ? idMatch[1] : '', workCount }, embedded && embedded.profile || {}),
     items: Array.from(itemsById.values()).slice(0, 1000)
   };
 }
 
 function buildDouyinPageSnapshotScript() {
-  return '(' + douyinVisiblePageSnapshot.toString() + ')(' +
+  return '(() => {' + cleanText.toString() + isAllowedDouyinImageUrl.toString() + extractDouyinDetail.toString() +
+    'return (' + douyinVisiblePageSnapshot.toString() + ')(' +
     parseVisibleWorkCount.toString() + ',' + parseVisibleMetricCount.toString() + ',' + inferVisibleLoggedIn.toString() + ',' +
-    selectVisibleProfileCandidate.toString() + ')';
+    selectVisibleProfileCandidate.toString() + ',' + extractDouyinEmbeddedDetail.toString() + ');})()';
 }
 
 module.exports = {
   isAllowedDouyinUrl,
   parseDouyinItemUrl,
   extractDouyinMediaCandidates,
+  extractDouyinDetail,
+  extractDouyinEmbeddedDetail,
+  isAllowedDouyinImageUrl,
   buildDouyinMediaProbeScript,
   parseVisibleWorkCount,
   parseVisibleMetricCount,

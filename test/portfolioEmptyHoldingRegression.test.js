@@ -208,7 +208,7 @@ test('Windows capture obtains empty-grid evidence from a native row count and in
   if (process.platform !== 'win32') return;
   let script = '';
   await runWindowsCapture({ execFile: async function(file, args) {
-    script = Buffer.from(args[args.length - 1], 'base64').toString('utf16le');
+    script = fs.readFileSync(args[args.indexOf('-File') + 1], 'utf8');
     return { stdout: JSON.stringify(emptyCapture()) };
   } });
   assert.match(script, /GridPattern.*Pattern/);

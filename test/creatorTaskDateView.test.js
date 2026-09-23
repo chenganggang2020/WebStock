@@ -18,7 +18,7 @@ function setup() {
   vm.runInContext(source, ctx);
   const run = code => vm.runInContext(code, ctx);
   run(`expertChannels = [{id:1,platform:'douyin'},{id:2,platform:'douyin'}];
-    expertCreatorTaskDate = '2026-09-10';
+    expertCreatorTaskDate = '2026-09-10'; expertCreatorTaskDateMode = 'published';
     expertRenderDouyinSyncState = function() {};
     expertRenderCreatorWorkbench = function() {};
     expertRenderCreatorRunAudit = function() {};
@@ -29,6 +29,13 @@ function setup() {
   const ids = () => JSON.parse(run('JSON.stringify(expertCreatorFilteredVideos(expertObservations).map(x=>x.id))'));
   return { node, ctx, run, ids };
 }
+test('collection opens all saved history rather than silently filtering to today', () => {
+  const ctx = vm.createContext({window:{}, Date, Intl, URL, console});
+  vm.runInContext(source, ctx);
+  assert.equal(vm.runInContext('expertCreatorTaskDateMode', ctx), 'all');
+  const html = fs.readFileSync(path.join(__dirname,'../index.html'),'utf8');
+  assert.match(html, /value="all" selected>全部本地历史/);
+});
 test('publication day filters actual video list, never first-seen or unknown dates', () => {
   const { run, ids } = setup();
   assert.deepEqual(ids(), [2]);

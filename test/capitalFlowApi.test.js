@@ -35,6 +35,17 @@ async function withServer(service, callback) {
   }
 }
 
+test('history date and refresh are validated and forwarded without substitution', async () => {
+  const calls = [];
+  await withServer({ getSeries: async input => { calls.push(input); return {}; } }, async server => {
+    assert.equal((await requestJson(server, '/api/capital-flow/series?scope=stock&code=002080&source=vendor-classified&date=2026-09-18&refresh=0')).status, 200);
+    assert.equal(calls[0].date, '2026-09-18');
+    assert.equal(calls[0].refresh, false);
+    assert.equal((await requestJson(server, '/api/capital-flow/series?scope=stock&code=002080&source=vendor-classified&date=2026-02-31')).status, 400);
+    assert.equal(calls.length, 1);
+  });
+});
+
 test('GET /capital-flow/series passes explicit scope, code, and source to the service', async () => {
   const calls = [];
   const service = {

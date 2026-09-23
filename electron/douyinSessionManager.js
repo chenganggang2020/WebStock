@@ -4,8 +4,13 @@ const {
   normalizeDouyinPageSnapshot,
   buildDouyinPageSnapshotScript,
   buildDouyinMediaProbeScript,
-  extractDouyinMediaCandidates
+  extractDouyinMediaCandidates,
+  extractDouyinDetail
 } = require('./douyinPageCapture');
+const runtimeTrace = require('../services/runtimeDiagnostics');
+function traceNative(label, work) {
+  return runtimeTrace.trace('douyin.await.' + label, () => runtimeTrace.traceSync('douyin.invoke.' + label, work));
+}
 
 const PAUSE_MEDIA_SCRIPT = `(function() {
   document.querySelectorAll('video, audio').forEach(function(media) {
@@ -92,7 +97,7 @@ function createDouyinSessionManager(options = {}) {
       height: 860,
       minWidth: 900,
       minHeight: 640,
-      title: kind === 'background' ? 'WebStock · 抖音后台同步' : 'WebStock · 抖音登录与公开页面同步',
+      title: kind === 'background' ? '抖音后台同步' : '抖音登录与公开页面同步',
       backgroundColor: '#ffffff',
       show: false,
       webPreferences: {
@@ -105,7 +110,7 @@ function createDouyinSessionManager(options = {}) {
     };
     if (parent && kind !== 'background') config.parent = parent;
     if (options.iconPath) config.icon = options.iconPath;
-    const created = new BrowserWindow(config);
+    const created = runtimeTrace.traceSync('douyin.window.create', () => new BrowserWindow(config));
     if (typeof created.webContents.setAudioMuted === 'function') {
       created.webContents.setAudioMuted(true);
     }
@@ -114,7 +119,7 @@ function createDouyinSessionManager(options = {}) {
     });
     created.webContents.setWindowOpenHandler(function(details) {
       if (isAllowedDouyinUrl(details.url)) {
-        created.loadURL(details.url).catch(function(error) {
+        traceNative('loadURL', () => created.loadURL(details.url)).catch(function(error) {
           log('Failed to follow Douyin popup navigation', error);
         });
       }
@@ -173,6 +178,7 @@ function createDouyinSessionManager(options = {}) {
     const processedRequests = new Set();
     const pending = new Set();
     let candidates = [];
+    let detailData = null;
 
     function matchesDetailUrl(value) {
       try {
@@ -201,12 +207,13 @@ function createDouyinSessionManager(options = {}) {
           processedRequests.has(params.requestId)) return;
       processedRequests.add(params.requestId);
       const task = Promise.resolve().then(async function() {
-        const response = await debug.sendCommand('Network.getResponseBody', { requestId: params.requestId });
+        const response = await traceNative('responseBody', () => debug.sendCommand('Network.getResponseBody', { requestId: params.requestId }));
         const body = response && response.base64Encoded
           ? Buffer.from(String(response.body || ''), 'base64').toString('utf8')
           : String(response && response.body || '');
         const payload = JSON.parse(body);
         candidates = sanitizeMediaCandidates(extractDouyinMediaCandidates(payload, expectedItem.contentId));
+        detailData = extractDouyinDetail(payload, expectedItem.contentId);
       }).catch(function(error) {
         log('Failed to read original Douyin detail response', error);
       });
@@ -225,7 +232,7 @@ function createDouyinSessionManager(options = {}) {
       }
       if (pending.size) await Promise.allSettled(Array.from(pending));
       if (attachedByUs && typeof debug.detach === 'function') {
-        try { debug.detach(); } catch (error) { log('Failed to detach Douyin detail debugger', error); }
+        try { runtimeTrace.traceSync('douyin.debugger.detach', () => debug.detach()); } catch (error) { log('Failed to detach Douyin detail debugger', error); }
         attachedByUs = false;
       }
     }
@@ -233,15 +240,16 @@ function createDouyinSessionManager(options = {}) {
     try {
       const alreadyAttached = typeof debug.isAttached === 'function' && debug.isAttached();
       if (!alreadyAttached) {
-        debug.attach('1.3');
+        runtimeTrace.traceSync('douyin.debugger.attach', () => debug.attach('1.3'));
         attachedByUs = true;
       }
       debug.on('message', onDebuggerMessage);
       listenerInstalled = true;
-      await debug.sendCommand('Network.enable');
+      await traceNative('networkEnable', () => debug.sendCommand('Network.enable'));
       return {
         available: true,
         getCandidates: function() { return candidates.slice(); },
+        getDetail: function() { return detailData; },
         flush: async function() {
           if (pending.size) await Promise.allSettled(Array.from(pending));
         },
@@ -260,14 +268,14 @@ function createDouyinSessionManager(options = {}) {
       current.webContents.setAudioMuted(true);
     }
     try {
-      await current.webContents.executeJavaScript(PAUSE_MEDIA_SCRIPT, true);
+      await traceNative('pauseMedia', () => current.webContents.executeJavaScript(PAUSE_MEDIA_SCRIPT, true));
     } catch (error) {
       log('Failed to pause Douyin background media', error);
     }
   }
 
   async function loadPage(current, target, settleMs) {
-    const loadPromise = Promise.resolve().then(function() { return current.loadURL(target); });
+    const loadPromise = Promise.resolve().then(function() { return traceNative('loadURL', () => current.loadURL(target)); });
     let timer = null;
     let loadState;
     try {
@@ -303,7 +311,7 @@ function createDouyinSessionManager(options = {}) {
     if (!current) throw new Error('抖音登录窗口尚未打开');
     const currentUrl = current.webContents.getURL();
     if (!isAllowedDouyinUrl(currentUrl)) throw new Error('当前窗口不是可采集的抖音页面');
-    const raw = await current.webContents.executeJavaScript(buildDouyinPageSnapshotScript(), true);
+    const raw = await traceNative('pageSnapshot', () => current.webContents.executeJavaScript(buildDouyinPageSnapshotScript(), true));
     return normalizeDouyinPageSnapshot(raw);
   }
 
@@ -314,11 +322,11 @@ function createDouyinSessionManager(options = {}) {
     const current = automationWindow && !automationWindow.isDestroyed()
       ? automationWindow : createWindow('background');
     automationWindow = current;
-    if (typeof current.hide === 'function') current.hide();
+    if (typeof current.hide === 'function') runtimeTrace.traceSync('douyin.window.hide', () => current.hide());
     const expectedItem = parseDouyinItemUrl(target);
     let capture = null;
     let lastUsefulCapture = null;
-    const responseCapture = preferMediaUrl && expectedItem
+    const responseCapture = expectedItem
       ? await startDetailResponseCapture(current, expectedItem)
       : { available: false, getCandidates: function() { return []; }, flush: async function() {}, stop: async function() {} };
     try {
@@ -327,7 +335,7 @@ function createDouyinSessionManager(options = {}) {
         const deadline = Date.now() + captureReadyTimeoutMs;
         let mediaProbeAttempted = false;
         do {
-          const raw = await current.webContents.executeJavaScript(buildDouyinPageSnapshotScript(), true);
+          const raw = await traceNative('pageSnapshot', () => current.webContents.executeJavaScript(buildDouyinPageSnapshotScript(), true));
           capture = normalizeDouyinPageSnapshot(raw);
           if (!capture.loggedIn) {
             await pauseMedia(current);
@@ -336,10 +344,33 @@ function createDouyinSessionManager(options = {}) {
           if (capture.loadError) break;
           if (expectedItem) {
             const detail = capture.items.find(function(item) { return item.contentId === expectedItem.contentId; });
+            if (responseCapture.available) {
+              await responseCapture.flush();
+              const original = responseCapture.getDetail();
+              if (detail && original) {
+                if (original.profile) {
+                  capture.profile = Object.assign({}, capture.profile, original.profile);
+                  detail.author = original.profile.displayName;
+                }
+                if (original.description) detail.description = original.description;
+                if (original.publishedAt) detail.publishedAt = original.publishedAt;
+                if (original.mediaType === 'note') {
+                  capture.pageType = detail.mediaType = 'note';
+                  detail.sourceUrl = 'https://www.douyin.com/note/' + expectedItem.contentId;
+                  detail.images = original.images;
+                  detail.imageCount = original.imageCount;
+                  detail.mediaUrl = '';
+                }
+              }
+            }
             const hasUsefulDetail = detail && (detail.description || detail.transcript || detail.summary || detail.mediaUrl || detail.publishedAt ||
-              Object.keys(detail.engagement || {}).length);
+              detail.images && detail.images.length || Object.keys(detail.engagement || {}).length);
             if (capture.profile.profileUrl && hasUsefulDetail) {
-              if (preferMediaUrl && !detail.mediaUrl) {
+              if (detail.mediaType === 'note' && !detail.imageCount && responseCapture.available && Date.now() < deadline) {
+                await wait(capturePollMs);
+                continue;
+              }
+              if (preferMediaUrl && !detail.mediaUrl && detail.mediaType !== 'note') {
                 lastUsefulCapture = capture;
                 let probed = [];
                 if (responseCapture.available) {
@@ -349,7 +380,7 @@ function createDouyinSessionManager(options = {}) {
                   mediaProbeAttempted = true;
                   try {
                     const rawCandidates = typeof buildDouyinMediaProbeScript === 'function'
-                      ? await current.webContents.executeJavaScript(buildDouyinMediaProbeScript(expectedItem.contentId), true)
+                      ? await traceNative('mediaProbe', () => current.webContents.executeJavaScript(buildDouyinMediaProbeScript(expectedItem.contentId), true))
                       : [];
                     const candidateInput = Array.isArray(rawCandidates) ? rawCandidates
                       : rawCandidates && Array.isArray(rawCandidates.mediaCandidates) ? rawCandidates.mediaCandidates : [];
@@ -413,14 +444,14 @@ function createDouyinSessionManager(options = {}) {
     const current = automationWindow && !automationWindow.isDestroyed()
       ? automationWindow : createWindow('background');
     automationWindow = current;
-    if (typeof current.hide === 'function') current.hide();
+    if (typeof current.hide === 'function') runtimeTrace.traceSync('douyin.window.hide', () => current.hide());
     let first = null;
     for (let attempt = 0; attempt <= captureReloadAttempts; attempt += 1) {
       await loadPage(current, target, pageSettleMs);
       const deadline = Date.now() + captureReadyTimeoutMs;
       do {
         first = normalizeDouyinPageSnapshot(
-          await current.webContents.executeJavaScript(buildDouyinPageSnapshotScript(), true)
+          await traceNative('pageSnapshot', () => current.webContents.executeJavaScript(buildDouyinPageSnapshotScript(), true))
         );
         if (!first.loggedIn) {
           await pauseMedia(current);
@@ -455,10 +486,10 @@ function createDouyinSessionManager(options = {}) {
     }
     while (scrollCount < maxScrolls && stable < requiredStableRounds()) {
       const before = merged.size;
-      await current.webContents.executeJavaScript(SCROLL_PROFILE_SCRIPT, true);
+      await traceNative('scrollProfile', () => current.webContents.executeJavaScript(SCROLL_PROFILE_SCRIPT, true));
       if (archiveScrollSettleMs) await wait(archiveScrollSettleMs);
       const next = normalizeDouyinPageSnapshot(
-        await current.webContents.executeJavaScript(buildDouyinPageSnapshotScript(), true)
+        await traceNative('pageSnapshot', () => current.webContents.executeJavaScript(buildDouyinPageSnapshotScript(), true))
       );
       if (!next.loggedIn) { loginLost = true; break; }
       if (next.profile && next.profile.profileUrl) {

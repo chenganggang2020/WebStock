@@ -45,6 +45,10 @@ function createBackgroundMode(options = {}) {
       await onExit();
     } catch (error) {
       log('WebStock background shutdown failed', error);
+      quitting = false;
+      showMainWindow();
+      options.onExitError?.(error);
+      return;
     }
     if (tray && typeof tray.destroy === 'function') tray.destroy();
     tray = null;
@@ -54,9 +58,9 @@ function createBackgroundMode(options = {}) {
   function attach() {
     if (tray) return tray;
     tray = new Tray(iconPath);
-    tray.setToolTip('WebStock 后台采集');
+    tray.setToolTip('盯盘终端 · 后台采集');
     tray.setContextMenu(Menu.buildFromTemplate([
-      { label: '打开 WebStock', click: showMainWindow },
+      { label: '打开盯盘终端', click: showMainWindow },
       { label: '立即检查全部创作者', click: syncAll },
       { type: 'separator' },
       { label: '完全退出', click: exit }

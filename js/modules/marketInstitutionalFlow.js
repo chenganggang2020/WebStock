@@ -298,7 +298,7 @@
       });
     });
     if (citicFocus) {
-      const citicTotal = citicAggregate.comparableContracts ? renderAggregateTotal(citicAggregate, '中信全部可比合约') : '';
+      const citicTotal = !documentObject.getElementById('dashboardCiticAggregate') && citicAggregate.comparableContracts ? renderAggregateTotal(citicAggregate, '中信全部可比合约') : '';
       citicFocus.innerHTML = citicTotal + (citicItems.length ? citicItems.map(function(item) {
         const direction = Number(item.rankedMemberImbalanceChange) < 0 ? 'net-short' : Number(item.rankedMemberImbalanceChange) > 0 ? 'net-long' : 'balanced';
         return '<article class="citic-futures-item ' + direction + '"><header><span>' + escapeHtml(item.product) + '</span><strong>' + escapeHtml(item.contract) + '</strong></header>' +
@@ -326,7 +326,7 @@
     const citicBox = documentObject.getElementById('dashboardCiticFuturesFocus');
     const citicAggregateBox = documentObject.getElementById('dashboardCiticAggregate');
     const disclosedAggregateBox = documentObject.getElementById('dashboardCffexAggregate');
-    if (!etfBox || !futuresBox) return;
+    if (!etfBox && !futuresBox && !citicAggregateBox) return;
     const summary = buildDashboardSummary(data);
     setText(documentObject, 'dashboardInstitutionalDailyAsOf', summary.asOf ? summary.asOf + ' 收盘后' : '日终数据不可用');
     setText(documentObject, 'dashboardCiticFuturesAsOf', summary.futuresAvailable
@@ -339,7 +339,7 @@
         '<strong>' + escapeHtml(item.name || item.code) + '</strong><b>' + amountHundredMillion(item.estimatedNetFlowHundredMillion) + '</b>' +
         '<small>' + escapeHtml(item.code) + '</small></article>';
     }
-    etfBox.innerHTML = etfLeader(summary.topInflow, 'ETF净流入首位', 'inflow') +
+    if (etfBox) etfBox.innerHTML = etfLeader(summary.topInflow, 'ETF净流入首位', 'inflow') +
       etfLeader(summary.topOutflow, 'ETF净流出首位', 'outflow');
 
     if (citicAggregateBox) {
@@ -372,7 +372,7 @@
       }).join('') : '<div class="empty-state compact">暂无中信期货双边前20名披露；不代表零仓位。</div>';
     }
 
-    futuresBox.innerHTML = summary.futures.length ? summary.futures.map(function(item) {
+    if (futuresBox) futuresBox.innerHTML = summary.futures.length ? summary.futures.map(function(item) {
       const value = Number(item.rankedMemberImbalance);
       const direction = value < 0 ? 'net-short' : value > 0 ? 'net-long' : 'balanced';
       return '<article class="dashboard-futures-item ' + direction + '"><div><span>' + escapeHtml(item.product) + '</span>' +
@@ -444,6 +444,7 @@
   function createModule(options) {
     options = options || {};
     const documentObject = options.document || (typeof document !== 'undefined' ? document : null);
+    const timerWindow = options.window || (typeof window !== 'undefined' ? window : null);
     const fetchData = options.fetchData || function(path) {
       if (typeof window !== 'undefined' && window.ApiClient && window.ApiClient.fetchJsonData) {
         return window.ApiClient.fetchJsonData(path);
@@ -456,10 +457,15 @@
       });
     };
     let dailyLoaded = false;
+    let dailyLoadedAt = 0;
+    const now = options.now || Date.now;
     let intradayLoaded = false;
     let dailyLoading = null;
     let intradayLoading = null;
     let intradayTimer = null;
+    let activePage = null;
+    let lastIntradayData = null;
+    let timerGeneration = 0;
 
     function render(data) {
       if (!documentObject) return;
@@ -478,12 +484,12 @@
       dailyLoading = fetchData('/api/market/institutional-flow' + (force ? '?refresh=1' : ''))
         .then(function(data) {
           dailyLoaded = true;
+          dailyLoadedAt = now();
           render(data);
           return data;
         })
         .catch(function(error) {
           setText(documentObject, 'institutionalFlowStatus', '读取失败：' + (error.message || String(error)));
-          setText(documentObject, 'dashboardInstitutionalFlowStatus', '日度来源当前不可用');
           throw error;
         })
         .finally(function() { dailyLoading = null; });
@@ -491,11 +497,14 @@
     }
 
     function scheduleIntraday(data) {
-      if (typeof window === 'undefined' || !window.setTimeout) return;
-      if (intradayTimer) window.clearTimeout(intradayTimer);
+      if (!timerWindow || activePage !== 'etf') return;
+      if (intradayTimer !== null) timerWindow.clearTimeout(intradayTimer);
+      const generation = ++timerGeneration;
       const requested = Number(data && data.refreshIntervalMs);
       const delay = Number.isFinite(requested) ? Math.max(requested, 60 * 1000) : 60 * 1000;
-      intradayTimer = window.setTimeout(function() {
+      intradayTimer = timerWindow.setTimeout(function() {
+        if (activePage !== 'etf' || generation !== timerGeneration) return;
+        intradayTimer = null;
         if (documentObject && documentObject.hidden) {
           scheduleIntraday(data);
           return;
@@ -511,6 +520,7 @@
       intradayLoading = fetchData('/api/market/institutional-flow/intraday' + (force ? '?refresh=1' : ''))
         .then(function(data) {
           intradayLoaded = true;
+          lastIntradayData = data;
           renderIntraday(data, documentObject);
           scheduleIntraday(data);
           return data;
@@ -518,32 +528,54 @@
         .catch(function(error) {
           setText(documentObject, 'dashboardInstitutionalFlowStatus', '一分钟行情不可用');
           setText(documentObject, 'institutionalIntradayStatus', '读取失败：' + (error.message || String(error)));
+          scheduleIntraday(lastIntradayData);
           throw error;
         })
         .finally(function() { intradayLoading = null; });
       return intradayLoading;
     }
 
-    function load(force) {
+    function setActivePage(pageId) {
+      activePage = pageId;
+      if (pageId === 'etf') {
+        if (intradayLoaded && intradayTimer === null) scheduleIntraday(lastIntradayData);
+      } else {
+        ++timerGeneration;
+        if (intradayTimer !== null && timerWindow) timerWindow.clearTimeout(intradayTimer);
+        intradayTimer = null;
+      }
+    }
+
+    function load(force, scope) {
+      if (scope === 'daily') return loadDaily(force);
+      if (scope === 'intraday') return loadIntraday(force);
       return Promise.all([loadDaily(force), loadIntraday(force)]);
     }
 
     function bind() {
       if (!documentObject) return;
-      const button = documentObject.getElementById('institutionalFlowRefreshBtn');
+      [['institutionalFlowRefreshBtn', 'daily'], ['institutionalIntradayRefreshBtn', 'intraday']].forEach(function(entry) {
+      const button = documentObject.getElementById(entry[0]);
       if (button && button.dataset.bound !== '1') {
         button.dataset.bound = '1';
         button.addEventListener('click', function() {
           button.disabled = true;
-          load(true).catch(function() {}).finally(function() { button.disabled = false; });
+          load(true, entry[1]).catch(function() {}).finally(function() { button.disabled = false; });
         });
       }
+      });
     }
 
     return {
       bind,
       load,
-      ensureLoaded: function() { return dailyLoaded && intradayLoaded ? Promise.resolve() : load(false); },
+      setActivePage,
+      ensureLoaded: function(scope) {
+        const tasks = [];
+        if (scope !== 'intraday' && (!dailyLoaded || now() - dailyLoadedAt >= 300000)) tasks.push(loadDaily(false));
+        if (scope !== 'daily' && !intradayLoaded) tasks.push(loadIntraday(false));
+        return Promise.all(tasks);
+      },
       render,
       renderIntraday
     };

@@ -596,7 +596,7 @@ function settingsImportUserDataFromFile(file) {
         return typeof item === 'string' && item.trim();
       }) : [];
       const message = [
-        'Import will replace local WebStock workstation data.',
+        '导入将替换本地工作台数据。',
         warnings.length ? '导入风险提示：\n' + warnings.join('\n') : '',
         'Incoming: watchlist ' + (incoming.watchlist || 0) + ', trades ' + (incoming.trades || 0) + ', sectors ' + (incoming.sectors || 0) + ', leaders ' + (incoming.sectorLeaders || 0) + ', screener tasks ' + (incoming.screenerResults || 0) + ', knowledge sources ' + (incoming.knowledgeSources || 0) + ', research runs ' + (incoming.researchRuns || 0) + ', paper portfolios ' + (incoming.paperPortfolios || 0) + '.',
         'Current: watchlist ' + (current.watchlist || 0) + ', trades ' + (current.trades || 0) + ', sectors ' + (current.sectors || 0) + ', leaders ' + (current.sectorLeaders || 0) + ', screener tasks ' + (current.screenerResults || 0) + ', knowledge sources ' + (current.knowledgeSources || 0) + ', research runs ' + (current.researchRuns || 0) + ', paper portfolios ' + (current.paperPortfolios || 0) + '.',

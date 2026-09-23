@@ -7,6 +7,8 @@ const expertChannels = require('../services/expertChannelService');
 const douyinSources = require('../services/douyinSourceService');
 const douyinSyncState = require('../services/douyinSyncStateService');
 const creatorMedia = require('../services/creatorMediaService');
+const { resolveDouyinProfile } = require('../services/douyinProfileResolver');
+const { getCreatorCollectionQueue } = require('../services/creatorCollectionQueue');
 const { buildAnalysisPacket } = require('../services/expertAnalysisPacketService');
 const gptPickImports = require('../services/gptPickImportService');
 const { isValidApiKey, getAIConfig, callAIModel } = require('./ai');
@@ -53,6 +55,10 @@ router.post('/research-picks/import', function(req, res) {
   } catch (error) {
     fail(res, error);
   }
+});
+
+router.get('/knowledge/authors', function(req, res) {
+  try { ok(res, knowledge.listAuthors()); } catch (error) { fail(res, error); }
 });
 
 router.get('/knowledge/sources', function(req, res) {
@@ -103,6 +109,34 @@ router.get('/expert/channels', function(req, res) {
   }
 });
 
+router.post('/expert/resolve-profile', async function(req, res) {
+  try { ok(res, await resolveDouyinProfile(req.body.text)); }
+  catch (error) { fail(res, error); }
+});
+
+router.get('/expert/collection-queue', function(req, res) {
+  res.set('Cache-Control', 'no-store');
+  try {
+    const queue = getCreatorCollectionQueue();
+    const jobs = queue.list().map(job => {
+      if (job.status !== 'running') return job;
+      try { return Object.assign(job, {progress:douyinSyncState.getJob(job.channelId).progress}); }
+      catch (_) { return job; }
+    });
+    ok(res, {workerRunning:queue.isWorkerRunning(), jobs});
+  } catch (error) { fail(res, error); }
+});
+router.post('/expert/collection-queue', function(req, res) {
+  try { ok(res, getCreatorCollectionQueue().enqueue(req.body.channelIds, req.body)); }
+  catch (error) { fail(res, error); }
+});
+router.post('/expert/collection-queue/:id/:action', function(req, res) {
+  try {
+    if (!['retry','cancel'].includes(req.params.action)) throw new Error('不支持的队列操作');
+    ok(res, getCreatorCollectionQueue()[req.params.action](Number(req.params.id)));
+  } catch (error) { fail(res, error); }
+});
+
 router.post('/expert/channels', function(req, res) {
   try {
     const channel = expertChannels.createChannel(req.body || {});
@@ -122,6 +156,8 @@ router.put('/expert/channels/:id', function(req, res) {
     }
     const channel = expertChannels.createChannel(Object.assign({}, existing, {
       displayName: req.body.displayName || existing.displayName, profileUrl: profile,
+      collectionMediaType: req.body.collectionMediaType === undefined ? existing.collectionMediaType : req.body.collectionMediaType,
+      industryAnalysisEnabled: req.body.industryAnalysisEnabled === undefined ? existing.industryAnalysisEnabled : req.body.industryAnalysisEnabled === true,
       enabled: req.body.enabled == null ? existing.enabled : req.body.enabled === true
     }));
     ok(res, channel);
@@ -203,6 +239,14 @@ router.get('/expert/channels/:id/observations/:observationId/media', function(re
   } catch (_) { fail(res, new Error('视频未归档、文件缺失或不在允许的归档目录'), 404); }
 });
 
+router.get('/expert/channels/:id/observations/:observationId/images/:page', function(req, res) {
+  try {
+    const observation = expertChannels.getObservation(req.params.id, req.params.observationId);
+    const image = creatorMedia.resolveNoteImage(observation, req.params.page);
+    res.set('X-Content-Type-Options', 'nosniff').type(image.type).sendFile(image.filename, {cacheControl:false});
+  } catch (_) { fail(res, new Error('当前作品图片尚未归档或文件缺失'),404); }
+});
+
 router.get('/expert/channels/:id/observations/:observationId/cover', async function(req, res) {
   try {
     const observation = expertChannels.getObservation(req.params.id, req.params.observationId);
@@ -219,9 +263,9 @@ router.post('/expert/channels/:id/douyin-links', function(req, res) {
   }
 });
 
-router.post('/expert/channels/:id/douyin-capture', function(req, res) {
+router.post('/expert/channels/:id/douyin-capture', async function(req, res) {
   try {
-    ok(res, douyinSources.importCapturedPage(Number(req.params.id), req.body || {}));
+    ok(res, await douyinSources.importCapturedPageAsync(Number(req.params.id), req.body || {}));
   } catch (error) {
     fail(res, error, /不存在/.test(error.message) ? 404 : 400);
   }

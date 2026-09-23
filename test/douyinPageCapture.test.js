@@ -58,11 +58,11 @@ test('visible engagement counts support Chinese compact units', () => {
   assert.equal(parseVisibleMetricCount('--'), null);
 });
 
-test('video detail profile selection skips the signed-in user and keeps the creator link', () => {
+test('video detail profile selection requires a work-bound creator link', () => {
   assert.deepEqual(selectVisibleProfileCandidate([
     { href: 'https://www.douyin.com/user/self', text: '' },
     { href: 'https://www.douyin.com/user/model-mr', text: '' },
-    { href: 'https://www.douyin.com/user/model-mr', text: '模型先生' },
+    { href: 'https://www.douyin.com/user/model-mr', text: '模型先生', contentId: '7672339420096779953' },
     { href: 'https://www.douyin.com/user/commenter?from=comment', text: '评论用户' }
   ], 'https://www.douyin.com/video/7672339420096779953', true), {
     profileUrl: 'https://www.douyin.com/user/model-mr',

@@ -42,7 +42,7 @@ test('same-name Tonghuashun and editable WebStock tabs remain independently reac
   const tabs = page.locator('#watchlistGroupTabs .portfolio-watchlist-tab');
   await expect(tabs).toHaveCount(2);
   await expect(page.locator('[data-group="ths:42"]')).toContainText('同花顺只读');
-  await expect(page.locator('[data-group="local:重名分组"]')).toContainText('WebStock可编辑');
+  await expect(page.locator('[data-group="local:重名分组"]')).toContainText('本地可编辑');
 
   await page.locator('[data-group="ths:42"]').evaluate(button => {
     window.Watchlist.setSelectedGroup(button.getAttribute('data-group'));

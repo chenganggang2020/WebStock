@@ -3,15 +3,15 @@ const marketData = require('./marketDataService');
 
 const GLOBAL_SIGNAL_DEFINITIONS = Object.freeze([
   {
-    key: 'china-a50-future', symbol: 'hf_CHA50CFD', name: '富时中国A50期货', parser: 'future', digits: 2,
+    key: 'china-a50-future', symbol: 'hf_CHA50CFD', name: '富时中国A50期货 CFD', parser: 'future', digits: 2,
     group: 'china', relevance: 'A股离岸风险温度计', inverseForAShares: false
   },
   {
-    key: 'nasdaq100-future', symbol: 'hf_NQ', name: '纳指100期货', parser: 'future', digits: 2,
+    key: 'nasdaq100-future', symbol: 'hf_NQ', name: '纳指100期货 CFD', parser: 'future', digits: 2,
     group: 'global', relevance: '全球科技风险偏好', inverseForAShares: false
   },
   {
-    key: 'sp500-future', symbol: 'hf_ES', name: '标普500期货', parser: 'future', digits: 2,
+    key: 'sp500-future', symbol: 'hf_ES', name: '标普500期货 CFD', parser: 'future', digits: 2,
     group: 'global', relevance: '全球权益风险偏好', inverseForAShares: false
   },
   {
@@ -112,7 +112,7 @@ function createGlobalMarketSignalService(options) {
     const response = await client.get('global-market-signals', url, {
       responseType: 'arraybuffer',
       headers: { Referer: 'https://finance.sina.com.cn', 'User-Agent': 'Mozilla/5.0 WebStock' }
-    });
+    }).catch(()=>null);
     const availableByKey = new Map(parseSinaGlobalSignals(response && response.data, definitions).map(function(item) {
       return [item.key, item];
     }));
@@ -129,7 +129,7 @@ function createGlobalMarketSignalService(options) {
       source: {
         id: 'sina-public-global-quote',
         label: '新浪公开跨市场行情',
-        note: '公开行情快照，不保证交易所实时；只作联动观察，相关不代表因果。'
+        note: '新浪公开行情快照 · 延迟未获来源保证 · 指数 / 期货 CFD / 汇率分别展示'
       }
     };
     cache = { storedAt: timestamp, value: result };

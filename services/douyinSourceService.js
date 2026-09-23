@@ -254,7 +254,9 @@ function capturedObservationInput(channel, capture, identity, item, existing) {
   const transcript = String(existingAsr && ['complete', 'needs_review'].includes(existingAsr.status)
     ? existing.transcript || ''
     : item.transcript || existing && existing.transcript || '').trim();
-  const content = transcript || description || existing && existing.content || '';
+  const existingNoteText = existing && existing.mediaType === 'note' && existing.mediaMetadata &&
+    existing.mediaMetadata.note && existing.content;
+  const content = transcript || existingNoteText || description || existing && existing.content || '';
   const visibleEngagement = item.engagement && typeof item.engagement === 'object' ? item.engagement : {};
   const previousEngagement = existing && existing.engagement || {};
   const previousMediaMetadata = existing && existing.mediaMetadata || {};
@@ -289,7 +291,7 @@ function capturedObservationInput(channel, capture, identity, item, existing) {
       capture.pageType === 'video' || capture.pageType === 'note') mediaMetadata.observedAt = capture.capturedAt;
   const signal = analyzeInvestmentText({
     title,
-    description,
+    description: existingNoteText || description,
     transcript,
     summary,
     hashtags: item.hashtags
@@ -477,7 +479,7 @@ function sanitizedAsrMetadata(result = {}) {
   const normalization = result.normalization && typeof result.normalization === 'object'
     ? result.normalization : {};
   const quality = result.quality && typeof result.quality === 'object' ? result.quality : {};
-  const finiteOrNull = function(value) { return Number.isFinite(Number(value)) ? Number(value) : null; };
+  const finiteOrNull = function(value) { return value != null && value !== '' && Number.isFinite(Number(value)) ? Number(value) : null; };
   return {
     status,
     engine: String(result.engine || 'faster-whisper').slice(0, 80),
@@ -607,6 +609,66 @@ function applyTranscription(channelId, contentId, result = {}) {
   });
 }
 
+async function importCapturedPageAsync(channelId, input = {}) {
+  const capture = normalizeDouyinPageSnapshot(input.capture || input);
+  const db = require('../db');
+  const trace = require('./runtimeDiagnostics');
+  if (!capture.items.length) return importCapturedPage(channelId, capture);
+  let result;
+  for (let offset = 0; offset < capture.items.length; offset += 10) {
+    // A transaction belongs to one synchronous batch, never across an await.
+    await new Promise(resolve => setImmediate(resolve));
+    const batch = trace.traceSync('douyin.capture.persist-batch', () => db.transaction(() =>
+      importCapturedPage(channelId, { ...capture, items: capture.items.slice(offset, offset + 10) }))());
+    if (!result) result = { ...batch, items: [], capturedCount: 0, addedCount: 0, updatedCount: 0, unchangedCount: 0 };
+    for (const key of ['capturedCount', 'addedCount', 'updatedCount', 'unchangedCount']) result[key] += batch[key];
+    result.items.push(...batch.items);
+  }
+  return result;
+}
+
+function applyNoteResult(channelId, contentId, result = {}) {
+  const existing = expertChannels.findObservationByIdentity(channelId, { externalContentId: contentId });
+  if (!existing || existing.evidenceLevel !== 'primary' || existing.mediaType !== 'note') {
+    throw new Error('找不到身份已核验的抖音图文记录');
+  }
+  const note = {schemaVersion:1,engine:'windows-ocr',processedAt:new Date().toISOString(),
+    imageCount:Math.min(Math.max(Math.floor(Number(result.imageCount)||0),0),1000),
+    status:['needs_review','no_text','partial'].includes(result.status) ? result.status : 'partial',
+    pages:(Array.isArray(result.pages)?result.pages:[]).slice(0,50).map((page,index)=>({index:index+1,
+      status:['recognized','no_text'].includes(page.status)?page.status:'error',text:String(page.text||'').trim().slice(0,100000),
+      rawText:String(page.rawText||page.text||'').trim().slice(0,100000),
+      localAssetPath:String(page.localAssetPath||'').slice(0,2000),sha256:String(page.sha256||'').slice(0,64),
+      bytes:Math.max(Number(page.bytes)||0,0),mimeType:String(page.mimeType||'').slice(0,80),
+      message:String(page.message||'').replace(/https?:\/\/\S+/g,'[图片地址]').slice(0,400)}))};
+  const previous = existing.mediaMetadata && existing.mediaMetadata.note;
+  const previousPages = previous && previous.pages || [];
+  const attempt = JSON.parse(JSON.stringify(note));
+  // An unsuccessful refresh must not erase earlier images or recognized text.
+  if (previous && note.status==='partial') {
+    note.imageCount=Math.max(note.imageCount,previous.imageCount||0);
+    note.pages=Array.from({length:Math.min(note.imageCount,50)},(_,index)=>{
+      const current=note.pages[index], old=previousPages[index];
+      if (old && (!current || current.status==='error') && (old.text || old.localAssetPath)) {
+        return Object.assign({},old,{preservedFromPrior:true,attemptMessage:current&&current.message||'本次未成功读取'});
+      }
+      return current || {index:index+1,status:'error',text:'',message:'本次未成功读取'};
+    });
+  }
+  const content = [existing.description ? '作者配文：\n'+existing.description : '',
+    ...note.pages.filter(page=>page.text).map(page=>'【图片 '+page.index+' · OCR 待校对】\n'+page.text)].filter(Boolean).join('\n\n');
+  const history = (existing.mediaMetadata && existing.mediaMetadata.noteHistory || []).slice();
+  const pageSignature=pages=>JSON.stringify(pages.map(page=>[page.index,page.sha256,page.text]));
+  if (previousPages.some(page=>page.text) && pageSignature(previousPages)!==pageSignature(note.pages)) history.push(previous);
+  const signal = analyzeInvestmentText({title:existing.title,description:content,hashtags:topicsWithoutPreviousSignal(existing)});
+  return expertChannels.recordObservation(channelId,{externalKey:existing.externalKey,
+    content:content || existing.content, contentRole:'direct_quote',
+    archiveStatus:note.pages.length===note.imageCount && note.pages.every(page=>page.localAssetPath)?'downloaded':existing.archiveStatus,
+    mediaMetadata:Object.assign({},existing.mediaMetadata,{note,noteHistory:history,lastNoteAttempt:note.status==='partial'?attempt:null}),signal,
+    stockCodes:signal.stockCodes,sectors:signal.sectors,topics:mergeUnique(topicsWithoutPreviousSignal(existing),signal.topics),
+    analysisNotes:generatedAnalysisNotes(signal),lastSeenAt:existing.lastSeenAt});
+}
+
 function applyNoSpeechResult(channelId, contentId, result = {}) {
   const existing = expertChannels.findObservationByIdentity(channelId, { externalContentId: contentId });
   if (!existing || existing.evidenceLevel !== 'primary') throw new Error('找不到身份已核验的抖音视频记录。');
@@ -698,10 +760,12 @@ module.exports = {
   importDouyinLinks,
   inspectCapturedPage,
   importCapturedPage,
+  importCapturedPageAsync,
   verifyCapturedIdentity,
   reanalyzeChannelObservations,
   applyMediaArchive,
   applyTranscription,
+  applyNoteResult,
   applyNoSpeechResult,
   recordRemoteUnavailable,
   recordTranscriptionUnavailable,
