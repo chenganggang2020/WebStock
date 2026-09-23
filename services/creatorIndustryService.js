@@ -1,11 +1,23 @@
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const crypto = require('node:crypto');
+const SPEC_VERSION = 'creator-industry-graph/v2';
 
 function documentBody(row) {
   return String(row.transcript || (row.mediaType === 'note' ? row.content || '' : '')).trim();
 }
 function documentHash(row) { return crypto.createHash('sha256').update(documentBody(row)).digest('hex'); }
+function reviewGate(row) {
+  const body = documentBody(row);
+  if (row.mediaType === 'note') {
+    if (!row.mediaMetadata?.note?.pages?.some(page => page.status === 'recognized' && page.text)) return 'note_ocr_required';
+    if (row.mediaMetadata.note.status !== 'reviewed') return 'note_review_required';
+  }
+  if (body.length < 30) return 'missing_text';
+  if (/请对以下音频进行逐字转写|请将以下音频转写|不要添加解释|transcribe the following audio/i.test(body)) return 'suspected_prompt_echo';
+  if (row.mediaType === 'video' && (row.mediaMetadata?.asr?.status !== 'complete' || row.mediaMetadata?.asr?.quality?.needsReview === true)) return 'asr_review_required';
+  return 'ready';
+}
 function invalid(message) { return Object.assign(new Error(message), { code: 'INVALID_INPUT' }); }
 function createCreatorIndustryService({ directory, channels, ai } = {}) {
   const pending = new Map();
@@ -25,10 +37,18 @@ function createCreatorIndustryService({ directory, channels, ai } = {}) {
   }
   async function read(id) {
     const { channel, rows, records } = await context(id);
-    const ready = rows.filter(row => documentBody(row).length >= 30);
-    const current = records.filter(record => ready.some(row => row.id === record.observationId && documentHash(row) === record.bodyHash));
+    const reviewQueue = rows.map(row => ({ observationId: row.id, mediaType: row.mediaType, title: row.title || '',
+      publishedAt: row.publishedAt || null, sourceUrl: row.sourceUrl || '', status: reviewGate(row), bodyHash: documentHash(row) }));
+    const queueById = new Map(reviewQueue.map(item => [item.observationId, item]));
+    const ready = reviewQueue.filter(item => item.status === 'ready');
+    const matching = records.filter(record => queueById.get(record.observationId)?.bodyHash === record.bodyHash);
+    const current = matching.filter(record => record.specVersion === SPEC_VERSION && queueById.get(record.observationId)?.status === 'ready');
+    const legacy = matching.filter(record => record.specVersion !== SPEC_VERSION);
+    const analyzedIds = new Set(current.map(record => record.observationId));
     return { channelId: channel.id, author: channel.displayName, totalCount: rows.length, readyCount: ready.length,
-      analyzedCount: current.length, pendingCount: ready.length - current.length, automaticEnabled: !!channel.industryAnalysisEnabled,
+      analyzedCount: current.length, legacyCount: legacy.length, blockedCount: reviewQueue.length - ready.length,
+      pendingCount: ready.filter(item => !analyzedIds.has(item.observationId)).length,
+      reviewQueue, automaticEnabled: !!channel.industryAnalysisEnabled,
       aiConfigured: !!(ai && ai.getAIEnabled() && ai.isValidApiKey(ai.getAIConfig()?.apiKey)),
       lastRun: lastRuns.get(Number(id)) || null,
       documents: current.map(({ relations, ...record }) => ({ ...record, relationCount: relations.length })),
@@ -36,28 +56,51 @@ function createCreatorIndustryService({ directory, channels, ai } = {}) {
         key: `${record.observationId}-${record.bodyHash.slice(0, 10)}-${index}` })))
         .sort((a, b) => (Date.parse(b.publishedAt) || 0) - (Date.parse(a.publishedAt) || 0)) };
   }
+  async function readDocument(id, observationId) {
+    const channelId = Number(id), itemId = Number(observationId);
+    if (!Number.isSafeInteger(channelId) || channelId < 1 || !Number.isSafeInteger(itemId) || itemId < 1) throw invalid('作者或文稿编号无效');
+    if (!channels.getChannel(channelId)) throw Object.assign(new Error('作者不存在'), { code: 'NOT_FOUND' });
+    let row;
+    if (typeof channels.getObservation === 'function') {
+      try { row = channels.getObservation(channelId, itemId); }
+      catch (error) {
+        if (!/观察记录不存在|不属于该作者/.test(error.message || '')) throw error;
+        throw Object.assign(new Error('文稿不存在'), { code: 'NOT_FOUND' });
+      }
+    } else row = channels.listCollectionObservations(channelId).find(item => item.id === itemId);
+    if (!row || row.evidenceLevel !== 'primary') throw Object.assign(new Error('文稿不存在'), { code: 'NOT_FOUND' });
+    return { observationId: row.id, title: row.title || '', mediaType: row.mediaType,
+      sourceUrl: row.sourceUrl || '', publishedAt: row.publishedAt || null,
+      bodyHash: documentHash(row), status: reviewGate(row), transcript: documentBody(row),
+      segments: row.mediaMetadata?.asr?.segments || [], asr: row.mediaMetadata?.asr ? {
+        status: row.mediaMetadata.asr.status, model: row.mediaMetadata.asr.model || null,
+        transcribedAt: row.mediaMetadata.asr.transcribedAt || null } : null };
+  }
   async function writeReviews(id, items, options = {}) {
     const { channel, rows, file, records } = await context(id);
     if (!Array.isArray(items) || !items.length || items.length > 500) throw invalid('分析条数无效');
     const validated = items.map(item => {
       const row = rows.find(row => row.id === Number(item.observationId));
-      if (!row || documentBody(row).length < 30 || documentHash(row) !== item.bodyHash) throw invalid('文稿已变化或不属于该作者');
+      if (!row || documentHash(row) !== item.bodyHash) throw invalid('文稿已变化或不属于该作者');
+      if (reviewGate(row) !== 'ready') throw invalid('文稿需要复核，不能提取产业关系');
       if (!Array.isArray(item.relations) || item.relations.length > 100) throw invalid('关系条数无效');
       const relations = item.relations.map(relation => {
         const fields = Object.fromEntries(['topic', 'from', 'to', 'relation', 'quote', 'polarity', 'uncertainty'].map(key => [key, String(relation[key] || '').trim()]));
         if (fields.quote.length < 12 || fields.quote.length > 500 || !documentBody(row).includes(fields.quote)) throw invalid('引用不是连续原文');
         if (![fields.from, fields.to].every(value => value && value.length <= 100 && fields.quote.toLowerCase().includes(value.toLowerCase()))) throw invalid('关系实体没有出现在引用中');
         if (!fields.topic || fields.topic.length > 80 || !['使用', '组成', '制造', '需求驱动', '替代', '技术路线', '观点关联'].includes(fields.relation) || !['supports', 'contradicts'].includes(fields.polarity)) throw invalid('关系类型无效');
-        return { ...fields, uncertainty: fields.uncertainty.slice(0, 500), status: 'author_claim' };
+        const quoteStart = documentBody(row).indexOf(fields.quote);
+        return { ...fields, quoteStart, quoteEnd: quoteStart + fields.quote.length,
+          uncertainty: fields.uncertainty.slice(0, 500), status: 'author_claim' };
       });
-      return { observationId: row.id, bodyHash: item.bodyHash, title: row.title || '', sourceUrl: row.sourceUrl,
+      return { specVersion: SPEC_VERSION, observationId: row.id, bodyHash: item.bodyHash, title: row.title || '', sourceUrl: row.sourceUrl,
         publishedAt: row.publishedAt || null, author: channel.displayName, summary: String(item.summary || '').slice(0, 1500),
         analyzedAt: new Date().toISOString(), model: String(options.model || '人工导入').slice(0, 100), relations };
     });
-    for (const record of validated) if (!records.some(old => old.observationId === record.observationId && old.bodyHash === record.bodyHash)) records.push(record);
+    for (const record of validated) if (!records.some(old => old.observationId === record.observationId && old.bodyHash === record.bodyHash && old.specVersion === SPEC_VERSION)) records.push(record);
     await fs.mkdir(directory, { recursive: true });
     const temporary = file + '.' + crypto.randomUUID() + '.tmp';
-    try { await fs.writeFile(temporary, JSON.stringify({ schema: 'webstock.creator-industry/v1', records }), { flag: 'wx' }); await fs.rename(temporary, file); }
+    try { await fs.writeFile(temporary, JSON.stringify({ schema: 'webstock.creator-industry/v2', records }), { flag: 'wx' }); await fs.rename(temporary, file); }
     finally { await fs.unlink(temporary).catch(() => {}); }
     return read(id);
   }
@@ -72,8 +115,10 @@ function createCreatorIndustryService({ directory, channels, ai } = {}) {
     if (!ai || !ai.getAIEnabled() || !ai.isValidApiKey(ai.getAIConfig()?.apiKey)) return { status: 'ai_not_configured' };
     const { rows, records } = await context(id);
     if (stopped) return { status: 'stopped' };
-    const row = rows.filter(row => documentBody(row).length >= 30).sort((a, b) => (Date.parse(b.publishedAt) || 0) - (Date.parse(a.publishedAt) || 0))
-      .find(row => !records.some(record => record.observationId === row.id && record.bodyHash === documentHash(row)) && Date.now() - (failures.get(row.id+':'+documentHash(row)) || 0) > 3600000);
+    const analyzed = new Set(records.filter(record => record.specVersion === SPEC_VERSION)
+      .map(record => record.observationId + ':' + record.bodyHash));
+    const row = rows.filter(row => reviewGate(row) === 'ready').sort((a, b) => (Date.parse(b.publishedAt) || 0) - (Date.parse(a.publishedAt) || 0))
+      .find(row => !analyzed.has(row.id+':'+documentHash(row)) && Date.now() - (failures.get(row.id+':'+documentHash(row)) || 0) > 3600000);
     if (!row) return { status: 'idle' };
     const body = documentBody(row), hash = documentHash(row), relations = [], summaries = [];
     const controller = new AbortController(); controllers.add(controller);
@@ -120,7 +165,7 @@ function createCreatorIndustryService({ directory, channels, ai } = {}) {
   }
   function start() { stopped = false; if (!timer) { timer = setInterval(() => tick().catch(() => {}), 60000); timer.unref?.(); } }
   function stop() { stopped = true; clearInterval(timer); timer = null; controllers.forEach(controller => controller.abort()); }
-  return { read, importReviews, run, tick, start, stop };
+  return { read, readDocument, importReviews, run, tick, start, stop };
 }
 let singleton;
 function getCreatorIndustryService() {
@@ -128,4 +173,4 @@ function getCreatorIndustryService() {
     channels: require('./expertChannelService'), ai: require('../routes/ai') });
   return singleton;
 }
-module.exports = { createCreatorIndustryService, getCreatorIndustryService, documentBody, documentHash };
+module.exports = { createCreatorIndustryService, getCreatorIndustryService, documentBody, documentHash, reviewGate, SPEC_VERSION };

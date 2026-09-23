@@ -34,3 +34,18 @@ test('manual creator analysis does not queue when AI is unconfigured', async t =
   const response=await fetch('http://127.0.0.1:'+server.address().port+'/api/industry-chain/creators/4/analyze',{method:'POST'});
   assert.equal((await response.json()).data.status,'ai_not_configured');assert.equal(calls,0);
 });
+
+test('creator observation endpoint returns source text without running analysis', async t => {
+  let calls=0;
+  const app=express();app.use(express.json());
+  app.use('/api',createIndustryChainRouter({creatorService:{readDocument:async (_id, observationId)=>{
+    calls++;return {observationId:Number(observationId),transcript:'原始文稿',status:'ready'};
+  }}}));
+  const server=app.listen(0,'127.0.0.1');await new Promise(resolve=>server.once('listening',resolve));
+  t.after(()=>{server.closeAllConnections();server.close();});
+  const response=await fetch('http://127.0.0.1:'+server.address().port+'/api/industry-chain/creators/4/observations/7');
+  assert.equal(response.status,200);
+  assert.equal(response.headers.get('cache-control'),'no-store');
+  assert.deepEqual((await response.json()).data,{observationId:7,transcript:'原始文稿',status:'ready'});
+  assert.equal(calls,1);
+});

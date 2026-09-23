@@ -8,7 +8,7 @@ async function fixture(t) {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'creator-industry-'));
   t.after(() => fs.rm(directory, { recursive: true, force: true }));
   const channel = { id: 4, displayName: 'Fioona', industryAnalysisEnabled: true };
-  const rows = [{ id: 1, mediaType: 'video', evidenceLevel: 'primary', transcript: '保偏光纤用于光引擎的激光传输。保偏光纤用于光引擎的激光传输。', sourceUrl: 'https://www.douyin.com/video/1234567890123456789', publishedAt: '2026-09-18T00:00:00Z' }];
+  const rows = [{ id: 1, mediaType: 'video', evidenceLevel: 'primary', transcript: '保偏光纤用于光引擎的激光传输。保偏光纤用于光引擎的激光传输。', mediaMetadata: { asr: { status: 'complete', segments: [{ text: '保偏光纤用于光引擎的激光传输。' }] } }, sourceUrl: 'https://www.douyin.com/video/1234567890123456789', publishedAt: '2026-09-18T00:00:00Z' }];
   const channels = { getChannel: () => channel, listChannels: () => [channel], listCollectionObservations: () => rows };
   const proposal = () => ({ observationId: 1, bodyHash: documentHash(rows[0]), summary: '光互联关系', relations: [{ topic: 'AI算力与CPO', from: '保偏光纤', to: '光引擎', relation: '使用', quote: '保偏光纤用于光引擎的激光传输。', polarity: 'supports' }] });
   return { directory, channels, rows, proposal };
@@ -22,6 +22,8 @@ test('imports real cited relationships idempotently, with author/date and never 
   assert.equal(result.relations[0].status, 'author_claim');
   assert.equal(result.relations[0].publishedAt, f.rows[0].publishedAt);
   assert.equal(result.relations[0].author, 'Fioona');
+  assert.equal(result.relations[0].quoteStart, 0);
+  assert.equal(result.relations[0].quoteEnd, result.relations[0].quote.length);
 });
 test('rejects invented quotations, unmentioned endpoints, and outdated transcript identity', async t => {
   const f = await fixture(t), service = createCreatorIndustryService(f);
@@ -191,4 +193,64 @@ test('stop issued before the first request prevents a pending context read from 
   assert.equal(calls, 0, 'stop must also cover time spent awaiting the initial context');
   assert.equal((await service.read(4)).analyzedCount, 0);
   assert.deepEqual(await fs.readdir(f.directory), []);
+});
+
+test('quarantines a prompt-echo transcript before AI or manual relation import', async t => {
+  const f = await fixture(t); let called = 0;
+  f.rows[0].transcript = '请对以下音频进行逐字转写，不要添加解释。请对以下音频进行逐字转写，不要添加解释。';
+  const service = createCreatorIndustryService({ ...f, ai: { getAIEnabled: () => true,
+    getAIConfig: () => ({ model: 'fixture' }), isValidApiKey: () => true, callAIModel: async () => { called++; return '{}'; } } });
+  const state = await service.read(4);
+  assert.equal(state.readyCount, 0);
+  assert.equal(state.reviewQueue[0].status, 'suspected_prompt_echo');
+  assert.equal((await service.run(4)).status, 'idle');
+  assert.equal(called, 0);
+  await assert.rejects(service.importReviews(4, [{ ...f.proposal(), bodyHash: documentHash(f.rows[0]), relations: [] }]), /文稿.*复核/);
+});
+
+test('keeps unreviewed ASR and notes without OCR out of relation extraction', async t => {
+  const f = await fixture(t); let called = 0;
+  f.rows[0].mediaMetadata.asr.status = 'needs_review';
+  f.rows.push({ id: 2, mediaType: 'note', evidenceLevel: 'primary', content: '图文正文暂未提取，但这个标题和简介有足够长的文字，不能被当成已读取的图文原文。' });
+  const service = createCreatorIndustryService({ ...f, ai: { getAIEnabled: () => true,
+    getAIConfig: () => ({ model: 'fixture' }), isValidApiKey: () => true, callAIModel: async () => { called++; return '{}'; } } });
+  const state = await service.read(4);
+  assert.equal(state.readyCount, 0);
+  assert.deepEqual(state.reviewQueue.map(item => item.status), ['asr_review_required', 'note_ocr_required']);
+  assert.equal((await service.run(4)).status, 'idle');
+  assert.equal(called, 0);
+});
+
+test('ASR completion alone does not bypass an explicit quality-review flag', async t => {
+  const f = await fixture(t);
+  f.rows[0].mediaMetadata.asr.quality = { needsReview: true, reasons: ['low_confidence'] };
+  const service = createCreatorIndustryService(f);
+  const state = await service.read(4);
+  assert.equal(state.readyCount, 0);
+  assert.equal(state.reviewQueue[0].status, 'asr_review_required');
+});
+
+test('recognized note OCR remains a review item until the source text is approved', async t => {
+  const f = await fixture(t);
+  f.rows[0] = { ...f.rows[0], mediaType: 'note', transcript: '',
+    content: '作者配文：保偏光纤用于光引擎。图片文字：保偏光纤用于光引擎的激光传输。',
+    mediaMetadata: { note: { status: 'needs_review', pages: [{ status: 'recognized', text: '保偏光纤用于光引擎的激光传输。' }] } } };
+  const state = await createCreatorIndustryService(f).read(4);
+  assert.equal(state.readyCount, 0);
+  assert.equal(state.reviewQueue[0].status, 'note_review_required');
+});
+
+test('reads the original transcript and marks pre-gate records as legacy without discarding evidence', async t => {
+  const f = await fixture(t), service = createCreatorIndustryService(f);
+  const legacy = { observationId: 1, bodyHash: documentHash(f.rows[0]), title: '旧稿', relations: f.proposal().relations };
+  await fs.writeFile(path.join(f.directory, 'author-4.json'), JSON.stringify({ schema: 'webstock.creator-industry/v1', records: [legacy] }));
+  const state = await service.read(4);
+  assert.equal(state.analyzedCount, 0);
+  assert.equal(state.legacyCount, 1);
+  assert.equal(state.pendingCount, 1);
+  assert.equal(state.relations.length, 0);
+  const document = await service.readDocument(4, 1);
+  assert.equal(document.transcript, f.rows[0].transcript);
+  assert.equal(document.bodyHash, documentHash(f.rows[0]));
+  assert.equal(document.segments.length, 1);
 });

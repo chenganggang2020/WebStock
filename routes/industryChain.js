@@ -50,6 +50,13 @@ function createIndustryChainRouter(options = {}) {
     try { res.json({ success: true, data: await creatorService().read(req.params.id) }); }
     catch (error) { errorResponse(res, error); }
   });
+  router.get('/industry-chain/creators/:id/observations/:observationId', async function(req, res) {
+    try {
+      const data = await creatorService().readDocument(req.params.id, req.params.observationId);
+      res.set('Cache-Control', 'no-store').json({ success: true, data });
+    }
+    catch (error) { errorResponse(res, error); }
+  });
   router.post('/industry-chain/creators/:id/import', async function(req, res) {
     if (!writeAccessAllowed(req)) return res.status(403).json({ success: false, error: '仅允许本机导入' });
     try { res.json({ success: true, data: await creatorService().importReviews(req.params.id, req.body.items, { model: req.body.model }) }); }

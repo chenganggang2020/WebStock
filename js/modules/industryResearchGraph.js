@@ -15,5 +15,39 @@
     });
     return {nodes,links,shown:rows.length,total:all.length};
   }
-  return {buildGraph};
+  function buildCreatorGraph(relations){
+    const all=Array.isArray(relations)?relations:[], rows=all.slice(0,60), groups=new Map(), nodes=[], links=[];
+    rows.forEach(row=>{
+      const topic=String(row.topic||'主题待核验');
+      if(!groups.has(topic)) groups.set(topic,[]);
+      groups.get(topic).push(row);
+    });
+    let offset=0;
+    for(const [topic,group] of groups){
+      const topicId='topic:'+topic,first=offset;
+      const entities=new Map();
+      group.forEach((row,index)=>{
+        const y=(offset+index)*76+40;
+        for(const [role,name] of [['from',row.from],['to',row.to]]){
+          const key=String(name||'实体未提供');
+          if(!entities.has(key)) entities.set(key,{roles:new Set(),ys:[],relationKey:row.key});
+          entities.get(key).roles.add(role);entities.get(key).ys.push(y);
+        }
+        links.push({source:topicId+'|'+String(row.from),target:topicId+'|'+String(row.to),relationKey:row.key,
+          label:{show:true,formatter:String(row.relation||'关系待核验')},lineStyle:{type:row.polarity==='contradicts'?'dashed':'solid'}});
+      });
+      nodes.push({id:topicId,name:topic,x:20,y:(first+(group.length-1)/2)*76+40,
+        symbolSize:[150,42],itemStyle:{color:'#4263a0'},category:0});
+      for(const [name,entity] of entities){
+        const x=entity.roles.size===2?440:entity.roles.has('from')?240:640;
+        nodes.push({id:topicId+'|'+name,name,x,y:entity.ys.reduce((a,b)=>a+b,0)/entity.ys.length,
+          symbolSize:[165,40],relationKey:entity.relationKey,itemStyle:{color:'#397c84'},category:1});
+        if(entity.roles.has('from') && !entity.roles.has('to')) links.push({source:topicId,target:topicId+'|'+name,
+          lineStyle:{type:'dotted',color:'#a0adc0'},label:{show:false}});
+      }
+      offset+=group.length+1;
+    }
+    return {nodes,links,shown:rows.length,total:all.length,relationCount:rows.length,height:Math.max(500,offset*76+80)};
+  }
+  return {buildGraph,buildCreatorGraph};
 });

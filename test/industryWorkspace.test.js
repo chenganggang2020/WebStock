@@ -51,3 +51,14 @@ test('creator relations keep directed endpoints, quotation and author without in
   assert.equal(rows[0].status,'author_claim'); assert.equal(rows[0].code,'');
   assert.equal(rows[0].evidence[0].fragments[0].quote,'保偏光纤用于光引擎');
 });
+
+test('creator review list exposes blocked source documents without treating them as graph relations', () => {
+  const rows=workspace.creatorReviewRows({reviewQueue:[
+    {observationId:1,title:'待复核视频',mediaType:'video',status:'asr_review_required',publishedAt:'2026-09-20'},
+    {observationId:2,title:'未提取图文',mediaType:'note',status:'note_ocr_required',publishedAt:'2026-09-21'}
+  ]});
+  assert.equal(rows.length,2);
+  assert.equal(rows[0].observationId,2);
+  assert.equal(rows[0].status,'note_ocr_required');
+  assert.equal(rows[1].status,'asr_review_required');
+});
