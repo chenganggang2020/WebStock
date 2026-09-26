@@ -52,6 +52,16 @@ function createDesktopBackend(options = {}) {
     child.stdout.on('data', chunk => options.onLog?.(String(chunk)));
     child.stderr.on('data', chunk => options.onLog?.(String(chunk)));
     rpc = createProcessRpc(child, {
+      douyinSessionState(state) {
+        if (!state || !['login_required', 'authenticated'].includes(state.status) ||
+            !Number.isSafeInteger(state.channelId) || state.channelId < 1) throw new Error('Invalid Douyin session state');
+        if (stopping) return false;
+        try {
+          Promise.resolve(options.onDouyinSessionState?.({ status: state.status, channelId: state.channelId }))
+            .catch(() => options.onLog?.('Douyin session notice delivery failed'));
+        } catch (_) { options.onLog?.('Douyin session notice delivery failed'); }
+        return true;
+      },
       captureUrl: (...args) => sessionForCapture().captureUrl(...args),
       captureProfileRecent: (...args) => sessionForCapture().captureProfileRecent(...args),
       captureProfileArchive: (url, settings, id) => sessionForCapture().captureProfileArchive(url, {

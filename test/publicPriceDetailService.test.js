@@ -26,12 +26,32 @@ test('combines same-date prices without overwriting newer local observations or 
   const remote = { rows: [{ time: '2026-09-18 09:30:05', price: 11, volume: null }], meta: { tradingDate: '2026-09-18', dataSource: 'tencent-public-detail', backfillState: 'ready' } };
   const merged = combinePriceSeries(local, remote);
   assert.deepEqual(merged.rows.map(row => row.price), [11, 12]);
-  assert.deepEqual(merged.rows.map(row => row.volume), [null, 30]);
+  assert.deepEqual(merged.rows.map(row => row.volume), [20, 30]);
   assert.equal(merged.meta.localSupplementPoints, 1);
+  assert.equal(merged.meta.localVolumeOverlayPoints, 1);
+  assert.equal(merged.meta.volumeCoverage, 'local-observed-samples-only');
+  const noLocalVolume = combinePriceSeries({ rows: [{ time: '2026-09-18 09:30:05', price: 10, volume: null }], meta: local.meta }, remote);
+  assert.equal(noLocalVolume.meta.volumeCoverage, remote.meta.volumeCoverage);
   const tomorrow = { rows: [{ time: '2026-09-21 09:30:05', price: 13 }], meta: { tradingDate: '2026-09-21', dataSource: 'local-public-quote-5s' } };
   assert.deepEqual(combinePriceSeries(tomorrow, remote).rows, tomorrow.rows);
   const older = { rows: [{ time: '2026-09-17 09:30:05', price: 8 }], meta: { tradingDate: '2026-09-17' } };
   assert.deepEqual(combinePriceSeries(older, remote).rows, remote.rows);
+});
+
+test('prefers derived public-detail volume and uses local observed volume only for uncovered buckets', () => {
+  const remote = { rows: [
+    { time: '2026-09-18 09:30:05', price: 11, volume: 300, amount: 3200, volumeSource: 'tencent-public-detail-derived' },
+    { time: '2026-09-18 09:30:10', price: 12, volume: null, amount: null }
+  ], meta: { tradingDate: '2026-09-18', dataSource: 'tencent-public-detail', volumeCoverage: 'public-detail-derived' } };
+  const local = { rows: [
+    { time: '2026-09-18 09:30:05', price: 10, volume: 20, amount: 200 },
+    { time: '2026-09-18 09:30:10', price: 12, volume: 30, amount: 360 }
+  ], meta: { tradingDate: '2026-09-18', dataSource: 'local-public-quote-5s' } };
+  const merged = combinePriceSeries(local, remote);
+  assert.deepEqual(merged.rows.map(row => row.volume), [300, 30]);
+  assert.deepEqual(merged.rows.map(row => row.volumeSource), ['tencent-public-detail-derived', 'local-public-quote-5s']);
+  assert.equal(merged.meta.localVolumeOverlayPoints, 1);
+  assert.equal(merged.meta.volumeCoverage, 'public-detail-derived-with-local-fallback');
 });
 
 test('caps concurrent downloads at two and backs off failures without discarding cached data', async t => {
@@ -59,8 +79,18 @@ test('observed-price buckets retain missing intervals and exclude auction, lunch
   assert.equal(bars[0].open, 10);
   assert.equal(bars[0].price, 11);
   assert.equal(bars[0].observedCount, 2);
-  assert.equal(bars[0].volume, null);
+  assert.equal(bars[0].volume, 300);
+  assert.equal(bars[0].amount, 3200);
+  assert.equal(bars[0].volumeSource, 'tencent-public-detail-derived');
   assert.equal(bars[0].averagePrice, null);
+});
+
+test('invalid public-detail quantity fails closed without publishing partial bucket volume', () => {
+  const rows = parsePage(page(0, sample.replace('2/09:30:03/11/1/2/2200/B', '2/09:30:03/11/1/oops/2200/B')), symbol, 0, '2026-09-18');
+  const bars = aggregatePrices(rows, 5);
+  assert.equal(bars[0].price, 11);
+  assert.equal(bars[0].volume, null);
+  assert.equal(bars[0].amount, null);
 });
 
 test('downloads indexed pages and rejects cross-day, incomplete and duplicate records', async () => {
@@ -128,6 +158,19 @@ test('service returns promptly, deduplicates jobs and survives restart with date
   const otherDay = await restarted.list('000001', { tradingDate: '2026-09-17' });
   assert.equal(otherDay.rows.length, 0);
   assert.equal(otherDay.meta.backfillState, 'date-not-cached');
+});
+
+test('an incomplete refresh cannot replace longer same-day cached history', async t => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'detail-retain-'));
+  t.after(() => fs.rm(directory, { recursive: true, force: true }));
+  const complete = await fetchSnapshot('000001', { get: async p => p.action === 'info' ? info('09:25:00~09:30:03') : page(0, sample), delay: async () => {} });
+  let calls = 0;
+  const service = createPublicPriceDetailService({ cacheDir: directory, download: async () => ++calls === 1 ? complete : { ...complete, records: complete.records.slice(0, 2), paginationComplete: false } });
+  await service.refresh('000001');
+  await assert.rejects(service.refresh('000001'), /shorter|incomplete/i);
+  const retained = await service.list('000001', { tradingDate: '2026-09-18' });
+  assert.equal(retained.meta.rawRecordCount, 3);
+  assert.equal(retained.meta.paginationComplete, true);
 });
 
 test('freshness uses actual market observation time, not download time or post-market rows', async t => {

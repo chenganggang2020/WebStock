@@ -118,7 +118,7 @@
       <nav id="terminalWorkspaces" aria-label="工作区"></nav>
       <div class="terminal-search">
         <div class="search-box">
-          <input id="searchInput" type="text" placeholder="代码 / 名称 / 行业 / 板块" autocomplete="off">
+          <input id="searchInput" type="text" placeholder="搜索股票代码 / 名称，点☆加入自选" aria-label="搜索股票并加入自选" autocomplete="off">
           <button id="clearBtn" class="clear-btn" aria-label="清空搜索" title="清空搜索">✕</button>
           <div id="searchHistoryPanel" class="search-history-panel" style="display:none;"></div>
         </div>
@@ -2115,8 +2115,8 @@
         <header class="creator-task-hero">
           <div>
             <span class="creator-task-eyebrow">后台采集工作台</span>
-            <h2>采集任务与视频记录</h2>
-            <p>查看登录会话、采集流程、转写队列和每条视频的可核对记录。</p>
+            <h2>采集任务与文稿</h2>
+            <p>切换作者，统一查看作品、文稿、任务与采集配置；跨作者操作在批量采集中管理。</p>
           </div>
           <div id="creatorTaskNetworkRoute" class="creator-network-route" aria-live="polite">
             <span class="creator-route-dot"></span>
@@ -2149,9 +2149,9 @@
             <div class="creator-current-parameters">
               <label>采集类型 <select id="creatorMediaPreference"><option value="all">全部作品</option><option value="video">只采视频文稿</option><option value="note">只采图文正文</option></select></label>
               <label><input id="creatorIndustryAutomatic" type="checkbox">文稿就绪后自动分析产业链</label>
-            <label>当前作者采集范围 <select id="creatorCurrentMode"><option value="incremental">新增与待完成作品</option><option value="archive">全部公开作品 · 补齐历史</option></select></label>
+            <label>本次队列采集范围 <select id="creatorCurrentMode"><option value="incremental">新增与待完成作品</option><option value="archive">全部公开作品 · 补齐历史</option></select></label>
             <label>本次队列转写模型 <select id="creatorCurrentModel"><option value="large-v3-turbo">large-v3-turbo</option><option value="small">small · 轻量</option><option value="large-v3">large-v3</option></select></label>
-            <small>已有完整转写保留；资料按作者分开。</small>
+            <small>本次范围与模型按作者分别记住（本次打开期间）；已有文稿保留。</small>
           </div>
           <form id="creatorAccountForm" hidden class="creator-task-toolbar">
             <input id="creatorAccountName" aria-label="作者名称" placeholder="作者名称" required maxlength="160">
@@ -2190,7 +2190,8 @@
         </section>
 
         <details class="creator-collection-queue" open>
-          <summary>多作者采集队列 <span id="creatorQueueStatus" class="muted" role="status">尚未读取</span></summary>
+          <summary>采集队列 <span id="creatorQueueStatus" class="muted" role="status">尚未读取</span></summary>
+          <label>任务范围 <select id="creatorQueueScope" aria-label="队列作者范围"><option value="current">当前作者</option><option value="all">全部作者</option></select></label>
           <div id="creatorQueueList"></div>
         </details>
 
@@ -2255,12 +2256,12 @@
         <section id="expertCreatorWorkbench" class="creator-research-workbench" hidden>
           <div class="creator-task-date-filter">
             <label>北京时间日期 <input id="creatorTaskDate" type="date" disabled></label>
-            <label>视频范围 <select id="creatorTaskDateMode"><option value="all" selected>全部本地历史</option><option value="published">指定日期发布</option><option value="run">指定日期任务处理</option></select></label>
-            <span id="creatorTaskDateScope" class="muted" aria-live="polite">全部已保存资料；切换作者不会混入其他作者的视频。</span>
+            <label>作品范围 <select id="creatorTaskDateMode"><option value="all" selected>全部本地历史</option><option value="published">指定日期发布</option><option value="run">指定日期任务处理</option></select></label>
+            <span id="creatorTaskDateScope" class="muted" aria-live="polite">全部已保存资料；切换作者不会混入其他作者的作品。</span>
           </div>
           <details class="creator-coverage-details"><summary>采集覆盖与新鲜度</summary><div id="expertCreatorStats" class="creator-stat-strip"></div></details>
           <div class="creator-workbench-toolbar">
-            <input id="expertCreatorSearchInput" type="search" placeholder="搜索视频、逐字稿、股票或主题" autocomplete="off">
+            <input id="expertCreatorSearchInput" type="search" placeholder="搜索作品、文稿、股票或主题" autocomplete="off">
             <select id="expertCreatorStatusFilter" aria-label="转写状态">
               <option value="all">全部状态</option>
               <option value="complete">已转写</option>
@@ -2573,7 +2574,7 @@
               <th>名称</th>
               <th>数量</th>
               <th>成本价</th>
-              <th>当前价</th>
+              <th>当前价 / 涨跌幅</th>
               <th>明盘 / 暗盘净额</th>
               <th>市值</th>
               <th>浮动盈亏</th>
@@ -2658,6 +2659,19 @@
         </div>
       </div>
     </div>
+
+    <dialog id="tonghuashunHoldingInputDialog" class="watchlist-add-dialog portfolio-holding-input-dialog" aria-labelledby="tonghuashunHoldingInputTitle">
+      <form method="dialog">
+        <h3 id="tonghuashunHoldingInputTitle"></h3>
+        <p id="tonghuashunHoldingInputHint" class="muted"></p>
+        <textarea id="tonghuashunHoldingTextInput" rows="10" aria-label="同花顺持仓表" hidden></textarea>
+        <input id="tonghuashunHoldingCashInput" type="text" inputmode="decimal" aria-label="同花顺可用资金" hidden>
+        <div class="modal-actions">
+          <button type="button" id="tonghuashunHoldingInputCancel">取消</button>
+          <button type="submit" value="ok" class="primary">确定</button>
+        </div>
+      </form>
+    </dialog>
 
     <div id="statsView" class="main-view" style="display:none;">
       <div class="section-header">

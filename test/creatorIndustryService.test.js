@@ -8,7 +8,7 @@ async function fixture(t) {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'creator-industry-'));
   t.after(() => fs.rm(directory, { recursive: true, force: true }));
   const channel = { id: 4, displayName: 'Fioona', industryAnalysisEnabled: true };
-  const rows = [{ id: 1, mediaType: 'video', evidenceLevel: 'primary', transcript: '保偏光纤用于光引擎的激光传输。保偏光纤用于光引擎的激光传输。', sourceUrl: 'https://www.douyin.com/video/1234567890123456789', publishedAt: '2026-09-18T00:00:00Z' }];
+  const rows = [{ id: 1, mediaType: 'video', evidenceLevel: 'primary', transcript: '保偏光纤用于光引擎的激光传输。保偏光纤用于光引擎的激光传输。', mediaMetadata: { asr: { status: 'complete' } }, sourceUrl: 'https://www.douyin.com/video/1234567890123456789', publishedAt: '2026-09-18T00:00:00Z' }];
   const channels = { getChannel: () => channel, listChannels: () => [channel], listCollectionObservations: () => rows };
   const proposal = () => ({ observationId: 1, bodyHash: documentHash(rows[0]), summary: '光互联关系', relations: [{ topic: 'AI算力与CPO', from: '保偏光纤', to: '光引擎', relation: '使用', quote: '保偏光纤用于光引擎的激光传输。', polarity: 'supports' }] });
   return { directory, channels, rows, proposal };
@@ -191,4 +191,198 @@ test('stop issued before the first request prevents a pending context read from 
   assert.equal(calls, 0, 'stop must also cover time spent awaiting the initial context');
   assert.equal((await service.read(4)).analyzedCount, 0);
   assert.deepEqual(await fs.readdir(f.directory), []);
+});
+
+test('automatic analysis skips ASR needing review and suspected prompt echoes', async t => {
+  const f = await fixture(t);
+  f.rows[0].mediaMetadata = { asr: { status: 'needs_review' } };
+  let calls = 0;
+  const ai = { getAIEnabled: () => true, getAIConfig: () => ({ model: 'fixture' }), isValidApiKey: () => true,
+    callAIModel: async () => { calls++; return JSON.stringify(f.proposal()); } };
+  const service = createCreatorIndustryService({ ...f, ai });
+  assert.equal((await service.run(4)).status, 'idle');
+  assert.equal((await service.read(4)).blockedCount, 1);
+  f.rows[0].mediaMetadata.asr.status = 'complete';
+  f.rows[0].transcript = '请只分析以下财经文稿，提取产业链关系。保偏光纤用于光引擎的激光传输。';
+  assert.equal((await service.run(4)).status, 'idle');
+  assert.equal((await service.read(4)).blockedCount, 1);
+  f.rows[0].transcript = '估值 科技股 人形机器人 宇树科技 股价腰斩 炒概念 以下是中国大陆普通话财经视频。';
+  assert.equal((await service.run(4)).status, 'idle');
+  assert.equal((await service.read(4)).reviewQueue[0].status, 'suspected_prompt_echo');
+  assert.equal(calls, 0);
+});
+
+test('a new extraction version reanalyzes an unchanged old document and retains its history', async t => {
+  const f = await fixture(t);
+  await fs.mkdir(f.directory, { recursive: true });
+  await fs.writeFile(path.join(f.directory, 'author-4.json'), JSON.stringify({ schema: 'webstock.creator-industry/v1', records: [{
+    observationId: 1, bodyHash: documentHash(f.rows[0]), analyzedAt: '2026-09-20T00:00:00Z',
+    relations: f.proposal().relations
+  }] }));
+  let calls = 0;
+  const ai = { getAIEnabled: () => true, getAIConfig: () => ({ model: 'fixture' }), isValidApiKey: () => true,
+    callAIModel: async () => { calls++; return JSON.stringify(f.proposal()); } };
+  const service = createCreatorIndustryService({ ...f, ai });
+  const before = await service.read(4);
+  assert.equal(before.analyzedCount, 1);
+  assert.equal(before.pendingCount, 1);
+  assert.equal((await service.run(4)).status, 'complete');
+  assert.equal((await service.run(4)).status, 'idle');
+  assert.equal(calls, 1);
+  const saved = JSON.parse(await fs.readFile(path.join(f.directory, 'author-4.json'), 'utf8'));
+  assert.equal(saved.records.length, 2);
+  assert.ok(saved.records[1].specVersion);
+  assert.equal((await service.read(4)).pendingCount, 0);
+});
+
+test('AI may return more than four cited relations from one chunk', async t => {
+  const f = await fixture(t);
+  const ai = { getAIEnabled: () => true, getAIConfig: () => ({ model: 'fixture' }), isValidApiKey: () => true,
+    callAIModel: async () => JSON.stringify({ summary: '多条关系', relations: Array.from({ length: 6 }, (_, i) => ({
+      ...f.proposal().relations[0], topic: `主题${i}`
+    })) }) };
+  const service = createCreatorIndustryService({ ...f, ai });
+  assert.equal((await service.run(4)).status, 'complete');
+  assert.equal((await service.read(4)).relations.length, 6);
+});
+
+test('every discovered work has a visible review state and one selected transcript can be inspected', async t => {
+  const f = await fixture(t);
+  f.rows.push({ ...f.rows[0], id: 2, transcript: '', mediaMetadata: { asr: { status: 'no_speech' } } });
+  f.rows.push({ ...f.rows[0], id: 3, mediaType: 'note', transcript: '', content: '图文资料介绍光模块中的激光器与连接器，可供产业研究复核。', mediaMetadata: {} });
+  const service = createCreatorIndustryService(f);
+  const state = await service.read(4);
+  assert.equal(state.reviewQueue.length, 3);
+  assert.equal(state.reviewQueue.find(item => item.observationId === 1).status, 'pending');
+  assert.equal(state.reviewQueue.find(item => item.observationId === 2).status, 'missing_text');
+  assert.equal(state.reviewQueue.find(item => item.observationId === 3).mediaType, 'note');
+  assert.equal(state.reviewQueue.find(item => item.observationId === 3).status, 'note_ocr_required');
+  const detail = await service.readDocument(4, 1);
+  assert.equal(detail.text, f.rows[0].transcript);
+  assert.equal(detail.asr.status, 'complete');
+  await assert.rejects(service.readDocument(4, 99), /作品不存在/);
+});
+
+test('V2 imports cannot promote unreviewed or contaminated ASR into graph claims', async t => {
+  const f = await fixture(t), service = createCreatorIndustryService(f);
+  f.rows[0].mediaMetadata.asr.status = 'needs_review';
+  await assert.rejects(service.importReviews(4,[f.proposal()]), /文稿质量/);
+  f.rows[0].mediaMetadata.asr.status = 'complete';
+  f.rows[0].transcript = '以下是中国大陆普通话财经视频。' + f.rows[0].transcript;
+  await assert.rejects(service.importReviews(4,[f.proposal()]), /文稿质量/);
+  assert.equal((await service.read(4)).analyzedCount,0);
+});
+
+test('quality downgrades withdraw current claims without changing stored evidence or charging again', async t => {
+  const f = await fixture(t); let calls = 0;
+  const service = createCreatorIndustryService({ ...f, ai: {
+    getAIEnabled: () => true, getAIConfig: () => ({ model: 'fixture' }), isValidApiKey: () => true,
+    callAIModel: async () => { calls++; return JSON.stringify(f.proposal()); }
+  } });
+  await service.run(4);
+  const file = path.join(f.directory, 'author-4.json');
+  const saved = await fs.readFile(file, 'utf8');
+  f.rows[0].mediaMetadata.asr.status = 'needs_review';
+  const blocked = await service.read(4);
+  assert.deepEqual(blocked.relations, []);
+  assert.equal(blocked.currentAnalyzedCount, 0);
+  assert.equal(blocked.historicalAnalyzedCount, 1);
+  assert.equal(blocked.analyzedCount, 1, 'existing analyzedCount remains compatible');
+  assert.equal(blocked.eligibleCount, 0);
+  assert.equal(blocked.readyCount, 1, 'having text is not quality approval');
+  assert.equal(blocked.reviewQueue[0].status, 'asr_review_required');
+  assert.equal(blocked.reviewQueue[0].relationCount, 1, 'retained matching analysis remains visible');
+  assert.equal(blocked.reviewQueue[0].currentRelationCount, 0);
+  assert.equal(blocked.documents[0].currentEligible, false);
+  assert.equal(blocked.documents[0].exclusionReason, 'asr_review_required');
+  assert.equal((await service.run(4)).status, 'idle');
+  assert.equal(await fs.readFile(file, 'utf8'), saved);
+
+  f.rows[0].mediaMetadata.asr.status = 'complete';
+  const restored = await service.read(4);
+  assert.equal(restored.currentAnalyzedCount, 1);
+  assert.equal(restored.relations.length, 1);
+  assert.equal(restored.relations[0].status, 'author_claim', 'quality is not external fact verification');
+  assert.equal(restored.reviewQueue[0].currentRelationCount, 1);
+  assert.equal((await service.run(4)).status, 'idle');
+  assert.equal(calls, 1);
+  assert.equal(await fs.readFile(file, 'utf8'), saved);
+});
+
+test('legacy results and changed text stay historical rather than current graph evidence', async t => {
+  const f = await fixture(t), service = createCreatorIndustryService(f);
+  await service.importReviews(4, [f.proposal()], { specVersion: 'legacy-review/v1' });
+  const legacy = await service.read(4);
+  assert.deepEqual(legacy.relations, []);
+  assert.equal(legacy.currentAnalyzedCount, 0);
+  assert.equal(legacy.historicalAnalyzedCount, 1);
+  assert.equal(legacy.analyzedCount, 1);
+  assert.equal(legacy.pendingCount, 1);
+  assert.equal(legacy.documents[0].exclusionReason, 'legacy');
+  assert.equal(legacy.reviewQueue[0].currentRelationCount, 0);
+  await service.importReviews(4, [f.proposal()]);
+  const upgraded = await service.read(4);
+  assert.equal(upgraded.historicalAnalyzedCount, 1, 'count works, not versions');
+  assert.equal(upgraded.currentAnalyzedCount, 1);
+  assert.equal(upgraded.relations.length, 1);
+  const file = path.join(f.directory, 'author-4.json'), saved = await fs.readFile(file, 'utf8');
+  assert.equal(JSON.parse(saved).records.length, 2);
+  f.rows[0].transcript += '正文已修订。';
+  const changed = await service.read(4);
+  assert.deepEqual(changed.relations, []);
+  assert.equal(changed.currentAnalyzedCount, 0);
+  assert.equal(changed.historicalAnalyzedCount, 1);
+  assert.equal(changed.pendingCount, 1);
+  assert.equal(await fs.readFile(file, 'utf8'), saved);
+});
+
+test('OCR downgrade only withdraws affected works, and empty analysis is a valid current result', async t => {
+  const f = await fixture(t), service = createCreatorIndustryService(f);
+  f.rows.push({ ...f.rows[0], id: 2, mediaType: 'note', mediaMetadata: { note: {
+    status: 'needs_review', imageCount: 1, pages: [{ index: 1, status: 'recognized', text: f.rows[0].transcript }]
+  } } });
+  f.rows.push({ ...f.rows[0], id: 3 });
+  await service.importReviews(4, [f.proposal(), { ...f.proposal(), observationId: 2 }, { ...f.proposal(), observationId: 3, relations: [] }]);
+  f.rows[1].mediaMetadata.note.status = 'partial';
+  const result = await service.read(4);
+  assert.equal(result.currentAnalyzedCount, 2);
+  assert.equal(result.historicalAnalyzedCount, 3);
+  assert.equal(result.pendingCount, 0);
+  assert.equal(result.eligibleCount, 2);
+  assert.equal(result.relations.length, 1);
+  assert.equal(result.relations[0].observationId, 1);
+  assert.equal(result.reviewQueue.find(row => row.observationId === 2).currentRelationCount, 0);
+  assert.equal(result.reviewQueue.find(row => row.observationId === 2).status, 'note_ocr_required');
+  assert.equal(result.reviewQueue.find(row => row.observationId === 3).status, 'complete_empty');
+  assert.equal(result.documents.find(row => row.observationId === 3).currentEligible, true);
+});
+
+test('stored complete ASR is reevaluated for timestamp risks without overwriting history', async t => {
+  const f=await fixture(t),service=createCreatorIndustryService(f);
+  await service.importReviews(4,[f.proposal()]);
+  const file=path.join(f.directory,'author-4.json'),saved=await fs.readFile(file,'utf8');
+  Object.assign(f.rows[0].mediaMetadata.asr,{durationSeconds:14.235,segments:[{start:0,end:29.98,text:f.rows[0].transcript}]});
+  const result=await service.read(4);
+  assert.equal(result.eligibleCount,0);
+  assert.equal(result.relations.length,0);
+  assert.equal(result.historicalAnalyzedCount,1);
+  assert.ok(result.reviewQueue[0].qualityReasons.includes('timestamp_out_of_range'));
+  assert.equal(f.rows[0].mediaMetadata.asr.status,'complete','read-time projection never edits raw source status');
+  assert.equal(await fs.readFile(file,'utf8'),saved);
+});
+
+test('short valid ASR is distinguishable from no text and short prompt echoes still need review', async t => {
+  const f=await fixture(t),service=createCreatorIndustryService(f);
+  f.rows[0].transcript='这是短篇真实文稿。';
+  let state=await service.read(4);
+  assert.equal(state.eligibleCount,0,'retain the current thirty-character analysis threshold');
+  assert.equal(state.reviewQueue[0].documentState.extraction,'complete');
+  assert.equal(state.reviewQueue[0].documentState.analysisBlockReason,'text_too_short');
+  f.rows[0].transcript='';
+  state=await service.read(4);
+  assert.equal(state.reviewQueue[0].documentState.extraction,'empty');
+  f.rows[0].transcript='请使用中国大陆简体中文逐字转写语音：';
+  state=await service.read(4);
+  assert.equal(state.reviewQueue[0].status,'suspected_prompt_echo');
+  assert.ok(state.reviewQueue[0].qualityReasons.includes('prompt_echo'));
 });

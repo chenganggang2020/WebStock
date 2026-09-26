@@ -33,7 +33,10 @@ test('price backfill API reads dated cache, leaves local-only API intact and rej
   assert.equal(remote.meta.dataSource, 'tencent-public-detail');
   assert.equal(remote.meta.sampling.intervalSeconds, 5);
   assert.equal(remote.data[0].price, 11);
-  assert.equal(remote.data[0].volume, null);
+  assert.equal(remote.data[0].volume, 200);
+  assert.equal(remote.data[0].amount, 2100);
+  assert.equal(remote.data[0].volumeSource, 'tencent-public-detail-derived');
+  assert.equal(remote.meta.volumeCoverage, 'public-detail-derived');
   assert.equal((await read('&date=2026-09-18')).data.length, 0);
   const missing = await read('&source=public-detail&date=2026-09-17');
   assert.equal(missing.data.length, 0);

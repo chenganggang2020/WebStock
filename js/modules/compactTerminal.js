@@ -15,13 +15,13 @@
     ['industryChain', '产业链研究', 'research'], ['screener', '本地候选', 'research'], ['news', '资讯与公告', 'research'],
     ['aiResearch', 'AI研究', 'research'], ['evidence', '证据库', 'research'],
     ['commentStrategy', '评论工坊', 'research'], ['aiHistory', 'AI交接记录', 'research'],
-    ['creatorTasks', '采集任务', 'collect'], ['authors', '作者管理', 'collect', 'creatorTasks', 'creatorTaskChannelSelect'],
+    ['creatorTasks', '采集任务', 'collect'],
     ['compoundLab', '情景测算', 'paper'], ['paperPortfolio', '纸面组合 / 前向模拟', 'paper'],
     ['settings', '设置中心', 'settings'], ['health', '行情接口 / Level-2', 'settings', 'settings', 'settingsLevel2Status']
   ].map(function(row) { return Object.freeze({ id: row[0], label: row[1], workspace: row[2], view: row[3] || row[0], target: row[4] || null }); });
   let bound = false;
   const lastPages = {};
-  function resolve(id) { return pages.find(function(page) { return page.id === (id === 'capitalIntraday' ? 'capitalDaily' : id); }) || null; }
+  function resolve(id) { return pages.find(function(page) { return page.id === (id === 'authors' ? 'creatorTasks' : id === 'capitalIntraday' ? 'capitalDaily' : id); }) || null; }
 
   function sync(view, pageId) {
     if (!root) return;

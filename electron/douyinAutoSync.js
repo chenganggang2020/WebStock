@@ -208,7 +208,28 @@ function createDouyinAutoSync(options = {}) {
   function safeError(error) {
     const sanitized = new Error(safeErrorMessage(error));
     if (error && error.name) sanitized.name = error.name;
+    if (error && error.code === 'DOUYIN_LOGIN_REQUIRED') sanitized.code = error.code;
     return sanitized;
+  }
+
+  function sessionState(status, channelId) {
+    if (typeof options.onSessionState !== 'function') return;
+    try {
+      Promise.resolve(options.onSessionState({ status, channelId: Number(channelId) }))
+        .catch(error => log('Douyin session notice delivery failed', safeError(error)));
+    } catch (error) { log('Douyin session notice delivery failed', safeError(error)); }
+  }
+
+  function requireCaptureSession(capture, channelId) {
+    if (capture && capture.loadError) throw new Error('抖音页面服务异常，请稍后重试；尚不能确认登录状态');
+    if (capture && capture.loggedIn === true) return;
+    if (capture && capture.loggedIn === false) {
+      sessionState('login_required', channelId);
+      const error = new Error('抖音登录状态已失效或需要验证，请在采集页面重新登录');
+      error.code = 'DOUYIN_LOGIN_REQUIRED';
+      throw error;
+    }
+    throw new Error('抖音页面未返回可核验的登录状态，请稍后重试');
   }
 
   function reportProgress(channelId, progress) {
@@ -273,9 +294,10 @@ function createDouyinAutoSync(options = {}) {
           archiveOptions = Object.assign({}, archiveOptions, {
             maxScrolls: continuedScrollLimit,
             async onBatch(batchCapture) {
-              if (!batchCapture.loggedIn) throw new Error('抖音登录状态已失效，请在 WebStock 中重新登录');
+              requireCaptureSession(batchCapture, id);
               const batchIdentity = sources.verifyCapturedIdentity(id, batchCapture);
               if (!batchIdentity.matched) throw new Error('抖音主页身份与研究对象不一致，本轮不会入库');
+              sessionState('authenticated', id);
               const batch = await importCapture(id, batchCapture);
               if (!batchedDiscoveryResult) {
                 batchedDiscoveryResult = { addedCount: 0, updatedCount: 0, unchangedCount: 0, items: [] };
@@ -310,12 +332,13 @@ function createDouyinAutoSync(options = {}) {
         if (runOptions.mode === 'archive' && profileCapture && profileCapture.archive) {
           audit('updateArchiveCheckpoint', id, profileCapture.archive);
         }
-        if (!profileCapture.loggedIn) throw new Error('抖音登录状态已失效，请在 WebStock 中重新登录');
+        requireCaptureSession(profileCapture, id);
         if (!profileCapture.profile || !profileCapture.profile.profileUrl || !profileCapture.items.length) {
           throw new Error('抖音主页尚未加载出作品列表，本轮不会记为成功');
         }
         const profileIdentity = sources.verifyCapturedIdentity(id, profileCapture);
         if (!profileIdentity.matched) throw new Error('抖音主页身份与研究对象不一致，本轮不会入库');
+        sessionState('authenticated', id);
         if (checkOnly) {
           if (typeof sources.inspectCapturedPage !== 'function') {
             throw new Error('当前采集服务不支持只读更新检查');
@@ -517,6 +540,7 @@ function createDouyinAutoSync(options = {}) {
             const detailCapture = shouldProbeMedia
               ? await sessionManager.captureUrl(item.sourceUrl, { preferMediaUrl: true })
               : await sessionManager.captureUrl(item.sourceUrl);
+            requireCaptureSession(detailCapture, id);
             const currentItem = detailCapture.items.find(detail => String(detail.contentId) === String(item.contentId));
             if (!currentItem) throw new Error('详情页未返回目标视频数据');
             const persistedItem = Object.assign({}, item, currentItem, {
@@ -529,6 +553,7 @@ function createDouyinAutoSync(options = {}) {
             delete persistedDetailCapture.mediaCandidates;
             const detailIdentity = sources.verifyCapturedIdentity(id, persistedDetailCapture);
             if (!detailIdentity.matched) throw new Error('详情页作者身份与研究对象不一致');
+            sessionState('authenticated', id);
             const detailResult = await importCapture(id, persistedDetailCapture);
             addedCount += Number(detailResult.addedCount || 0);
             updatedCount += Number(detailResult.updatedCount || 0);
@@ -588,8 +613,9 @@ function createDouyinAutoSync(options = {}) {
                 if (noteResult.status==='partial') archiveErrors.push({contentId:item.contentId,message:'图文有图片未完成归档或识别'});
                 else archivedCount += 1;
                 audit('upsertRunItem',runId,{contentId:item.contentId,detailStatus:'complete',
-                  transcriptionStatus:noteResult.status==='partial'?'ocr_partial':'ocr_complete',
-                  message:noteResult.status==='partial'?'图文部分处理，原图和已识别文字已保存':'图文原图已保存，图片文字识别完成'});
+                  transcriptionStatus:noteResult.status==='partial'?'ocr_partial':noteResult.status==='no_text'?'no_text':'ocr_complete',
+                  message:noteResult.status==='partial'?'图文部分处理，原图和已识别文字已保存'
+                    :noteResult.status==='no_text'?'原图已保存，未识别到文字':'图文原图已保存，图片文字识别完成'});
               } catch (error) {
                 const message=safeErrorMessage(error);
                 archiveErrors.push({contentId:item.contentId,message});
@@ -765,6 +791,7 @@ function createDouyinAutoSync(options = {}) {
               message
             });
             log('Douyin detail capture failed for ' + item.contentId, safeError(error));
+            if (error.code === 'DOUYIN_LOGIN_REQUIRED') throw error;
           }
           processedCount += 1;
           reportProgress(id, {
@@ -928,10 +955,16 @@ function createDouyinAutoSync(options = {}) {
           message: safeErrorMessage(progress.message || stage) });
       };
       try {
-        const result = await runDouyinVideoTask({ channels, sources, sessionManager, transcriber, noteProcessor },
+        const checkedSession = { async captureUrl(...args) {
+          const capture = await sessionManager.captureUrl(...args);
+          requireCaptureSession(capture, channelId);
+          if (sources.verifyCapturedIdentity(channelId, capture).matched) sessionState('authenticated', channelId);
+          return capture;
+        } };
+        const result = await runDouyinVideoTask({ channels, sources, sessionManager: checkedSession, transcriber, noteProcessor },
           channelId, observationId, stage, update, settings);
         audit('upsertRunItem', runId, { contentId: observation.externalContentId, detailStatus: 'complete',
-          transcriptionStatus: stage === 'transcribe' ? 'complete' : 'not_requested', message: '单视频操作完成' });
+          transcriptionStatus: result.transcriptionStatus || (stage === 'transcribe' ? 'complete' : 'not_requested'), message: '单视频操作完成' });
         audit('completeRun', runId, result);
         syncState.markCompleted(channelId, result);
         return result;

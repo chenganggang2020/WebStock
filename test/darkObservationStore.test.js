@@ -30,3 +30,12 @@ test('an interrupted archive tail prevents hidden future writes, preserving the 
  await assert.rejects(s.append(next),/incomplete/i);assert.equal(await fs.readFile(file,'utf8'),before);
  const history=await s.read({code:'sh600000'});assert.equal(history.points.length,1);assert.ok(history.warning);
 });
+
+test('compares each stock with its preceding distinct observed snapshot, never inventing missing intervals',async t=>{
+ const s=await store(t);const first=sample();await s.append(first);
+ const second=sample();second.receivedAt='2026-09-17T01:40:00Z';second.rows[0].receivedAt=second.receivedAt;
+ second.rows[0].darkNetCents='130';second.rows[0].visibleNetCents='-50';second.rows[0].combinedNetCents='80';await s.append(second);
+ const changes=await s.compare({codes:['sh600000','sz000001'],date:'2026-09-17'});
+ assert.deepEqual(changes.sh600000,{fromAt:'2026-09-17T01:34:59Z',toAt:'2026-09-17T01:40:00Z',darkNetChangeCents:'30',visibleNetChangeCents:'-20'});
+ assert.equal(changes.sz000001,undefined);
+});

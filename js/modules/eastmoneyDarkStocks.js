@@ -24,7 +24,7 @@
       finally {
         busy=false;
         const nextForce=queuedForce;
-        timer=setTimeout(()=>sync(nextForce),queued?0:60000);queued=false;queuedForce=false;
+        timer=setTimeout(()=>sync(nextForce),queued?0:active==='capitalFlow'?60000:view.refreshDelay());queued=false;queuedForce=false;
       }
     }
     root.EastmoneyDarkStocks.sync=sync;
@@ -66,15 +66,31 @@
       const a=BigInt(row.darkNetCents),b=BigInt(row.visibleNetCents);
       relation=a===0n || b===0n?'一侧为零':(a>0n)===(b>0n)?'明暗同向':'明暗反向';
     }
+    const comparison=data.comparisons && data.comparisons[row.key];
+    let comparisonHtml='<small>暂无两次可比采集，暂不判断净额变化。</small>';
+    if(comparison && ['darkNetChangeCents','visibleNetChangeCents'].every(field=>/^-?\d+$/.test(comparison[field]||''))) {
+      const minutes=Math.round((Date.parse(comparison.toAt)-Date.parse(comparison.fromAt))/60000);
+      if(Number.isFinite(minutes) && minutes>0) {
+        function change(label,value) {
+          const amount=BigInt(value),direction=amount>0n?'增加':amount<0n?'减少':'不变';
+          const tone=amount>0n?'up':amount<0n?'down':'neutral';
+          return '<div><span>'+label+'较前次</span><strong class="dark-rank-'+tone+'">'+direction+' '+shared.formatMoney(value)+'</strong></div>';
+        }
+        comparisonHtml='<div class="dark-stock-amounts dark-stock-changes">'+change('暗盘',comparison.darkNetChangeCents)+change('明盘',comparison.visibleNetChangeCents)+'</div>'+
+          '<small>两次实际采集相隔 '+minutes+' 分钟；净额差不是该时段成交资金。</small>';
+      }
+    }
     return (detail?'<h4>'+escape(row.name)+' · '+escape(row.code)+'</h4>':'')+
       '<div class="dark-stock-amounts">'+amount('暗盘净额',row.darkNetCents)+amount('明盘净额',row.visibleNetCents)+(detail?amount('合计净额',row.combinedNetCents):'')+'</div>'+
+      comparisonHtml+
       '<small>活跃度 '+activity+' · '+relation+(row.reconciled===false?' · 合计待核验':'')+'</small>'+
-      '<small>'+escape(data.tradingDay)+(data.stale?' · 旧快照':'')+'</small>'+
+      '<small>'+escape(data.tradingDay)+(data.stale?' · 旧快照':'')+(data.refreshing?' · 后台更新中':'')+'</small>'+
       (detail?'<small>东方财富模型估算 · 采集 '+escape(time(row.receivedAt))+' 北京时间；不是行情事件时间。</small>':'');
   }
   function createDarkStockView(options) {
     const doc=options.document,now=options.now || Date.now,el=id=>doc.getElementById(id);
-    let selected=null,generation=0,data=null,loadedAt=0,pendingKey='',viewName='market',historySequence=0,historyChart=null;
+    let selected=null,generation=0,data=null,loadedAt=0,pendingKey='',viewName='market',historySequence=0,historyChart=null,refreshFollowupUntil=0;
+    const refreshDelay=()=>data?.refreshing && now()<refreshFollowupUntil?5000:60000;
     const statusId=()=>viewName==='watchlist'?'watchlistDarkStockStatus':viewName==='portfolio'?'portfolioDarkStockStatus':'detailDarkStockStatus';
     function status(message) {const node=el(statusId());if(node) node.textContent=message;}
     function rootBox(view) {return el(view==='watchlist'?'watchlistTbody':'positionsTbody');}
@@ -145,8 +161,12 @@
       if(!keys.length) {draw(view);return;}
       draw(view);
       const covered=data && keys.every(key=>data.rows.some(r=>r.key===key) || data.missing.includes(key));
-      if(!force && covered && (now()-loadedAt<300000 || !session.pollAllowed)) {
-        status((data.stale?'旧快照，更新未成功 · ':'')+data.tradingDay+' · '+(session.pollAllowed?'个股快照每 5 分钟更新':session.reason)+' · 采集 '+time(data.receivedAt)+' 北京时间');return;
+      const followup=data?.refreshing && now()<refreshFollowupUntil;
+      // A hidden tab can outlive the fast window. Finish reading the already
+      // started refresh at the normal cadence, including after the close.
+      const cacheTtl=data?.refreshing?(followup?5000:60000):300000;
+      if(!force && covered && (now()-loadedAt<cacheTtl || !session.pollAllowed && !data.refreshing)) {
+        status((data.refreshing?'后台更新中，保留已标注日期的快照 · ':data.stale?'旧快照，更新未成功 · ':'')+data.tradingDay+' · '+(session.pollAllowed?'个股快照每 5 分钟更新':session.reason)+' · 采集 '+time(data.receivedAt)+' 北京时间');return;
       }
       const requestKey=JSON.stringify([session.dataDate,view,keys]);
       if(pendingKey===requestKey) return;
@@ -154,14 +174,16 @@
       const ticket=++generation;
       status(data?'正在更新，暂保留已标注日期的快照…':'首次正在逐页匹配东方财富榜单，通常需 20–45 秒；各股票共用缓存。');
       try {
-        const response=await options.fetch('/api/capital-flow/dark-stocks?codes='+encodeURIComponent(keys.join(',')));
+        const response=await options.fetch('/api/capital-flow/dark-stocks?codes='+encodeURIComponent(keys.join(','))+(force?'&force=1':''));
         const payload=await response.json();
         if(ticket!==generation) return;
         if(!response.ok || !payload.success) throw Error('明暗盘读取失败');
         const next=payload.data;
         if(!next || next.tradingDay!==session.dataDate || !Array.isArray(next.rows) || !Array.isArray(next.missing) || next.rows.some(r=>!keys.includes(r.key))) throw Error('明暗盘日期或股票不匹配');
+        if(next.refreshing && !data?.refreshing) refreshFollowupUntil=now()+60000;
+        if(!next.refreshing) refreshFollowupUntil=0;
         data=next;loadedAt=now();draw(view);
-        status((data.stale?'旧快照 · ':'')+data.tradingDay+' · 采集 '+time(data.receivedAt)+' 北京时间 · 每 5 分钟检查（非逐秒行情）'+(data.coverage.complete?'':' · 分页覆盖不完整')+(allKeys.length>200?' · 本组仅显示前 200 只，请缩小分组':'')+' · 休市/页面隐藏暂停'+(data.historyWarning?' · '+data.historyWarning:''));
+        status((data.refreshing?'后台更新中，暂显示旧快照 · ':data.stale?'旧快照 · ':'')+data.tradingDay+' · 采集 '+time(data.receivedAt)+' 北京时间 · 每 5 分钟检查（非逐秒行情）'+(data.coverage.complete?'':' · 分页覆盖不完整')+(allKeys.length>200?' · 本组仅显示前 200 只，请缩小分组':'')+' · 休市/页面隐藏暂停'+(data.historyWarning?' · '+data.historyWarning:''));
       } catch (_) {
         if(ticket!==generation) return;
         if(data) {data={...data,stale:true};draw(view);}
@@ -169,7 +191,7 @@
         status('明暗盘更新失败。'+(data?'保留旧快照：'+data.tradingDay+'，采集 '+time(data.receivedAt)+' 北京时间。':'未使用普通资金替代，请稍后重试。'));
       } finally {if(ticket===generation) pendingKey='';}
     }
-    return {select,load,status,cell,history};
+    return {select,load,status,cell,history,refreshDelay};
   }
   return {stockKey,stockCell,renderStock,createDarkStockView};
 });

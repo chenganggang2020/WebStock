@@ -7,6 +7,7 @@ const axios = require('axios');
 const OpenCC = require('opencc-js');
 const { readRuntimeLink } = require('./quantRuntimeLink');
 const { runtimePythonPath } = require('./quantRuntimeInstaller');
+const { transcriptQualityReasons } = require('./creatorDocumentState');
 
 const toSimplifiedChinese = OpenCC.Converter({ from: 'tw', to: 'cn' });
 const DEFAULT_FINANCE_HOTWORDS = [
@@ -250,11 +251,13 @@ function resolveTranscriptionTimeout(options = {}) {
 }
 
 function buildRecognitionPrompt(prompt, hotwords = []) {
-  const context = String(prompt || '').replace(/\s+/g, ' ').trim();
-  const instruction = '请使用中国大陆简体中文逐字转写视频中的普通话语音，不要改写、总结或补充原文。';
-  const initialPrompt = (instruction + (context ? ' 上下文：' + context : '')).slice(0, 1000);
+  const context = String(prompt || '').replace(/\s+/g, ' ').trim().slice(0, 1000);
+  // Whisper conditions on preceding text; it does not obey chat instructions.
+  // Supply only source context and vocabulary, keeping the original ASR output untouched.
+  const initialPrompt = context;
   const uniqueHotwords = [];
-  (Array.isArray(hotwords) ? hotwords : String(hotwords || '').split(/[\s,，;；]+/)).forEach(function(value) {
+  const sourceTerms = Array.from(context.matchAll(/#([\p{L}\p{N}_+\-]{2,40})/gu), match => match[1]);
+  (Array.isArray(hotwords) ? hotwords : String(hotwords || '').split(/[\s,，;；]+/)).concat(sourceTerms).forEach(function(value) {
     const word = String(value || '').replace(/\s+/g, '').trim().slice(0, 40);
     if (word && !uniqueHotwords.includes(word)) uniqueHotwords.push(word);
   });
@@ -415,7 +418,7 @@ function normalizeResult(raw, download) {
   const averageLogProbability = average(logProbabilities);
   const averageNoSpeechProbability = average(noSpeechProbabilities);
   const maximumCompressionRatio = compressionRatios.length ? Math.max.apply(Math, compressionRatios) : null;
-  const qualityReasons = [];
+  const qualityReasons = transcriptQualityReasons(transcript, source);
   if (averageLogProbability != null && averageLogProbability < -1) qualityReasons.push('low_log_probability');
   if (averageNoSpeechProbability != null && averageNoSpeechProbability > 0.35) qualityReasons.push('high_no_speech_probability');
   if (maximumCompressionRatio != null && maximumCompressionRatio > 2.4) qualityReasons.push('high_compression_ratio');
@@ -602,8 +605,9 @@ function createDouyinTranscriptService(options = {}) {
       model,
       durationSeconds: input.durationSeconds,
       onProgress: function(progress) { report(input, progress); },
-      prompt: recognitionPrompt.initialPrompt + (recognitionPrompt.hotwords
-        ? ' 重点术语：' + recognitionPrompt.hotwords : ''),
+      prompt: provider === 'local' ? recognitionPrompt.initialPrompt
+        : '请使用中国大陆简体中文逐字转写视频中的普通话语音，不要改写、总结或补充原文。 ' +
+          recognitionPrompt.initialPrompt + (recognitionPrompt.hotwords ? ' 重点术语：' + recognitionPrompt.hotwords : ''),
       hotwords: recognitionPrompt.hotwords
     };
     const localModelSource = provider === 'local' ? resolveLocalModelSource(modelRoot, model) : '';

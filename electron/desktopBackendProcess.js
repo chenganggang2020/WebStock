@@ -26,7 +26,9 @@ const handlers = {
       nativeCapture: config.nativeCapture,
       onWarning: code => console.error('Backend diagnostics unavailable: ' + code)
     });
-    services = require('./desktopBackendServices').createDesktopBackendServices(config, remote.sessionManager);
+    services = require('./desktopBackendServices').createDesktopBackendServices(config, remote.sessionManager, {
+      onDouyinSessionState: state => rpc.call('douyinSessionState', [state])
+    });
     try { return await services.start(); }
     catch (error) { await shutdown(); throw error; }
   },

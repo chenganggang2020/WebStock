@@ -31,6 +31,10 @@
 .iw-claims {display:grid;gap:10px;align-content:start}.industry-workspace .iw-claim {display:grid;grid-template-columns:minmax(0,1fr) 110px minmax(0,1fr);align-items:center;gap:10px;padding:12px;background:var(--card-bg);text-align:center;width:100%;min-height:100px}
 .iw-entity {border:1px solid var(--border);border-radius:3px;padding:12px 8px;font-size:14px;overflow-wrap:anywhere;background:var(--hover)}.iw-arrow {color:var(--accent);font-size:12px}.iw-arrow b {display:block;font-size:27px;line-height:20px}.iw-claim small {grid-column:1/-1;text-align:left;color:var(--text-secondary);font-size:11px}
 .iw-graph-caption {display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:11px;color:var(--text-secondary);margin-bottom:10px}
+.iw-creator-controls {display:flex;align-items:center;gap:7px;flex-wrap:wrap;font-size:12px;color:var(--text-secondary)}
+.iw-creator-controls input {min-width:160px;height:28px;margin-left:5px}
+#iwCreatorGraph {width:100%;height:min(600px,calc(100vh - 325px));min-height:280px;background:var(--card-bg);border:1px solid var(--border)}
+.iw-graph-coverage {font-size:11px;color:var(--text-secondary);margin:7px 0}
 .iw-lanes {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;align-items:start;min-width:0}
 .iw-lane {min-width:0}.iw-lane>header {position:relative;font-size:12px;min-height:35px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px dashed var(--border);margin-bottom:12px;color:var(--text-secondary)}
 .iw-lane:not(:last-child)>header:after {content:'→';position:absolute;right:-15px;color:var(--text-secondary)}

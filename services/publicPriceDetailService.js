@@ -63,7 +63,14 @@ function parsePage(text, symbol, index, tradingDate) {
 function aggregatePrices(records, intervalSeconds = 5) {
   if (![5, 30].includes(intervalSeconds)) throw new Error('Invalid detail interval');
   const buckets = new Map();
-  records.filter(row => row.phase === 'continuous').forEach(row => {
+  const continuous = records.filter(row => row.phase === 'continuous');
+  const validVolume = continuous.length > 0 && continuous.every(row => {
+    const lots = Number(row.quantityRaw);
+    return /^\d+$/.test(String(row.quantityRaw)) && Number.isSafeInteger(lots) &&
+      lots <= Number.MAX_SAFE_INTEGER / 100 && /^\d+(?:\.\d+)?$/.test(String(row.amountRaw)) &&
+      Number.isFinite(Number(row.amountRaw));
+  });
+  continuous.forEach(row => {
     const at = seconds(row.time.slice(11));
     const start = at < 46800 ? 34200 : 46800;
     const end = Math.min(at < 46800 ? 41400 : 53820, start + Math.max(intervalSeconds, Math.ceil((at - start) / intervalSeconds) * intervalSeconds));
@@ -73,6 +80,11 @@ function aggregatePrices(records, intervalSeconds = 5) {
     if (!bar) {
       bar = { time, open: row.price, high: row.price, low: row.price, price: row.price, volume: null, amount: null,
         averagePrice: null, observedCount: 0, source: 'tencent-public-detail', providerLastAt: row.time };
+      if (validVolume) {
+        bar.volume = 0;
+        bar.amount = 0;
+        bar.volumeSource = 'tencent-public-detail-derived';
+      }
       buckets.set(time, bar);
     }
     bar.high = Math.max(bar.high, row.price);
@@ -80,6 +92,10 @@ function aggregatePrices(records, intervalSeconds = 5) {
     bar.price = row.price;
     bar.providerLastAt = row.time;
     bar.observedCount++;
+    if (validVolume) {
+      bar.volume += Number(row.quantityRaw) * 100;
+      bar.amount += Number(row.amountRaw);
+    }
   });
   return Array.from(buckets.values());
 }
@@ -210,7 +226,13 @@ function createPublicPriceDetailService(options = {}) {
     if (jobs.size >= 2) return Promise.reject(new Error('Public detail downloads busy'));
     const job = Promise.resolve().then(async () => {
       const previous = state.snapshot || (!state.loaded ? await read(code, request.tradingDate) : null);
+      if (previous && !state.snapshot) state.snapshot = previous;
       const snapshot = await download(code, { previous, tradingDate: request.tradingDate, now });
+      if (previous && snapshot.tradingDate === previous.tradingDate &&
+          (snapshot.records.length < previous.records.length ||
+           previous.paginationComplete && !snapshot.paginationComplete)) {
+        throw new Error('Incomplete or shorter detail refresh; cached history retained');
+      }
       const directory = path.join(cacheDir, code);
       await fs.mkdir(directory, { recursive: true });
       await writeJson(path.join(directory, snapshot.tradingDate + '.json'), snapshot);
@@ -258,7 +280,8 @@ function createPublicPriceDetailService(options = {}) {
         tradingDate: snapshot?.tradingDate || request.tradingDate || null, fetchedAt: snapshot?.fetchedAt || null,
         providerObservedAt: rows.at(-1)?.providerLastAt || null,
         derived: true, synthetic: false, exchangeGroundTruth: false, realtimeGuaranteed: false,
-        volumeCoverage: 'unverified-raw-fields-not-charted', auctionCoverage: 'raw-result-only-not-indicative',
+        volumeCoverage: rows.some(row => row.volume !== null) ? 'public-detail-derived' : 'unverified-raw-fields-not-charted',
+        auctionCoverage: 'raw-result-only-not-indicative',
         stale,
         marketState: request.tradingDate ? 'historical' : !snapshot ? 'unavailable' : stale ? 'delayed'
           : calendar.isContinuousSession(now()) ? 'observed' : 'latest-close',
@@ -267,7 +290,9 @@ function createPublicPriceDetailService(options = {}) {
         backfillState: request.tradingDate ? snapshot ? 'cached' : 'date-not-cached'
           : jobs.has(code) ? 'loading' : state.error ? 'failed' : snapshot ? 'ready' : 'busy',
         backfillError: state.error || null,
-        sampling: { intervalSeconds, intervalMinutes: intervalSeconds / 60, label: intervalSeconds + '秒价格聚合', timestampMeaning: 'bar-end' }
+        sampling: { intervalSeconds, intervalMinutes: intervalSeconds / 60,
+          label: intervalSeconds + (rows.some(row => row.volume !== null) ? '秒公开明细价格/量能聚合' : '秒价格聚合'),
+          timestampMeaning: 'bar-end' }
       }
     };
   }
@@ -283,17 +308,34 @@ function combinePriceSeries(local, remote) {
   if (!local.rows.length || local.meta.tradingDate !== remote.meta.tradingDate) return remote;
   const rows = new Map(remote.rows.map(row => [row.time, row]));
   let localSupplementPoints = 0;
+  let localVolumeOverlayPoints = 0;
   local.rows.forEach(row => {
     if (!rows.has(row.time)) {
-      rows.set(row.time, Object.assign({}, row, { source: local.meta.dataSource }));
+      rows.set(row.time, Object.assign({}, row, { source: local.meta.dataSource,
+        volumeSource: row.volume !== null && row.volume !== undefined ? local.meta.dataSource : undefined }));
       localSupplementPoints++;
+    } else if (rows.get(row.time).volume == null && row.volume !== null && row.volume !== undefined &&
+        Number.isFinite(Number(row.volume)) && Number(row.volume) >= 0) {
+      const priceRow = rows.get(row.time);
+      rows.set(row.time, Object.assign({}, priceRow, {
+        volume: row.volume,
+        amount: row.amount,
+        volumeSource: local.meta.dataSource
+      }));
+      localVolumeOverlayPoints++;
     }
   });
+  const combinedRows = Array.from(rows.values()).sort((a, b) => a.time.localeCompare(b.time));
+  const hasPlatformVolume = combinedRows.some(row => row.volumeSource === 'tencent-public-detail-derived');
+  const hasLocalVolume = combinedRows.some(row => row.volume != null && row.volumeSource !== 'tencent-public-detail-derived');
   return {
-    rows: Array.from(rows.values()).sort((a, b) => a.time.localeCompare(b.time)),
+    rows: combinedRows,
     meta: Object.assign({}, remote.meta, {
       localSupplementPoints, localDataSource: local.meta.dataSource,
-      volumeCoverage: localSupplementPoints ? 'local-supplement-only' : remote.meta.volumeCoverage
+      localVolumeOverlayPoints,
+      volumeCoverage: hasPlatformVolume
+        ? hasLocalVolume ? 'public-detail-derived-with-local-fallback' : 'public-detail-derived'
+        : hasLocalVolume ? 'local-observed-samples-only' : remote.meta.volumeCoverage
     })
   };
 }

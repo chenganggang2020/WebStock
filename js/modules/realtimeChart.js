@@ -410,7 +410,20 @@ function loadRealtimeData(code) {
       }
       const samplingLabel = window.RealtimeChartModel.describeSampling(minuteData, minuteMeta).label ||
         realtimeResolutionLabel(requestedResolution);
+      const volumeCoveredPoints = requestedResolution === '1m' ? 0 : minuteData.filter(function(row) {
+        return row && row.volume !== null && row.volume !== undefined &&
+          Number.isFinite(Number(row.volume)) && Number(row.volume) >= 0;
+      }).length;
+      const publicDetailVolumePoints = requestedResolution === '1m' ? 0 : minuteData.filter(function(row) {
+        return row && row.volumeSource === 'tencent-public-detail-derived';
+      }).length;
+      const volumeCoverageLabel = requestedResolution === '1m' ? '' :
+        ' · 量能有记录 ' + volumeCoveredPoints + '/' + minuteData.length + ' 个已返回点（' +
+        (publicDetailVolumePoints ? '公开明细派生 ' + publicDetailVolumePoints + ' 点' +
+          (volumeCoveredPoints > publicDetailVolumePoints ? '，本机采样 ' + (volumeCoveredPoints - publicDetailVolumePoints) + ' 点' : '') +
+          '，非交易所逐笔' : '仅本机连续报价') + '；缺失不补零）';
       setRealtimeStatus(samplingLabel + ' · ' + realtimeSourceLabel(minuteMeta) +
+        volumeCoverageLabel +
         (minuteMeta.backfillState === 'loading' ? ' · 后台补取中' : minuteMeta.backfillState === 'failed' ? ' · 补取失败，保留已有记录' : '') +
         (changed ? ' · 曲线已更新' : ' · 数据未变化'), changed ? 'updated' : 'unchanged');
       return { changed };
@@ -1035,8 +1048,14 @@ function renderVolumeChart(minuteData) {
       formatter: function(params) {
         if (!params || params.length === 0) return '';
         const idx = params[0].dataIndex;
+        const volumeSource = dataMap[times[idx]] && dataMap[times[idx]].volumeSource;
+        const sourceLabel = volumeSource === 'tencent-public-detail-derived'
+          ? '腾讯公开明细派生（非交易所逐笔）' :
+          volumeSource === 'local-public-quote-5s' || volumeSource === 'local-public-quote-30s'
+            ? '本机公开报价采样' : '';
         return '<strong>' + times[idx] + '</strong><br/>' +
-          '成交量: ' + (volumes[idx] == null ? '--' : window.ChartTheme.formatAxisNumber(volumes[idx] / 100) + '手');
+          '成交量: ' + (volumes[idx] == null ? '--' : window.ChartTheme.formatAxisNumber(volumes[idx] / 100) + '手') +
+          (volumes[idx] == null || !sourceLabel ? '' : '<br/>来源: ' + sourceLabel);
       }
     }
   };

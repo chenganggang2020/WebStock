@@ -13,9 +13,9 @@ test('compact navigation covers 21 views with independent intraday and paper por
   for (const page of views) assert.ok(html.includes('id="' + page.view + 'View"'), page.view);
 });
 
-test('seven detail shortcuts retain one canonical page per business subject', () => {
+test('six detail shortcuts retain one canonical page per business subject', () => {
   const shortcuts = terminal.pages.filter(page => page.target);
-  assert.equal(shortcuts.length, 7);
+  assert.equal(shortcuts.length, 6);
   for (const page of shortcuts) {
     assert.ok(html.includes('id="' + page.target + '"'), page.id);
     assert.equal(terminal.resolve(page.id).id, page.id);
@@ -27,7 +27,12 @@ test('workspace grouping keeps holdings and market detail distinct', () => {
   assert.equal(terminal.resolve('market').workspace, 'market');
   assert.equal(terminal.resolve('creatorTasks').workspace, 'collect');
   assert.equal(terminal.resolve('does-not-exist'), null);
-  assert.equal(new Set(terminal.pages.map(page => page.id)).size, 28);
+  assert.equal(new Set(terminal.pages.map(page => page.id)).size, 27);
+});
+
+test('collection has one author-scoped page and old author links resolve to it', () => {
+  assert.deepEqual(terminal.pages.filter(page => page.workspace === 'collect').map(page => page.id), ['creatorTasks']);
+  assert.equal(terminal.resolve('authors').id, 'creatorTasks');
 });
 
 test('production shell loads real compact styling without prototype fixture scripts', () => {

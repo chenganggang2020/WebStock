@@ -46,22 +46,27 @@ function createDarkStockService(options = {}) {
   async function get(input) {
     const {date}=input;buildQuery({date});
     const codes=stockKeys(input.codes.join(','));
-    const fresh=snapshot && snapshot.tradingDay===date && now()-snapshot.savedAt<300000;
+    const cached=snapshot && snapshot.tradingDay===date,force=input.force===true;
+    if(force && pending && pendingDate!==date) throw Error('Dark stock refresh busy');
+    const fresh=cached && now()-snapshot.savedAt<300000;
     const changedDate=snapshot && snapshot.tradingDay!==date && !lastFailed;
-    if(!fresh && !pending && (changedDate || now()-lastAttempt>=(lastFailed?60000:300000))) {
+    if((force || !fresh) && !pending && (force || changedDate || now()-lastAttempt>=(lastFailed?60000:300000))) {
       lastAttempt=now();pendingDate=date;
       pending=scan(date).then(value=>{snapshot=value;lastFailed=false;}).catch(()=>{lastFailed=true;})
         .finally(()=>{pending=null;pendingDate=null;});
     }
-    if(pending && pendingDate===date) await pending;
+    // Ordinary reads render the same-date cache while the one shared scan runs.
+    // Cold starts and an explicit manual refresh still wait for their result.
+    if((!cached || force) && pending && pendingDate===date) await pending;
     if(!snapshot || snapshot.tradingDay!==date) throw Error('Dark stock snapshot unavailable');
     const stale=lastFailed || now()-snapshot.savedAt>=300000;
+    const refreshing=Boolean(pending && pendingDate===date);
     return {version:'webstock.eastmoney-dark-stocks/v1',automaticTrading:false,tradingDay:date,
       source:snapshot.source,receivedAt:snapshot.receivedAt,scanStartedAt:snapshot.scanStartedAt,
-      refreshIntervalSeconds:300,stale,coverage:snapshot.coverage,
+      refreshIntervalSeconds:300,stale,refreshing,cache:{hit:Boolean(cached && !force),ttlSeconds:300},coverage:snapshot.coverage,
       rows:(input.all ? Array.from(snapshot.byKey.keys()) : codes.filter(key=>snapshot.byKey.has(key))).map(key=>({...snapshot.byKey.get(key),key})),
       missing:codes.filter(key=>!snapshot.byKey.has(key)),
-      note:stale?'更新未完成，下方是旧快照；采集时刻不是行情时刻。':'逐页采集，不是同一时刻的全市场快照；未匹配不代表资金为零。'};
+      note:refreshing?'后台正在更新，暂显示已标注日期的快照；采集时刻不是行情时刻。':stale?'更新未完成，下方是旧快照；采集时刻不是行情时刻。':'逐页采集，不是同一时刻的全市场快照；未匹配不代表资金为零。'};
   }
   return {get};
 }

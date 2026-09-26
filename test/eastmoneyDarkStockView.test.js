@@ -23,6 +23,14 @@ test('stock card shows amounts, ratio, provenance and real missing/old states, e
   assert.match(renderStock(row,{...snapshot,stale:true}),/旧快照/);
   assert.match(renderStock({...row,darkNetCents:null},snapshot),/--/);
 });
+test('stock card labels separate observed dark and visible net changes without calling them traded flow',()=>{
+  const data={...snapshot,comparisons:{sh600487:{fromAt:'2026-09-17T01:55:00Z',toAt:'2026-09-17T02:00:00Z',darkNetChangeCents:'2000000',visibleNetChangeCents:'-1000000'}}};
+  const html=renderStock(row,data);
+  assert.match(html,/暗盘较前次.*增加/s);
+  assert.match(html,/明盘较前次.*减少/s);
+  assert.match(html,/相隔 5 分钟/);
+  assert.match(renderStock(row,snapshot),/暂无两次可比采集/);
+});
 test('late stock response cannot paint new selection; old-day data clears before request',async()=>{
   const doc=docFake();let release;
   const view=createDarkStockView({document:doc,fetch:()=>new Promise(r=>release=r),formatMoney:require('../js/modules/eastmoneyDarkRank').formatMoney});
@@ -50,6 +58,44 @@ test('ordinary quote rerenders reuse already matched amounts instead of flashing
   const cell=view.cell({code:'600487'});
   assert.match(cell,/data-dark-stock="sh600487"/);assert.match(cell,/9\.16 亿元/);
   assert.doesNotMatch(cell,/等待/);
+});
+
+test('refreshing cache gets bounded visible follow-up reads, and manual refresh reaches the service',async()=>{
+  const doc=docFake();let now=0;const urls=[];
+  const view=createDarkStockView({document:doc,now:()=>now,fetch:async url=>{
+    urls.push(url);return response(urls.length===1?{...snapshot,stale:true,refreshing:true}:{...snapshot,refreshing:false});
+  }});
+  view.select({code:'600487'});await view.load(session,'market');
+  assert.match(doc.getElementById('detailDarkStockStatus').textContent,/后台更新/);
+  assert.equal(view.refreshDelay(),5000);
+  await view.load(session,'market');assert.equal(urls.length,1);
+  now=5000;doc.hidden=true;await view.load(session,'market');assert.equal(urls.length,1);
+  doc.hidden=false;await view.load(session,'market');assert.equal(urls.length,2);
+  assert.equal(view.refreshDelay(),60000);
+  await view.load(session,'market',true);assert.match(urls[2],/&force=1$/);
+});
+
+test('fast refresh follow-up expires after one minute even if the source keeps reporting pending',async()=>{
+  const doc=docFake();let now=0;
+  const view=createDarkStockView({document:doc,now:()=>now,fetch:async()=>response({...snapshot,stale:true,refreshing:true})});
+  view.select({code:'600487'});await view.load({...session,pollAllowed:false},'market');
+  assert.equal(view.refreshDelay(),5000);
+  now=60001;assert.equal(view.refreshDelay(),60000);
+});
+
+test('returning after the fast follow-up window reads the completed result even during a closed session',async()=>{
+  const doc=docFake();let now=0,calls=0;const urls=[];
+  const view=createDarkStockView({document:doc,now:()=>now,fetch:async url=>{
+    urls.push(url);calls++;
+    return response(calls===1?{...snapshot,stale:true,refreshing:true}:{...snapshot,refreshing:false,receivedAt:'2026-09-17T02:05:01Z'});
+  }});
+  view.select({code:'600487'});const closed={...session,pollAllowed:false};
+  await view.load(closed,'market');doc.hidden=true;now=70000;
+  await view.load(closed,'market');assert.equal(calls,1);
+  doc.hidden=false;await view.load(closed,'market');assert.equal(calls,2);
+  assert.doesNotMatch(urls[1],/force=/);
+  assert.doesNotMatch(doc.getElementById('detailDarkStockStatus').textContent,/后台更新/);
+  now=900000;await view.load(closed,'market');assert.equal(calls,2);
 });
 
 test('history responses cannot overwrite another stock and gaps stay null',async()=>{

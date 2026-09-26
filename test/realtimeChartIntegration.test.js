@@ -57,6 +57,11 @@ test('intraday chart compresses lunch, exposes sampling, and draws a visible zer
   assert.match(chartSource, /成交量\(万手\)/);
 });
 
+test('high-frequency status distinguishes recorded price points from actual volume-covered points', () => {
+  assert.match(chartSource, /量能有记录/);
+  assert.match(chartSource, /volumeCoveredPoints/);
+});
+
 test('intraday price and volume charts share a fixed full-session viewport with readable monitoring styles', () => {
   assert.match(chartSource, /buildFixedTradingViewport/);
   assert.match(chartSource, /dataZoom:\s*\[/);

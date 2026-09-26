@@ -1,5 +1,5 @@
 (function(root) {
-  let bound=false, pending=null, generation=0, last=null, sectors=null, attemptedAt=0, followsDate=true, view='stocks', capTimer=null, capRetries=0;
+  let bound=false, pending=null, generation=0, last=null, sectors=null, attemptedAt=0, followsDate=true, view='stocks', capTimer=null, capRetries=0, refreshFollowupUntil=0;
   const el=id=>root.document.getElementById(id);
   const esc=value=>String(value ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const money=value=>value==null?'—':root.EastmoneyDarkRank.formatMoney(value);
@@ -34,7 +34,7 @@
     }
     const sum=summarize(last.rows),c=last.coverage;
     el('darkBoardSummary').innerHTML=[['净流入股票合计',sum.inflow],['净流出股票合计',sum.outflow],['明暗综合净额',sum.net]].map(([label,n])=>'<div><small>'+label+'</small><strong class="'+tone(n)+'">'+money(n)+'</strong></div>').join('')+'<div><small>个股覆盖</small><strong>'+last.rows.length+' / '+esc(c.totalReported)+' 只</strong><small>'+sum.missing+' 条合计缺失或待核对</small></div>';
-    el('darkBoardStatus').textContent='数据 '+last.tradingDay+' · 采集 '+time(last.receivedAt)+(last.capLoading?' · 市值补充中': ' · 市值比例缺失 '+last.ratioMissing)+(last.stale?' · 保留上次结果，更新未完成':'');
+    el('darkBoardStatus').textContent='数据 '+last.tradingDay+' · 采集 '+time(last.receivedAt)+(last.capLoading?' · 市值补充中': ' · 市值比例缺失 '+last.ratioMissing)+(last.refreshing?' · 后台更新中，保留上次结果':last.stale?' · 保留上次结果，更新未完成':'');
   }
   function renderSectors() {
     if(!sectors){el('darkBoardSectors').innerHTML='<p class="reading-empty">正在读取行业明暗资金排行…</p>';el('darkBoardSummary').innerHTML='';return;}
@@ -48,7 +48,7 @@
     const response=await root.fetch(url,{signal:AbortSignal.timeout(65000)}),payload=await response.json();
     if(!response.ok || !payload.success)throw Error(payload.error?.message || '读取失败');return payload.data;
   }
-  async function refresh() {
+  async function refresh(force=false) {
     bind();const date=el('darkBoardDate').value,metric=el('darkBoardMetric').value,key=[view,date,metric].join('|');
     if(pending?.key===key)return pending.task;
     const ticket=++generation;attemptedAt=Date.now();clearTimeout(capTimer);
@@ -65,11 +65,15 @@
           if(!next.rows.length || rows.size>=total)break;
         } while(page<=20 && Date.now()-started<45000);
       } else {
-        const next=await read('/api/capital-flow/dark-rank-board?'+new URLSearchParams({date,metric}));
+        const next=await read('/api/capital-flow/dark-rank-board?'+new URLSearchParams({date,metric,...(force?{force:'1'}:{})}));
         if(ticket!==generation)return;
         if(next.tradingDay!==date || next.metric!==metric)throw Error('返回日期或排序口径不一致');
+        if(next.refreshing && !last?.refreshing)refreshFollowupUntil=Date.now()+60000;
+        if(!next.refreshing)refreshFollowupUntil=0;
         last=next;render();
-        if(next.capLoading && capRetries++<5)capTimer=setTimeout(()=>{if(ticket===generation && root.State?.currentMainView==='capitalFlow')refresh();},5000);
+        if(next.refreshing && Date.now()<refreshFollowupUntil || next.capLoading && capRetries++<5) {
+          capTimer=setTimeout(()=>{if(ticket===generation && !root.document.hidden && root.State?.currentMainView==='capitalFlow' && view==='stocks')refresh();},5000);
+        }
       }
       return {ok:true};
     } catch(error){if(ticket===generation)el('darkBoardStatus').textContent=error.message+' · 未完成更新，已显示数据保留原日期';return {ok:false};}
@@ -82,11 +86,11 @@
     let back=el('darkBoardBack');
     if(!back){back=root.document.createElement('button');back.id='darkBoardBack';back.className='small-btn';back.textContent='返回资金榜';el('chartTitle').parentElement.appendChild(back);back.onclick=()=>root.CompactTerminal.open('darkFlow');}
   }
-  function reset() {generation++;pending=null;last=null;sectors=null;attemptedAt=0;capRetries=0;clearTimeout(capTimer);['In','Out','Sectors','Summary'].forEach(k=>el('darkBoard'+k).innerHTML='');}
+  function reset() {generation++;pending=null;last=null;sectors=null;attemptedAt=0;capRetries=0;refreshFollowupUntil=0;clearTimeout(capTimer);['In','Out','Sectors','Summary'].forEach(k=>el('darkBoard'+k).innerHTML='');}
   function bind() {
     if(bound || !el('darkRankBoard'))return;bound=true;el('darkBoardDate').value=el('darkRankDate').value;
     ['darkBoardDate','darkBoardMetric'].forEach(id=>el(id).addEventListener('change',()=>{if(id==='darkBoardDate')followsDate=false;reset();refresh();}));
-    el('darkBoardLimit').addEventListener('change',render);el('darkBoardRefresh').addEventListener('click',()=>{capRetries=0;refresh();});
+    el('darkBoardLimit').addEventListener('change',render);el('darkBoardRefresh').addEventListener('click',()=>{capRetries=0;refresh(true);});
     el('darkRankBoard').addEventListener('click',event=>{
       const stock=event.target.closest('[data-dark-board-stock]');if(stock)openStock(stock.dataset.darkBoardStock);
       const tab=event.target.closest('[data-dark-view]');if(tab){generation++;pending=null;view=tab.dataset.darkView;clearTimeout(capTimer);render();if(view==='sectors'?!sectors:!last)refresh();}
@@ -96,6 +100,6 @@
     bind();const date=session.dataDate || session.today;
     if(followsDate && el('darkBoardDate').value!==date){reset();el('darkBoardDate').value=date;}
     const hasData=view==='stocks'?last:sectors;
-    if(!pending && (!hasData && Date.now()-attemptedAt>60000 || session.pollAllowed && el('darkBoardDate').value===session.today && Date.now()-attemptedAt>300000))await refresh();
+    if(!root.document.hidden && !pending && (!hasData && Date.now()-attemptedAt>60000 || view==='stocks' && last?.refreshing && Date.now()-attemptedAt>=60000 || session.pollAllowed && el('darkBoardDate').value===session.today && Date.now()-attemptedAt>300000))await refresh();
   }};
 })(window);

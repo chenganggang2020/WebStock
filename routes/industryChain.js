@@ -50,9 +50,17 @@ function createIndustryChainRouter(options = {}) {
     try { res.json({ success: true, data: await creatorService().read(req.params.id) }); }
     catch (error) { errorResponse(res, error); }
   });
+  router.get('/industry-chain/creators/:id/observations/:observationId', async function(req, res) {
+    try { res.json({ success: true, data: await creatorService().readDocument(req.params.id, req.params.observationId) }); }
+    catch (error) { errorResponse(res, error); }
+  });
   router.post('/industry-chain/creators/:id/import', async function(req, res) {
     if (!writeAccessAllowed(req)) return res.status(403).json({ success: false, error: '仅允许本机导入' });
-    try { res.json({ success: true, data: await creatorService().importReviews(req.params.id, req.body.items, { model: req.body.model }) }); }
+    try { res.json({ success: true, data: await creatorService().importReviews(req.params.id, req.body.items, {
+      model: req.body.model,
+      // Existing four-relations-per-document imports remain visibly due for V2 review.
+      specVersion: req.body.schema === 'webstock.creator-industry-review/v2' ? 'creator-industry-graph/v2' : 'legacy-review/v1'
+    }) }); }
     catch (error) { errorResponse(res, error); }
   });
   router.post('/industry-chain/creators/:id/analyze', async function(req, res) {

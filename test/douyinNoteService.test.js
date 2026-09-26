@@ -46,3 +46,27 @@ test('Han spacing is normalized for search while untouched OCR evidence is retai
   assert.equal(result.pages[0].text,'铝电解电容器\nAI Server 70 80');
   assert.equal(result.pages[0].rawText,'铝 电 解 电 容 器\nAI Server 70 80');
 });
+
+test('offline OCR reuses verified original pages without fetching expired URLs',async()=>{
+  const first=createDouyinNoteService({root,download:async()=>png,recognize:async()=>({text:'首次文字'})});
+  const initial=await first.process({channelId:9,contentId:id,images:[{url:'https://p3.douyinpic.com/1.png'}]});
+  const retry=createDouyinNoteService({root,download:async()=>{throw Error('unexpected network');},recognize:async()=>({text:'重试文字'})});
+  const result=await retry.process({channelId:9,contentId:id,localPages:initial.pages,imageCount:1});
+  assert.equal(result.status,'needs_review');
+  assert.equal(result.pages[0].text,'重试文字');
+  assert.equal(result.pages[0].sha256,initial.pages[0].sha256);
+});
+
+test('offline OCR rejects cross-author paths and changed bytes before recognition',async()=>{
+  const first=createDouyinNoteService({root,download:async()=>png,recognize:async()=>({text:'首次文字'})});
+  const initial=await first.process({channelId:10,contentId:id,images:[{url:'https://p3.douyinpic.com/1.png'}]});
+  let recognized=0;
+  const retry=createDouyinNoteService({root,recognize:async()=>{recognized++;return {text:'must not read'};}});
+  const wrongAuthor=await retry.process({channelId:11,contentId:id,localPages:initial.pages,imageCount:1});
+  assert.equal(wrongAuthor.status,'partial');
+  fs.appendFileSync(initial.pages[0].localAssetPath,'changed');
+  const tampered=await retry.process({channelId:10,contentId:id,localPages:initial.pages,imageCount:1});
+  assert.equal(tampered.status,'partial');
+  assert.match(tampered.pages[0].message,/校验/);
+  assert.equal(recognized,0);
+});

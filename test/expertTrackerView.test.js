@@ -9,7 +9,7 @@ function loadHelpers() {
   const context = vm.createContext({
     window: {}, console, URL, setInterval() { return 1; }, clearInterval() {}
   });
-  vm.runInContext(source + '\nthis.helpers = { expertDisplayTitle, expertCreatorVideoCard, expertCreatorCommentsHtml, expertCommentCache, expertCreatorAsrStatus, expertCreatorAsrStatusLabel, expertCreatorVerificationStatus, expertCreatorStatusMessage, expertRunOutcome };', context, {
+  vm.runInContext(source + '\nthis.helpers = { expertDisplayTitle, expertCreatorVideoCard, expertCreatorCommentsHtml, expertCommentCache, expertCreatorAsrStatus, expertCreatorAsrStatusLabel, expertCreatorVerificationStatus, expertCreatorStatusMessage, expertRunOutcome, expertRunStatusLabel };', context, {
     filename: 'expertTracker.js'
   });
   return context.helpers;
@@ -24,6 +24,45 @@ test('finished collection with missing speech runtime is partial, not fully comp
     mediaMetadata: { asr: { status: 'runtime_missing' } } };
   assert.equal(helpers.expertCreatorAsrStatus(item), 'runtime_missing');
   assert.match(helpers.expertCreatorAsrStatusLabel('runtime_missing', true), /环境/);
+});
+
+test('OCR and intentionally unrequested ASR are finished operations, not phantom pending videos', () => {
+  const {expertRunOutcome}=loadHelpers();
+  for(const status of ['ocr_complete','not_requested']){
+    const result=expertRunOutcome({status:'completed',items:[{detailStatus:'complete',transcriptionStatus:status}]});
+    assert.equal(result.state,'completed');
+    assert.doesNotMatch(result.label,/待处理/);
+  }
+});
+
+test('OCR chip stays compact while run explanation preserves the machine-only boundary', () => {
+  const { expertRunOutcome, expertRunStatusLabel } = loadHelpers();
+  assert.equal(expertRunStatusLabel('ocr_complete', 'transcription'), '图片文字已识别');
+  const result = expertRunOutcome({ status: 'completed', items: [{ detailStatus: 'complete', transcriptionStatus: 'ocr_complete' }] });
+  assert.match(result.explanation, /不代表人工已校对/);
+});
+
+test('finished ASR awaiting quality review is not labelled as clean completed processing', () => {
+  const {expertRunOutcome}=loadHelpers();
+  const result=expertRunOutcome({status:'completed',items:[{detailStatus:'complete',transcriptionStatus:'needs_review'}]});
+  assert.equal(result.state,'needs_review');
+  assert.match(result.label,/待复核/);
+});
+
+test('OCR with no text ends its machine step without claiming speech or pending work', () => {
+  const { expertRunOutcome, expertRunStatusLabel } = loadHelpers();
+  const result = expertRunOutcome({ status: 'completed', items: [{ detailStatus: 'complete', transcriptionStatus: 'no_text' }] });
+  assert.equal(result.state, 'completed');
+  assert.doesNotMatch(result.label, /待处理/);
+  assert.match(expertRunStatusLabel('no_text', 'transcription'), /未识别到文字/);
+  assert.doesNotMatch(expertRunStatusLabel('no_text', 'transcription'), /口语/);
+});
+
+test('persisted partial outcome remains visible when run items were not requested', () => {
+  const {expertRunOutcome}=loadHelpers();
+  const result=expertRunOutcome({status:'completed',result:{processingOutcome:{state:'partial',pendingCount:2,reviewCount:1}}});
+  assert.equal(result.state,'partial');
+  assert.match(result.label,/待处理/);
 });
 
 test('generic Douyin titles use a clearly labelled content-extracted title', () => {

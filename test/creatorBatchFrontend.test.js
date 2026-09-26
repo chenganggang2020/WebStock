@@ -27,13 +27,13 @@ test('author form accepts share text and save-and-scan uses durable queue', () =
   assert.match(source, /\/api\/expert\/collection-queue/);
   assert.match(source, /expertBatchSelected/);
   assert.match(source, /workerRunning/);
-  assert.ok(source.includes("expertEnqueueCreators([channel.id], 'archive')"), 'save-and-scan always requests full archive even after selecting incremental elsewhere');
+  assert.ok(source.includes("expertEnqueueCreators([channel.id], 'archive', model, selectionId)"), 'save-and-scan retains its submitted author, archive mode and model');
 });
 
 test('current-author queue parameters do not reuse the multi-author selection or its parameters', async () => {
   const calls=[];
   const context=vm.createContext({document:{getElementById:id=>({value:id==='creatorBatchMode'?'archive':'large-v3'})},
-    expertApi:async(url,options)=>{calls.push(options.body);return [{}];},expertSetStatus(){},expertLoadCollectionQueue:async()=>{}});
+    expertAuthorSelectionId: 0, expertApi:async(url,options)=>{calls.push(options.body);return [{}];},expertSetStatus(){},expertLoadCollectionQueue:async()=>{}});
   const start=source.indexOf('async function expertEnqueueCreators('),end=source.indexOf('\nfunction expertResetCreatorFilters',start);
   vm.runInContext(source.slice(start,end),context);
   await context.expertEnqueueCreators([2],'incremental','small');

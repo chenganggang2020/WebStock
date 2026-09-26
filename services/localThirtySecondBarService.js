@@ -137,8 +137,10 @@ function createLocalThirtySecondBarService(options = {}) {
   ensureColumn(db, tableName, 'auction_unmatched_sell_volume', 'REAL');
   db.exec(`CREATE INDEX IF NOT EXISTS ${indexName} ON ${tableName}(code, trading_date, bar_time)`);
 
+  // Bucket ends preserve provider timestamp order, including session/day boundaries.
+  // The existing (code, bar_time) primary key avoids sorting a stock's entire history.
   const latestStatement = db.prepare(`SELECT close, last_cumulative_volume, last_cumulative_amount, provider_last_at
-    FROM ${tableName} WHERE code = ? ORDER BY provider_last_at DESC LIMIT 1`);
+    FROM ${tableName} WHERE code = ? ORDER BY bar_time DESC LIMIT 1`);
   const upsertStatement = db.prepare(`INSERT INTO ${tableName}
     (code, trading_date, bar_time, open, high, low, close, volume, amount, observed_count,
      last_cumulative_volume, last_cumulative_amount, auction_reference_price, auction_matched_volume,
@@ -172,7 +174,7 @@ function createLocalThirtySecondBarService(options = {}) {
       auction_unmatched_sell_volume AS auctionUnmatchedSellVolume
     FROM ${tableName} WHERE code = ? AND trading_date = ? ORDER BY bar_time`);
   const lastProviderStatement = db.prepare(`SELECT provider_last_at AS providerLastAt
-    FROM ${tableName} WHERE code = ? AND trading_date = ? ORDER BY provider_last_at DESC LIMIT 1`);
+    FROM ${tableName} WHERE code = ? AND trading_date = ? ORDER BY bar_time DESC LIMIT 1`);
   const latestDateStatement = db.prepare(`SELECT MAX(trading_date) AS tradingDate FROM ${tableName} WHERE code = ?`);
   const states = new Map();
 
@@ -242,6 +244,11 @@ function createLocalThirtySecondBarService(options = {}) {
     const result = recordQuoteBatch(Array.isArray(quotes) ? quotes : [], nextStates);
     nextStates.forEach(function(state, code) { states.set(code, state); });
     return result;
+  }
+
+  // A caller combining multiple writers must invalidate after its outer rollback.
+  function clearStateCache() {
+    states.clear();
   }
 
   function list(codeValue, listOptions = {}) {
@@ -314,7 +321,7 @@ function createLocalThirtySecondBarService(options = {}) {
     };
   }
 
-  return { recordQuotes, list };
+  return { recordQuotes, list, clearStateCache };
 }
 
 function createLocalFiveSecondBarService(options = {}) {

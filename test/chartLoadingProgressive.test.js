@@ -152,6 +152,31 @@ test('public detail prices render before optional quotes and identify raw resolu
   assert.equal(r.errors.length, 0);
 });
 
+test('derived public-detail volume is visible with its source and does not claim local-only collection', async () => {
+  const r = renderer('realtime');
+  const loading = r.window.RealtimeChart.setRealtimeResolution('5s');
+  await flush();
+  r.resolve('/api/minute?code=000001&resolution=5s&source=public-detail', {
+    data: [
+      { time: '2026-09-18 09:30:05', price: 11, volume: 300, amount: 3200, volumeSource: 'tencent-public-detail-derived' },
+      { time: '2026-09-18 09:30:10', price: 12, volume: 30, amount: 360, volumeSource: 'local-public-quote-5s' }
+    ],
+    meta: { dataSource: 'tencent-public-detail', tradingDate: '2026-09-18', rawIntervalSeconds: 3,
+      volumeCoverage: 'public-detail-derived-with-local-fallback', backfillState: 'ready',
+      sampling: { intervalSeconds: 5, label: '5秒公开明细价格/量能聚合' } }
+  });
+  await flush();
+  assert.match(r.node('chartRealtimeStatus').textContent, /公开明细派生 1 点/);
+  assert.doesNotMatch(r.node('chartRealtimeStatus').textContent, /仅本机连续报价/);
+  const chart = r.State.volumeChart.getOption();
+  const index = chart.xAxis.data.indexOf('09:30:05');
+  assert.ok(index >= 0);
+  assert.match(chart.tooltip.formatter([{ dataIndex: index }]), /腾讯公开明细派生/);
+  r.resolve('/api/quote?codes=000001', []);
+  await loading;
+  assert.equal(r.errors.length, 0);
+});
+
 test('daily candles render as soon as history arrives while minute and auction requests remain pending', async () => {
   const r = renderer();
   r.window.KlineChart.loadKlineData('000001', 'day');
@@ -204,6 +229,9 @@ test('minute prices render while quote and optional opening-auction requests rem
 
   assert.equal(r.errors.length, 0);
   assert.deepEqual(realtimePrices(r.State.timeChart), [11]);
+  const volumeChart = r.State.volumeChart.getOption();
+  const index = volumeChart.xAxis.data.indexOf('09:30');
+  assert.doesNotMatch(volumeChart.tooltip.formatter([{ dataIndex: index }]), /本机公开报价采样/);
 });
 
 test('late minute auxiliary responses cannot overwrite the newly selected stock', async () => {

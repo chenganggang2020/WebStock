@@ -270,3 +270,51 @@ test('starting a new run closes stale running audit records from an interrupted 
   assert.match(recovered.error, /中断/);
   assert.equal(recovered.items[0].transcriptionStatus, 'complete');
 });
+
+test('completed run lifecycle preserves partial processing, deferred work and review counts', () => {
+  const channel=channels.createChannel({channelKey:'truthful-outcome',displayName:'处理结果测试',platform:'douyin'});
+  syncState.ensureJob(channel.id,{enabled:true,intervalMinutes:10});
+  syncState.markRunning(channel.id);
+  const run=syncState.startRun(channel.id,{trigger:'manual'});
+  ['complete','error','deferred_limit','needs_review'].forEach((status,index)=>syncState.upsertRunItem(run.id,{
+    contentId:String(7681478827298291000n+BigInt(index)),detailStatus:'complete',transcriptionStatus:status
+  }));
+  const result={transcribedCount:2,transcriptionAttemptedCount:3,transcriptErrors:[{contentId:'failed',message:'下载失败'}]};
+  const finished=syncState.completeRun(run.id,result);
+  assert.equal(finished.status,'completed','lifecycle completion must not change scheduler or resume semantics');
+  assert.equal(finished.result.processingOutcome.state,'partial');
+  assert.equal(finished.result.processingOutcome.reviewCount,1);
+  assert.equal(finished.result.processingOutcome.transcriptErrorCount,1);
+  assert.equal(finished.result.processingOutcome.deferredCount,1);
+  assert.match(finished.message,/待处理/);
+  const job=syncState.markCompleted(channel.id,result);
+  assert.equal(job.status,'idle');
+  assert.equal(job.progress.processingOutcome.state,'partial');
+  assert.equal(job.lastResult.processingOutcome.reviewCount,1);
+  assert.equal(job.lastResult.transcriptErrors[0].message,'下载失败');
+  assert.ok(Date.parse(job.nextRunAt)>Date.parse(job.lastCompletedAt));
+  assert.match(job.progress.message,/待处理/);
+});
+
+test('OCR completion and ASR needing review have distinct persisted outcomes', () => {
+  for(const status of ['ocr_complete','no_text','needs_review']){
+    const channel=channels.createChannel({channelKey:'outcome-'+status,displayName:'结果作者',platform:'douyin'});
+    syncState.markRunning(channel.id);
+    const run=syncState.startRun(channel.id,{});
+    syncState.upsertRunItem(run.id,{contentId:'7681478827298291555',detailStatus:'complete',transcriptionStatus:status});
+    const result=syncState.completeRun(run.id,{});
+    const expected=status==='needs_review'?'needs_review':'completed';
+    assert.equal(result.result.processingOutcome.state,expected);
+    assert.equal(result.result.processingOutcome.pendingCount,0);
+    assert.equal(syncState.markCompleted(channel.id,{}).lastResult.processingOutcome.state,expected);
+  }
+});
+
+test('aggregate-only completion retains deferred and archive failure outcomes without requiring run items', () => {
+  const channel=channels.createChannel({channelKey:'outcome-aggregate',displayName:'摘要结果作者',platform:'douyin'});
+  const result=syncState.markCompleted(channel.id,{transcriptionDeferredCount:2,archiveErrors:[{message:'原图未完成'}]});
+  assert.equal(result.progress.processingOutcome.state,'partial');
+  assert.equal(result.progress.processingOutcome.deferredCount,2);
+  assert.equal(result.progress.processingOutcome.archiveErrorCount,1);
+  assert.equal(result.progress.transcriptionDeferredCount,2);
+});

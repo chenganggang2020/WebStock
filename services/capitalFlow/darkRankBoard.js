@@ -52,9 +52,9 @@ function createDarkRankBoard(options) {
     })().finally(()=>{capPending=null;});
     return capPending;
   }
-  async function get({date,metric='amount'}) {
+  async function get({date,metric='amount',force=false}) {
     if (!['amount','ratio','visible','combined'].includes(metric)) throw Error('Invalid ranking metric');
-    const snapshot = await options.darkStocks.get({date,codes:['sh600000'],all:true});
+    const snapshot = await options.darkStocks.get({date,codes:['sh600000'],all:true,force});
     let lookup;
     if (options.loadCaps) {
       if (!customPending && (!capCache || now()-capCache.at>=300000)) {

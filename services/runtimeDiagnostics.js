@@ -1,5 +1,6 @@
 // Inert in plain Node/server/tests until the desktop installs the independent sink.
 let sink=null,sequence=0;
+const instrumentedDatabases=new WeakSet();
 function install(next){sink=next;}
 function emit(event){try{if(sink)sink(event);}catch(_){/* Diagnostics must never break business operations. */}}
 function begin(label,withStack=false) {
@@ -30,18 +31,49 @@ function middleware(req,res,next) {
   const end=begin(routeLabel(req));res.once('finish',end);res.once('close',end);next();
 }
 function instrumentDatabase(db) {
-  if(!sink)return db;
+  if(!sink || instrumentedDatabases.has(db))return db;
+  instrumentedDatabases.add(db);
+  let transactionDepth=0;
+  // A transaction span includes native BEGIN/COMMIT/ROLLBACK. Thousands of
+  // nested row spans would flood IPC while obscuring that actual wait boundary.
+  const databaseTrace=(label,work)=>transactionDepth?work():traceSync(label,work);
   const prepare=db.prepare;
   db.prepare=function(sql){
-    const statement=trace('db.prepare',()=>prepare.call(this,sql));
+    const statement=databaseTrace('db.prepare',()=>prepare.call(this,sql));
     // A query fingerprint locates the statement without storing SQL/values.
     const hash=require('node:crypto').createHash('sha256').update(String(sql)).digest('hex').slice(0,12);
     for(const method of ['get','all','run']) {
-      const original=statement[method];statement[method]=function(...args){return trace('db.'+method+'.'+hash,()=>original.apply(this,args));};
+      const original=statement[method];statement[method]=function(...args){return databaseTrace('db.'+method+'.'+hash,()=>original.apply(this,args));};
     }
     return statement;
   };
-  const exec=db.exec;db.exec=function(sql){return trace('db.exec',()=>exec.call(this,sql));};
+  const exec=db.exec;db.exec=function(sql){return databaseTrace('db.exec',()=>exec.call(this,sql));};
+  const transaction=db.transaction;
+  if(typeof transaction==='function')db.transaction=function(work){
+    const native=transaction.call(this,work),wrapped=new Map();
+    function wrap(fn){
+      if(wrapped.has(fn))return wrapped.get(fn);
+      const result=function(...args){
+        const end=transactionDepth?()=>{}:begin('db.transaction',true);
+        transactionDepth++;
+        try{return fn.apply(this,args);}finally{transactionDepth--;end();}
+      };
+      wrapped.set(fn,result);
+      return result;
+    }
+    const variants=[native,...['default','deferred','immediate','exclusive'].map(key=>native[key])]
+      .filter(fn=>typeof fn==='function');
+    variants.forEach(wrap);
+    for(const fn of new Set(variants)) {
+      const descriptors=Object.getOwnPropertyDescriptors(fn);
+      for(const key of ['length','name','arguments','caller','prototype'])delete descriptors[key];
+      for(const key of ['default','deferred','immediate','exclusive']) {
+        if(descriptors[key] && typeof descriptors[key].value==='function')descriptors[key].value=wrap(descriptors[key].value);
+      }
+      Object.defineProperties(wrap(fn),descriptors);
+    }
+    return wrap(native);
+  };
   return db;
 }
 module.exports={install,emit,begin,trace,traceSync,middleware,instrumentDatabase,routeLabel};

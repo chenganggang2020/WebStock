@@ -10,6 +10,7 @@ const {
 const { resolveRuntimeConfig } = require('./runtimeConfig');
 const { createDesktopBackend } = require('./desktopBackend');
 const { createDouyinSessionManager } = require('./douyinSessionManager');
+const { createDouyinLoginNotice } = require('./douyinLoginNotice');
 const runtimeTrace = require('../services/runtimeDiagnostics');
 const { startRuntimeDiagnostics } = require('./runtimeDiagnostics');
 const { createBackgroundMode } = require('./backgroundMode');
@@ -31,6 +32,10 @@ let douyinSessionManager = null;
 let backgroundMode = null;
 let tailscaleAccess = null;
 let servicesStopped = false;
+const douyinLoginNotice = createDouyinLoginNotice({
+  dialog, getParentWindow: () => mainWindow,
+  openLogin: () => getDouyinSessionManager().open('https://www.douyin.com/'), log
+});
 
 app.setName('WebStock');
 const loginStartup = createLoginStartup({ app, portableExecutable: process.env.PORTABLE_EXECUTABLE_FILE });
@@ -223,6 +228,7 @@ async function startServer() {
   }
   desktopBackend = createDesktopBackend({
     getSessionManager: getDouyinSessionManager,
+    onDouyinSessionState: state => douyinLoginNotice.handle(state),
     onLog: message => console.log('[data] ' + message.trimEnd()),
     onExit: details => {
       log('Data backend exited unexpectedly: ' + String(details.code));
@@ -238,6 +244,7 @@ async function stopBackgroundServices() {
   if (servicesStopped) return;
   if (shutdownTask) return shutdownTask;
   shutdownTask = (async function() {
+    douyinLoginNotice.dispose();
     if (douyinSessionManager) douyinSessionManager.dispose();
     if (desktopBackend) await desktopBackend.stop();
     servicesStopped = true;

@@ -25,7 +25,7 @@ async function main() {
   const summary = { documents: items.length, relations: items.reduce((sum,item)=>sum+item.relations.length,0), empty: items.filter(item=>!item.relations.length).length };
   console.log(JSON.stringify({ validated: summary, destination: base, apply: process.argv.includes('--apply') }));
   if (!process.argv.includes('--apply')) return;
-  const response = await fetch(base + '/api/industry-chain/creators/4/import', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({items,model:'ChatGPT existing conversation 6aa79528 / message 1e295441'}) });
+  const response = await fetch(base + '/api/industry-chain/creators/4/import', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({schema:'webstock.creator-industry-review/v1',items,model:'ChatGPT existing conversation 6aa79528 / message 1e295441'}) });
   const result = await response.json();
   if (!response.ok || !result.success) throw new Error(JSON.stringify(result.error));
   console.log(JSON.stringify({ analyzed:result.data.analyzedCount, relations:result.data.relations.length, pending:result.data.pendingCount }));

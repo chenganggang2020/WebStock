@@ -8,7 +8,7 @@ function loadSectorService(payload, historyRows = []) {
   const snapshots = [];
   const sectors = [{ id: 1, name: '测试板块' }];
   const leaders = [{ id: 1, sector_id: 1, code: '600000', name: '测试一' }, { id: 2, sector_id: 1, code: '600001', name: '测试二' }];
-  const db = { prepare(sql) { return {
+  const db = { transaction: fn => fn, prepare(sql) { return {
     all: () => sql.includes('FROM sector_leader_snapshots') ? historyRows : sql.includes('FROM sector_leaders') ? leaders : sectors,
     get: () => ({ count: 1 }), run: value => { snapshots.push(value); return { changes: 1 }; }
   }; } };

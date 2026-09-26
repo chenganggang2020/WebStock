@@ -37,7 +37,8 @@ test('all requested stocks share one bounded scan and cache; missing is not zero
   assert.equal(a.coverage.receivedRows,101);assert.equal(a.coverage.paginationSnapshotConsistent,false);
   assert.equal(JSON.stringify(a).includes('"raw"'),false);
   await svc.get({date,codes:['sh600002']});assert.equal(calls,2);
-  now=300001;await svc.get({date,codes:['sh600487']});assert.equal(calls,4);
+  now=300001;assert.equal((await svc.get({date,codes:['sh600487']})).refreshing,true);
+  await new Promise(resolve=>setImmediate(resolve));assert.equal(calls,4);
 });
 test('failed refresh keeps explicitly stale same-day snapshot and backs off; no cross-date fallback',async()=>{
   let now=0,fail=false,calls=0;

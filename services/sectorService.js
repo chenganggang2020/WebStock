@@ -382,11 +382,13 @@ async function getDashboard() {
     });
   });
   const allLeaders = sectorsWithLeaders.flatMap(sector => sector.leaders.map(leader => Object.assign({}, leader, { sectorName: sector.name })));
-  allLeaders.forEach(leader => recordLeaderSnapshot(leader, { id: leader.sectorId, name: leader.sectorName }, {
-    price: leader.price,
-    change: leader.change,
-    amount: leader.amount
-  }));
+  db.transaction(function() {
+    allLeaders.forEach(leader => recordLeaderSnapshot(leader, { id: leader.sectorId, name: leader.sectorName }, {
+      price: leader.price,
+      change: leader.change,
+      amount: leader.amount
+    }));
+  })();
   const overview = allLeaders.slice().sort((a, b) => (Number(b.change) || -999) - (Number(a.change) || -999));
   const risks = allLeaders.filter(item => Number(item.change) <= -3 || item.strength === '弱')
     .sort((a, b) => (Number(a.change) || 999) - (Number(b.change) || 999));

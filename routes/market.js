@@ -23,6 +23,11 @@ const publicPriceDetails = createPublicPriceDetailService({
   cacheDir: require('node:path').join(require('node:path').dirname(db.dbPath), 'public-price-details')
 });
 const quoteSnapshotStore = createQuoteSnapshotStore(db);
+const persistQuoteBatch = db.transaction(function(quotes, fetchedAt) {
+  localThirtySecondBars.recordQuotes(quotes);
+  localFiveSecondBars.recordQuotes(quotes);
+  quoteSnapshotStore.saveAll(quotes, fetchedAt);
+});
 
 function ok(res, data, meta) {
   const payload = { success: true, data };
@@ -188,15 +193,13 @@ async function fetchSinaQuoteBatch(codes) {
     };
   });
   try {
-    localThirtySecondBars.recordQuotes(Object.values(results));
-    localFiveSecondBars.recordQuotes(Object.values(results));
+    persistQuoteBatch(Object.values(results), new Date().toISOString());
   } catch (error) {
-    console.warn('[Market] Could not persist local derived bars:', error.message);
-  }
-  try {
-    quoteSnapshotStore.saveAll(Object.values(results), new Date().toISOString());
-  } catch (error) {
-    console.warn('[Market] Could not persist quote snapshots:', error.message);
+    // Nested savepoints can succeed before the enclosing commit fails. Restore
+    // watermarks from committed history before retrying this or the next quote.
+    localThirtySecondBars.clearStateCache();
+    localFiveSecondBars.clearStateCache();
+    console.warn('[Market] Could not persist quote batch:', error.message);
   }
   return results;
 }

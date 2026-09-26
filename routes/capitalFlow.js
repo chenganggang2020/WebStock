@@ -77,23 +77,32 @@ function createCapitalFlowRouter(options = {}) {
     res.set('Cache-Control','no-store');
     try {
       if(typeof req.query.date !== 'string' || !['amount','ratio','visible','combined'].includes(req.query.metric || 'amount')) throw Error('query');
+      if(req.query.force!==undefined && req.query.force!=='1') throw Error('Invalid refresh flag');
       require('../services/capitalFlow/eastmoneyDarkRank').buildQuery({date:req.query.date});
     } catch (_) { return res.status(400).json({success:false,error:{message:'请选择有效日期和排序口径。'}}); }
-    try { res.json({success:true,data:await darkBoard.get({date:req.query.date,metric:req.query.metric || 'amount'})}); }
+    try { res.json({success:true,data:await darkBoard.get({date:req.query.date,metric:req.query.metric || 'amount',force:req.query.force==='1'})}); }
     catch (_) { res.status(502).json({success:false,error:{message:'暗盘双向榜读取失败，请稍后重试。'}}); }
   });
   router.get('/capital-flow/dark-stocks', async function(req,res) {
     res.set('Cache-Control','no-store');
     let codes;
-    try {codes=stockKeys(req.query.codes);} catch (_) {
+    try {
+      codes=stockKeys(req.query.codes);
+      if(req.query.force!==undefined && req.query.force!=='1') throw Error('Invalid refresh flag');
+    } catch (_) {
       return res.status(400).json({success:false,error:{code:'DARK_STOCK_QUERY_INVALID',message:'请选择 1–200 只带市场前缀的 A 股。'}});
     }
     const state=session();
     if(!state.dataDate) return res.status(503).json({success:false,error:{code:'DARK_CALENDAR_UNKNOWN',message:'交易日历未覆盖当前日期，无法自动选定交易日。'}});
     try {
-      const data=await darkStocks.get({date:state.dataDate,codes});
+      const data=await darkStocks.get({date:state.dataDate,codes,force:req.query.force==='1'});
       try {data.historySaved=await darkHistory.append(data);}
       catch (_) {data.historySaved=false;data.historyWarning='历史写入未成功；当前报价仍可看，已有记录保留';}
+      data.comparisons={};
+      if((data.historySaved || data.stale) && typeof darkHistory.compare==='function') {
+        try {data.comparisons=await darkHistory.compare({codes,date:state.dataDate});}
+        catch (_) {data.historyWarning='历史对比读取未成功；当前净额仍可看，已有记录保留';}
+      }
       res.json({success:true,data});
     }
     catch (_) {res.status(502).json({success:false,error:{code:'DARK_STOCK_UNAVAILABLE',message:'个股明暗盘榜单匹配暂不可用；未以普通资金或零替代。稍后可重试。'}});}

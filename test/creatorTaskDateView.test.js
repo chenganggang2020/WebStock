@@ -81,14 +81,14 @@ test('run API failure clears task scope and never falls back to entire library',
   assert.deepEqual(ids(), []); assert.match(run('expertCreatorTaskRunsError'),/网络中断/);
 });
 test('switching authors clears visible old videos before a pending or failed response', async () => {
-  const {run,ctx,node}=setup(); let reject;
+  const {run,ctx,node}=setup(); const rejects=[];
   node('expertCreatorVideoList').innerHTML='old author video'; node('expertCreatorVideoDetail').innerHTML='old author detail';
-  ctx.fetchTest=()=>new Promise((resolve,fail)=>{reject=fail;});
+  ctx.fetchTest=()=>new Promise((resolve,fail)=>{rejects.push(fail);});
   run('expertApi=fetchTest; expertResetAnalysisPacket=function(){};');
   const switching=run('expertActivateChannel(2)');
   assert.doesNotMatch(node('expertCreatorVideoList').innerHTML,/old author/);
   assert.equal(node('expertCreatorVideoDetail').innerHTML,'');
-  reject(new Error('作者请求失败')); await assert.rejects(switching,/作者请求失败/);
+  rejects.forEach(reject => reject(new Error('作者请求失败'))); await assert.rejects(switching,/作者请求失败/);
   assert.doesNotMatch(node('expertCreatorVideoList').innerHTML,/old author/);
 });
 test('identical same-scope polls do not replace the current workbench DOM', async () => {

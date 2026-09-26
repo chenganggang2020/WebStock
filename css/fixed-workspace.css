@@ -136,10 +136,6 @@ body.compact-terminal.fixed-terminal .market-overview { --text-secondary:var(--m
 .fixed-terminal .creator-detail-tabs { position:sticky; top:-10px; background:var(--card-bg); z-index:2; }
 .fixed-terminal .creator-reading-column { padding-left:10px; }
 .fixed-terminal .creator-reading-body p { font-size:13px; }
-.fixed-terminal .creator-management-panel { padding:12px; background:var(--card-bg); border:1px solid var(--border); }
-.fixed-terminal .creator-management-panel #creatorConfiguration { margin:12px 0 0; }
-.fixed-terminal .creator-management-panel #creatorConfiguration > summary { display:none; }
-.fixed-terminal .creator-management-panel .creator-configuration-body { position:static; width:100%; max-height:none; box-shadow:none; box-sizing:border-box; }
 .fixed-terminal :is(#etfView,#paperPortfolioView).active { display:flex; flex-direction:column; gap:6px; overflow:auto; }
 .fixed-terminal #etfView .institutional-intraday-panel { margin:0; padding:10px; flex:none; }
 .fixed-terminal #paperPortfolioView .decision-paper-band { margin:0; padding:10px; overflow:auto; min-height:0; flex:1; }

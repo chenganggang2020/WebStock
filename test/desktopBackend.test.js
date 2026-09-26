@@ -7,6 +7,17 @@ const net = require('node:net');
 const { once } = require('node:events');
 const { createDesktopBackend, createRemoteSession } = require('../electron/desktopBackend');
 
+test('private login notices are acknowledged without waiting for a native-dialog response', async t => {
+  const states = [];
+  const backend = createDesktopBackend({ script: path.join(__dirname, 'fixtures/backend-login-state.js'),
+    onDouyinSessionState(state) { states.push(state); return new Promise(() => {}); } });
+  t.after(() => backend.stop());
+  await backend.start({ port: 0 });
+  assert.equal(await backend.call('notify', [{ status: 'login_required', channelId: 4 }], { timeoutMs: 1000 }), true);
+  assert.deepEqual(states, [{ status: 'login_required', channelId: 4 }]);
+  await assert.rejects(backend.call('notify', [{ status: 'execute', channelId: 4 }]), /Invalid/);
+});
+
 test('blocked data worker does not block the desktop event loop and exits normally', async t => {
   const backend = createDesktopBackend({ script: path.join(__dirname, 'fixtures/backend-block.js') });
   t.after(() => backend.stop());

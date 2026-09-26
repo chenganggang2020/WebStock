@@ -63,6 +63,18 @@ test('watchlist header wraps before the title can be squeezed into a vertical co
   assert.match(stylesSource, /#combinedWatchlistPanel[^}]*\.section-title-live\s+h2\s*\{[^}]*white-space:\s*nowrap/s);
 });
 
+test('each holding labels the quote change separately from its cumulative return', () => {
+  assert.match(portfolioSource, /position-price-change/);
+  assert.match(portfolioSource, /涨跌幅/);
+  assert.match(indexSource, /<th>当前价 \/ 涨跌幅<\/th>/);
+});
+
+test('top stock search reveals its result list and visible watchlist star without stealing typing focus', () => {
+  assert.match(appSource, /setMarketDrawerOpen\(true, false\)/);
+  assert.match(appSource, /if \(event\.target\.closest\('\.star-btn'\)\) return/);
+  assert.match(indexSource, /id="searchInput"[^>]*搜索股票/);
+});
+
 test('Tonghuashun watchlist keeps every rendered row reachable in its own vertical scroller', () => {
   assert.match(stylesSource, /#combinedWatchlistPanel\s*\{[^}]*display:\s*flex[^}]*flex-direction:\s*column[^}]*min-height:\s*0/s);
   assert.match(stylesSource, /#combinedWatchlistPanel\s*>\s*\.table-scroll\s*\{[^}]*flex:\s*1\s+1\s+auto[^}]*min-height:\s*0[^}]*overflow:\s*auto/s);
@@ -123,4 +135,14 @@ test('holdings page exposes safe Tonghuashun snapshot sync', () => {
   assert.match(portfolioSource, /tonghuashun-holdings\/sync-text/);
   assert.match(portfolioSource, /更新当前账户持仓/);
   assert.match(portfolioSource, /accountId:\s*activeAccountId\(\)/);
+});
+
+test('Tonghuashun holding sync uses an in-app input dialog instead of unsupported browser prompt', () => {
+  const start = portfolioSource.indexOf('async function readTonghuashunHoldingClipboard');
+  const end = portfolioSource.indexOf('const holdingSnapshotChecks', start);
+  assert.ok(start >= 0 && end > start);
+  assert.doesNotMatch(portfolioSource.slice(start, end), /\bprompt\s*\(/);
+  assert.match(indexSource, /id="tonghuashunHoldingInputDialog"/);
+  assert.match(indexSource, /id="tonghuashunHoldingTextInput"/);
+  assert.match(indexSource, /id="tonghuashunHoldingCashInput"/);
 });

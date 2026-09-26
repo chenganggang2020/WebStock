@@ -78,11 +78,11 @@ for (const pageId of ['auction', 'etf', 'darkFlow', 'rotation', 'replay', 'evide
     const r = terminalRuntime();
     const page = r.api.resolve(pageId);
     r.api.sync(page.view, pageId);
-    assert.deepEqual(r.calls.filter(call => call.type === 'show').map(call => call.id), [pageId]);
+    assert.deepEqual(r.calls.filter(call => call.type === 'show').map(call => call.id), [page.id]);
     assert.equal(r.calls[0].titleBeforeActivation, '市场总览 · 行情与研究');
     assert.equal(r.calls.some(call => call.type === 'scroll'), false);
-    assert.equal(r.document.body.dataset.terminalPage, pageId);
-    assert.equal(r.picker.value, pageId);
+    assert.equal(r.document.body.dataset.terminalPage, page.id);
+    assert.equal(r.picker.value, page.id);
     assert.equal(r.title.textContent, page.label);
   });
 }

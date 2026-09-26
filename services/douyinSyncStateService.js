@@ -187,16 +187,50 @@ function nextRunIso(intervalMinutes) {
   return new Date(Date.now() + Number(intervalMinutes) * 60000).toISOString();
 }
 
+function processingOutcome(result = {}, items = []) {
+  const count = value => Math.max(Number(value) || 0, 0);
+  const itemCount = predicate => items.filter(predicate).length;
+  const errorCount = (array, field, predicate) => Math.max(Array.isArray(result[array]) ? result[array].length : 0,
+    count(result[field]), itemCount(predicate));
+  const detailErrorCount = errorCount('detailErrors', 'detailErrorCount', item => ['error', 'rejected'].includes(item.detailStatus));
+  const transcriptErrorCount = errorCount('transcriptErrors', 'transcriptErrorCount', item => item.transcriptionStatus === 'error');
+  const archiveErrorCount = errorCount('archiveErrors', 'archiveErrorCount', item => ['archive_error', 'archive_missing', 'ocr_error', 'ocr_partial'].includes(item.transcriptionStatus));
+  const mediaMissingCount = Math.max(count(result.mediaMissingCount), itemCount(item => item.transcriptionStatus === 'media_missing'));
+  const deferredCount = Math.max(count(result.transcriptionDeferredCount), itemCount(item => ['deferred_limit', 'runtime_missing', 'model_missing'].includes(item.transcriptionStatus)));
+  const reviewCount = Math.max(count(result.needsReviewCount), itemCount(item => item.transcriptionStatus === 'needs_review'));
+  const ocrCompletedCount = itemCount(item => item.transcriptionStatus === 'ocr_complete');
+  const done = ['complete', 'needs_review', 'no_speech', 'no_text', 'archive_complete', 'ocr_complete', 'not_requested'];
+  const itemPending = itemCount(item => item.detailStatus !== 'complete' || !done.includes(item.transcriptionStatus));
+  // Error counters can overlap for a single work. This is a lower bound, not a claim of distinct failed videos.
+  const pendingCount = Math.max(itemPending, detailErrorCount, transcriptErrorCount, archiveErrorCount, mediaMissingCount, deferredCount);
+  const state = result.checkOnly === true ? 'checked' : pendingCount ? 'partial' : reviewCount ? 'needs_review' : 'completed';
+  return { state, pendingCount, reviewCount, ocrCompletedCount, detailErrorCount, transcriptErrorCount, archiveErrorCount, mediaMissingCount, deferredCount };
+}
+
+function processingMessage(outcome) {
+  return outcome.state === 'partial' ? '本轮结束，仍有待处理步骤；已完成资料保留'
+    : outcome.state === 'needs_review' ? '本轮机器处理结束，' + outcome.reviewCount + ' 篇文稿待复核'
+      : '本轮机器处理已完成；未经人工校对';
+}
+
+function listRunItems(runId) {
+  return db.prepare('SELECT * FROM expert_sync_run_items WHERE run_id = ? ORDER BY id').all(Number(runId)).map(rowToRunItem);
+}
+
 function markCompleted(channelId, result = {}) {
   const current = getJob(channelId);
   const completedAt = isoNow();
   const checkOnly = result.checkOnly === true;
   const updateCandidateCount = Math.max(Number(result.updateCandidateCount) || 0, 0);
+  const run = current.status === 'running' && current.lastStartedAt
+    ? db.prepare("SELECT id FROM expert_sync_runs WHERE channel_id = ? AND status = 'completed' AND started_at >= ? ORDER BY id DESC LIMIT 1")
+      .get(Number(channelId), current.lastStartedAt) : null;
+  const outcome = processingOutcome(result, run ? listRunItems(run.id) : []);
   const completionMessage = checkOnly
     ? updateCandidateCount
       ? '更新检查完成，发现 ' + updateCandidateCount + ' 条新增或变化，等待手动采集'
       : '更新检查完成，未发现新增或实质变化'
-    : '本轮采集已完成';
+    : processingMessage(outcome);
   const storedResult = current.lastResult && current.lastResult.archiveCheckpoint
     ? Object.assign({}, result, { archiveCheckpoint: current.lastResult.archiveCheckpoint })
     : result;
@@ -207,6 +241,7 @@ function markCompleted(channelId, result = {}) {
       stringifyPersistentValue({
         stage: 'completed',
         message: completionMessage,
+        processingOutcome: outcome,
         checkOnly,
         updatesAvailable: checkOnly && result.updatesAvailable === true,
         updateCandidateCount,
@@ -216,15 +251,16 @@ function markCompleted(channelId, result = {}) {
           ? Number(result.detailedCount || 0) + (Array.isArray(result.detailErrors) ? result.detailErrors.length : 0)
           : result.candidateCount),
         detailedCount: Number(result.detailedCount || 0),
-        detailErrorCount: Array.isArray(result.detailErrors) ? result.detailErrors.length : 0,
+        detailErrorCount: outcome.detailErrorCount,
         transcriptionAttemptedCount: Number(result.transcriptionAttemptedCount || 0),
         transcribedCount: Number(result.transcribedCount || 0),
-        mediaMissingCount: Number(result.mediaMissingCount || 0),
-        transcriptErrorCount: Array.isArray(result.transcriptErrors) ? result.transcriptErrors.length : 0,
+        transcriptionDeferredCount: outcome.deferredCount,
+        mediaMissingCount: outcome.mediaMissingCount,
+        transcriptErrorCount: outcome.transcriptErrorCount,
         addedCount: Number(result.addedCount || 0),
         updatedCount: Number(result.updatedCount || 0)
       }),
-      stringifyPersistentValue(storedResult || {}), Number(channelId));
+      stringifyPersistentValue({ ...storedResult, processingOutcome: outcome }), Number(channelId));
   return getJob(channelId);
 }
 
@@ -351,16 +387,17 @@ function upsertRunItem(runId, input = {}) {
 }
 
 function completeRun(runId, result = {}) {
+  const outcome = processingOutcome(result, listRunItems(runId));
   updateRun(runId, {
     workCount: result.workCount,
     discoveredCount: result.discoveredCount,
     candidateCount: result.candidateCount,
     detailedCount: result.detailedCount,
-    detailErrorCount: Array.isArray(result.detailErrors) ? result.detailErrors.length : result.detailErrorCount,
+    detailErrorCount: outcome.detailErrorCount,
     transcriptionAttemptedCount: result.transcriptionAttemptedCount,
     transcribedCount: result.transcribedCount,
-    mediaMissingCount: result.mediaMissingCount,
-    transcriptErrorCount: Array.isArray(result.transcriptErrors) ? result.transcriptErrors.length : result.transcriptErrorCount,
+    mediaMissingCount: outcome.mediaMissingCount,
+    transcriptErrorCount: outcome.transcriptErrorCount,
     addedCount: result.addedCount,
     updatedCount: result.updatedCount,
     unchangedCount: result.unchangedCount,
@@ -368,12 +405,12 @@ function completeRun(runId, result = {}) {
       ? Math.max(Number(result.updateCandidateCount) || 0, 0)
         ? '更新检查完成，发现待采集变化'
         : '更新检查完成，未发现变化'
-      : '本轮采集已完成'
+      : processingMessage(outcome)
   });
   const completedAt = isoNow();
   db.prepare(`UPDATE expert_sync_runs SET status = 'completed', completed_at = ?, error = '',
     result_json = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`)
-    .run(completedAt, stringifyPersistentValue(result || {}), Number(runId));
+    .run(completedAt, stringifyPersistentValue({ ...result, processingOutcome: outcome }), Number(runId));
   return getRun(runId);
 }
 

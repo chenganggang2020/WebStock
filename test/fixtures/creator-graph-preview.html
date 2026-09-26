@@ -1,0 +1,17 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><title>作者关系图隔离检查</title>
+<style>body{margin:0;--text:#23364b;--text-secondary:#586c81;--card-bg:#fff;--border:#ccd9e6;--bg:#edf1f5;--hover:#eaf3fc;--accent:#186dba;--down:#2d845a;--up:#b43b45;font:13px sans-serif}.fixed-terminal #industryChainView.industry-workspace.active{height:100vh}#industryChainView{height:100vh}</style>
+<link rel="stylesheet" href="../../css/industry-workspace.css"></head><body class="fixed-terminal">
+<div id="industryChainView" class="active"><input class="industry-chain-search" placeholder="搜索"><button id="refreshIndustryChainBtn">刷新</button></div>
+<script src="../../vendor/echarts.min.js"></script><script src="../../js/modules/industryResearchGraph.js"></script><script src="../../js/modules/industryWorkspace.js"></script>
+<script>
+window.IndustryChain={cancelPendingSelection(){},reasonLabel(value){return value;}};
+window.apiFetch=async url=>url==='/api/expert/channels'?[{id:4,platform:'douyin',displayName:'测试作者'}]:url.includes('/observations/')?{
+  observationId:1,title:'测试口播',mediaType:'video',publishedAt:'2026-09-18',sourceUrl:'https://example.com/1',text:'保偏光纤用于光引擎的激光传输。',asr:{status:'complete',model:'fixture',quality:{reasons:[]},segments:[{start:0,end:3,text:'保偏光纤用于光引擎的激光传输。'}]}
+}:{
+  author:'测试作者',totalCount:2,readyCount:2,analyzedCount:2,pendingCount:0,blockedCount:0,aiConfigured:false,
+  documents:[],reviewQueue:[{observationId:1,title:'测试口播',mediaType:'video',asrModel:'fixture',textLength:30,status:'complete_with_relations',publishedAt:'2026-09-18'}],relations:[
+    {key:'a',from:'保偏光纤',to:'光引擎',relation:'使用',topic:'光互联',author:'测试作者',quote:'保偏光纤用于光引擎的激光传输。',publishedAt:'2026-09-18',sourceUrl:'https://example.com/1',bodyHash:'fixture'},
+    {key:'b',from:'激光器',to:'光引擎',relation:'组成',topic:'光互联',author:'测试作者',quote:'激光器组成光引擎的一部分。',publishedAt:'2026-09-19',sourceUrl:'https://example.com/2',bodyHash:'fixture'}]};
+IndustryWorkspace.mount(document.getElementById('industryChainView'));
+IndustryWorkspace.loadSelected();
+</script></body></html>

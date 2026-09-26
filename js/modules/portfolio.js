@@ -434,6 +434,9 @@ function renderPositions() {
     const todayReferencePnl = todayReferencePnlValue(pos);
     const floatingPnl = pos.unrealizedPnl;
     const realizedPnl = pos.realizedPnl;
+    const todayChange = pos.todayChange === null || pos.todayChange === undefined ? null : Number(pos.todayChange);
+    const changeLabel = todayChange !== null && Number.isFinite(todayChange)
+      ? (todayChange > 0 ? '+' : '') + fmt(todayChange) + '%' : '--';
     const minuteSeries = window.State.minuteSeriesByCode && window.State.minuteSeriesByCode[pos.code];
     const trendColor = window.MarketVisualModel
       ? window.MarketVisualModel.trendColor(pos.todayChange, document.body.classList.contains('dark'))
@@ -446,7 +449,7 @@ function renderPositions() {
       '<td><div class="holding-name-cell"><span>' + pos.name + '</span><span class="position-mini-chart" data-mini-chart-code="' + pos.code + '">' + miniChart + '</span></div></td>' +
       '<td>' + pos.quantity + '</td>' +
       '<td>' + fmt(pos.avgCost, 3) + '</td>' +
-      '<td>' + fmt(pos.currentPrice, 3) + '</td>' +
+      '<td><span>' + fmt(pos.currentPrice, 3) + '</span><small class="position-price-change ' + pnlClass(todayChange) + '">涨跌幅 ' + changeLabel + '</small></td>' +
       '<td>' + (window.EastmoneyDarkStocks ? window.EastmoneyDarkStocks.cell(pos) : '--') + '</td>' +
       '<td>' + fmt(pos.marketValue) + '</td>' +
       '<td class="' + pnlClass(floatingPnl) + '" title="浮动盈亏：当前市值 - 剩余持仓成本；买入手续费已计入剩余成本">' + fmt(floatingPnl) + '</td>' +
@@ -743,6 +746,33 @@ async function refreshPortfolio() {
   await loadPortfolio();
 }
 
+function requestTonghuashunHoldingInput(kind) {
+  const dialog = document.getElementById('tonghuashunHoldingInputDialog');
+  const textInput = document.getElementById('tonghuashunHoldingTextInput');
+  const cashInput = document.getElementById('tonghuashunHoldingCashInput');
+  const isText = kind === 'text';
+  const input = isText ? textInput : cashInput;
+  document.getElementById('tonghuashunHoldingInputTitle').textContent = isText ? '粘贴同花顺持仓表' : '填写可用资金';
+  document.getElementById('tonghuashunHoldingInputHint').textContent = isText
+    ? '自动读取剪贴板失败。请在同花顺持仓表中全选、复制，再粘贴到下面。'
+    : '可留空，沿用当前账户的可用资金。';
+  textInput.hidden = !isText;
+  cashInput.hidden = isText;
+  textInput.required = isText;
+  input.value = '';
+  dialog.returnValue = '';
+  return new Promise(function(resolve) {
+    function onClose() {
+      dialog.removeEventListener('close', onClose);
+      resolve(dialog.returnValue === 'ok' ? input.value : null);
+    }
+    dialog.addEventListener('close', onClose);
+    document.getElementById('tonghuashunHoldingInputCancel').onclick = function() { dialog.close('cancel'); };
+    dialog.showModal();
+    input.focus();
+  });
+}
+
 async function readTonghuashunHoldingClipboard() {
   const message = '请先在同花顺电脑版持仓表中全选并复制。点击“确定”后，本程序只读取这一次剪贴板文本，不读取账号、密码，也不执行交易。';
   if (!confirm(message)) return '';
@@ -754,7 +784,7 @@ async function readTonghuashunHoldingClipboard() {
       console.warn('读取同花顺持仓剪贴板失败:', error.message || error);
     }
   }
-  return prompt('无法自动读取剪贴板，请把同花顺持仓表粘贴到这里：') || '';
+  return await requestTonghuashunHoldingInput('text') || '';
 }
 
 async function syncTonghuashunHoldings(options) {
@@ -800,7 +830,7 @@ async function syncTonghuashunHoldings(options) {
     const body = options.automatic ? {} : { accountId: activeAccountId() };
     if (text) body.text = text;
     if (!options.automatic && (preview.cashBalance === null || preview.cashBalance === undefined)) {
-      const cash = prompt('请输入同花顺账户可用资金（可留空，沿用上次值）：', '');
+      const cash = await requestTonghuashunHoldingInput('cash');
       if (cash !== null && cash.trim() !== '') {
         const value = Number(cash.replace(/[,，]/g, ''));
         if (!Number.isFinite(value) || value < 0) throw new Error('可用资金格式不正确');

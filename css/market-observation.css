@@ -22,6 +22,9 @@
 .watchlist-add-dialog h3 { margin: 0 0 14px; font-size: 20px; }
 .watchlist-add-dialog p { line-height: 1.6; font-size: 14px; overflow-wrap: anywhere; }
 .watchlist-add-dialog input { box-sizing: border-box; width: 100%; padding: 11px; margin-top: 8px; font-size: 15px; border: 1px solid var(--border); border-radius: 7px; background: var(--card-bg); color: var(--text); }
+.portfolio-holding-input-dialog { width: min(720px, calc(100vw - 32px)); }
+.portfolio-holding-input-dialog textarea { box-sizing: border-box; width: 100%; min-height: 180px; margin: 8px 0 16px; padding: 11px; resize: vertical; border: 1px solid var(--border); border-radius: 7px; background: var(--card-bg); color: var(--text); font: inherit; }
+.portfolio-holding-input-dialog input { margin-bottom: 16px; }
 #watchlistAddError:empty, #watchlistActionStatus:empty { display: none; }
 .industry-research-workbench { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(250px, .8fr); gap: 14px; align-items: start; }
 .industry-research-workbench > * { min-width: 0; }

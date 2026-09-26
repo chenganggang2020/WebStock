@@ -39,12 +39,12 @@ test('ASR output keeps the raw evidence while publishing simplified Chinese', ()
   assert.equal(result.normalization.sourceHadTraditional, true);
 });
 
-test('recognition prompt requests simplified Chinese and adds bounded finance hotwords', () => {
+test('recognition context supplies terminology without instructions that can echo into speech', () => {
   const prompt = buildRecognitionPrompt('模型先生的观点', [
     '宇树科技', '人形机器人', '股价腰斩', '宇树科技'
   ]);
 
-  assert.match(prompt.initialPrompt, /中国大陆简体中文/);
+  assert.doesNotMatch(prompt.initialPrompt, /请使用|逐字转写|不要改写|不要总结/);
   assert.match(prompt.initialPrompt, /模型先生的观点/);
   assert.equal(prompt.hotwords, '宇树科技 人形机器人 股价腰斩');
   assert.ok(prompt.initialPrompt.length <= 1000);
@@ -67,6 +67,37 @@ test('low-confidence ASR segments are retained but marked for review', () => {
   assert.equal(result.quality.needsReview, true);
   assert.ok(result.quality.reasons.includes('low_log_probability'));
   assert.equal(result.segments[0].avgLogProbability, -1.35);
+});
+
+test('recognition hotwords include bounded hashtags from the selected work, not invented company replacements',()=>{
+  const prompt=buildRecognitionPrompt('Fioona：保偏光纤的逻辑 #保偏光纤 #CPO #NPO #保偏光纤', ['A股']);
+  assert.equal(prompt.hotwords,'A股 保偏光纤 CPO NPO');
+  assert.ok(prompt.initialPrompt.includes('保偏光纤'));
+});
+
+test('prompt echoes are retained as evidence but cannot report successful clean ASR', () => {
+  const text='请使用中国大陆简体中文逐字转写语音：';
+  const result=normalizeResult({transcript:text,durationSeconds:15,segments:[{
+    start:0,end:3,text,avgLogProbability:-0.2,noSpeechProbability:0.1,compressionRatio:1
+  }]},{localAssetPath:'fixture.mp4',sha256:'c'.repeat(64),bytes:1});
+  assert.equal(result.transcript,text);
+  assert.equal(result.status,'needs_review');
+  assert.ok(result.quality.reasons.includes('prompt_echo'));
+});
+
+test('segment timestamps outside audio bounds require review while small rounding drift remains valid', () => {
+  const text='保偏光纤用于光引擎的激光传输。';
+  const raw={transcript:text,durationSeconds:14.235,segments:[{
+    start:0,end:29.98,text,avgLogProbability:-0.2,noSpeechProbability:0.1,compressionRatio:1
+  }]};
+  const evidence={localAssetPath:'fixture.mp4',sha256:'d'.repeat(64),bytes:1};
+  const result=normalizeResult(raw,evidence);
+  assert.equal(result.status,'needs_review');
+  assert.ok(result.quality.reasons.includes('timestamp_out_of_range'));
+  raw.segments[0].end=14.7;
+  assert.equal(normalizeResult(raw,evidence).status,'complete');
+  raw.segments[0].start=-2;
+  assert.ok(normalizeResult(raw,evidence).quality.reasons.includes('timestamp_out_of_range'),'check before sanitizing negative timestamps');
 });
 
 test('one transcription can select local large-v3-turbo without changing the service default', async t => {

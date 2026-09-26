@@ -4,7 +4,7 @@ const crypto = require('node:crypto');
 const { execFile } = require('node:child_process');
 const axios = require('axios');
 const { isAllowedDouyinImageUrl } = require('../electron/douyinPageCapture');
-const { archiveRoot, imageType } = require('./creatorMediaService');
+const { archiveRoot, imageType, resolveNoteImage } = require('./creatorMediaService');
 
 function recognizeImage(filename) {
   if (process.platform !== 'win32') return Promise.reject(new Error('当前本地图片识别需要 Windows OCR'));
@@ -33,7 +33,8 @@ function createDouyinNoteService(options = {}) {
     if (!/^[1-9]\d{0,9}$/.test(channelId)) throw new Error('作者编号无效');
     if (!/^\d{12,24}$/.test(contentId)) throw new Error('作品编号无效');
     const images = Array.isArray(input.images) ? input.images : [];
-    const imageCount = Math.max(images.length, Math.min(Math.floor(Number(input.imageCount) || 0),1000));
+    const localPages = Array.isArray(input.localPages) ? input.localPages : null;
+    const imageCount = Math.max(localPages ? localPages.length : images.length, Math.min(Math.floor(Number(input.imageCount) || 0),1000));
     if (!imageCount) throw new Error('尚未读取到当前图文的原图列表，请补采详情');
     const directory = path.join(root, 'notes', channelId, contentId);
     await fs.mkdir(directory, {recursive:true});
@@ -43,21 +44,35 @@ function createDouyinNoteService(options = {}) {
       const page = {index:index+1, status:'error', text:''};
       try {
         if (Date.now()-started > 180000) throw new Error('本轮图文处理时间已达上限，可继续补采');
-        const source = images[index];
-        if (!source || !isAllowedDouyinImageUrl(source.url)) throw new Error('缺少有效原图地址');
         if (input.onProgress) input.onProgress({stage:'ocr', message:'正在识别图文第 '+(index+1)+' / '+imageCount+' 张'});
-        const buffer = await download(source.url);
+        let buffer;
+        if (localPages) {
+          const saved = localPages[index];
+          if (!saved || saved.index !== index+1) throw new Error('本地图文页序校验失败');
+          const asset = resolveNoteImage({channelId,externalContentId:contentId,mediaType:'note',
+            mediaMetadata:{note:{pages:localPages}}},index+1,root);
+          if ((await fs.stat(asset.filename)).size > 16*1024*1024) throw new Error('原图大小超出限制');
+          buffer = await fs.readFile(asset.filename);
+          if (crypto.createHash('sha256').update(buffer).digest('hex') !== saved.sha256 ||
+              imageType(buffer) !== saved.mimeType) throw new Error('本地原图内容校验失败，未进行识别');
+        } else {
+          const source = images[index];
+          if (!source || !isAllowedDouyinImageUrl(source.url)) throw new Error('缺少有效原图地址');
+          buffer = await download(source.url);
+        }
         if (!Buffer.isBuffer(buffer) || !buffer.length || buffer.length > 16*1024*1024) throw new Error('原图大小超出限制');
         const type = imageType(buffer);
         const sha256 = crypto.createHash('sha256').update(buffer).digest('hex');
         const extension = {'image/jpeg':'jpg','image/png':'png','image/webp':'webp'}[type];
         const filename = path.join(directory, String(index+1).padStart(3,'0')+'-'+sha256+'.'+extension);
         // Content-addressed files preserve earlier originals if the remote page changes.
-        const temporary=filename+'.'+crypto.randomBytes(6).toString('hex')+'.part';
-        try {
-          await fs.writeFile(temporary,buffer,{flag:'wx'});
-          await fs.rename(temporary,filename);
-        } finally { await fs.rm(temporary,{force:true}); }
+        if (!localPages) {
+          const temporary=filename+'.'+crypto.randomBytes(6).toString('hex')+'.part';
+          try {
+            await fs.writeFile(temporary,buffer,{flag:'wx'});
+            await fs.rename(temporary,filename);
+          } finally { await fs.rm(temporary,{force:true}); }
+        }
         Object.assign(page,{localAssetPath:filename,sha256,bytes:buffer.length,mimeType:type});
         const recognized = await recognize(filename);
         page.rawText = String(recognized.text || '').trim().slice(0,100000);

@@ -1,5 +1,5 @@
 // All database-backed desktop services belong to the data process, never BrowserWindow's main thread.
-function createDesktopBackendServices(config, sessionManager) {
+function createDesktopBackendServices(config, sessionManager, options = {}) {
   const services = [];
   const timers = [];
   const log = (message, error) => console.log(message, error ? error.message || String(error) : '');
@@ -18,6 +18,7 @@ function createDesktopBackendServices(config, sessionManager) {
       transcriber: require('../services/douyinTranscriptService').createDouyinTranscriptService(),
       noteProcessor: require('../services/douyinNoteService').createDouyinNoteService(),
       syncState, maxTranscriptionsPerRun: 3,
+      onSessionState: options.onDouyinSessionState,
       shouldDeferChannel: channelId => creatorCollectionQueue && creatorCollectionQueue.hasActiveChannel(channelId), log
     }));
     creatorCollectionQueue = require('../services/creatorCollectionQueue').getCreatorCollectionQueue();

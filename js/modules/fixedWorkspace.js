@@ -8,8 +8,6 @@
   let ready = false;
   let auctionNodes = [];
   let newsCard = null;
-  let creatorConfiguration = null;
-  let creatorConfigurationMarker = null;
   const doc = () => root.document;
   const find = selector => doc().querySelector(selector);
   function element(tag, className, text) {
@@ -122,14 +120,8 @@
     const batch = find('.creator-batch-controls');
     const global = group('creator-global-panel',[find('.creator-global-settings'),find('#openCreatorAsrSetupBtn')]);
     const jobs = group('fixed-creator-jobs', [find('.creator-collection-queue'),find('.creator-task-progress-card')]);
-    creatorConfiguration = find('#creatorConfiguration');
-    creatorConfigurationMarker = doc().createComment('current author configuration location');
-    creatorConfiguration.before(creatorConfigurationMarker);
-    const management = element('section', 'creator-management-panel');
-    management.append(element('h3', '', '作者资料与采集配置'), element('p', 'muted', '在上方切换作者；这里管理主页、采集范围、转写模型与自动采集。视频和本轮进度请前往采集任务。'));
     deck('creator', panel, [
-      item('videos', '视频与逐字稿', '#expertCreatorWorkbench'),
-      {key:'management',title:'作者管理',page:'authors',node:management},
+      item('videos', '作品与文稿', '#expertCreatorWorkbench'),
       {key:'jobs',title:'队列 / 本轮进度',node:jobs},
       {key:'batch',title:'批量采集 · 多作者',node:batch},
       {key:'global',title:'全局设置 / 转写环境',node:global},
@@ -211,20 +203,9 @@
     if (page.view === 'aiResearch') decks.get('research').select('decision');
     if (page.view === 'settings' && page.id === 'health') decks.get('settings').select('health');
     if (page.view === 'creatorTasks') {
-      find('.creator-task-page').classList.toggle('fixed-author-management',page.id === 'authors');
-      find('.creator-task-hero h2').textContent = page.id === 'authors' ? '作者管理' : '采集任务与视频记录';
-      find('.creator-task-hero p').textContent = page.id === 'authors'
-        ? '管理当前作者的资料、主页与采集规则；视频和任务进度在采集任务中查看。'
-        : '查看登录会话、采集流程、转写队列和每条视频的可核对记录。';
-      if (page.id === 'authors') {
-        find('.creator-management-panel').appendChild(creatorConfiguration);
-        creatorConfiguration.open = true;
-      } else if (creatorConfiguration.parentElement === find('.creator-management-panel')) {
-        creatorConfigurationMarker.after(creatorConfiguration);
-        creatorConfiguration.open = false;
-      }
-      decks.get('creator').frame.querySelector('.fixed-panel-nav').hidden = page.id === 'authors';
-      decks.get('creator').select(page.id === 'authors' ? 'management' : 'videos');
+      find('.creator-task-hero h2').textContent = '采集任务与文稿';
+      find('.creator-task-hero p').textContent = '切换作者，统一查看作品、文稿、任务与采集配置；跨作者操作在批量采集中管理。';
+      decks.get('creator').select('videos');
     }
     const auction = page.id === 'auction';
     find('#auctionWorkspace').hidden = !auction;
