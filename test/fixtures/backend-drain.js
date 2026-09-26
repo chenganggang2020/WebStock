@@ -10,7 +10,7 @@ require.cache[require.resolve('../../electron/desktopBackendServices')] = { expo
       async stop() { if (config.failFirstStop && ++stopCount === 1) throw new Error('stop failed once'); },
       commands: {
         syncAll() {
-          const child = spawn(process.execPath, ['-e', 'setTimeout(() => {}, 700)'], { windowsHide: true, stdio: 'ignore' });
+          const child = spawn(process.execPath, ['-e', `setTimeout(() => {}, ${Number(config.jobDurationMs) || 700})`], { windowsHide: true, stdio: 'ignore' });
           child.once('exit', () => fs.writeFileSync(path.join(config.userDataDir, 'drained.txt'), 'completed'));
           return { started: true };
         }

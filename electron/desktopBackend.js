@@ -77,16 +77,16 @@ function createDesktopBackend(options = {}) {
     stopping = true;
     stopPromise = (async () => {
       if (!shutdownRequested) {
-        await call('shutdown', [], { timeoutMs: 30000 });
+        options.onLog?.('Shutdown: waiting for current tasks to finish saving');
+        await call('shutdown', [], { timeoutMs: 0 });
         shutdownRequested = true;
       }
-      let timeout;
+      const notice = setInterval(() => options.onLog?.('Shutdown: waiting for remaining background handles to drain'), 10000);
       try {
-        await Promise.race([exitPromise, new Promise((_, reject) => {
-          timeout = setTimeout(() => reject(new Error('Backend did not exit; no force termination was attempted')), 10000);
-        })]);
-      } finally { clearTimeout(timeout); }
+        await exitPromise;
+      } finally { clearInterval(notice); }
       rpc.close();
+      options.onLog?.('Shutdown: background process exited');
     })().catch(error => { stopPromise = null; throw error; });
     return stopPromise;
   }

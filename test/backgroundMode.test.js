@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 
 const { createBackgroundMode } = require('../electron/backgroundMode');
 
-test('failed shutdown preserves the tray, shows the window and allows a later retry', async () => {
+test('failed shutdown preserves the tray without reopening the stopped page and allows a later retry', async () => {
   let stops = 0, destroyed = 0, shown = 0, quit = 0, notified = 0;
   class Tray {
     setToolTip() {} setContextMenu() {} on() {} destroy() { destroyed++; }
@@ -18,7 +18,7 @@ test('failed shutdown preserves the tray, shows the window and allows a later re
   await controller.exit();
   assert.equal(destroyed, 0);
   assert.equal(quit, 0);
-  assert.equal(shown, 1);
+  assert.equal(shown, 0);
   assert.equal(notified, 1);
   assert.equal(controller.isQuitting(), false);
   await controller.exit();

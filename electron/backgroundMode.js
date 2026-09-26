@@ -9,6 +9,8 @@ function createBackgroundMode(options = {}) {
   const log = typeof options.log === 'function' ? options.log : () => {};
   let tray = null;
   let quitting = false;
+  let exitPending = false;
+  let exitComplete = false;
   let syncRunning = false;
 
   if (!app || typeof app.quit !== 'function') throw new Error('缺少 Electron app');
@@ -17,6 +19,7 @@ function createBackgroundMode(options = {}) {
   }
 
   function showMainWindow() {
+    if (exitPending) { options.onExitPending?.(true); return; }
     const window = getMainWindow();
     if (!window || window.isDestroyed()) return;
     if (typeof window.isMinimized === 'function' && window.isMinimized() && typeof window.restore === 'function') {
@@ -27,7 +30,7 @@ function createBackgroundMode(options = {}) {
   }
 
   async function syncAll() {
-    if (syncRunning) return;
+    if (syncRunning || exitPending) return;
     syncRunning = true;
     try {
       await onSyncAll();
@@ -41,17 +44,21 @@ function createBackgroundMode(options = {}) {
   async function exit() {
     if (quitting) return;
     quitting = true;
+    exitPending = true;
+    options.onExitPending?.(true);
     try {
       await onExit();
     } catch (error) {
       log('WebStock background shutdown failed', error);
       quitting = false;
-      showMainWindow();
+      options.onExitPending?.(true);
       options.onExitError?.(error);
       return;
     }
     if (tray && typeof tray.destroy === 'function') tray.destroy();
     tray = null;
+    exitComplete = true;
+    options.onExitPending?.(false);
     app.quit();
   }
 
@@ -70,7 +77,7 @@ function createBackgroundMode(options = {}) {
   }
 
   function handleWindowClose(event) {
-    if (quitting) return;
+    if (exitComplete) return;
     if (event && typeof event.preventDefault === 'function') event.preventDefault();
     const window = getMainWindow();
     if (window && !window.isDestroyed() && typeof window.hide === 'function') window.hide();
@@ -79,6 +86,7 @@ function createBackgroundMode(options = {}) {
 
   function setQuitting(value) {
     quitting = value === true;
+    exitComplete = value === true;
   }
 
   return { attach, handleWindowClose, showMainWindow, syncAll, exit, setQuitting, isQuitting: () => quitting };

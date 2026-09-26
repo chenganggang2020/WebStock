@@ -69,11 +69,11 @@ function createDesktopBackendServices(config, sessionManager, options = {}) {
   async function stop() {
     timers.forEach(clearTimeout);
     const errors = [];
-    for (const service of [...services].reverse()) {
-      try { await service.stop(); } catch (error) { errors.push(error); }
-    }
-    if (serverController) await serverController.stop();
+    // Signal every scheduler before awaiting any long-running task's persistence.
+    const results = await Promise.allSettled([...services].reverse().map(service => Promise.resolve().then(() => service.stop())));
+    results.forEach(result => { if (result.status === 'rejected') errors.push(result.reason); });
     if (errors.length) throw errors[0];
+    if (serverController) await serverController.stop();
     services.length = 0;
   }
   function requireSync() {

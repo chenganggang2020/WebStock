@@ -64,6 +64,8 @@
       "quant/**",
       "!quant/.venv/**",
       "!quant/workspace/**",
+      "!quant/asr-models/**",
+      "!quant/media-library/**",
       "!quant/tests/**",
       "!quant/**/__pycache__/**",
       "!quant/**/*.pyc",

@@ -528,7 +528,10 @@ function createDouyinAutoSync(options = {}) {
         const transcriptionLimit = runOptions.mode === 'archive'
           ? candidates.length : maxTranscriptionsPerRun;
 
+        let remainingCount = candidates.length;
         for (const item of candidates) {
+          if (stopping) break; // Finish and persist this video, not the entire remaining archive.
+          remainingCount--;
           try {
             audit('upsertRunItem', runId, {
               contentId: item.contentId,
@@ -819,7 +822,7 @@ function createDouyinAutoSync(options = {}) {
           });
         }
 
-        if (candidates.length && detailedCount === 0) {
+        if (!stopping && candidates.length && detailedCount === 0) {
           throw new Error('发现作品链接，但本轮未能提取任何身份匹配的视频详情');
         }
 
@@ -840,6 +843,8 @@ function createDouyinAutoSync(options = {}) {
           workCount: Number(profileCapture.profile && profileCapture.profile.workCount || 0),
           discoveredCount: profileCapture.items.length,
           candidateCount: candidates.length,
+          interrupted: stopping && remainingCount > 0,
+          remainingCount,
           archive: profileCapture.archive || null,
           discoveryAddedCount,
           discoveryUpdatedCount,
@@ -995,6 +1000,8 @@ function createDouyinAutoSync(options = {}) {
     if (interval) clearIntervalFn(interval);
     startupTimer = null;
     interval = null;
+    // Await persistence as well as the child job; clearing timers only stops new work.
+    return Promise.allSettled([workQueue, dueTask, ...running.values(), ...videoTasks.values()]);
   }
 
   return { syncChannel, syncAll, runVideo, runDue, start, stop,

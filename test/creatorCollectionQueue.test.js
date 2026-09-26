@@ -56,6 +56,15 @@ function storedJob(queue, id) {
   return job;
 }
 
+test('shutdown interrupted incremental work stays resumable and rejects a new retry', async t => {
+  const queue = makeQueue(t);
+  const [job] = queue.enqueue([1], { mode: 'incremental' });
+  const result = await queue.runNext(async () => syncResult({ interrupted: true, remainingCount: 1 }));
+  assert.equal(result.status, 'queued');
+  await queue.stop();
+  assert.throws(() => queue.retry(job.id), /stopping/);
+});
+
 test('creator collection accepts all supported models and stores the requested options', t => {
   const queue = makeQueue(t);
   const examples = [

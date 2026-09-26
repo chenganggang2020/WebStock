@@ -7,7 +7,7 @@ const {
   readRegisteredDataDirectory,
   registerPortableDataDirectory
 } = require('./dataMigration');
-const { resolveRuntimeConfig } = require('./runtimeConfig');
+const { resolveRuntimeConfig, readManagedDataDirectory } = require('./runtimeConfig');
 const { createDesktopBackend } = require('./desktopBackend');
 const { createDouyinSessionManager } = require('./douyinSessionManager');
 const { createDouyinLoginNotice } = require('./douyinLoginNotice');
@@ -32,6 +32,7 @@ let douyinSessionManager = null;
 let backgroundMode = null;
 let tailscaleAccess = null;
 let servicesStopped = false;
+const showShutdownPending = require('./shutdownWindow').createShutdownWindow({ BrowserWindow, getParentWindow: () => mainWindow });
 const douyinLoginNotice = createDouyinLoginNotice({
   dialog, getParentWindow: () => mainWindow,
   openLogin: () => getDouyinSessionManager().open('https://www.douyin.com/'), log
@@ -42,15 +43,24 @@ const loginStartup = createLoginStartup({ app, portableExecutable: process.env.P
 
 const defaultUserDataDir = app.getPath('userData');
 const linkedDataDir = readRegisteredDataDirectory(defaultUserDataDir);
+let managedDataDir;
+try {
+  managedDataDir = readManagedDataDirectory(process.env.PORTABLE_EXECUTABLE_DIR || (app.isPackaged ? path.dirname(process.execPath) : ''));
+} catch (error) {
+  dialog.showErrorBox('数据目录不可用', '请恢复 runtime-location.json 中配置的原数据目录，再启动程序。不会创建空数据库。\n' + error.message);
+  app.exit(1);
+  throw error;
+}
 
 const runtimeConfig = resolveRuntimeConfig({
   portableExecutableDir: process.env.PORTABLE_EXECUTABLE_DIR,
   defaultUserDataDir,
   linkedDataDir,
+  managedDataDir,
   port: process.env.PORT
 });
 fs.mkdirSync(runtimeConfig.userDataDir, { recursive: true });
-if (runtimeConfig.portable) app.setPath('userData', runtimeConfig.userDataDir);
+if (runtimeConfig.portable || runtimeConfig.managed) app.setPath('userData', runtimeConfig.userDataDir);
 
 function log(message, error) {
   const detail = error ? '\n' + (error.stack || error.message || String(error)) : '';
@@ -212,7 +222,7 @@ async function startServer() {
     targetDbPath: process.env.WEBSTOCK_DB_PATH || runtimeConfig.dbPath
   });
   if (migration.migrated) log('Migrated installed WebStock database to portable data directory');
-  if (runtimeConfig.portable && process.env.WEBSTOCK_BUILD_SMOKE_TEST !== '1') {
+  if ((runtimeConfig.portable || runtimeConfig.managed) && process.env.WEBSTOCK_BUILD_SMOKE_TEST !== '1') {
     const registration = registerPortableDataDirectory({
       userDataDir: defaultUserDataDir,
       dataDir: runtimeConfig.dataDir
@@ -229,7 +239,7 @@ async function startServer() {
   desktopBackend = createDesktopBackend({
     getSessionManager: getDouyinSessionManager,
     onDouyinSessionState: state => douyinLoginNotice.handle(state),
-    onLog: message => console.log('[data] ' + message.trimEnd()),
+    onLog: message => /^Shutdown:/.test(message) ? log(message.trimEnd()) : console.log('[data] ' + message.trimEnd()),
     onExit: details => {
       log('Data backend exited unexpectedly: ' + String(details.code));
       runtimeTrace.emit({ type: 'backend-exit', label: String(details.code) });
@@ -244,10 +254,12 @@ async function stopBackgroundServices() {
   if (servicesStopped) return;
   if (shutdownTask) return shutdownTask;
   shutdownTask = (async function() {
+    log('Shutdown: requested; draining current tasks');
+    if (desktopBackend) await desktopBackend.stop();
     douyinLoginNotice.dispose();
     if (douyinSessionManager) douyinSessionManager.dispose();
-    if (desktopBackend) await desktopBackend.stop();
     servicesStopped = true;
+    log('Shutdown: services stopped; closing application');
   })().finally(function() { shutdownTask = null; });
   return shutdownTask;
 }
@@ -264,6 +276,7 @@ function createBackgroundController() {
       return desktopBackend.call('syncAll', [], { timeoutMs: 0 });
     },
     onExit: stopBackgroundServices,
+    onExitPending: showShutdownPending,
     onExitError: error => dialog.showErrorBox('后台尚未退出', '未强制关闭或清空数据。请稍后再次完全退出。\n' + error.message),
     log
   });
@@ -397,8 +410,9 @@ const gotLock = app.requestSingleInstanceLock();
 if (!gotLock) {
   app.quit();
 } else {
-  app.on('second-instance', function() {
-    if (backgroundMode) backgroundMode.showMainWindow();
+  app.on('second-instance', function(_event, argv) {
+    if (backgroundMode && argv.includes('--quit')) backgroundMode.exit();
+    else if (backgroundMode) backgroundMode.showMainWindow();
   });
 
   app.whenReady().then(async function() {
@@ -425,6 +439,7 @@ if (!gotLock) {
       return;
     }
     event.preventDefault();
+    if (backgroundMode) { backgroundMode.exit(); return; }
     stopBackgroundServices().then(() => app.quit()).catch(function(error) {
       log('Backend shutdown did not finish; application was not force-closed', error);
       if (backgroundMode) backgroundMode.setQuitting(false);

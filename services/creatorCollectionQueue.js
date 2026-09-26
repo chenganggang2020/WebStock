@@ -10,6 +10,8 @@ function createCreatorCollectionQueue({db, channels}) {
   )`);
   let busy = false;
   let timer = null;
+  let stopping = false;
+  let activeRun = null;
   function row(item) {
     if (!item) return null;
     let channel;
@@ -32,6 +34,7 @@ function createCreatorCollectionQueue({db, channels}) {
     return channel;
   }
   function enqueue(ids, options = {}) {
+    if (stopping) throw new Error('Background collection is stopping');
     if (!Array.isArray(ids) || !ids.length || ids.length > 50 || ids.some(id => !Number.isSafeInteger(Number(id)) || Number(id) < 1)) {
       throw new Error('请选择 1–50 位有效作者');
     }
@@ -58,6 +61,7 @@ function createCreatorCollectionQueue({db, channels}) {
     return get(id);
   }
   function retry(id) {
+    if (stopping) throw new Error('Background collection is stopping');
     const item = get(id); validChannel(item.channelId);
     if (['queued','running'].includes(item.status)) return item;
     const active = db.prepare("SELECT id FROM creator_collection_queue WHERE channel_id=? AND status IN ('queued','running')").get(item.channelId);
@@ -68,7 +72,15 @@ function createCreatorCollectionQueue({db, channels}) {
   function recoverInterrupted() {
     db.prepare("UPDATE creator_collection_queue SET status=CASE WHEN cancel_requested=1 THEN 'cancelled' ELSE 'queued' END, message='上次程序退出，保留已完成资料并继续未完成项',updated_at=? WHERE status='running'").run(new Date().toISOString());
   }
-  async function runNext(executor) {
+  function runNext(executor) {
+    if (stopping || busy) return Promise.resolve(null);
+    const task = runNextItem(executor);
+    activeRun = task;
+    const clear = () => { if (activeRun === task) activeRun = null; };
+    task.then(clear, clear);
+    return task;
+  }
+  async function runNextItem(executor) {
     if (busy) return null;
     const item = row(db.prepare("SELECT * FROM creator_collection_queue WHERE status='queued' ORDER BY updated_at,id LIMIT 1").get());
     if (!item) return null;
@@ -82,14 +94,14 @@ function createCreatorCollectionQueue({db, channels}) {
       const archive = result.archive || {};
       const reportedCount = Number(archive.reportedWorkCount || result.workCount || 0);
       const catalogConfirmed = archive.complete === true && reportedCount > 0 && Number(archive.discoveredCount) >= reportedCount;
-      const complete = !hasErrors && (item.mode === 'incremental' ||
+      const complete = !result.interrupted && !hasErrors && (item.mode === 'incremental' ||
         Boolean(catalogConfirmed && after && after.pendingCount === 0 && !after.unavailableCount));
       const previous = item.result.archiveQueue && item.result.archiveQueue.after;
       const progress = Number(result.transcribedCount) > 0 || Number(result.archivedCount) > 0 ||
         (after && Number(after.completedCount) > Number(previous && previous.completedCount || 0)) ||
         Number(result.archive && result.archive.discoveredCount || 0) > Number(item.result.archive && item.result.archive.discoveredCount || 0);
       const cancelled = get(item.id).cancelRequested;
-      const status = cancelled ? 'cancelled' : complete ? 'complete' : !hasErrors && progress ? 'queued' : 'partial';
+      const status = cancelled ? 'cancelled' : result.interrupted ? 'queued' : complete ? 'complete' : !hasErrors && progress ? 'queued' : 'partial';
       const message = cancelled ? '任务已停止，已采集资料保留' : complete ? (item.mode === 'archive' ? '已覆盖本次主页报告的公开作品及视频处理队列' : '本轮增量处理结束，不代表全量覆盖')
         : status === 'queued' ? '本批已保存，等待下一轮补采' : '部分完成或无新进展，请检查失败明细后续跑';
       db.prepare('UPDATE creator_collection_queue SET status=?,result_json=?,message=?,updated_at=? WHERE id=?')
@@ -103,13 +115,19 @@ function createCreatorCollectionQueue({db, channels}) {
   }
   function start(executor, options = {}) {
     if (timer) return;
+    stopping = false;
     recoverInterrupted();
     timer = setInterval(() => {
       if (!options.canRun || options.canRun()) runNext(executor).catch(() => {});
     }, 5000);
     if (timer.unref) timer.unref();
   }
-  function stop() { if (timer) clearInterval(timer); timer = null; }
+  function stop() {
+    stopping = true;
+    if (timer) clearInterval(timer);
+    timer = null;
+    return activeRun || Promise.resolve();
+  }
   return {enqueue,list,get,retry,cancel,recoverInterrupted,runNext,start,stop,hasActiveChannel,isWorkerRunning:() => Boolean(timer)};
 }
 let singleton;

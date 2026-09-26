@@ -136,3 +136,14 @@ test('occupied backend port rejects startup and still permits normal cleanup', a
   await backend.stop();
   assert.equal(backend.child.exitCode, 0);
 });
+
+test('normal exit waits for a child job longer than the former ten-second limit', async t => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'webstock-long-drain-'));
+  const backend = createDesktopBackend({ script: path.join(__dirname, 'fixtures/backend-drain.js') });
+  t.after(async () => { await backend.stop(); fs.rmSync(directory, { recursive: true, force: true }); });
+  await backend.start({ port: 0, userDataDir: directory, jobDurationMs: 11000 });
+  await backend.call('syncAll');
+  await backend.stop();
+  assert.equal(backend.child.exitCode, 0);
+  assert.equal(fs.readFileSync(path.join(directory, 'drained.txt'), 'utf8'), 'completed');
+});
