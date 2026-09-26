@@ -83,6 +83,12 @@ async function verifyFrontendAssets(port) {
   const authors = await fetch('http://127.0.0.1:' + port + '/api/knowledge/authors', {signal:AbortSignal.timeout(5000)});
   const authorList = await authors.json();
   if (!authors.ok || !authorList.success || !Array.isArray(authorList.data)) throw new Error('Packaged evidence author route is missing');
+  const search = await fetch('http://127.0.0.1:' + port + '/api/stock-search?q=600519', {signal:AbortSignal.timeout(5000)});
+  const searchResult = await search.json();
+  if (!search.ok || !searchResult.success || !searchResult.data?.stocks?.some(stock => stock.code === '600519')) {
+    throw new Error('Packaged stock search cannot resolve its local catalog');
+  }
+  console.log('Packaged local stock search resolved 600519 without an external lookup');
 }
 
 async function removeSmokeDirectory(directory) {
