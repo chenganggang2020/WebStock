@@ -78,7 +78,7 @@
             <p data-chart-symbol="缺"><b>缺</b><span>相邻两根 K 线之间出现完整向上或向下缺口。</span></p>
             <p data-chart-symbol="量"><b>量</b><span>成交量达到前 20 期均量约 1.8 倍，且价格变动达到 1%。</span></p>
             <p data-chart-symbol="积"><b>积</b><span>本地规则识别的窄幅整理、站上 MA20 且近期量能增强。</span></p>
-            <p data-chart-symbol="9"><b>9</b><span>简化九转首次计到9：连续比较收盘价与4根日K线前的收盘价；不是完整TD Sequential。</span></p>
+            <p data-chart-symbol="9"><b>1–9</b><span>九转连续计数：上行标在K线上方，下行标在下方，9强调显示。悬浮数字查看两根比较价格；图表上方可展开“九转怎么算”。不是完整TD Sequential。</span></p>
             <p data-chart-symbol="资"><b>资</b><span>资金流数据源给出的资金方向证据；缺数据时不会显示。</span></p>
           </div>
           <small>这些都是透明规则的观察标记，不是买卖指令，也不等同于同花顺专有信号。</small>
@@ -419,6 +419,16 @@
       </div>
       <section id="decisionGuideStrip" class="decision-guide-strip" data-state="idle" aria-live="polite" hidden></section>
       <section id="chartCoachEvidenceStrip" class="chart-coach-evidence-strip" aria-live="polite" hidden></section>
+      <details id="nineTurnMethod" class="nine-turn-history">
+        <summary>九转怎么算 · 当前仅日线</summary>
+        <p><b>比较对象：</b>C[t] 是本根日K线收盘价，C[t−4] 是前第4根日K线收盘价；按K线根数，不是4个自然日。不是连续涨跌9天，也不使用均价线。</p>
+        <p><b>上行：</b><code>C[t] &gt; C[t−4]</code>，连续满足时计 1、2…9，标在K线上方。<b>下行：</b><code>C[t] &lt; C[t−4]</code>，连续满足时计 1、2…9，标在K线下方。</p>
+        <p><b>重置与缺口：</b>相等时计数归零；方向反转时从 1 重新开始。本根及前4根窗口存在已标记的数据缺口或无效收盘价时中断，不删除缺口来凑9；此前4根须已收盘。至少需要13根有效K线才能首次完成9。</p>
+        <p><b>确认与显示：</b>未收盘数字淡显，仅作暂定计数；盘中可能变化或消失。当前实现还将北京时间当日15:01前视为未确认。连续超过9不重复标9，须中断后开启新序列。悬浮任意数字可查看本根与前第4根的日期、价格和进度。</p>
+        <p><b>实现范围：</b>当前是连续比较的九转基础计数，未实现完整TD Sequential的其他条件，例如13 根倒计数、完善形态等。数字9不是买卖指令，不保证反转。</p>
+        <p><b>分时：</b>分时九转尚未接入。若接入，应按固定1分钟或5分钟K线的收盘价分别计算；1分钟比较前4根分钟K线，5分钟比较前4根5分钟K线，不能混用日线计数，也不能把5秒/30秒报价刷新当成分钟K线。</p>
+        <p>方法参考：<a href="https://demark.com/tradingview/" target="_blank" rel="noopener noreferrer">DeMARK对Setup 9与Countdown 13的说明</a>；以上逐条描述本程序当前实现，不宣称与官方指标完全等同。</p>
+      </details>
       <div id="realtimeView" class="main-content">
         <div class="realtime-left">
           <div id="realtimeResolutionToggle" class="realtime-resolution-toggle" role="group" aria-label="分时数据粒度">

@@ -72,3 +72,27 @@ test('missing extrema fall back to the actual close without fabricating a price'
   data[4].high = null;
   assert.deepEqual(marks(data)[0].coord, [data[4].date, data[4].close]);
 });
+
+test('each count explains the actual close and the close four bars earlier', () => {
+  const upward = marks(rows([20, 21, 22, 23, 24]))[0];
+  assert.match(upward.signal.basis, /本根收盘 24\.00 > 前第4根（2026-01-01）收盘 20\.00/);
+  const downward = marks(rows([50, 49, 48, 47, 46]))[0];
+  assert.match(downward.signal.basis, /本根收盘 46\.00 < 前第4根（2026-01-01）收盘 50\.00/);
+});
+
+test('unfinished comparison identifies the current price rather than a confirmed close', () => {
+  const data = rows([20, 21, 22, 23, 24]);
+  data[4].incomplete = true;
+  assert.match(marks(data)[0].signal.basis, /本根暂定价 24\.00 > 前第4根（2026-01-01）收盘 20\.00/);
+  assert.match(marks(data)[0].signal.basis, /未确认/);
+});
+
+test('chart has a visible-entry calculation guide covering scope, reset, confirmation and limitations', () => {
+  const html = fs.readFileSync(path.join(__dirname, '../index.html'), 'utf8');
+  const guide = html.match(/<details id="nineTurnMethod"[^>]*>[\s\S]*?<\/details>/)?.[0];
+  assert.ok(guide, 'calculation guide must exist above the chart views');
+  assert.ok(html.indexOf(guide) > html.indexOf('id="stockWorkspace"'));
+  assert.ok(html.indexOf(guide) < html.indexOf('id="realtimeView"'));
+  for (const text of ['九转怎么算', 'C[t] &gt; C[t−4]', 'C[t] &lt; C[t−4]', '相等',
+    '数据缺口', '从 1 重新开始', '未收盘', '13 根', '分时九转尚未接入', '不是买卖指令']) assert.ok(guide.includes(text), text);
+});

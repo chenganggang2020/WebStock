@@ -562,6 +562,10 @@ function buildNineTurnMarks(data, context, history) {
     const event = events.get(item.index);
     let basis = '连续计数 ' + item.count + '/9 · ' +
       (item.provisional ? '当前K线未收盘，计数未确认' : confirmed ? '本根完成九转计数' : '九转尚未完成');
+    const reference = data[item.index - 4];
+    basis += '；本根' + (item.provisional ? '暂定价 ' : '收盘 ') + metricText(row.close, '') +
+      (upward ? ' > ' : ' < ') + '前第4根（' + String(reference.date || '日期未提供') +
+      '）收盘 ' + metricText(reference.close, '');
     if (event) basis += '；事件后收盘涨跌（事后核对）：' + [1, 5, 20].map(function(horizon) {
       return horizon + '根后 ' + nineTurnOutcomeText(event.outcomes[horizon]);
     }).join('；');
