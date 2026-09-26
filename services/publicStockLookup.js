@@ -6,7 +6,14 @@ function parseSuggestions(payload) {
   const body = text.match(/^\s*var\s+suggestdata\s*=\s*"([^"\r\n]*)"\s*;?\s*$/)?.[1] || '';
   const seen = new Set();
   return body.split(';').flatMap(row => {
-    const fields = row.split(','), symbol = fields[3] || '', code = fields[2], name = fields[4];
+    const fields = row.split(','), code = fields[2], name = fields[4];
+    let symbol = fields[3] || '';
+    // The fund suggestion feed uses of159915/of510300 instead of exchange
+    // symbols. Convert only exchange ETF codes, never ordinary OTC funds.
+    if (fields[1] === '22' && symbol === 'of' + code && /ETF/i.test(name || '') &&
+        /^(159|510|511|512|513|515|516|517|518|519|560|561|562|563|588|589)\d{3}$/.test(code)) {
+      symbol = (code.startsWith('1') ? 'sz' : 'sh') + code;
+    }
     // Suggestions also include indices with colliding six-digit codes (e.g.
     // sh000001 versus sz000001); this stock picker must not merge them.
     const supported = fields[1] === '11'

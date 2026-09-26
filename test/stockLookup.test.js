@@ -60,3 +60,10 @@ test('stock-search opts into bounded online suggestions without losing local res
   await routes['/stock-search']({query:{q:'600519'}},{json(){}},error=>{throw error;});
   assert.equal(calls,1,'legacy local-only callers remain local');
 });
+
+test('real public ETF suggestions use fund identities and map only verified exchange ETF prefixes', () => {
+  const {parseSuggestions} = require('../services/publicStockLookup');
+  // Raw response shapes observed 2026-09-27, not exchange trading quotes.
+  const rows = parseSuggestions('var suggestdata="of159915,22,159915,of159915,创业板ETF易方达,,创业板ETF易方达,99,1,,,;of510300,22,510300,of510300,沪深300ETF华泰柏瑞,,沪深300ETF华泰柏瑞,99,1,,,;of000001,22,000001,of000001,普通场外基金";');
+  assert.deepEqual(rows.map(row=>[row.code,row.market,row.type]), [['159915','sz','fund'],['510300','sh','fund']]);
+});
