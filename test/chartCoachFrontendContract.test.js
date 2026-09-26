@@ -160,6 +160,26 @@ test('chart coach renders versioned rule definitions and non-predictive knowledg
   assert.match(html, /当前规则参考/);
 });
 
+test('coach toggles preserve watchlist price lines and zones without duplicating them on refresh', async () => {
+  const requests = [];
+  const fixture = loadInteractiveChartCoach(requests);
+  const options = [];
+  fixture.state.currentKlineWatchlistMarks = { markLine: { data: [{ name: '自动压力', yAxis: 12.01 }] },
+    markArea: { data: [[{ name: '观察区', yAxis: 10 }, { yAxis: 10.1 }]] } };
+  fixture.state.klineChart = { setOption: option => options.push(option) };
+  const opening = fixture.ChartCoach.open();
+  const result = chartResult('000001', 'day', '2026-08-11');
+  result.chartAnnotations = { currentLevels: { resistance: { price: 12, label: '压力', shortLabel: '压' } } };
+  requests[0].resolve(result);
+  await opening;
+  assert.equal(options.at(-1).series[0].markLine.data.length, 2);
+  fixture.ChartCoach.refreshMarks();
+  assert.equal(options.at(-1).series[0].markLine.data.length, 2);
+  fixture.ChartCoach.clearMarks();
+  assert.equal(options.at(-1).series[0].markLine.data.length, 1);
+  assert.equal(options.at(-1).series[0].markArea.data.length, 1);
+});
+
 test('chart coach escapes service text and only links http or https references', () => {
   const ChartCoach = loadChartCoach();
   const html = ChartCoach.renderResult({
@@ -313,6 +333,8 @@ test('chart coach explains strength-graded key levels and marks their last confi
   assert.match(strip, /chartCoachGptEvidence/);
   assert.ok(marks.markLine.data.some(item => item.yAxis === 10.12 && /强支/.test(item.label.formatter)));
   assert.ok(marks.markPoint.data.some(item => item.coord[0] === '2026-08-10' && item.value === '撑'));
+  assert.ok(marks.markPoint.data.find(item => item.value === '压').symbolOffset[1] < 0);
+  assert.ok(marks.markPoint.data.find(item => item.value === '撑').symbolOffset[1] > 0);
 });
 
 test('chart coach renders daily GPT, news and capital-flow evidence as separate unverified sources', () => {

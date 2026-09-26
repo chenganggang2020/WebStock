@@ -9894,6 +9894,24 @@ a.small-btn {
   color: #b91c1c;
 }
 
+.chart-price-labels { position:absolute; inset:0; pointer-events:none; z-index:12; }
+.chart-price-labels > svg { position:absolute; inset:0; }
+.chart-price-rail { position:absolute; }
+.chart-price-rail.scrollable { overflow-y:auto; overflow-x:hidden; pointer-events:auto; }
+.chart-price-label { position:absolute; left:0; width:100%; height:34px; padding:2px 5px;
+  border:1px solid var(--border, #cbd5e1); border-left:3px solid; border-radius:3px;
+  background:var(--panel-bg, #fff); color:var(--text-primary, #23364b); text-align:left;
+  cursor:pointer; pointer-events:auto; line-height:14px; }
+.chart-price-label strong, .chart-price-label small { display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.chart-price-label strong { font-size:11px; }
+.chart-price-label small { font-size:10px; color:var(--text-secondary, #586c81); }
+.chart-price-label:focus-visible { outline:2px solid #5682ad; }
+.chart-price-label[aria-expanded="true"] { box-shadow:0 0 0 1px #5682ad; }
+.chart-price-detail { position:absolute; left:12px; width:auto; max-width:560px; box-sizing:border-box;
+  padding:10px; white-space:pre-wrap; overflow:auto; pointer-events:auto; font-size:12px; line-height:1.6;
+  color:var(--text-primary, #23364b); background:var(--panel-bg, #fff); border:1px solid var(--border, #cbd5e1); border-radius:4px; }
+body.dark .chart-price-label, body.dark .chart-price-detail { background:#191919; color:#dce7f2; }
+
 .realtime-resolution-toggle {
   display: flex;
   align-items: center;

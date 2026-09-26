@@ -89,16 +89,20 @@ function renderKlineChart(rawData, indicator) {
     confirm: '#7c3aed',
     observe: '#2563eb'
   };
+  const dockedLevels = Boolean(window.ChartPriceLabels);
+  const levelSource = { basis: watchlistItem && watchlistItem.autoLevelsMethod || '自选备注或预警点位；未独立核验',
+    sourceDate: watchlistItem && watchlistItem.autoLevelsDate || '' };
   if (watchlistMarks.lines.length) {
     baseSeries[0].markLine = {
       symbol: ['none', 'none'],
       silent: true,
-      label: { show: true, position: 'insideEndTop', color: textColor, formatter: '{b} {c}' },
+      label: { show: !dockedLevels, position: 'insideEndTop', color: textColor, formatter: '{b} {c}' },
       data: watchlistMarks.lines.map(function(mark) {
         const color = markColors[mark.kind] || chartTheme.colors.reference;
         return {
           name: mark.name,
           yAxis: mark.value,
+          signal: levelSource,
           lineStyle: { color: color, width: 1.1, type: 'dashed' },
           label: { color: color }
         };
@@ -109,12 +113,14 @@ function renderKlineChart(rawData, indicator) {
     baseSeries[0].markArea = {
       silent: true,
       itemStyle: { color: 'rgba(37, 99, 235, 0.08)' },
-      label: { color: '#2563eb', position: 'insideTopRight' },
+      label: { show: !dockedLevels, color: '#2563eb', position: 'insideTopRight' },
       data: watchlistMarks.areas.map(function(area) {
-        return [{ name: area.name, yAxis: area.from }, { yAxis: area.to }];
+        return [{ name: area.name, yAxis: area.from, signal: levelSource }, { yAxis: area.to }];
       })
     };
   }
+  State.currentKlineWatchlistMarks = { markLine: baseSeries[0].markLine || { data: [] },
+    markArea: baseSeries[0].markArea || { data: [] } };
   const localSignalMarks = Array.isArray(State.currentKlineSignalMarks)
     ? State.currentKlineSignalMarks : [];
   if (isDaily && localSignalMarks.length) {
@@ -366,6 +372,7 @@ function renderKlineChart(rawData, indicator) {
     ],
     series: baseSeries
   };
+  if (dockedLevels && (watchlistMarks.lines.length || watchlistMarks.areas.length)) option.grid.forEach(grid => { grid.right = 190; });
   window.ChartTheme.applyToOption(option, { dark: isDark });
 
   const dom = document.getElementById('chartContainer');
@@ -392,6 +399,7 @@ function renderKlineChart(rawData, indicator) {
     }
   });
   if (window.ChartCoach && window.ChartCoach.refreshMarks) window.ChartCoach.refreshMarks();
+  if (window.ChartPriceLabels) window.ChartPriceLabels.bind(State.klineChart, rawData.at(-1));
 
   if (indicator === 'ma') {
     enableLegendDblClick();

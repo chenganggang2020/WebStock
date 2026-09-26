@@ -251,6 +251,7 @@
           signal: level,
           lineStyle: { color: resistance ? '#dc2626' : '#059669', type: 'dashed', width: keyLevels ? 1.5 : 2, opacity: 0.9 },
           label: {
+            show: !window.ChartPriceLabels,
             formatter: level.shortLabel + ' ' + Number(level.price).toFixed(2),
             color: resistance ? '#b91c1c' : '#047857',
             backgroundColor: resistance ? 'rgba(254,226,226,0.94)' : 'rgba(209,250,229,0.94)',
@@ -268,6 +269,7 @@
             signal: level,
             symbol: 'circle',
             symbolSize: level.strengthKey === 'strong' ? 34 : 28,
+            symbolOffset: [0, resistance ? -22 : 22],
             itemStyle: { color: resistance ? '#dc2626' : '#059669', borderColor: '#ffffff', borderWidth: 1 },
             label: { color: '#ffffff', fontWeight: 700, fontSize: 11 }
           });
@@ -420,12 +422,28 @@
     const counts = state.currentPeriod === 'day' && Array.isArray(state.currentKlineSignalMarks)
       ? state.currentKlineSignalMarks.filter(function(mark) { return mark.nineTurnCount; }) : [];
     const points = marksVisible && marks ? marks.markPoint : { data: [] };
-    chart.setOption({ series: [{
+    const base = state.currentKlineWatchlistMarks || {};
+    const active = marksVisible && marks ? marks : {};
+    const lines = Object.assign({}, base.markLine, active.markLine, {
+      data: (base.markLine && base.markLine.data || []).concat(active.markLine && active.markLine.data || []) });
+    const areas = Object.assign({}, base.markArea, active.markArea, {
+      data: (base.markArea && base.markArea.data || []).concat(active.markArea && active.markArea.data || []) });
+    if (window.ChartPriceLabels) {
+      lines.label = Object.assign({}, lines.label, { show: false });
+      areas.label = Object.assign({}, areas.label, { show: false });
+      lines.data = lines.data.map(line => Object.assign({}, line, { label: Object.assign({}, line.label, { show: false }) }));
+    }
+    const patch = { series: [{
       name: 'K线',
-      markLine: marksVisible && marks ? marks.markLine : { data: [] },
+      markLine: lines,
       markPoint: Object.assign({}, points, { data: counts.concat(points.data || []) }),
-      markArea: marksVisible && marks ? marks.markArea : { data: [] }
-    }] });
+      markArea: areas
+    }] };
+    if (window.ChartPriceLabels && chart.getOption) {
+      patch.grid = (chart.getOption().grid || []).map(() => ({ right: lines.data.length || areas.data.length ? 190 : '3%' }));
+    }
+    chart.setOption(patch);
+    if (window.ChartPriceLabels) window.ChartPriceLabels.bind(chart, (state.currentRawData || []).at(-1));
     return true;
   }
 
