@@ -7,6 +7,7 @@ const axios = require('axios');
 const pinyin = require('tiny-pinyin');
 const themeService = require('../services/themeService');
 const stockSearchService = require('../services/stockSearchService');
+const publicStockLookup = require('../services/publicStockLookup');
 
 let stockListCache = [];
 let fundListCache = [];
@@ -125,15 +126,23 @@ router.get('/stocklist', async function (req, res) {
   res.json({ success: true, data: getMergedStockList() });
 });
 
-router.get('/stock-search', function(req, res, next) {
+router.get('/stock-search', async function(req, res, next) {
   try {
-    res.json({
-      success: true,
-      data: stockSearchService.search(req.query.q || req.query.keyword || '', {
+    const query = String(req.query.q || req.query.keyword || '').trim().slice(0,60);
+    const online = req.query.network === '1' ? publicStockLookup.search(query) : null;
+    const data = stockSearchService.search(query, {
         limit: req.query.limit,
         baseStocks: getMergedStockList()
-      })
     });
+    if (online) {
+      const result = await online;
+      const merged = new Map(data.stocks.map(stock=>[stock.code, stock]));
+      result.stocks.forEach(stock=>merged.set(stock.code, Object.assign({}, merged.get(stock.code), addPinyinToStock(stock))));
+      data.stocks = Array.from(merged.values()).sort((a,b)=>
+        Number(b.code === query) - Number(a.code === query) || (b.score || 0) - (a.score || 0)).slice(0,160);
+      data.online = {status:result.status, source:result.source};
+    }
+    res.json({success:true, data});
   } catch (error) {
     next(error);
   }

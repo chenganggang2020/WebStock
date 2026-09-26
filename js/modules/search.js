@@ -1,7 +1,7 @@
 function fuzzyMatch(q, t) {
   if (!q) return true;
   q = q.toLowerCase().replace(/\s+/g, '');
-  t = t.toLowerCase();
+  t = String(t || '').toLowerCase();
   if (t.includes(q)) return true;
   let qi = 0, ti = 0;
   while (qi < q.length && ti < t.length) { if (q[qi] === t[ti]) qi++; ti++; }
@@ -37,6 +37,7 @@ function matchScore(query, stock) {
 
 function searchStocks(query) {
   const State = window.State;
+  query = String(query || '').trim().replace(/^(?:sh|sz|bj)(?=\d{6}$)/i, '');
   if (!query.trim()) return State.allStocks;
   const res = [];
   for (const s of State.allStocks) { const sc = matchScore(query, s); if (sc > 0) res.push({ ...s, score: sc }); }
@@ -44,7 +45,6 @@ function searchStocks(query) {
   return res;
 }
 
-let deepSearchSeq = 0;
 const SEARCH_HISTORY_KEY = 'webstock_search_history';
 
 function searchHistoryEscape(value) {
@@ -137,12 +137,10 @@ function mergeSearchResults(localResults, remotePayload) {
 }
 
 async function searchStocksDeep(query, localResults) {
-  const keyword = String(query || '').trim();
-  const seq = ++deepSearchSeq;
-  if (keyword.length < 2 || /^\d+$/.test(keyword) || !window.ApiClient) return null;
+  const keyword = String(query || '').trim().replace(/^(?:sh|sz|bj)(?=\d{6}$)/i, '');
+  if (keyword.length < 2 || !window.ApiClient) return null;
   try {
-    const payload = await window.ApiClient.fetchJsonData('/api/stock-search?q=' + encodeURIComponent(keyword) + '&limit=80');
-    if (seq !== deepSearchSeq) return null;
+    const payload = await window.ApiClient.fetchJsonData('/api/stock-search?q=' + encodeURIComponent(keyword) + '&limit=80&network=1', {timeoutMs:6500, maxRetries:0});
     return mergeSearchResults(localResults || [], payload || {});
   } catch (error) {
     console.warn(error.message || error);
@@ -168,6 +166,7 @@ function clearSearch() {
   toggleClearButton();
   State.currentPage = 0;
   State.searchResults = [];
+  State.searchQuery = '';
   State.filteredStocks = State.allStocks.slice(0, State.PAGE_SIZE);
   StockList.renderStockTable(State.filteredStocks);
   if (window.HotMarket) window.HotMarket.syncSearchMode();

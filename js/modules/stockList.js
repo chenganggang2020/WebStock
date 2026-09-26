@@ -259,7 +259,7 @@ async function loadMoreStocks() {
     State.currentPage++;
     const start = State.currentPage * State.PAGE_SIZE;
     const end = start + State.PAGE_SIZE;
-    const sourceData = State.searchResults.length > 0 ? State.searchResults : State.allStocks;
+    const sourceData = State.searchQuery || State.searchResults.length > 0 ? State.searchResults : State.allStocks;
     const newStocks = sourceData.slice(start, end);
     if (newStocks.length > 0) {
       State.filteredStocks = State.filteredStocks.concat(newStocks);
@@ -275,7 +275,7 @@ function setupInfiniteScroll() {
   if (!tableWrap) return;
   tableWrap.addEventListener('scroll', function () {
     if (tableWrap.scrollTop + tableWrap.clientHeight >= tableWrap.scrollHeight - 50) {
-      const sourceData = State.searchResults.length > 0 ? State.searchResults : State.allStocks;
+      const sourceData = State.searchQuery || State.searchResults.length > 0 ? State.searchResults : State.allStocks;
       if (State.filteredStocks.length < sourceData.length) {
         loadMoreStocks();
       }
@@ -669,7 +669,7 @@ function renderStockTable(stocks) {
     const priceColor = price === 0 ? '#999' : color;
     const watched = State.watchlist.some(item => item.code === s.code);
     const star = watched ? '★' : '☆';
-    return '<tr class="' + active + '" data-code="' + s.code + '" tabindex="0" aria-label="' + s.code + ' ' + (s.name || '未知') + '">' +
+    return '<tr class="' + active + '" data-code="' + s.code + '" tabindex="0" aria-label="' + s.code + ' ' + stockEscape(s.name || '未知') + '">' +
       '<td class="star-cell"><button class="star-btn ' + (watched ? 'active' : '') + '" data-code="' + s.code + '" title="切换自选">' + star + '</button></td>' +
       '<td>' + s.code + '</td>' +
       '<td>' + renderStockNameCell(s) + '</td>' +

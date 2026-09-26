@@ -183,8 +183,10 @@ function bindButtons() {
   let historyTimer = null;
   let searchSeq = 0;
   function runSearch(keyword, seq) {
+    if (seq !== searchSeq || searchInput.value !== keyword) return;
     if (keyword.trim()) setMarketDrawerOpen(true, false);
     State.currentPage = 0;
+    State.searchQuery = keyword.trim();
     State.searchResults = keyword.trim() ? Search.searchStocks(keyword) : [];
     const source = keyword.trim() ? State.searchResults : State.allStocks;
     State.filteredStocks = source.slice(0, State.PAGE_SIZE);
@@ -192,7 +194,7 @@ function bindButtons() {
     if (window.HotMarket) window.HotMarket.syncSearchMode();
     if (quoteTimer) clearTimeout(quoteTimer);
     quoteTimer = setTimeout(function() {
-      if (seq !== searchSeq) return;
+      if (seq !== searchSeq || searchInput.value !== keyword) return;
       StockList.refreshQuotes(State.filteredStocks).catch(function(error) { console.warn(error.message); });
     }, 360);
     Search.searchStocksDeep(keyword, State.searchResults).then(function(results) {
@@ -201,6 +203,8 @@ function bindButtons() {
       State.searchResults = results;
       State.filteredStocks = results.slice(0, State.PAGE_SIZE);
       StockList.renderStockTable(State.filteredStocks);
+      if (window.HotMarket) window.HotMarket.syncSearchMode();
+      StockList.refreshQuotes(State.filteredStocks).catch(function(error) { console.warn(error.message); });
     });
   }
   searchInput.addEventListener('input', function(e) {
@@ -219,6 +223,8 @@ function bindButtons() {
   });
   searchInput.addEventListener('keydown', function(event) {
     if (event.key !== 'Enter') return;
+    if (searchTimer) clearTimeout(searchTimer);
+    runSearch(searchInput.value, ++searchSeq);
     const keyword = searchInput.value.trim();
     if (keyword) Search.saveSearchHistory(keyword);
     Search.hideSearchHistory();

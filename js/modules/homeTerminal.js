@@ -4,7 +4,8 @@
   if (root) root.HomeTerminal = api;
 })(typeof window !== 'undefined' ? window : null, function(root) {
   let bound = false;
-  let groupKey = '';
+  let groupKey = ':watchlist';
+  let visibleItems = [], rowLimit = 60, lookupRows = null, lookupQuery = '', searchSequence = 0, searchTimer = null;
   let selecting = false;
   const origins = new Map();
   const charts = new Map();
@@ -18,7 +19,8 @@
   const amount = value => finite(value) === null ? '—' : (Number(value) / 1e8).toFixed(2) + '亿';
   const isChartView = view => view === 'dashboard' || view === 'market';
   const indexHistory = (series, key) => (series || []).find(row => row.key === key || row.key === 'index:' + key);
-  const groupItems = () => root.Watchlist && root.Watchlist.getGroupItems ? root.Watchlist.getGroupItems(groupKey) : [];
+  // Live quote polling is bounded even when the user browses the whole catalog.
+  const groupItems = () => visibleItems.slice(0, 60);
   const displayTime = value => value && root.WebStockTime ? root.WebStockTime.formatDateTime(value) : value || '未记录';
 
   function rankBoards(boards, kind) {
@@ -68,18 +70,48 @@
   function renderWatchlist() {
     if (!root.Watchlist || !root.Watchlist.getGroupItems) return;
     const groups = root.Watchlist.watchlistGroups().slice().sort((a, b) => Number(a.readOnly) - Number(b.readOnly));
-    if (!groups.some(group => group.key === groupKey)) groupKey = (groups.find(group => group.source === 'local') || groups[0] || {}).key || '';
-    html('homeGroups', groups.map(group => '<option value="' + escape(group.key) + '">' + escape(group.name) + ' · ' + (group.readOnly ? '同花顺 · 只读' : '本地自选') + '</option>').join(''));
+    if (![':market', ':watchlist'].includes(groupKey) && !groups.some(group => group.key === groupKey)) groupKey = ':watchlist';
+    html('homeGroups', '<option value=":watchlist">全部自选（去重）</option><option value=":market">A股 / ETF · 全市场检索</option>' + groups.map(group => '<option value="' + escape(group.key) + '">' + escape(group.name) + ' · ' + (group.readOnly ? '同花顺 · 只读' : '本地自选') + '</option>').join(''));
     el('homeGroups').value = groupKey;
     const query = (el('homeWatchSearch').value || '').trim().toLowerCase();
-    const items = root.Watchlist.getGroupItems(groupKey).filter(item => (item.code + ' ' + item.name).toLowerCase().includes(query));
+    el('homeWatchSearch').placeholder = groupKey === ':market' ? '代码 / 名称 / 拼音 · 联网补查' : '筛选自选；全市场请切换上方范围';
+    const source = groupKey === ':market' ? (root.State.allStocks || []) : groupKey === ':watchlist'
+      ? Array.from(new Map(groups.flatMap(group => root.Watchlist.getGroupItems(group.key)).map(item => [item.code, item])).values())
+      : root.Watchlist.getGroupItems(groupKey);
+    const local = !query ? source : groupKey === ':market' && root.Search ? root.Search.searchStocks(query)
+      : source.filter(item => root.Search ? root.Search.matchScore(query, item) > 0 : (item.code + ' ' + item.name).toLowerCase().includes(query));
+    const matches = groupKey === ':market' && query === lookupQuery && lookupRows ? lookupRows : local;
+    const items = matches.slice(0, rowLimit);
+    visibleItems = items;
     const selected = root.State.currentStock && root.State.currentStock.code;
-    html('homeWatchRows', items.length ? items.map(item => '<button type="button" data-home-stock="' + escape(item.code) + '" aria-pressed="' + (item.code === selected) + '"><span>' + escape(item.name || item.code) + '<small>' + escape(item.code) + '</small></span><b class="' + trend(item.change) + '">' + (finite(item.price) > 0 ? pct(item.change) : '—') + '</b></button>').join('') : '<p class="home-empty">本组暂无匹配股票。可在“管理”中添加自选。</p>');
-    el('homeWatchStatus').textContent = items.length + '只 · 点击联动主图 · 同花顺分组只读';
+    html('homeWatchRows', items.length ? items.map(item => '<button type="button" data-home-stock="' + escape(item.code) + '" aria-pressed="' + (item.code === selected) + '"><span>' + escape(item.name || item.code) + '<small>' + escape(item.code) + '</small></span><b class="' + trend(item.change) + '">' + (finite(item.price) > 0 ? pct(item.change) : '—') + '</b></button>').join('') : '<p class="home-empty">当前范围无匹配结果。可切换到“A股 / ETF”按代码、名称或拼音检索。</p>');
+    if (el('homeLoadMore')) el('homeLoadMore').hidden = items.length >= matches.length;
+    if (el('homeAddWatchlist')) {
+      el('homeAddWatchlist').disabled = !root.State.currentStock;
+      el('homeAddWatchlist').textContent = root.State.currentStock ? '加入自选：' + (root.State.currentStock.name || selected) : '选中股票后加入自选';
+    }
+    el('homeWatchStatus').textContent = '已显示 ' + items.length + ' / ' + matches.length + ' 只 · ' +
+      (groupKey === ':market' ? 'A股与场内ETF；目录覆盖不等于实时行情覆盖。' : '点击联动主图 · 同花顺分组只读');
+  }
+
+  function search() {
+    const seq = ++searchSequence;
+    rowLimit = 60; lookupRows = null;
+    if (searchTimer) clearTimeout(searchTimer);
+    renderWatchlist();
+    const query = el('homeWatchSearch').value.trim().toLowerCase();
+    if (groupKey !== ':market' || query.length < 2 || !root.Search) return;
+    el('homeWatchStatus').textContent += ' 正在联网补查…';
+    searchTimer = setTimeout(async () => {
+      const rows = await root.Search.searchStocksDeep(query, root.Search.searchStocks(query));
+      if (seq !== searchSequence || groupKey !== ':market' || el('homeWatchSearch').value.trim().toLowerCase() !== query) return;
+      lookupQuery = query; lookupRows = rows;
+      renderWatchlist();
+    }, 250);
   }
 
   async function select(code) {
-    const item = root.Watchlist.getGroupItems(groupKey).find(x => x.code === code) || (root.State.watchlist || []).find(x => x.code === code) || (root.State.allStocks || []).find(x => x.code === code);
+    const item = visibleItems.find(x => x.code === code) || (root.State.watchlist || []).find(x => x.code === code) || (root.State.allStocks || []).find(x => x.code === code);
     if (!item) return;
     await root.StockList.selectStock(item);
     renderWatchlist();
@@ -88,7 +120,7 @@
   function ensureSelection() {
     if (selecting || root.State.currentMainView !== 'dashboard') return;
     renderWatchlist();
-    const stock = root.State.currentQuote ? root.State.currentStock : root.Watchlist.getGroupItems(groupKey)[0] || root.State.currentStock;
+    const stock = root.State.currentStock || groupItems()[0];
     if (!stock) return;
     selecting = true;
     root.StockList.selectStock(stock).catch(error => { el('chartRealtimeStatus').textContent = '行情读取失败：' + error.message; })
@@ -159,7 +191,7 @@
     if (globals) el('homeIndicators').after(globals);
     el('homeGroups').addEventListener('change', event => {
       groupKey = event.target.value;
-      renderWatchlist();
+      search();
     });
     el('dashboardView').addEventListener('click', event => {
       const stock = event.target.closest('[data-home-stock]');
@@ -167,7 +199,13 @@
       if (stock) select(stock.dataset.homeStock).catch(error => { el('homeWatchStatus').textContent = error.message; });
       if (page) root.switchMainView(page.dataset.homePage);
     });
-    el('homeWatchSearch').addEventListener('input', renderWatchlist);
+    el('homeWatchSearch').addEventListener('input', search);
+    el('homeLoadMore')?.addEventListener('click', () => { rowLimit += 60; renderWatchlist(); });
+    el('homeAddWatchlist')?.addEventListener('click', async () => {
+      if (!root.State.currentStock) return;
+      try { await root.Watchlist.addStock(root.State.currentStock); renderWatchlist(); }
+      catch(error) { el('homeWatchStatus').textContent = '加入自选失败：' + error.message; }
+    });
     el('homeManageWatchlist').addEventListener('click', () => root.switchMainView('watchlist'));
     el('homeMarketMore').addEventListener('toggle', () => {
       if (root.MarketComparison) root.MarketComparison.resize();

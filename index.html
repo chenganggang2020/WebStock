@@ -158,10 +158,12 @@
     <div id="dashboardView" class="main-view active">
       <div class="home-terminal">
         <aside id="homeWatchPane" class="home-panel" aria-label="首页自选与分组">
-          <header><strong>自选与分组</strong><button type="button" id="homeManageWatchlist" class="small-btn">管理</button></header>
-          <select id="homeGroups" aria-label="选择自选分组"></select>
-          <input id="homeWatchSearch" type="search" placeholder="搜索本组代码 / 名称" aria-label="搜索首页自选">
+          <header><strong>股票浏览</strong><button type="button" id="homeManageWatchlist" class="small-btn">自选管理</button></header>
+          <select id="homeGroups" aria-label="股票范围与自选分组"></select>
+          <input id="homeWatchSearch" type="search" placeholder="代码 / 名称 / 拼音" aria-label="搜索左侧股票">
+          <button id="homeAddWatchlist" type="button" class="small-btn" disabled>选中股票后加入自选</button>
           <div id="homeWatchRows"><p class="home-empty">正在读取本机自选…</p></div>
+          <button id="homeLoadMore" type="button" class="small-btn" hidden>显示更多（60只）</button>
           <footer id="homeWatchStatus">本地自选与同花顺只读分组分别展示</footer>
         </aside>
         <div class="home-terminal-main">
