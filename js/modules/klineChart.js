@@ -1,4 +1,31 @@
 let klineRequestSequence = 0;
+let klineRequestController = null;
+const klineFrames = new Map();
+function rememberKlineFrame(code, period, data, meta) {
+  if (!data.length) return;
+  const key = code + ':' + period;
+  klineFrames.delete(key);
+  klineFrames.set(key, {data:data.slice(), meta:Object.assign({}, meta)});
+  if (klineFrames.size > 12) klineFrames.delete(klineFrames.keys().next().value);
+}
+function restoreKlineFrame(code, period, message) {
+  const frame = klineFrames.get(code + ':' + period), State = window.State;
+  if (!frame) return false;
+  State.currentRawData = frame.data.slice();
+  State.currentKlineMeta = Object.assign({}, frame.meta, {code, period, hasData:true, stale:true});
+  window.Indicators.calcMAFromData(State.currentRawData, State.maPeriods);
+  hideKlineInsights(State);
+  renderAvailableKlineHeader(State, State.currentRawData, State.currentKlineMeta);
+  const info = document.getElementById('priceInfo');
+  if (info) info.insertAdjacentHTML('beforeend', ' <span class="market-source-warning">· 缓存快照 · ' + message + '</span>');
+  renderKlineChart(State.currentRawData, State.currentIndicator);
+  return true;
+}
+function cancelKlineLoad() {
+  klineRequestSequence += 1;
+  if (klineRequestController) klineRequestController.abort();
+  klineRequestController = null;
+}
 let maLegendSelection = {};
 function parseMAPeriods(input) {
   const values = String(input).trim().split(/[,，\s]+/);
@@ -789,21 +816,34 @@ function showUnavailableKline(State, code, period, meta, message) {
 async function loadKlineData(code, period) {
   const State = window.State;
   const Indicators = window.Indicators;
+  cancelKlineLoad();
   const requestId = ++klineRequestSequence;
+  const controller = new AbortController();
+  klineRequestController = controller;
+  const options = {signal:controller.signal, dedupe:false, timeoutMs:12000};
+  if (!restoreKlineFrame(code, period, '正在后台更新')) {
+    if (State.klineChart && State.klineChart.dispose) State.klineChart.dispose();
+    State.klineChart = null;
+    hideKlineInsights(State);
+    State.currentRawData = [];
+    const container = document.getElementById('chartContainer');
+    if (container) container.innerHTML = '<div class="loading">正在读取K线，最多等待12秒…</div>';
+  }
   try {
     const minutePromise = period === 'day'
-      ? window.ApiClient.fetchApiEnvelope('/api/minute?code=' + code + '&resolution=1m')
+      ? window.ApiClient.fetchApiEnvelope('/api/minute?code=' + code + '&resolution=1m', options)
         .catch(function() { return { data: [], meta: { dataSource: 'unavailable' } }; })
       : Promise.resolve({ data: [], meta: {} });
     const localAuctionPromise = period === 'day'
-      ? window.ApiClient.fetchApiEnvelope('/api/minute?code=' + code + '&resolution=30s')
+      ? window.ApiClient.fetchApiEnvelope('/api/minute?code=' + code + '&resolution=30s', options)
         .catch(function() { return { data: [], meta: { dataSource: 'local-30s-unavailable' } }; })
       : Promise.resolve({ data: [], meta: {} });
-    const envelope = await window.ApiClient.fetchApiEnvelope('/api/kline?code=' + code + '&period=' + period);
+    const envelope = await window.ApiClient.fetchApiEnvelope('/api/kline?code=' + code + '&period=' + period, options);
     if (requestId !== klineRequestSequence || !State.currentStock || State.currentStock.code !== code || State.currentPeriod !== period) return;
     // Historical candles are the primary result. Do not hold them behind a
     // slower optional minute/auction source; enrich only this same selection.
     if (Array.isArray(envelope.data) && envelope.data.length) {
+      rememberKlineFrame(code, period, envelope.data, envelope.meta);
       State.currentRawData = envelope.data;
       State.currentKlineMeta = Object.assign({}, envelope.meta || {}, {code,period,hasData:true});
       State.klineSnapshots[code] = envelope.data.slice(-80);
@@ -811,14 +851,19 @@ async function loadKlineData(code, period) {
       hideKlineInsights(State);
       renderAvailableKlineHeader(State, envelope.data, envelope.meta || {});
       renderKlineChart(State.currentRawData, State.currentIndicator);
+    } else if (!restoreKlineFrame(code, period, '本次暂无新数据，保留原日期')) {
+      showUnavailableKline(State, code, period, envelope.meta, '暂无K线数据；辅助行情若可用将自动补充');
     }
-    const results = [envelope, ...await Promise.all([minutePromise, localAuctionPromise])];
-    const minuteEnvelope = results[1];
-    const data = Array.isArray(envelope.data) ? envelope.data : [];
-    const meta = envelope.meta || {};
+    // Auxiliary enrichment must not keep the primary refresh cycle pending.
+    Promise.all([minutePromise, localAuctionPromise]).then(function(results) {
+    const minuteEnvelope = results[0];
+    const cached = klineFrames.get(code + ':' + period);
+    const useCache = !(Array.isArray(envelope.data) && envelope.data.length) && cached;
+    const data = useCache ? cached.data : Array.isArray(envelope.data) ? envelope.data : [];
+    const meta = useCache ? Object.assign({}, cached.meta, {stale:true}) : envelope.meta || {};
     const minuteRows = Array.isArray(minuteEnvelope.data) ? minuteEnvelope.data : [];
     const minuteMeta = minuteEnvelope.meta || {};
-    const localEnvelope = results[2];
+    const localEnvelope = results[1];
     const localRows = Array.isArray(localEnvelope.data) ? localEnvelope.data : [];
     const localMeta = localEnvelope.meta || {};
     if (requestId !== klineRequestSequence || !State.currentStock || State.currentStock.code !== code || State.currentPeriod !== period) return;
@@ -827,6 +872,7 @@ async function loadKlineData(code, period) {
       : data;
     State.currentKlineMeta = Object.assign({}, meta, { code, period, hasData: chartData.length > 0 });
     if (Array.isArray(chartData) && chartData.length > 0) {
+      rememberKlineFrame(code, period, chartData, meta);
       State.currentRawData = chartData;
       State.klineSnapshots[code] = chartData.slice(-80);
       Indicators.calcMAFromData(State.currentRawData, State.maPeriods);
@@ -846,13 +892,16 @@ async function loadKlineData(code, period) {
             (fetchedAt ? '（缓存时间 ' + fetchedAt + '）' : '') + '</span>');
         }
       }
-    } else if (meta.dataSource === 'unavailable') {
+    } else if (!restoreKlineFrame(code, period, '更新未取得新数据，保留原日期')) {
       showUnavailableKline(State, code, period, meta, '暂无K线数据（行情源暂不可用）');
     }
+    }).catch(function(error) {
+      if (requestId === klineRequestSequence) console.warn('K线辅助信息未更新:', error.message || error);
+    });
   } catch (e) {
     if (requestId !== klineRequestSequence || !State.currentStock ||
       State.currentStock.code !== code || State.currentPeriod !== period) return;
-    showUnavailableKline(State, code, period, {
+    if (!restoreKlineFrame(code, period, '更新失败，保留原日期')) showUnavailableKline(State, code, period, {
       dataSource: 'unavailable',
       stale: false,
       reason: 'request_failed'
@@ -867,11 +916,13 @@ async function prefetchKlineSnapshot(code, period) {
   const envelope = await window.ApiClient.fetchApiEnvelope('/api/kline?code=' + code + '&period=' + nextPeriod);
   const data = Array.isArray(envelope.data) ? envelope.data : [];
   if (!State.currentStock || State.currentStock.code !== code || !data.length) return [];
+  if (!klineFrames.has(code + ':' + nextPeriod)) rememberKlineFrame(code, nextPeriod, data, envelope.meta);
   State.klineSnapshots[code] = data.slice(-80);
   return State.klineSnapshots[code];
 }
 
 window.KlineChart = {
+  cancelLoad: cancelKlineLoad,
   parseMAPeriods,
   renderKlineChart,
   enableLegendDblClick,

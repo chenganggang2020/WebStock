@@ -169,6 +169,7 @@ function stopRealtimeRefresh(options) {
 
 function beginStockSelection(code) {
   const State = window.State;
+  if (window.KlineChart && window.KlineChart.cancelLoad) window.KlineChart.cancelLoad();
   stopRealtimeRefresh({ invalidate: true, silent: true });
   State.currentQuote = null;
   State.currentMinuteMeta = null;
@@ -242,6 +243,7 @@ function syncRefreshSchedule(options) {
 
 function showRealtimeView() {
   const State = window.State;
+  if (window.KlineChart && window.KlineChart.cancelLoad) window.KlineChart.cancelLoad();
   stopRealtimeRefresh({ invalidate: true, silent: true });
   State.currentView = 'realtime';
   State.currentPeriod = 'minute';
