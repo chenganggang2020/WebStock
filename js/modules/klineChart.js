@@ -546,6 +546,46 @@ function nineTurnOutcomeText(outcome) {
     : outcome.status === 'invalid' ? '数据缺口' : '待满窗口';
 }
 
+function buildNineTurnMarks(data, context, history) {
+  const model = window.MarketSignalModel;
+  const series = model.calculateNineTurnSeries(data, context);
+  const results = history || model.evaluateNineTurnHistory(data, context);
+  const events = new Map(results.events.map(function(event) { return [event.index, event]; }));
+  return series.filter(function(item) {
+    return item.available && item.count >= 1 && item.count <= 9;
+  }).map(function(item) {
+    const row = data[item.index];
+    const upward = item.direction === 'up';
+    const extreme = Number(upward ? row.high : row.low);
+    const color = upward ? '#c47700' : '#2563eb';
+    const confirmed = item.triggered;
+    const event = events.get(item.index);
+    let basis = '连续计数 ' + item.count + '/9 · ' +
+      (item.provisional ? '当前K线未收盘，计数未确认' : confirmed ? '本根完成九转计数' : '九转尚未完成');
+    if (event) basis += '；事件后收盘涨跌（事后核对）：' + [1, 5, 20].map(function(horizon) {
+      return horizon + '根后 ' + nineTurnOutcomeText(event.outcomes[horizon]);
+    }).join('；');
+    return {
+      nineTurnCount: true,
+      name: item.label,
+      coord: [item.date, Number.isFinite(extreme) && extreme > 0 ? extreme : Number(row.close)],
+      value: String(item.count),
+      symbol: 'circle',
+      symbolSize: confirmed ? 22 : 16,
+      symbolOffset: [0, upward ? -16 : 16],
+      itemStyle: { color: confirmed ? color : 'transparent', opacity: item.provisional ? 0.55 : 1 },
+      label: { show: true, color: confirmed ? '#ffffff' : color, fontSize: 11, fontWeight: 700 },
+      signal: {
+        label: item.date + ' · ' + item.label,
+        detail: item.rule,
+        basis,
+        limitations: [event ? results.limitation : '1–8为计数过程；中断即重新计数，不是买卖指令。'],
+        triggerUsesFutureData: false
+      }
+    };
+  });
+}
+
 function renderNineTurnHistory(history, meta) {
   const summary = document.getElementById('nineTurnHistorySummary');
   const coverage = document.getElementById('nineTurnHistoryCoverage');
@@ -689,25 +729,7 @@ function renderKlineInsights(State, data, minuteRows, minuteMeta, localRows, loc
   if (limitation) limitation.textContent = auction.limitation + ' 数据源：' + auction.source + '。';
 
   const latest = data[data.length - 1];
-  const marks = [];
-  nineTurnHistory.events.forEach(function(event) {
-    marks.push({
-      name: event.label,
-      coord: [event.date, event.close],
-      value: '9',
-      symbolOffset: [0, event.direction === 'up' ? '-65%' : '65%'],
-      itemStyle: { color: event.direction === 'up' ? '#f59e0b' : '#2563eb' },
-      signal: {
-        label: event.date + ' · ' + event.label,
-        detail: event.rule,
-        basis: '事件后收盘涨跌（事后核对）：' + [1, 5, 20].map(function(horizon) {
-          return horizon + '根后 ' + nineTurnOutcomeText(event.outcomes[horizon]);
-        }).join('；'),
-        limitations: [nineTurnHistory.limitation],
-        triggerUsesFutureData: false
-      }
-    });
-  });
+  const marks = buildNineTurnMarks(data, nineTurnContext, nineTurnHistory);
   signals.filter(function(signal) {
     return signal.active && signal.key !== 'intraday-breakout';
   }).forEach(function(signal, index) {

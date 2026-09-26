@@ -414,12 +414,16 @@
   }
 
   function applyMarks(marks) {
-    const chart = window.State && window.State.klineChart;
+    const state = window.State || {};
+    const chart = state.klineChart;
     if (!chart || typeof chart.setOption !== 'function') return false;
+    const counts = state.currentPeriod === 'day' && Array.isArray(state.currentKlineSignalMarks)
+      ? state.currentKlineSignalMarks.filter(function(mark) { return mark.nineTurnCount; }) : [];
+    const points = marksVisible && marks ? marks.markPoint : { data: [] };
     chart.setOption({ series: [{
       name: 'K线',
       markLine: marksVisible && marks ? marks.markLine : { data: [] },
-      markPoint: marksVisible && marks ? marks.markPoint : { data: [] },
+      markPoint: Object.assign({}, points, { data: counts.concat(points.data || []) }),
       markArea: marksVisible && marks ? marks.markArea : { data: [] }
     }] });
     return true;

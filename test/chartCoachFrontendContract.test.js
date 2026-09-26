@@ -84,6 +84,26 @@ function chartResult(code, period, asOf) {
   };
 }
 
+test('showing, refreshing and hiding coach hints keeps daily nine-turn counts without duplicating them', async () => {
+  const requests = [];
+  const fixture = loadInteractiveChartCoach(requests);
+  const options = [];
+  const count = { nineTurnCount: true, value: '1', coord: ['2026-08-11', 12] };
+  fixture.state.currentKlineSignalMarks = [count];
+  fixture.state.klineChart = { setOption: option => options.push(option) };
+  const opening = fixture.ChartCoach.open();
+  requests[0].resolve(chartResult('000001', 'day', '2026-08-11'));
+  await opening;
+  assert.deepEqual(Array.from(options.at(-1).series[0].markPoint.data), [count]);
+  fixture.ChartCoach.refreshMarks();
+  assert.deepEqual(Array.from(options.at(-1).series[0].markPoint.data), [count]);
+  fixture.ChartCoach.clearMarks();
+  assert.deepEqual(Array.from(options.at(-1).series[0].markPoint.data), [count]);
+  fixture.state.currentPeriod = 'week';
+  fixture.ChartCoach.clearMarks();
+  assert.equal(options.at(-1).series[0].markPoint.data.length, 0);
+});
+
 test('chart coach renders versioned rule definitions and non-predictive knowledge scope', () => {
   const ChartCoach = loadChartCoach();
   const html = ChartCoach.renderResult({
