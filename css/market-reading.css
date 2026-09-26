@@ -89,14 +89,18 @@
   .home-terminal-main .dashboard-global-signal {padding:3px 5px}
   .home-terminal-main .global-daily-spark {height:22px;margin-top:1px}
   .home-terminal-main .dashboard-global-signal p {font-size:9px}
+  /* Short screens keep the quote strip scrollable instead of squeezing the chart. */
+  .home-terminal-main #dashboardGlobalSignals {grid-template-columns:repeat(11,minmax(144px,1fr));overflow-x:auto}
   #homeChartHost .chart-header {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));padding:3px 6px;gap:3px 8px}
   #homeChartHost #chartTitle {grid-area:1/1;font-size:14px}
   #homeChartHost #priceInfo {grid-area:1/2;text-align:right}
-  #homeChartHost #indicatorBtns {grid-area:2/1;flex-wrap:nowrap}
-  #homeChartHost #chartRealtimeStatus {grid-area:2/2;min-width:0;min-height:20px;padding:0;display:block;align-self:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:right}
+  #homeChartHost #indicatorBtns {grid-area:2/1/3/-1;flex-wrap:nowrap;overflow-x:auto;min-width:0}
+  #homeChartHost #indicatorBtns>* {flex-shrink:0;white-space:nowrap}
+  #homeChartHost #chartRealtimeStatus {grid-area:3/1/4/-1;min-width:0;min-height:20px;padding:0;display:block;align-self:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left}
   #homeChartHost .realtime-resolution-toggle {padding:2px;min-height:28px;flex-wrap:nowrap}
   #homeChartHost .realtime-resolution-toggle button {flex:none}
   #homeChartHost .realtime-resolution-note {flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   #homeChartHost #decisionGuideStrip {padding:2px 6px;font-size:10px;gap:8px}
 }
-@media(max-width:1250px){.home-terminal-main #dashboardGlobalSignals {grid-template-columns:repeat(4,minmax(0,1fr))}.fixed-institutional-workspace .institutional-intraday-list {grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:1250px) and (min-height:851px){.home-terminal-main #dashboardGlobalSignals {grid-template-columns:repeat(4,minmax(0,1fr))}}
+@media(max-width:1250px){.fixed-institutional-workspace .institutional-intraday-list {grid-template-columns:repeat(2,minmax(0,1fr))}}

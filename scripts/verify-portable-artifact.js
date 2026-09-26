@@ -68,6 +68,7 @@ async function verifyFrontendAssets(port) {
   files.push('js/modules/marketInstitutionalFlow.js', 'js/modules/eastmoneyEtfDaily.js', 'js/modules/dashboard.js');
   files.push('js/modules/portfolio.js');
   files.push('css/styles.css', 'js/modules/volumePace.js', 'js/modules/marketSignalModel.js');
+  files.push('js/modules/search.js', 'js/modules/chartPriceLabels.js');
   for (const file of files) {
     const response = await fetch('http://127.0.0.1:' + port + '/' + file, {signal:AbortSignal.timeout(5000)});
     if (!response.ok) throw new Error('Packaged asset unavailable: ' + file);
