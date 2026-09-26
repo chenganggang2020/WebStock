@@ -699,6 +699,8 @@ function resizeMarketCharts() {
 }
 window.addEventListener('resize', resizeMarketCharts);
 window.addEventListener('orientationchange', resizeMarketCharts);
+const nineTurnMethod = document.getElementById('nineTurnMethod');
+if (nineTurnMethod) nineTurnMethod.addEventListener('toggle', resizeMarketCharts);
 
 if ('serviceWorker' in navigator) {
   const hadServiceWorkerController = Boolean(navigator.serviceWorker.controller);

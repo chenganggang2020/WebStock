@@ -4397,7 +4397,7 @@ body.dark .dashboard-index-correlation td.correlation-missing {
 .nine-turn-history summary { cursor:pointer; font-weight:600; }
 .nine-turn-history p, .nine-turn-history small { line-height:1.5; overflow-wrap:anywhere; }
 #nineTurnMethod { flex:none; margin:0; padding:4px 8px; max-height:180px; overflow:auto; background:var(--card-bg); border-bottom:1px solid var(--border); }
-#nineTurnMethod p { margin:6px 0; }
+#nineTurnMethod p { margin:6px 0; color:var(--text-secondary); }
 .nine-turn-history-events { max-height:260px; overflow-y:auto; margin:6px 0; }
 .nine-turn-history-events article { padding:7px 0; border-bottom:1px solid var(--border-color, #ccd8e6); }
 .nine-turn-outcomes { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:4px; font-size:11px; }

@@ -96,3 +96,18 @@ test('chart has a visible-entry calculation guide covering scope, reset, confirm
   for (const text of ['九转怎么算', 'C[t] &gt; C[t−4]', 'C[t] &lt; C[t−4]', '相等',
     '数据缺口', '从 1 重新开始', '未收盘', '13 根', '分时九转尚未接入', '不是买卖指令']) assert.ok(guide.includes(text), text);
 });
+
+test('opening and closing the guide resizes price and volume charts without reloading data', () => {
+  const source = fs.readFileSync(path.join(__dirname, '../js/app.js'), 'utf8');
+  const handlers = {}, resized = [];
+  let scheduled;
+  const state = { currentMainView: 'market' };
+  for (const key of ['klineChart', 'timeChart', 'volumeChart']) state[key] = { resize: () => resized.push(key) };
+  const context = vm.createContext({ window: { State: state, addEventListener() {} },
+    document: { getElementById(id) { assert.equal(id, 'nineTurnMethod'); return { addEventListener: (event, handler) => { handlers[event] = handler; } }; } },
+    clearTimeout() {}, setTimeout(callback) { scheduled = callback; return 1; } });
+  vm.runInContext(source.slice(source.indexOf('let chartResizeTimer = null;'), source.indexOf("if ('serviceWorker' in navigator)")), context);
+  assert.equal(typeof handlers.toggle, 'function');
+  handlers.toggle(); scheduled(); handlers.toggle(); scheduled();
+  assert.deepEqual(resized, ['klineChart', 'timeChart', 'volumeChart', 'klineChart', 'timeChart', 'volumeChart']);
+});
