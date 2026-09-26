@@ -18,13 +18,13 @@
 .dark-rank-panel .dark-rank-metrics article {padding:8px}.dark-rank-panel .dark-rank-metrics strong {font-size:18px}
 .reading-empty {padding:12px;color:var(--text-secondary)}
 #terminalClock {white-space:nowrap;color:var(--text-secondary);font-variant-numeric:tabular-nums}
-.home-terminal-main #dashboardGlobalSignals {display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px;flex:none;min-height:66px}
+.home-terminal-main #dashboardGlobalSignals {display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:5px;flex:none;min-height:66px}
 .home-terminal-main .dashboard-global-signal {padding:5px 7px;border:1px solid var(--border);border-radius:3px;background:var(--card-bg);min-width:0}
 .home-terminal-main .dashboard-global-signal header {display:block;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .home-terminal-main .dashboard-global-signal header small {display:none}
 .home-terminal-main .dashboard-global-signal div {display:flex;justify-content:space-between;font-size:12px;gap:3px}
 .home-terminal-main .dashboard-global-signal b {font-size:14px}.home-terminal-main .dashboard-global-signal p {font-size:10px;margin:3px 0 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.home-terminal-main .dashboard-global-signals-note {display:none}
+.home-terminal-main .dashboard-global-signals-note {display:block;font-size:10px}
 .global-daily-spark {display:block;width:100%;height:27px;margin-top:3px;color:var(--accent)}
 .reading-context-menu {position:fixed;z-index:10000;padding:4px;border:1px solid var(--border);border-radius:3px;background:var(--card-bg);box-shadow:0 5px 16px #0003}
 .reading-context-menu button {border:0;background:transparent;color:var(--text);padding:8px 12px;cursor:pointer}

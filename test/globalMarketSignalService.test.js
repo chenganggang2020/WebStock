@@ -62,6 +62,19 @@ test('cross-market service reports partial availability instead of fabricating m
 test('unavailable snapshot feed returns dated-unavailable slots so independent index history can still render',async()=>{
   const service=createGlobalMarketSignalService({marketData:{get:async()=>{throw Error('offline');}}});
   const result=await service.fetch();
-  assert.equal(result.items.length,7);assert.equal(result.status,'unavailable');
+  assert.equal(result.items.length,GLOBAL_SIGNAL_DEFINITIONS.length);assert.equal(result.status,'unavailable');
   assert.ok(result.items.every(item=>item.value===null && item.observedAt===''));
+});
+
+test('watch desk includes verified US futures and commodity symbols without substituting empty legacy Dow feed', () => {
+  const required = ['hf_YM', 'hf_GC', 'hf_CL', 'hf_OIL', 'hf_NQ', 'hf_ES'];
+  for (const symbol of required) assert.ok(GLOBAL_SIGNAL_DEFINITIONS.some(item => item.symbol === symbol), symbol);
+  assert.ok(!GLOBAL_SIGNAL_DEFINITIONS.some(item => item.symbol === 'hf_DJS'));
+  const raw = 'var hq_str_hf_GC="4323.299,,4320.300,4320.700,4351.600,4289.200,04:59:59,4298.000,4309.500,0,3,2,2026-09-26,纽约黄金,0";';
+  const [gold] = parseSinaGlobalSignals(raw);
+  assert.equal(gold.value, 4323.3);
+  assert.equal(gold.observedAt, '2026-09-26 04:59:59');
+  assert.equal(gold.changePct, 0.5886);
+  assert.match(gold.name, /CFD/);
+  assert.equal(gold.unit, '美元/盎司');
 });

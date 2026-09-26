@@ -15,6 +15,22 @@ const GLOBAL_SIGNAL_DEFINITIONS = Object.freeze([
     group: 'global', relevance: '全球权益风险偏好', inverseForAShares: false
   },
   {
+    key: 'dow-future', symbol: 'hf_YM', name: '道指期货 CFD', parser: 'future', digits: 2,
+    group: 'global', relevance: '美国股指期货观察', inverseForAShares: false, unit: '点'
+  },
+  {
+    key: 'gold-future', symbol: 'hf_GC', name: '纽约黄金 CFD', parser: 'future', digits: 2,
+    group: 'commodity', relevance: '贵金属观察', inverseForAShares: false, unit: '美元/盎司'
+  },
+  {
+    key: 'wti-future', symbol: 'hf_CL', name: '纽约原油 CFD', parser: 'future', digits: 2,
+    group: 'commodity', relevance: 'WTI原油观察', inverseForAShares: false, unit: '美元/桶'
+  },
+  {
+    key: 'brent-future', symbol: 'hf_OIL', name: '布伦特原油 CFD', parser: 'future', digits: 2,
+    group: 'commodity', relevance: '布伦特原油观察', inverseForAShares: false, unit: '美元/桶'
+  },
+  {
     key: 'hang-seng', symbol: 'int_hangseng', name: '恒生指数', parser: 'index', digits: 2,
     group: 'china', relevance: '港股中国资产联动', inverseForAShares: false
   },

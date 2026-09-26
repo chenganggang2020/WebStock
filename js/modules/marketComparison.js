@@ -200,10 +200,10 @@
       trend.forEach((point,index)=>{if(point.close==null){connected=false;return;}path+=(connected?'L':'M')+(index/Math.max(1,trend.length-1)*160).toFixed(2)+','+(24-(point.close-min)/span*21).toFixed(2)+' ';connected=true;});
       const spark=trend.length>1?'<svg class="global-daily-spark" viewBox="0 0 160 27" preserveAspectRatio="none" role="img" aria-label="最近一个月日线走势"><path d="'+path+'" fill="none" stroke="currentColor" stroke-width="1.1" vector-effect="non-scaling-stroke"/></svg>':'';
       return '<article class="dashboard-global-signal" data-direction="' + display.direction + '" data-state="' +
-        (available ? 'available' : 'unavailable') + '" title="' + escapeHtml(observed+' · '+(item.source || '新浪公开快照 · 延迟未确定')) + '">' +
+        (available ? 'available' : 'unavailable') + '" title="' + escapeHtml(observed+' · '+(item.unit || '')+' · '+(item.source || '新浪公开快照 · 延迟未确定')) + '">' +
         '<header><strong>' + escapeHtml(item.name || item.key) + '</strong><small>' + escapeHtml(item.group || '') + '</small></header>' +
         '<div><b>' + display.value + '</b><span>' + display.change + '</span></div>' +
-        spark+'<p>' + escapeHtml(observed) + '</p></article>';
+        spark+'<p>' + escapeHtml((item.unit ? item.unit + ' · ' : '') + observed) + '</p></article>';
     }).join('') + '<p class="dashboard-global-signals-note">' + escapeHtml(payload.source && payload.source.note ||
       '跨市场信号只作联动观察，相关不代表因果。') + '</p>';
   }
