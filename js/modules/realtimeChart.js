@@ -21,6 +21,11 @@ function realtimeResolutionLabel(value) {
   return resolution === '30s' ? '30秒分时' : '1分钟公开行情';
 }
 
+function realtimeNineTurnRefreshKey(now) {
+  // Recheck the provisional minute using the existing refresh loop, even if price is unchanged.
+  return realtimeResolution === '1m' ? Math.floor((now == null ? Date.now() : now) / 60000) : '';
+}
+
 function realtimeMinuteUrl(code, resolution, localOnly) {
   const base = '/api/minute?code=' + encodeURIComponent(code);
   const normalized = normalizeRealtimeResolution(resolution);
@@ -400,7 +405,7 @@ function loadRealtimeData(code) {
         }
         return { changed: false, empty: true };
       }
-      const snapshot = window.RealtimeChartModel.snapshotKey(minuteData, quote, minuteMeta);
+      const snapshot = window.RealtimeChartModel.snapshotKey(minuteData, quote, minuteMeta) + ':' + realtimeNineTurnRefreshKey();
       const changed = snapshot !== lastRenderedRealtimeSnapshot || code !== lastRenderedRealtimeCode;
       if (changed) {
         renderTimeChart(minuteData);
@@ -644,6 +649,31 @@ function realtimeCutoffMinutes(minuteData) {
   return latest >= 0 ? Math.max(current, latest) : current;
 }
 
+function buildRealtimeNineTurnMarks(minuteData, meta, options) {
+  const model = window.MarketSignalModel;
+  if (!model || !model.calculateIntradayNineTurn) return { marks: [], status: '1分钟九转：计算模块不可用' };
+  const result = model.calculateIntradayNineTurn(minuteData, meta, options);
+  if (!result.available) return { marks: [], status: result.reason };
+  const marks = result.series.filter(item => item.available && item.count >= 1 && item.count <= 9).map(function(item) {
+    const upward = item.direction === 'up';
+    const color = upward ? '#c47700' : '#2563eb';
+    const detail = item.tradingDate + ' ' + item.time + ' · 连续计数 ' + item.count + '/9；' +
+      (item.provisional ? '本分钟未收盘，暂定价 ' : '本分钟收盘 ') + item.price.toFixed(2) +
+      (upward ? ' &gt; ' : ' &lt; ') + '前第4根（' + item.referenceTime + '）收盘 ' + item.referencePrice.toFixed(2) +
+      '<br/>' + (item.triggered ? '本根完成九转计数。' : item.provisional ? '未确认，收盘前可能变化或消失。' : '九转尚未完成。') +
+      '<br/>' + result.rule;
+    return { nineTurnCount: true, name: '1分钟九转 · ' + item.label, value: String(item.count),
+      coord: [item.time, item.price], symbol: 'circle', symbolSize: item.triggered ? 22 : 16,
+      symbolOffset: [0, upward ? -16 : 16],
+      itemStyle: { color: item.triggered ? color : 'transparent', opacity: item.provisional ? 0.55 : 1 },
+      label: { show: true, color: item.triggered ? '#ffffff' : color, fontWeight: 700, fontSize: 11 },
+      triggerUsesFutureData: false, detail };
+  });
+  const latest = result.series.at(-1);
+  const state = latest.count > 9 ? '连续' + latest.count + '次（9已完成，不重复标记）' : latest.label;
+  return { marks, status: '1分钟九转 · ' + result.tradingDate + ' ' + latest.time + ' · ' + state + ' · 悬浮数字查看依据' };
+}
+
 function renderTimeChart(minuteData) {
   const State = window.State;
   if (!State.currentQuote) return;
@@ -677,6 +707,9 @@ function renderTimeChart(minuteData) {
   });
   const prices = minuteSeries.prices;
   const avgPrices = minuteSeries.averagePrices;
+  const nineTurn = buildRealtimeNineTurnMarks(minuteData, State.currentMinuteMeta || {});
+  const nineTurnStatus = document.getElementById('realtimeNineTurnStatus');
+  if (nineTurnStatus) nineTurnStatus.textContent = nineTurn.status;
   const intradayMarkers = window.MarketSignalModel && window.MarketSignalModel.buildIntradayMarkers
     ? window.MarketSignalModel.buildIntradayMarkers(minuteData) : [];
   const intradayMarkPoints = intradayMarkers.filter(function(marker) {
@@ -694,6 +727,7 @@ function renderTimeChart(minuteData) {
     };
   });
 
+  intradayMarkPoints.push(...nineTurn.marks.filter(marker => times.includes(marker.coord[0])));
   const validPrices = prices.filter(function(p) { return p !== null && p > 0; });
   if (validPrices.length === 0) {
     const dom = document.getElementById('timeChartContainer');

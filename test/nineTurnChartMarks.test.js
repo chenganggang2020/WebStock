@@ -94,7 +94,8 @@ test('chart has a visible-entry calculation guide covering scope, reset, confirm
   assert.ok(html.indexOf(guide) > html.indexOf('id="stockWorkspace"'));
   assert.ok(html.indexOf(guide) < html.indexOf('id="realtimeView"'));
   for (const text of ['九转怎么算', 'C[t] &gt; C[t−4]', 'C[t] &lt; C[t−4]', '相等',
-    '数据缺口', '从 1 重新开始', '未收盘', '13 根', '分时九转尚未接入', '不是买卖指令']) assert.ok(guide.includes(text), text);
+    '数据缺口', '从 1 重新开始', '未收盘', '13 根', '1分钟九转', '不是买卖指令']) assert.ok(guide.includes(text), text);
+  assert.doesNotMatch(guide, /分时九转尚未接入|当前仅日线/);
 });
 
 test('opening and closing the guide resizes price and volume charts without reloading data', () => {

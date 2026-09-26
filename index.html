@@ -420,13 +420,13 @@
       <section id="decisionGuideStrip" class="decision-guide-strip" data-state="idle" aria-live="polite" hidden></section>
       <section id="chartCoachEvidenceStrip" class="chart-coach-evidence-strip" aria-live="polite" hidden></section>
       <details id="nineTurnMethod" class="nine-turn-history">
-        <summary>九转怎么算 · 当前仅日线</summary>
-        <p><b>比较对象：</b>C[t] 是本根日K线收盘价，C[t−4] 是前第4根日K线收盘价；按K线根数，不是4个自然日。不是连续涨跌9天，也不使用均价线。</p>
+        <summary>九转怎么算 · 日线 / 1分钟分时</summary>
+        <p><b>比较对象：</b>C[t] 是本根K线收盘价，C[t−4] 是同周期前第4根K线收盘价；日线按交易日，1分钟分时按分钟根数，不混用周期。不是连续涨跌9天，也不使用均价线。</p>
         <p><b>上行：</b><code>C[t] &gt; C[t−4]</code>，连续满足时计 1、2…9，标在K线上方。<b>下行：</b><code>C[t] &lt; C[t−4]</code>，连续满足时计 1、2…9，标在K线下方。</p>
         <p><b>重置与缺口：</b>相等时计数归零；方向反转时从 1 重新开始。本根及前4根窗口存在已标记的数据缺口或无效收盘价时中断，不删除缺口来凑9；此前4根须已收盘。至少需要13根有效K线才能首次完成9。</p>
-        <p><b>确认与显示：</b>未收盘数字淡显，仅作暂定计数；盘中可能变化或消失。当前实现还将北京时间当日15:01前视为未确认。连续超过9不重复标9，须中断后开启新序列。悬浮任意数字可查看本根与前第4根的日期、价格和进度。</p>
+        <p><b>确认与显示：</b>未收盘数字淡显，仅作暂定计数；盘中可能变化或消失。日线将北京时间当日15:01前视为未确认；分时保守等待该分钟标签的下一分钟再确认，明确标记未完成的数据仍不确认。连续超过9不重复标9，须中断后开启新序列。悬浮任意数字可查看本根与前第4根的日期、价格和进度。</p>
         <p><b>实现范围：</b>当前是连续比较的九转基础计数，未实现完整TD Sequential的其他条件，例如13 根倒计数、完善形态等。数字9不是买卖指令，不保证反转。</p>
-        <p><b>分时：</b>分时九转尚未接入。若接入，应按固定1分钟或5分钟K线的收盘价分别计算；1分钟比较前4根分钟K线，5分钟比较前4根5分钟K线，不能混用日线计数，也不能把5秒/30秒报价刷新当成分钟K线。</p>
+        <p><b>1分钟九转：</b>在“1分钟公开行情”中逐根显示1–9；使用来源返回的分钟价格，未结束分钟仅为暂定价。午休跳过并衔接上午，跨日从头预热，不使用昨日计数；开盘竞价不参与。数据缺口中断，不插值、不补零。5秒/30秒报价和降级5分钟行情不计算这套1分钟九转，请切回1分钟查看。</p>
         <p>方法参考：<a href="https://demark.com/tradingview/" target="_blank" rel="noopener noreferrer">DeMARK对Setup 9与Countdown 13的说明</a>；以上逐条描述本程序当前实现，不宣称与官方指标完全等同。</p>
       </details>
       <div id="realtimeView" class="main-content">
@@ -436,6 +436,7 @@
             <button type="button" data-resolution="5s" aria-pressed="false">5秒分时</button>
             <button type="button" data-resolution="30s" aria-pressed="false">30秒分时</button>
             <button type="button" class="active" data-auction-layer aria-pressed="true">竞价图层：开</button>
+            <span id="realtimeNineTurnStatus" class="realtime-resolution-note" aria-live="polite">1分钟九转 · 等待分钟行情</span>
             <span id="realtimeAuctionStatus" class="realtime-resolution-note">秒级明细按需补取；竞价盘口仅使用本机记录。5秒/30秒不是交易所逐笔。</span>
           </div>
           <div class="sub-chart-container" id="timeChartContainer">
