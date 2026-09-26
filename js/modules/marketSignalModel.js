@@ -124,6 +124,58 @@
       completed: false, triggered: false, provisional: false, label: '样本不足', rule: nineTurnRule };
   }
 
+  function calculateIntradayNineTurn(input, meta, options) {
+    const source = meta || {};
+    const sampling = source.sampling || {};
+    const interval = Number(sampling.intervalSeconds) || Number(sampling.intervalMinutes) * 60;
+    const unavailable = reason => ({ available: false, reason, series: [] });
+    if (interval !== 60 || source.synthetic === true) {
+      return unavailable('九转仅支持1分钟行情；5秒/30秒报价与5分钟降级数据不混算');
+    }
+    const rows = Array.isArray(input) ? input : [];
+    const dates = rows.map(row => String(row && row.time || '').match(/^\d{4}-\d{2}-\d{2}/)?.[0]).filter(Boolean).sort();
+    const date = String(source.tradingDate || dates.at(-1) || '');
+    const asOf = Date.parse(options && options.asOf || new Date().toISOString());
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !Number.isFinite(Date.parse(date + 'T00:00:00+08:00')) || !Number.isFinite(asOf)) {
+      return unavailable('1分钟九转：交易日期或当前时间不可用');
+    }
+    const clock = new Date(asOf + 8 * 3600000).toISOString();
+    if (date > clock.slice(0, 10)) return unavailable('1分钟九转：不使用未来日期数据');
+    const nowMinute = Number(clock.slice(11, 13)) * 60 + Number(clock.slice(14, 16));
+    const today = date === clock.slice(0, 10);
+    const byMinute = new Map();
+    rows.forEach(function(row) {
+      const text = String(row && row.time || '');
+      const rowDate = text.match(/^\d{4}-\d{2}-\d{2}/)?.[0] || date;
+      const time = text.match(/(?:^|[ T])(\d{2}):(\d{2})(?::(\d{2}))?$/);
+      if (rowDate !== date || !time || Number(time[3] || 0) !== 0) return;
+      const minute = Number(time[1]) * 60 + Number(time[2]);
+      if (Number(time[2]) > 59 || today && minute > nowMinute) return;
+      if ((minute >= 570 && minute <= 690) || (minute >= 780 && minute <= 900)) byMinute.set(minute, row);
+    });
+    if (!byMinute.size) return unavailable('1分钟九转：暂无有效常规交易时段数据');
+    const lastMinute = Math.max(...byMinute.keys());
+    const bars = [];
+    const barEnd = sampling.timestampMeaning === 'bar-end';
+    // Keep absent minutes in place. Lunch is not a data gap; each new day starts fresh.
+    for (let minute = 570; minute <= lastMinute; minute++) {
+      if (minute > 690 && minute < 780 || barEnd && (minute === 570 || minute === 780)) continue;
+      const row = byMinute.get(minute);
+      const price = nineTurnClose(row && { close: row.price });
+      const time = String(Math.floor(minute / 60)).padStart(2, '0') + ':' + String(minute % 60).padStart(2, '0');
+      bars.push({ date: time, close: price > 0 ? price : null,
+        incomplete: Boolean(row && row.incomplete) || today && minute >= nowMinute });
+    }
+    if (!bars.length) return unavailable('1分钟九转：暂无有效常规交易时段数据');
+    const rule = '1分钟九转：本分钟价格与前第4根分钟收盘价比较，同向连续计1–9；相等、反向或缺口重置。午休衔接，跨日重置；不含开盘竞价，不是买卖指令。';
+    const series = calculateNineTurnSeries(bars).map(function(item) {
+      const reference = bars[item.index - 4];
+      return Object.assign({}, item, { time: item.date, tradingDate: date, price: bars[item.index].close,
+        referenceTime: reference && reference.date, referencePrice: reference && reference.close, rule });
+    });
+    return { available: true, tradingDate: date, series, rule };
+  }
+
   function evaluateNineTurnHistory(input, options) {
     const rows = nineTurnRows(input, options);
     const events = calculateNineTurnSeries(rows).filter(function(item) { return item.triggered; })
@@ -424,6 +476,7 @@
     analyzeDaily,
     calculateNineTurn,
     calculateNineTurnSeries,
+    calculateIntradayNineTurn,
     evaluateNineTurnHistory,
     analyzeAuction,
     detectLocalSignals,
