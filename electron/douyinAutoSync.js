@@ -472,6 +472,10 @@ function createDouyinAutoSync(options = {}) {
           ? planFullArchiveQueue(archivePlanningObservations, planningState)
           : planIncrementalCandidates(directPlanningObservations, planningState, {
             limit: maxDetailsPerRun,
+            transcriptionReady: transcriptionReadiness(transcriber, {
+              model: runOptions.model,
+              provider: runOptions.model ? 'local' : undefined
+            }).available,
           });
         const planned = runOptions.detailLimit
           ? allPlanned.slice(0, Math.min(Math.max(Number(runOptions.detailLimit) || 5, 1), 30)) : allPlanned;

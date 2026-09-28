@@ -238,13 +238,14 @@ function planIncrementalCandidates(observations, state = {}, options = {}) {
     const complete = observation.mediaType === 'note' ? noteProcessingComplete(observation) : status === 'no_speech' ||
       (['complete', 'needs_review'].includes(status) && String(observation.transcript || '').trim());
     if (complete && metadata.incrementalReason !== 'changed') return false;
+    if (options.transcriptionReady === false && observation.mediaType !== 'note' && metadata.detailCapturedAt && !complete) return false;
     const previous = state[contentId(observation)] || {};
+    if (Number(previous.transcriptionFailureCount) >= 5) return false;
     return [
       [previous.failureCount, previous.lastFailureAt],
       [previous.transcriptionFailureCount, previous.lastTranscriptionFailureAt]
     ].every(function(pair) {
       const count = Number(pair[0]) || 0;
-      if (count >= 5) return false;
       return !count || now >= timestamp(pair[1]) + Math.min(86400000, 900000 * Math.pow(2, count - 1));
     });
   }).sort(function(a, b) {

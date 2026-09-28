@@ -5,6 +5,7 @@ const {
   materialFingerprint,
   materiallyEquivalent,
   planDetailCandidates,
+  planIncrementalCandidates,
   summarizeDiscovery
 } = require('../services/douyinSyncPlanningService');
 
@@ -318,4 +319,45 @@ test('scheduled sync does not retry a recently checked archive backfill every te
   });
 
   assert.deepEqual(planned, []);
+});
+
+test('incremental detail failures remain retryable after the bounded backoff', () => {
+  const observation = {
+    externalContentId: 'detail-retry',
+    publishedAt: '2026-09-28T03:35:58.000Z',
+    mediaType: 'video',
+    mediaMetadata: { incrementalPending: true, incrementalReason: 'new' }
+  };
+  const state = {
+    'detail-retry': { failureCount: 5, lastFailureAt: '2026-09-28T12:00:00.000Z' }
+  };
+
+  assert.deepEqual(planIncrementalCandidates([observation], state, {
+    now: '2026-09-28T15:59:59.000Z'
+  }), []);
+  assert.deepEqual(planIncrementalCandidates([observation], state, {
+    now: '2026-09-28T16:00:00.000Z'
+  }).map(item => item.contentId), ['detail-retry']);
+});
+
+test('missing transcription runtime does not repeatedly consume a pending video slot', () => {
+  const observations = [
+    {
+      externalContentId: 'pending-asr',
+      mediaType: 'video',
+      mediaMetadata: { incrementalPending: true, detailCapturedAt: '2026-09-28T07:00:00.000Z' }
+    },
+    {
+      externalContentId: 'new-detail',
+      mediaType: 'video',
+      mediaMetadata: { incrementalPending: true }
+    }
+  ];
+
+  assert.deepEqual(planIncrementalCandidates(observations, {}, {
+    now: '2026-09-28T12:00:00.000Z', transcriptionReady: false
+  }).map(item => item.contentId), ['new-detail']);
+  assert.deepEqual(planIncrementalCandidates(observations, {}, {
+    now: '2026-09-28T12:00:00.000Z', transcriptionReady: true
+  }).map(item => item.contentId), ['new-detail', 'pending-asr']);
 });
