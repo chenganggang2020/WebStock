@@ -1,23 +1,29 @@
-# 独立安卓 2.2.0
+# 独立安卓 2.3.0
 
-本目录为可维护源码，取代在 output 交付目录内修改源码的方式；原 2.1.1 交付保留不动。
+本目录是 2026-10-05 的独立源码与安装包快照，从 runtime-lifecycle-cleanup 中当前 2.2.0 源码继续实现。旧交付及另一个工作区均保留不动。本轮说明见 [2.3.0 优化与验收](docs/2.3.0优化与验收.md)。
 
 手机直接请求公开数据源，使用自己的本地存储，不依赖电脑开机，不把手机请求转发到 Windows 的 3000 端口。它不是桌面 27 个页面的完整移植；功能边界见 docs/功能迁移清单.md。
 
 ## 构建与验证
 
-在仓库安装 Node 依赖后运行：
+在本目录运行（使用本机已安装的 JDK / Android 工具链及原发布签名）：
 
 ```powershell
-node --test android-independent/qa/*.test.cjs
-powershell -NoProfile -ExecutionPolicy Bypass -File android-independent/build-apk.ps1
+node --test qa/*.test.cjs
+powershell -NoProfile -ExecutionPolicy Bypass -File build-apk.ps1
 ```
 
-构建脚本先执行 prepare-web.cjs，将父仓库的行情计算模块复制到 web/shared、生成本地股票拼音索引，再执行 Java 测试、release 打包和签名校验。签名使用本机既有受保护配置，不能把签名文件或密钥提交进仓库。
+构建使用本目录随版本保存的 web/shared 模块及拼音目录，避免构建时被另一个可变工作区覆盖。prepare-web.cjs 生成资源哈希清单；随后执行 Java 测试、release 打包和签名校验。签名不包含在源码或 APK 中。图表同输入对照测试默认参考 runtime-lifecycle-cleanup 的 js/modules，可由 WEBSTOCK_DESKTOP_MODULES 指定。
 
-本版 versionName=2.2.0，versionCode=20261006。保留旧版 applicationId 与签名，允许正常覆盖升级；不要卸载后安装，以免清空本机数据。模拟器验证与真实手机验收分别记录。
+本版 versionName=2.3.0，versionCode=20261007。保留旧版 applicationId 与发布证书，覆盖安装；不要先卸载。模拟器验证与真实手机验收分别记录。
 
 ## 本轮功能
+
+- 独立账户统计、按日期/股票筛选、已实现盈亏曲线与逐笔损益；保留完整账本成本及精确小数，汇总后舍入。
+- 交易账本支持买卖筛选，持仓可直达对应股票记录并预填卖出表单。
+- ETF 涨幅、跌幅、成交额排序；东方财富失败后使用新浪备用榜单，榜单时间与补充报价日期分开。
+
+以下 2.2.0 看股能力继续保留：
 
 - 点击股票立即进入图表，最近浏览异步保存；当前列表内上一只/下一只保留周期。
 - 分时/日K/周K/月K快捷切换；固定历史读数与顶部最新报价分开。
@@ -25,7 +31,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File android-independent/build-ap
 - 代码、名称、拼音/首字母搜索；更早历史分批加载并核对来源、复权口径与已收盘重叠价格。
 - 与桌面共享公开规则版9+13；分时价格序列只运行基础1–9，不冒充完整OHLC序列指标。
 
-九转规则版本与未覆盖项见 ../docs/development/Sequential_Rules_20261003.md。历史统计仅是价格变化核对，不是策略盈利证明。
+九转规则版本与未覆盖项见应用中的规则说明。历史统计仅是价格变化核对，不是策略盈利证明。
 
 ## 构建期第三方依赖
 

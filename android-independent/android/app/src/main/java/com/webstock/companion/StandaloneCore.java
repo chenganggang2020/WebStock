@@ -110,6 +110,8 @@ public final class StandaloneCore {
     }
     private static final class Position {
         String code,name; long quantity; BigDecimal cost=BigDecimal.ZERO;
+        BigDecimal realized=BigDecimal.ZERO,fees=BigDecimal.ZERO,buyAmount=BigDecimal.ZERO,sellProceeds=BigDecimal.ZERO;
+        int buyCount,sellCount;
         Position(String code,String name) { this.code=code; this.name=name; }
     }
     private static BigDecimal amount(JSONObject trade,String key,boolean positive) throws Exception {
@@ -128,6 +130,10 @@ public final class StandaloneCore {
         trades.sort(Comparator.comparing(trade->trade.optString("date")));
         LinkedHashMap<String,Position> holdings=new LinkedHashMap<>();
         BigDecimal realized=BigDecimal.ZERO,totalCost=BigDecimal.ZERO,marketValue=BigDecimal.ZERO;
+        BigDecimal totalFees=BigDecimal.ZERO,buyAmount=BigDecimal.ZERO,sellProceeds=BigDecimal.ZERO,dailyRealized=BigDecimal.ZERO;
+        int buyCount=0,sellCount=0,winningSellCount=0,losingSellCount=0,flatSellCount=0;
+        JSONArray tradeRows=new JSONArray(),realizedSeries=new JSONArray();
+        JSONObject day=null;
         boolean missingQuote=false;
         for(JSONObject trade:trades) {
             String code=trade.getString("code"),sym=symbol(code); code=sym.substring(2);
@@ -136,17 +142,41 @@ public final class StandaloneCore {
             Position position=holdings.get(code);
             if(position==null) { position=new Position(code,trade.optString("name",code)); holdings.put(code,position); }
             String side=trade.getString("side");
-            if("buy".equals(side)) { position.cost=position.cost.add(price.multiply(qty)).add(fee); position.quantity+=count; }
+            BigDecimal gross=price.multiply(qty),net,salePnl=null;
+            if("buy".equals(side)) {
+                net=gross.add(fee);position.cost=position.cost.add(net);position.quantity+=count;
+                position.buyAmount=position.buyAmount.add(net);position.buyCount++;buyAmount=buyAmount.add(net);buyCount++;
+            }
             else if("sell".equals(side)) {
                 if(count>position.quantity) throw new IllegalArgumentException(code+" 卖出数量超过该账户已有持仓");
                 BigDecimal removed=position.cost.multiply(qty).divide(BigDecimal.valueOf(position.quantity),12,RoundingMode.HALF_UP);
-                realized=realized.add(price.multiply(qty).subtract(fee).subtract(removed));
+                net=gross.subtract(fee);salePnl=net.subtract(removed);realized=realized.add(salePnl);
+                position.realized=position.realized.add(salePnl);position.sellProceeds=position.sellProceeds.add(net);position.sellCount++;
+                sellProceeds=sellProceeds.add(net);sellCount++;
+                double displayedPnl=rounded(salePnl);
+                if(displayedPnl>0)winningSellCount++;else if(displayedPnl<0)losingSellCount++;else flatSellCount++;
                 position.cost=position.cost.subtract(removed); position.quantity-=count;
                 if(position.quantity==0) position.cost=BigDecimal.ZERO;
             } else throw new IllegalArgumentException("请选择买入或卖出");
+            totalFees=totalFees.add(fee);position.fees=position.fees.add(fee);
+            String date=trade.getString("date");
+            if(day==null || !date.equals(day.getString("date"))) {
+                day=new JSONObject().put("date",date).put("tradeCount",0);realizedSeries.put(day);dailyRealized=BigDecimal.ZERO;
+            }
+            if(salePnl!=null)dailyRealized=dailyRealized.add(salePnl);
+            day.put("tradeCount",day.getInt("tradeCount")+1).put("realizedPnl",rounded(dailyRealized)).put("cumulativeRealizedPnl",rounded(realized));
+            tradeRows.put(new JSONObject().put("id",trade.optString("id")).put("date",date).put("code",code).put("name",position.name)
+                .put("side",side).put("quantity",count).put("price",price.doubleValue()).put("fee",rounded(fee))
+                .put("grossAmount",rounded(gross)).put("netAmount",rounded(net)).put("realizedPnl",salePnl==null?JSONObject.NULL:rounded(salePnl))
+                .put("grossAmountExact",gross.toPlainString()).put("netAmountExact",net.toPlainString()).put("feeExact",fee.toPlainString())
+                .put("realizedPnlExact",salePnl==null?JSONObject.NULL:salePnl.toPlainString())
+                .put("cumulativeRealizedPnl",rounded(realized)).put("positionQuantity",position.quantity).put("note",trade.optString("note")));
         }
-        JSONArray rows=new JSONArray();
+        JSONArray rows=new JSONArray(),symbolRows=new JSONArray();
         for(Position position:holdings.values()) {
+            symbolRows.put(new JSONObject().put("code",position.code).put("name",position.name).put("quantity",position.quantity).put("cost",rounded(position.cost))
+                .put("tradeCount",position.buyCount+position.sellCount).put("buyCount",position.buyCount).put("sellCount",position.sellCount)
+                .put("totalFees",rounded(position.fees)).put("buyAmount",rounded(position.buyAmount)).put("sellProceeds",rounded(position.sellProceeds)).put("realizedPnl",rounded(position.realized)));
             if(position.quantity==0) continue;
             JSONObject quote=quotes.optJSONObject(symbol(position.code)); Double price=quote==null?null:number(quote.opt("price"));
             if(price!=null && price<=0) price=null;
@@ -158,8 +188,15 @@ public final class StandaloneCore {
                 .put("price",nullable(price)).put("marketValue",value==null?JSONObject.NULL:rounded(value))
                 .put("unrealizedPnl",value==null?JSONObject.NULL:rounded(value.subtract(position.cost))).put("quote",nullable(quote)));
         }
+        // This series records realized profit only; no historical market valuation is inferred from today's quotes.
+        JSONObject analytics=new JSONObject().put("accountId",accountId).put("tradeCount",trades.size()).put("buyCount",buyCount).put("sellCount",sellCount)
+            .put("winningSellCount",winningSellCount).put("losingSellCount",losingSellCount).put("flatSellCount",flatSellCount)
+            .put("totalFees",rounded(totalFees)).put("buyAmount",rounded(buyAmount)).put("sellProceeds",rounded(sellProceeds)).put("realizedPnl",rounded(realized))
+            .put("firstTradeDate",trades.isEmpty()?JSONObject.NULL:trades.get(0).getString("date"))
+            .put("lastTradeDate",trades.isEmpty()?JSONObject.NULL:trades.get(trades.size()-1).getString("date"))
+            .put("trades",tradeRows).put("realizedSeries",realizedSeries).put("symbols",symbolRows);
         return new JSONObject().put("positions",rows).put("cost",rounded(totalCost)).put("realizedPnl",rounded(realized))
             .put("marketValue",missingQuote?JSONObject.NULL:rounded(marketValue))
-            .put("unrealizedPnl",missingQuote?JSONObject.NULL:rounded(marketValue.subtract(totalCost))).put("missingQuotes",missingQuote);
+            .put("unrealizedPnl",missingQuote?JSONObject.NULL:rounded(marketValue.subtract(totalCost))).put("missingQuotes",missingQuote).put("analytics",analytics);
     }
 }

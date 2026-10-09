@@ -103,15 +103,36 @@ public final class StandaloneBackend {
         } catch(Exception error) {return stale(key,error);}
     }
     private JSONObject rank(String board,String sort) throws Exception {
+        if(!board.matches("industry|concept|etf|stocks") || !sort.matches("change|flow|decline|amount") || (!board.equals("etf") && sort.matches("decline|amount"))) throw new IllegalArgumentException("榜单类型或排序无效");
         String fs=board.equals("industry")?"m:90+t:2":board.equals("concept")?"m:90+t:3":board.equals("etf")?"b:MK0021,b:MK0022,b:MK0023,b:MK0024":"m:0+t:6,m:0+t:80,m:1+t:2,m:1+t:23,m:0+t:81+s:2048";
-        String field=sort.equals("flow")?"f62":"f3",key="rank:"+board+":"+field;
+        String field=sort.equals("flow")?"f62":sort.equals("amount")?"f6":"f3",key="rank:"+board+":"+field+(sort.equals("decline")?":asc":"");
         try {
-            String url="https://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=30&po=1&np=1&fltt=2&invt=2&fid="+field+"&fs="+URLEncoder.encode(fs,"UTF-8")+"&fields=f12,f14,f2,f3,f62,f124";
-            JSONArray data=new JSONObject(StandaloneHttp.get(url,"https://quote.eastmoney.com/",StandardCharsets.UTF_8)).getJSONObject("data").getJSONArray("diff"),rows=new JSONArray();
-            for(int i=0;i<data.length();i++) {JSONObject row=data.getJSONObject(i);rows.put(new JSONObject().put("code",row.optString("f12")).put("name",row.optString("f14")).put("price",StandaloneCore.nullable(StandaloneCore.number(row.opt("f2")))).put("changePercent",StandaloneCore.nullable(StandaloneCore.number(row.opt("f3")))).put("netFlow",StandaloneCore.nullable(StandaloneCore.number(row.opt("f62")))).put("dataTimestamp",StandaloneCore.nullable(StandaloneCore.number(row.opt("f124")))));}
+            String url="https://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=30&po="+(sort.equals("decline")?"0":"1")+"&np=1&fltt=2&invt=2&fid="+field+"&fs="+URLEncoder.encode(fs,"UTF-8")+"&fields=f12,f14,f2,f3,f6,f62,f124";
+            String raw=board.equals("etf")?StandaloneHttp.get(url,"https://quote.eastmoney.com/",StandardCharsets.UTF_8,3000):StandaloneHttp.get(url,"https://quote.eastmoney.com/",StandardCharsets.UTF_8);
+            JSONArray data=new JSONObject(raw).getJSONObject("data").getJSONArray("diff"),rows=new JSONArray();
+            for(int i=0;i<data.length();i++) {JSONObject row=data.getJSONObject(i);rows.put(new JSONObject().put("code",row.optString("f12")).put("name",row.optString("f14")).put("price",StandaloneCore.nullable(StandaloneCore.number(row.opt("f2")))).put("changePercent",StandaloneCore.nullable(StandaloneCore.number(row.opt("f3")))).put("amount",StandaloneCore.nullable(StandaloneCore.number(row.opt("f6")))).put("netFlow",StandaloneCore.nullable(StandaloneCore.number(row.opt("f62")))).put("dataTimestamp",StandaloneCore.nullable(StandaloneCore.number(row.opt("f124")))));}
             if(rows.length()==0) throw new java.io.IOException("榜单暂无有效数据");
-            JSONObject result=new JSONObject().put("rows",rows).put("source","eastmoney-public-model").put("checkedAt",Instant.now().toString()).put("stale",false);store.cache(key,result);return result;
-        } catch(Exception error) {return stale(key,error);}
+            JSONObject result=new JSONObject().put("rows",rows).put("source","eastmoney-public-model").put("sort",sort).put("amountUnit","元").put("checkedAt",Instant.now().toString()).put("stale",false);store.cache(key,result);return result;
+        } catch(Exception error) {
+            if(board.equals("etf") && !sort.equals("flow")) {
+                try {JSONObject result=sinaEtf(sort,error);store.cache(key,result);return result;}
+                catch(Exception fallbackError) {return stale(key,new java.io.IOException("东方财富与新浪 ETF 均刷新失败；"+StandaloneCore.friendlyError(fallbackError)));}
+            }
+            return stale(key,error);
+        }
+    }
+    private JSONObject sinaEtf(String sort,Exception primaryError) throws Exception {
+        String url="https://vip.stock.finance.sina.com.cn/quotes_service/api/json_v2.php/Market_Center.getHQNodeData?node=etf_hq_fund&page=1&num=30&sort="+(sort.equals("amount")?"amount":"changepercent")+"&asc="+(sort.equals("decline")?"1":"0");
+        JSONArray input=new JSONArray(StandaloneHttp.get(url,"https://finance.sina.com.cn/",StandardCharsets.UTF_8,3000));
+        JSONArray listed=StandaloneRankModel.sinaEtf(input,new JSONObject());LinkedHashSet<String> symbols=new LinkedHashSet<>();
+        for(int i=0;i<listed.length();i++)symbols.add(listed.getJSONObject(i).getString("symbol"));
+        JSONObject quoteRows=new JSONObject();String quoteError="";
+        try {quoteRows=StandaloneCore.sina(StandaloneHttp.get("https://hq.sinajs.cn/list="+String.join(",",symbols),"https://finance.sina.com.cn/",Charset.forName("GBK"),3000),Instant.now().toString());}
+        catch(Exception error) {quoteError=StandaloneCore.friendlyError(error);}
+        return new JSONObject().put("rows",StandaloneRankModel.sinaEtf(input,quoteRows)).put("source","sina-public-etf")
+            .put("fallback",true).put("primarySource","eastmoney-public-model").put("primaryError",StandaloneCore.friendlyError(primaryError))
+            .put("sort",sort).put("amountUnit","元").put("quoteError",quoteError).put("rankingDateKnown",false)
+            .put("checkedAt",Instant.now().toString()).put("stale",false);
     }
     private JSONObject news() throws Exception {
         String key="news";

@@ -21,6 +21,7 @@ public final class StandaloneSmokeInstrumentation extends Instrumentation {
         JSONObject row=new JSONObject().put("name",name);
         try {test.run();row.put("pass",true);}catch(Throwable error){row.put("pass",false).put("error",String.valueOf(error));}
         checks.put(row);
+        android.util.Log.i("WebStockQA",row.toString());
     }
     private static void require(boolean value) {if(!value)throw new AssertionError("condition failed");}
     private static JSONObject item(String json) throws Exception {return new JSONObject(json);}
@@ -38,6 +39,8 @@ public final class StandaloneSmokeInstrumentation extends Instrumentation {
     @Override public void onStart() {
         Bundle result=new Bundle();String dbName="standalone-instrumentation.db";
         try {
+            if(mode.equals("seed220")){seed220();return;}
+            if(mode.equals("upgrade230") || mode.equals("offline230")){release230Audit();return;}
             if(mode.equals("seed211")){seed211();return;}
             if(mode.equals("network220")){network220Audit();return;}
             if(mode.equals("upgrade220")){upgrade220Audit();return;}
@@ -98,6 +101,99 @@ public final class StandaloneSmokeInstrumentation extends Instrumentation {
         };
         for(String[] record:records)backend.request("POST","/record",new JSONObject().put("kind",record[0]).put("item",item(record[1])));
         Bundle result=new Bundle();result.putString("summary","Seeded isolated empty emulator with four QA records on version 2.1.1; no production data.");finish(Activity.RESULT_OK,result);
+    }
+    private void seed220() throws Exception {
+        require(android.os.Build.FINGERPRINT.contains("generic") || android.os.Build.MODEL.contains("sdk_gphone"));
+        StandaloneBackend backend=new StandaloneBackend(getTargetContext());
+        require(backend.request("GET","/state",new JSONObject()).getString("version").equals("2.2.0"));
+        JSONObject original=backend.request("GET","/backup",new JSONObject());
+        for(String key:new String[]{"watch","trades","docs","reports"})require(original.getJSONArray(key).length()==0);
+        String[][] records={
+            {"accounts","{\"id\":\"qa-other\",\"name\":\"QA第二账户\"}"},
+            {"watch","{\"id\":\"qa-upgrade-watch\",\"code\":\"000001\",\"name\":\"平安银行\",\"group\":\"QA升级保留\",\"note\":\"仅模拟器验收记录\"}"},
+            {"watch","{\"id\":\"qa-upgrade-watch-2\",\"code\":\"600000\",\"name\":\"浦发银行\",\"group\":\"QA升级保留\"}"},
+            {"trades","{\"id\":\"qa-buy-a\",\"accountId\":\"local\",\"code\":\"000001\",\"name\":\"平安银行\",\"date\":\"2026-09-24\",\"side\":\"buy\",\"quantity\":100,\"price\":10,\"fee\":5,\"note\":\"QA测试非真实持仓\"}"},
+            {"trades","{\"id\":\"qa-sell-a\",\"accountId\":\"local\",\"code\":\"000001\",\"name\":\"平安银行\",\"date\":\"2026-09-25\",\"side\":\"sell\",\"quantity\":40,\"price\":12,\"fee\":2,\"note\":\"QA测试非真实持仓\"}"},
+            {"trades","{\"id\":\"qa-buy-b\",\"accountId\":\"local\",\"code\":\"600000\",\"name\":\"浦发银行\",\"date\":\"2026-09-28\",\"side\":\"buy\",\"quantity\":200,\"price\":20,\"fee\":6,\"note\":\"QA测试非真实持仓\"}"},
+            {"trades","{\"id\":\"qa-sell-b\",\"accountId\":\"local\",\"code\":\"600000\",\"name\":\"浦发银行\",\"date\":\"2026-09-29\",\"side\":\"sell\",\"quantity\":200,\"price\":19,\"fee\":6,\"note\":\"QA测试非真实持仓\"}"},
+            {"trades","{\"id\":\"qa-buy-other\",\"accountId\":\"qa-other\",\"code\":\"000002\",\"name\":\"万科A\",\"date\":\"2026-09-30\",\"side\":\"buy\",\"quantity\":50,\"price\":30,\"fee\":3,\"note\":\"QA第二账户隔离\"}"},
+            {"docs","{\"id\":\"qa-upgrade-doc\",\"title\":\"QA升级资料\",\"text\":\"仅用于独立模拟器测试，非真实研究或持仓。\"}"},
+            {"reports","{\"id\":\"qa-upgrade-report\",\"title\":\"QA升级报告\",\"text\":\"覆盖升级必须保留此测试记录。\"}"}
+        };
+        for(String[] record:records)backend.request("POST","/record",new JSONObject().put("kind",record[0]).put("item",item(record[1])));
+        java.io.File before=new java.io.File(getTargetContext().getFilesDir(),"qa-upgrade-before.json");
+        java.nio.file.Files.write(before.toPath(),backend.request("GET","/backup",new JSONObject()).toString().getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        Bundle result=new Bundle();result.putString("summary","Seeded fresh isolated emulator on 2.2.0 with labeled QA accounts, 5 trades, 2 watch entries and 2 research records; saved upgrade snapshot.");finish(Activity.RESULT_OK,result);
+    }
+    private void release230Audit() throws Exception {
+        final boolean offline=mode.equals("offline230");
+        StandaloneBackend backend=new StandaloneBackend(getTargetContext());
+        java.io.File before=new java.io.File(getTargetContext().getFilesDir(),"qa-upgrade-before.json");
+        check("upgrade-220-to-230-preserves-all-records",()->{
+            JSONObject old=new JSONObject(new String(java.nio.file.Files.readAllBytes(before.toPath()),java.nio.charset.StandardCharsets.UTF_8));
+            JSONObject now=backend.request("GET","/backup",new JSONObject());
+            for(String key:new String[]{"watch","accounts","trades","docs","reports"})require(old.getJSONArray(key).toString().equals(now.getJSONArray(key).toString()));
+        });
+        check("native-version-is-230",()->require(backend.request("GET","/state",new JSONObject()).getString("version").equals("2.3.0")));
+        check("native-qa-ledger-cost-and-realized",()->{JSONObject p=backend.request("GET","/portfolio?account=local",new JSONObject());require(p.getDouble("cost")==603 && p.getDouble("realizedPnl")==-136 && p.getJSONArray("positions").length()==1);});
+        check("native-second-account-isolated",()->{JSONObject p=backend.request("GET","/portfolio?account=qa-other",new JSONObject());require(p.getDouble("cost")==1503 && p.getDouble("realizedPnl")==0 && p.getJSONArray("positions").getJSONObject(0).getString("code").equals("000002"));});
+        Activity activity=startActivitySync(new Intent(getTargetContext(),MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+        java.lang.reflect.Field field=MainActivity.class.getDeclaredField("web");field.setAccessible(true);web=(WebView)field.get(activity);
+        check("packaged-app-and-chart-engine-load",()->awaitJs("!!window.SequentialSignalModel && !!window.PhoneCharts && !!window.StandaloneApp && StandaloneApp.getState().accounts.length===2 && StandaloneApp.getState().watch.length===2 && document.querySelector('#runtimeStatus').textContent.startsWith('独立运行')"));
+        js("StandaloneApp.navigate('watch')");
+        awaitJs("!!document.querySelector('[data-stock=\"000001\"]')");
+        js("document.querySelector('[data-stock=\"000001\"]').click()");
+        check("native-candles-volume-macd",()->awaitJs("(()=>{const el=document.querySelector('#chart'),c=el&&echarts.getInstanceByDom(el);if(!c)return false;const o=c.getOption();return o.series[0].type==='candlestick' && o.series[0].data.length>180 && o.series.some(s=>s.name==='MACD柱') && o.series.some(s=>s.name==='成交量(手)')})()"));
+        if(offline)check("offline-chart-available-and-marked-cache",()->awaitJs("document.querySelector('#chartSource').textContent.includes('缓存')"));
+        if(!offline){
+            check("public-daily-bars-fresh-source-evidence",()->{JSONObject value=backend.request("GET","/kline?code=000001&period=day",new JSONObject());require(!value.optBoolean("stale")&&value.getJSONArray("rows").length()>180);checks.put(new JSONObject().put("name","public-daily-evidence").put("pass",true).put("evidence",new JSONObject().put("source",value.getString("source")).put("adjustment",value.getString("adjustment")).put("checkedAt",value.getString("checkedAt")).put("count",value.getJSONArray("rows").length()).put("first",value.getJSONArray("rows").getJSONObject(0).getString("date")).put("last",value.getJSONArray("rows").getJSONObject(value.getJSONArray("rows").length()-1).getString("date"))));});
+            check("quote-refresh-retains-chart-instance-and-zoom",()->{js("window.__qaInstance=echarts.getInstanceByDom(document.querySelector('#chart'));__qaInstance.dispatchAction({type:'dataZoom',start:60,end:90});document.querySelector('#refresh').click()");Thread.sleep(1500);require("true".equals(js("__qaInstance===echarts.getInstanceByDom(document.querySelector('#chart')) && Math.abs(__qaInstance.getOption().dataZoom[0].start-60)<0.01")));});
+            check("native-cache-independent-of-network-workers",()->{
+                java.lang.reflect.Field workers=MainActivity.class.getDeclaredField("executor");workers.setAccessible(true);java.util.concurrent.ExecutorService queue=(java.util.concurrent.ExecutorService)workers.get(activity);
+                CountDownLatch started=new CountDownLatch(3),release=new CountDownLatch(1);for(int i=0;i<3;i++)queue.execute(()->{started.countDown();try{release.await(25,TimeUnit.SECONDS);}catch(InterruptedException ignored){Thread.currentThread().interrupt();}});
+                try{require(started.await(20,TimeUnit.SECONDS));js("window.__qaCache=null;StandaloneApp.call('/chart-cache?code=000001&type=kline&period=day').then(v=>window.__qaCache=v).catch(e=>window.__qaCache={error:e.message})");long start=System.nanoTime();awaitJs("!!window.__qaCache");require((System.nanoTime()-start)/1000000<2500);require("true".equals(js("window.__qaCache.available && window.__qaCache.rows.length>180")));}finally{release.countDown();}
+            });
+        }
+        check("native-zoom-survives-theme",()->{js("echarts.getInstanceByDom(document.querySelector('#chart')).dispatchAction({type:'dataZoom',start:60,end:90});document.querySelector('#theme').click()");require("true".equals(js("Math.abs(echarts.getInstanceByDom(document.querySelector('#chart')).getOption().dataZoom[0].start-60)<0.01")));});
+        check("native-kdj-control",()->{js("document.querySelector('#indicator').value='kdj';document.querySelector('#indicator').dispatchEvent(new Event('change',{bubbles:true}))");awaitJs("echarts.getInstanceByDom(document.querySelector('#chart')).getOption().series.some(s=>s.name==='J')");});
+        check("native-minute-price-average-volume",()->{js("document.querySelector('#chartType').value='minute';document.querySelector('#chartType').dispatchEvent(new Event('change',{bubbles:true}))");awaitJs("(()=>{const o=echarts.getInstanceByDom(document.querySelector('#chart'))?.getOption();return !!o && o.xAxis[0].data.length===242 && o.series.some(s=>s.name==='均价') && o.series[1].data.some(v=>v>0) && o.series[2].data.some(v=>v.value>0)})()");});
+        js("document.querySelector('[data-action=expand-chart]').click()");Thread.sleep(400);capture(mode+"-minute");
+        js("document.querySelector('#chartType').value='kline';document.querySelector('#chartType').dispatchEvent(new Event('change',{bubbles:true}))");awaitJs("echarts.getInstanceByDom(document.querySelector('#chart')).getOption().series[0].type==='candlestick'");
+        js("document.querySelector('#indicator').value='macd';document.querySelector('#indicator').dispatchEvent(new Event('change',{bubbles:true}));PhoneCharts.range(65)");
+        check("native-chart-fits-source-and-viewport",()->awaitJs("(()=>{const el=document.querySelector('#chart'),c=echarts.getInstanceByDom(el);return el.clientHeight>150 && document.documentElement.scrollWidth<=innerWidth && Math.abs(c.getHeight()-el.clientHeight)<=1 && el.getBoundingClientRect().bottom<=document.querySelector('.chart-actions').getBoundingClientRect().top})()"));Thread.sleep(300);capture(mode+"-kline");
+        runOnMainSync(()->activity.setRequestedOrientation(android.content.pm.ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE));Thread.sleep(1400);
+        check("native-landscape-fits",()->awaitJs("innerWidth>innerHeight && document.documentElement.scrollWidth<=innerWidth && document.querySelector('#chart').clientHeight>140 && Math.abs(echarts.getInstanceByDom(document.querySelector('#chart')).getHeight()-document.querySelector('#chart').clientHeight)<=1"));Thread.sleep(300);capture(mode+"-landscape");
+        runOnMainSync(()->activity.setRequestedOrientation(android.content.pm.ActivityInfo.SCREEN_ORIENTATION_PORTRAIT));Thread.sleep(800);
+        check("native-back-closes-fullscreen",()->require("true".equals(js("WebStockPhoneBack() && !document.body.classList.contains('chart-expanded')"))));
+        js("StandaloneApp.navigate('stats')");
+        check("native-statistics-shows-fee-inclusive-realized",()->awaitJs("document.querySelector('#statsRealized')?.textContent.includes('-136.00') && !!echarts.getInstanceByDom(document.querySelector('#statsChart'))"));
+        js("document.querySelector('#statsRealized').closest('section').scrollIntoView({block:'start'})");Thread.sleep(350);capture(mode+"-account-stats");
+        check("native-statistics-stock-filter",()->{js("document.querySelector('#accountCode').value='000001';document.querySelector('#accountCode').dispatchEvent(new Event('change',{bubbles:true}))");awaitJs("document.querySelector('#statsRealized')?.textContent.includes('76.00')");});
+        check("native-statistics-date-filter-keeps-prior-cost",()->{js("document.querySelector('#accountFrom').value='2026-09-25';document.querySelector('#accountFrom').dispatchEvent(new Event('change',{bubbles:true}));document.querySelector('#accountTo').value='2026-09-25';document.querySelector('#accountTo').dispatchEvent(new Event('change',{bubbles:true}))");awaitJs("document.querySelector('#statsRealized')?.textContent.includes('76.00')");});
+        check("native-account-switch-clears-filters-and-isolates",()->{js("document.querySelector('#account').value='qa-other';document.querySelector('#account').dispatchEvent(new Event('change',{bubbles:true}))");awaitJs("document.querySelector('#account').value==='qa-other' && document.querySelector('#accountCode').value==='' && document.querySelector('#accountFrom').value==='' && document.querySelector('#accountTo').value==='' && document.querySelector('#statsRealized')?.textContent.trim()==='0.00'");});
+        js("document.querySelector('#account').value='local';document.querySelector('#account').dispatchEvent(new Event('change',{bubbles:true}))");awaitJs("document.querySelector('#statsRealized')?.textContent.includes('-136.00')");
+        check("native-ledger-stock-and-side-filter",()->{js("StandaloneApp.navigate('trades');document.querySelector('#accountCode').value='000001';document.querySelector('#accountCode').dispatchEvent(new Event('change',{bubbles:true}));document.querySelector('#accountSide').value='sell';document.querySelector('#accountSide').dispatchEvent(new Event('change',{bubbles:true}))");awaitJs("document.querySelectorAll('[data-trade-id]').length===1 && !!document.querySelector('[data-trade-id=\"qa-sell-a\"]')");});
+        Thread.sleep(350);capture(mode+"-account-ledger");
+        check("native-holding-links-to-stock-ledger",()->{js("StandaloneApp.navigate('portfolio')");awaitJs("!!document.querySelector('[data-ledger-code=\"000001\"]')");js("document.querySelector('[data-ledger-code=\"000001\"]').click()");awaitJs("document.body.dataset.page==='trades' && document.querySelector('#accountCode').value==='000001' && document.querySelectorAll('[data-trade-id]').length===2");});
+        check("native-account-pages-fit-phone-width",()->require("true".equals(js("document.documentElement.scrollWidth<=innerWidth"))));
+        AtomicReference<JSONObject> etfFirst=new AtomicReference<>();
+        check(offline?"native-offline-etf-preserves-cache-source":"native-live-etf-source-and-amount-unit",()->{
+            JSONObject rank=backend.request("GET","/rank?board=etf&sort=change",new JSONObject());
+            require(rank.getJSONArray("rows").length()>0 && rank.optBoolean("stale")==offline);
+            etfFirst.set(rank.getJSONArray("rows").getJSONObject(0));
+            if(rank.getString("source").equals("sina-public-etf")){
+                require(rank.getBoolean("fallback") && rank.getString("amountUnit").equals("元") && !rank.getBoolean("rankingDateKnown") && !rank.getString("primaryError").isEmpty());
+                JSONObject row=rank.getJSONArray("rows").getJSONObject(0);require(row.isNull("netFlow") && row.isNull("dataTimestamp"));
+            }
+            JSONObject evidence=new JSONObject().put("source",rank.getString("source")).put("checkedAt",rank.getString("checkedAt")).put("stale",rank.optBoolean("stale")).put("count",rank.getJSONArray("rows").length()).put("first",rank.getJSONArray("rows").getJSONObject(0));
+            checks.put(new JSONObject().put("name","native-etf-provider-evidence").put("pass",true).put("evidence",evidence));
+        });
+        js("StandaloneApp.navigate('etf')");
+        check("native-etf-page-renders-provider-rows",()->awaitJs("document.body.dataset.page==='etf' && document.querySelectorAll('#content [data-stock]').length>0 && document.documentElement.scrollWidth<=innerWidth"));
+        check("native-etf-price-preserves-three-decimals",()->{JSONObject first=etfFirst.get();require(first!=null);String code=first.getString("code");require(code.matches("[0-9]{6}"));awaitJs("Number(document.querySelector('[data-stock=\""+code+"\"]').closest('.quote-row').querySelector('.quote-price').textContent.replaceAll(',',''))==="+first.getDouble("price"));});
+        Thread.sleep(350);capture(mode+"-etf");
+        int passed=0;for(int i=0;i<checks.length();i++)if(checks.getJSONObject(i).getBoolean("pass"))passed++;
+        Bundle result=new Bundle();result.putString("summary",new JSONObject().put("checks",checks).put("pass",passed).put("total",checks.length()).toString());finish(passed==checks.length()?Activity.RESULT_OK:Activity.RESULT_CANCELED,result);
     }
     private void network220Audit() throws Exception {
         StandaloneBackend backend=new StandaloneBackend(getTargetContext());

@@ -99,7 +99,7 @@ public final class StandaloneStore extends SQLiteOpenHelper {
     }
     public synchronized JSONObject state() throws Exception {
         JSONObject result=new JSONObject(); for(String kind:KINDS) result.put(kind,read(kind));
-        return result.put("quotes",quotes()).put("mode","independent").put("version","2.2.0");
+        return result.put("quotes",quotes()).put("mode","independent").put("version","2.3.0");
     }
     public synchronized JSONObject backup() throws Exception {
         JSONObject result=new JSONObject().put("format","webstock-android-independent-v1").put("exportedAt",Instant.now().toString());

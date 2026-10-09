@@ -95,7 +95,7 @@ public final class MainActivity extends ComponentActivity {
             @Override public WebResourceResponse shouldInterceptRequest(WebView view,WebResourceRequest request) {
                 Uri uri=request.getUrl();if(!HOST.equals(uri.getHost()) || !"https".equals(uri.getScheme())) return response(403,"text/plain",new byte[0]);
                 String path=uri.getPath();if(path==null || path.equals("/")) path="/index.html";
-                if(path.contains("..") || !path.matches("^/(index\\.html|app(?:-flow)?\\.js|chart-model\\.js|phone-charts\\.js|shared/(indicators|marketSignalModel|sequentialSignalModel|auctionRules)\\.js|(?:app|chart-ui|flow)\\.css|stocks\\.json|funds\\.json|vendor/(echarts\\.min|tiny-pinyin)\\.js)$")) return response(404,"text/plain",new byte[0]);
+                if(path.contains("..") || !path.matches("^/(index\\.html|app(?:-flow)?\\.js|chart-model\\.js|phone-charts\\.js|portfolio-model\\.js|shared/(indicators|marketSignalModel|sequentialSignalModel|auctionRules)\\.js|(?:app|chart-ui|flow)\\.css|stocks\\.json|funds\\.json|vendor/(echarts\\.min|tiny-pinyin)\\.js)$")) return response(404,"text/plain",new byte[0]);
                 try {String mime=path.endsWith(".js")?"application/javascript":path.endsWith(".css")?"text/css":path.endsWith(".json")?"application/json":"text/html";
                     return new WebResourceResponse(mime,"UTF-8",getAssets().open("web"+path));
                 } catch(Exception error) {return response(404,"text/plain",new byte[0]);}

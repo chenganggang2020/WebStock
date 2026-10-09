@@ -14,7 +14,7 @@ try {
   if($LASTEXITCODE -ne 0) {throw 'Instrumentation build failed'}
 } finally {Pop-Location}
 $unsigned=Join-Path $PSScriptRoot '..\android\app\build\outputs\apk\androidTest\debug\app-debug-androidTest.apk'
-$signed=Join-Path $PSScriptRoot 'standalone-220-instrumentation.apk'
+$signed=Join-Path $PSScriptRoot 'standalone-230-instrumentation.apk'
 & (Join-Path $toolchain.sdkRoot 'build-tools\36.0.0\apksigner.bat') sign --ks (Join-Path $signingRoot 'webstock-release.jks') --ks-key-alias $signing.alias --ks-pass env:WEBSTOCK_ANDROID_STORE_PASSWORD --key-pass env:WEBSTOCK_ANDROID_KEY_PASSWORD --out $signed $unsigned
 if($LASTEXITCODE -ne 0) {throw 'Instrumentation signing failed'}
 & (Join-Path $toolchain.sdkRoot 'build-tools\36.0.0\apksigner.bat') verify $signed

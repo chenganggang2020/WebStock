@@ -1,6 +1,7 @@
 async page => {
   const errors=[];page.on('pageerror',error=>errors.push(error.message));
   await page.addInitScript(()=>{
+    localStorage.removeItem('webstock-chart-preferences');
     const state={watch:[{id:'a',code:'000002',name:'万科A',group:'测试组'},{id:'b',code:'000001',name:'平安银行',group:'测试组'}],accounts:[{id:'local',name:'测试账户'}],trades:[],docs:[],reports:[],recent:[],quotes:{}};
     window.qaRequests=[];window.qaChartDelays=[];window.qaChartValues=[];window.qaFailChart=false;
     window.WebStockNative={request(id,text){const r=JSON.parse(text),u=new URL(r.path,'https://fixture.invalid');qaRequests.push(r);let data,delay=15,error='';

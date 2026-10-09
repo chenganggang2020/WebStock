@@ -10,8 +10,8 @@ android {
         applicationId = "com.webstock.companion"
         minSdk = 26
         targetSdk = 37
-        versionCode = 20261006
-        versionName = "2.2.0"
+        versionCode = 20261007
+        versionName = "2.3.0"
         testInstrumentationRunner = "com.webstock.companion.StandaloneSmokeInstrumentation"
     }
 

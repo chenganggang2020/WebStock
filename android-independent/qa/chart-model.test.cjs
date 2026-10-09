@@ -3,7 +3,7 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
 const root=path.resolve(__dirname,'..');
 const model=require('../web/chart-model.js');
-const desktop=path.resolve(__dirname,'../../js/modules');
+const desktop=process.env.WEBSTOCK_DESKTOP_MODULES||'D:/CodexData/CodexHome-Final/worktrees/runtime-lifecycle-cleanup/Webstock/js/modules';
 const readIndicators=file=>{const box={window:{}};vm.runInNewContext(fs.readFileSync(file,'utf8'),box);return box.window.Indicators;};
 const bars=Array.from({length:80},(_,i)=>({date:new Date(Date.UTC(2026,0,i+1)).toISOString().slice(0,10),open:10+i/8,close:10+i/8+Math.sin(i),high:12+i/8,low:8+i/8,volume:100+i*11}));
 for(const name of ['calcMACD','calcKDJ','calcRSI','calcCCI','calcOBV','calcATR']) test(name+' matches desktop on identical bars',()=>{const a=structuredClone(bars),b=structuredClone(bars);readIndicators(path.join(desktop,'indicators.js'))[name](a);model.indicators[name](b);assert.deepEqual(b,a);});
