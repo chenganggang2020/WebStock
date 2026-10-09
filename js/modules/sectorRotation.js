@@ -24,21 +24,50 @@
   }
   function chartOption(points) {
     const moneyData=[],priceData=[];
+    // Only consume a verified, same-day clock from the backend. Older payloads
+    // retain conservative gaps rather than guessing a market's lunch schedule.
+    const day=String(points[0]?.phase||'').slice(0,10);
+    const trading=points.length>0 && /^\d{4}-\d{2}-\d{2}$/.test(day) && points.every(p=>
+      p.clockVersion==='cn-continuous-samples/v1' && Number.isFinite(p.tradingTimeMs) &&
+      typeof p.gapBefore==='boolean' && String(p.phase||'').slice(0,10)===day);
+    const x=p=>trading?p.tradingTimeMs:Date.parse(p.at);
     points.forEach((p,i)=>{
-      const t=Date.parse(p.at),prev=points[i-1];
-      if(prev && (p.phase!==prev.phase || t-Date.parse(prev.at)>150000)) {
-        moneyData.push([Date.parse(prev.at)+1,null]);priceData.push([Date.parse(prev.at)+1,null]);
+      const t=x(p),prev=points[i-1];
+      const gap=prev && (trading ? p.gapBefore || p.sourceKey!==prev.sourceKey ||
+        p.totalReported!==prev.totalReported || t<x(prev) || t-x(prev)>150000 ||
+        Date.parse(p.at)<Date.parse(prev.at) : p.phase!==prev.phase || t-Date.parse(prev.at)>150000);
+      if(gap) {
+        const gapX=trading && t===x(prev)?t:x(prev)+Math.min(1,Math.max(0,(t-x(prev))/2));
+        moneyData.push([gapX,null]);priceData.push([gapX,null]);
       }
-      moneyData.push([t,p.cumulativeCents==null?null:Number(p.cumulativeCents)/10000000000]);
-      priceData.push([t,p.changeRatio==null?null:p.changeRatio*100]);
+      const amount=p.cumulativeCents==null?null:Number(p.cumulativeCents)/10000000000;
+      const change=p.changeRatio==null?null:p.changeRatio*100;
+      moneyData.push(trading?[t,amount,p.at]:[t,amount]);
+      priceData.push(trading?[t,change,p.at]:[t,change]);
     });
+    const clockLabel=v=>{
+      const minute=Math.round(Number(v)/60000);
+      if(minute===120)return '11:30 / 13:00';
+      const wall=570+minute+(minute>120?90:0);
+      return String(Math.floor(wall/60)).padStart(2,'0')+':'+String(wall%60).padStart(2,'0');
+    };
+    const tooltip={trigger:'axis',renderMode:'richText'};
+    if(trading) tooltip.formatter=params=>{
+      const rows=Array.isArray(params)?params:[params];
+      const source=rows.find(p=>Array.isArray(p.data) && typeof p.data[2]==='string');
+      if(!source)return '缺采或口径变化';
+      return time(source.data[2])+'\n'+rows.map(p=>p.seriesName+'：'+
+        (Number.isFinite(p.data?.[1])?p.data[1].toFixed(2):'--')).join('\n');
+    };
     return {animation:false,legend:{data:['累计模型净额（亿元）','板块涨跌幅（%）'],textStyle:{color:'#8799b3'}},
-      tooltip:{trigger:'axis',renderMode:'richText'},grid:{left:65,right:65,top:45,bottom:45},
-      xAxis:{type:'time',axisLabel:{color:'#8799b3',formatter:v=>new Date(v).toLocaleTimeString('zh-CN',{timeZone:'Asia/Shanghai',hour12:false,hour:'2-digit',minute:'2-digit'})}},
+      tooltip,grid:{left:65,right:65,top:45,bottom:45},
+      xAxis:trading?{type:'value',scale:true,axisLabel:{color:'#8799b3',formatter:clockLabel},
+        axisPointer:{label:{formatter:p=>clockLabel(p.value)}}}:
+        {type:'time',axisLabel:{color:'#8799b3',formatter:v=>new Date(v).toLocaleTimeString('zh-CN',{timeZone:'Asia/Shanghai',hour12:false,hour:'2-digit',minute:'2-digit'})}},
       yAxis:[{type:'value',scale:true,axisLabel:{color:'#8799b3'},splitLine:{lineStyle:{color:'#8799b322'}}},
         {type:'value',scale:true,axisLabel:{formatter:'{value}%',color:'#8799b3'},splitLine:{show:false}}],
-      series:[{name:'累计模型净额（亿元）',type:'line',data:moneyData,connectNulls:false,showSymbol:points.length<2,lineStyle:{color:'#4f8eff',width:2.5}},
-        {name:'板块涨跌幅（%）',type:'line',yAxisIndex:1,data:priceData,connectNulls:false,showSymbol:points.length<2,lineStyle:{color:'#d8a84e',width:2}}]};
+      series:[{name:'累计模型净额（亿元）',type:'line',data:moneyData,encode:{x:0,y:1},connectNulls:false,showSymbol:points.length<2,lineStyle:{color:'#4f8eff',width:2.5}},
+        {name:'板块涨跌幅（%）',type:'line',yAxisIndex:1,data:priceData,encode:{x:0,y:1},connectNulls:false,showSymbol:points.length<2,lineStyle:{color:'#d8a84e',width:2}}]};
   }
   function createRotationView(options) {
     const el=id=>options.document.getElementById(id);
@@ -85,7 +114,7 @@
         el('rotationDetailMetrics').innerHTML=[['区间净额变化',money(detail.deltaCents)],['平均变化速度',yuan(detail.speedYuanPerMinute)+' / 分钟'],
           ['暗盘活跃度（供应商原指标）',pct(detail.darkActivityRatio)],['板块涨跌幅',pct(detail.changeRatio)]]
           .map(([label,value])=>'<article><span>'+label+'</span><strong>'+value+'</strong></article>').join('');
-        el('rotationDetailTime').textContent=(detail.startAt?'区间：'+time(detail.startAt)+' → '+time(detail.endAt)+'；实际 '+detail.elapsedMinutes.toFixed(1)+' 分钟。':'窗口样本不足。')+' 曲线横轴为本机采样时间，不是源行情事件时间。';
+        el('rotationDetailTime').textContent=(detail.startAt?'区间：'+time(detail.startAt)+' → '+time(detail.endAt)+(data.windowBasis==='trading-minutes'?'；交易时间 ':'；实际 ')+detail.elapsedMinutes.toFixed(1)+' 分钟。':'窗口样本不足。')+(data.windowBasis==='trading-minutes'?' 曲线压缩正常午休；悬停为原始本机采样时间，不是源行情事件时间。':' 曲线横轴为本机采样时间，不是源行情事件时间。');
         if(options.echarts) {
           if(!chart) chart=options.echarts.init(el('rotationChart'));
           const option=chartOption(detail.series||[]);
