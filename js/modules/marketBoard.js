@@ -8,6 +8,13 @@
   const percent = value => value == null ? '—' : (value > 0 ? '+' : '') + format(value) + '%';
   let selection = prefs.normalize(prefs.read(prefs.storageKey, localStorage)), catalog = [], items = [], bound = false;
   let timer, pending, generation = 0, chart, detailKey = '', period = 'intraday', detailRequest = 0, dailyItem;
+  let renderedBox, detailSignature = '', lastDetailItem = null;
+  // Compare our last input, not browser-normalized innerHTML (checked="", SVG, etc.).
+  const renderedHtml = new WeakMap();
+  function html(id, value) {
+    const node = el(id);
+    if (node && renderedHtml.get(node) !== value) { node.innerHTML = value; renderedHtml.set(node, value); }
+  }
   function save() {
     try { localStorage.setItem(prefs.storageKey, JSON.stringify(selection)); }
     catch (_) { el('marketBoardStatus').textContent = '设置未保存：本地存储不可用'; }
@@ -17,15 +24,24 @@
   }
   function render() {
     const box = el('dashboardGlobalSignals'); if (!box) return;
-    const expanded = el('marketBoardChoices')?.open || false;
-    box.innerHTML = '<div class="market-board-toolbar"><strong>跨市场盯盘</strong><span id="marketBoardStatus">1分钟数据 · 30秒检查 · 北京时间</span><button type="button" id="marketBoardWidget">桌面挂件</button></div>' +
-      '<details id="marketBoardChoices" class="market-board-choices" ' + (expanded ? 'open' : '') + '><summary>展示设置 · 已选 ' + selection.keys.length + ' 项</summary><div>' + choices() + '</div>' +
-      '<button type="button" id="marketBoardDefaults">恢复默认</button><button type="button" id="marketBoardNone">隐藏全部</button><p>显示顺序：' + selection.keys.map((key, i) => '<button type="button" data-board-up="' + escape(key) + '" title="点击向前移动">' + (i + 1) + '. ' + escape(catalog.find(row => row.key === key)?.name || key) + ' ↑</button>').join('') + '</p></details>' +
-      (items.length ? items.map(item => '<article class="dashboard-global-signal" role="button" tabindex="0" data-board-open="' + escape(item.key) + '" data-direction="' + (item.changePct > 0 ? 'up' : item.changePct < 0 ? 'down' : 'flat') + '">' +
+    if (renderedBox !== box) {
+      box.innerHTML = '<div class="market-board-toolbar"><strong>跨市场盯盘</strong><span id="marketBoardStatus">1分钟数据 · 30秒检查 · 北京时间</span><button type="button" id="marketBoardWidget">桌面挂件</button></div>' +
+        '<details id="marketBoardChoices" class="market-board-choices"><summary id="marketBoardSelectionCount"></summary><div id="marketBoardChoiceList"></div>' +
+        '<button type="button" id="marketBoardDefaults">恢复默认</button><button type="button" id="marketBoardNone">隐藏全部</button><p id="marketBoardOrder"></p></details>' +
+        '<div id="marketBoardCards" style="display:contents"></div>' +
+        '<p class="dashboard-global-signals-note">公开源延迟未保证；缺口保留。点击卡片查看分时 / 日 K。指数、CFD、汇率分别标识。</p>';
+      renderedBox = box;
+    }
+    html('marketBoardSelectionCount', '展示设置 · 已选 ' + selection.keys.length + ' 项');
+    html('marketBoardChoiceList', choices());
+    html('marketBoardOrder', '显示顺序：' + selection.keys.map((key, i) => '<button type="button" data-board-up="' + escape(key) + '" title="点击向前移动">' + (i + 1) + '. ' + escape(catalog.find(row => row.key === key)?.name || key) + ' ↑</button>').join(''));
+    html('marketBoardCards', items.length ? items.map(item => '<article class="dashboard-global-signal" role="button" tabindex="0" data-board-open="' + escape(item.key) + '" data-direction="' + (item.changePct > 0 ? 'up' : item.changePct < 0 ? 'down' : 'flat') + '">' +
         '<header><strong>' + escape(item.name) + '</strong><small>' + escape(item.group) + '</small></header><div><b>' + format(item.value, item.digits) + '</b><span>' + percent(item.changePct) + '</span></div>' +
         prefs.spark(item.points) + '<p title="' + escape(item.source + ' · ' + (item.note || '') + ' · ' + (item.reason || '')) + '">' +
-        escape(['unavailable', 'loading'].includes(item.status) ? item.reason : (item.status === 'cached' ? '缓存 · ' : '') + time(item.observedAt)) + '</p></article>').join('') : '<p class="dashboard-global-signals-note">' + (selection.keys.length ? '正在获取所选行情…' : '已隐藏全部；可在展示设置中重新选择。') + '</p>') +
-      '<p class="dashboard-global-signals-note">公开源延迟未保证；缺口保留。点击卡片查看分时 / 日 K。指数、CFD、汇率分别标识。</p>';
+        escape(['unavailable', 'loading'].includes(item.status) ? item.reason : (item.status === 'cached' ? '缓存 · ' : '') + time(item.observedAt)) + '</p></article>').join('') : '<p class="dashboard-global-signals-note">' + (selection.keys.length ? '正在获取所选行情…' : '已隐藏全部；可在展示设置中重新选择。') + '</p>');
+  }
+  function schedule(delay) {
+    timer = setTimeout(() => { if (!document.hidden) load(); else schedule(30000); }, delay);
   }
   async function load() {
     bind();
@@ -36,13 +52,14 @@
       if (current !== generation) return data;
       catalog = data.catalog || catalog; selection = prefs.normalize(selection, catalog.map(row => row.key));
       items = data.items || []; render();
+      if (el('marketBoardStatus')) el('marketBoardStatus').textContent = '1分钟数据 · 30秒检查 · 北京时间';
       if (detailKey && period === 'intraday') drawDetail(items.find(row => row.key === detailKey));
       return data;
     }).catch(error => {
-      if (el('marketBoardStatus')) el('marketBoardStatus').textContent = '刷新失败，保留上次结果 · ' + error.message;
+      if (current === generation && el('marketBoardStatus')) el('marketBoardStatus').textContent = '刷新失败，保留上次结果 · ' + error.message;
     }).finally(() => {
       pending = null;
-      timer = setTimeout(() => { if (!document.hidden || detailKey) load(); else timer = setTimeout(load, 30000); }, current !== generation ? 0 : items.some(row => row.status === 'loading') ? 2000 : 30000);
+      schedule(current !== generation ? 0 : items.some(row => row.status === 'loading') ? 2000 : 30000);
     });
     return pending;
   }
@@ -58,6 +75,11 @@
   }
   function drawDetail(item) {
     if (!detailKey || !item || item.key !== detailKey) return;
+    const hasPoints = value => period === 'daily' ? value.candles?.length : value.points?.some(point => point.close != null);
+    if (!hasPoints(item) && lastDetailItem && lastDetailItem.key === item.key &&
+        lastDetailItem.source === item.source && lastDetailItem.sessionDate === item.sessionDate) {
+      item = { ...lastDetailItem, status: 'cached', reason: item.reason || '本次尚无有效数据，保留上次结果' };
+    }
     const node = el('dashboardGlobalDetailChart');
     el('dashboardGlobalDetailTitle').textContent = item.name;
     el('dashboardGlobalDetailMeta').textContent = format(item.value, item.digits) + ' · ' + percent(item.changePct) + ' · 数据 ' + (period === 'daily' ? item.observedAt || '未提供' : time(item.observedAt));
@@ -65,19 +87,26 @@
       ' · 取数 ' + time(item.fetchedAt) + (item.status === 'cached' ? ' · 刷新失败，保留缓存' : '') + (item.reason ? ' · ' + item.reason : '');
     const link = el('dashboardGlobalDetailLink'); link.hidden = !/^https:\/\//.test(item.sourceUrl || ''); if (!link.hidden) link.href = item.sourceUrl;
     el('marketBoardPeriods').querySelectorAll('button').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.boardPeriod === period)));
-    if (!(period === 'daily' ? item.candles?.length : item.points?.length)) {
-      chart?.dispose(); chart = null; node.textContent = '该周期暂无可用数据；请稍后重试或切换周期。'; return;
+    if (!hasPoints(item)) {
+      chart?.dispose(); chart = null; detailSignature = ''; lastDetailItem = null; node.textContent = '该周期暂无可用数据；请稍后重试或切换周期。'; return;
     }
+    lastDetailItem = item;
+    const dark = document.body.classList.contains('dark');
+    const signature = JSON.stringify([period, dark, item.key, item.source, item.sessionDate, item.name,
+      item.digits, item.previousClose, period === 'daily' ? item.candles : item.points]);
+    if (chart && signature === detailSignature) return;
     node.querySelector('.dashboard-market-unavailable')?.remove();
     if (!chart) { node.textContent = ''; chart = root.echarts.init(node); }
     const option = period === 'daily' ? root.MarketComparison.buildGlobalKlineOption(item) : minuteOption(item);
-    root.ChartTheme?.applyToOption(option, { dark: document.body.classList.contains('dark') });
-    if (root.ChartTheme?.renderTo) chart = root.ChartTheme.renderTo(root.echarts, node, chart, option, 'board:' + detailKey + ':' + period);
+    root.ChartTheme?.applyToOption(option, { dark });
+    if (root.ChartTheme?.renderTo) chart = root.ChartTheme.renderTo(root.echarts, node, chart, option, 'board:' + detailKey + ':' + period + ':' + (item.sessionDate || '') + ':' + (item.source || ''));
     else chart.setOption(option, true);
+    detailSignature = signature;
     chart.resize();
   }
   async function open(key, nextPeriod = 'intraday') {
     bind(); detailKey = key; period = nextPeriod; const request = ++detailRequest;
+    detailSignature = ''; lastDetailItem = null;
     el('dashboardGlobalDetailOverlay').style.display = 'grid';
     const cached = nextPeriod === 'intraday' ? items.find(row => row.key === key) : dailyItem?.key === key ? dailyItem : null;
     if (chart) { chart.dispose(); chart = null; }
@@ -92,7 +121,7 @@
       drawDetail(item);
     } catch (error) { if (request === detailRequest) el('dashboardGlobalDetailSource').textContent = '读取失败：' + error.message; }
   }
-  function close() { detailRequest++; detailKey = ''; chart?.dispose(); chart = null; el('dashboardGlobalDetailOverlay').style.display = 'none'; }
+  function close() { detailRequest++; detailKey = ''; chart?.dispose(); chart = null; detailSignature = ''; lastDetailItem = null; el('dashboardGlobalDetailOverlay').style.display = 'none'; }
   async function toggleWidget() {
     const status = el('marketBoardStatus');
     if (!root.webstockDesktop?.setMarketWidget) { status.textContent = '悬浮挂件需在 Windows 安装版中开启；浏览器不支持系统置顶。'; return; }
@@ -112,7 +141,7 @@
     });
     document.addEventListener('change', event => { const key = event.target.dataset.boardKey; if (key) { selection.keys = event.target.checked ? [...selection.keys, key] : selection.keys.filter(k => k !== key); changeSelection(); } });
     document.addEventListener('keydown', event => { if (event.key === 'Escape' && detailKey) close(); const card = event.target.closest('[data-board-open]'); if (card && ['Enter', ' '].includes(event.key)) { event.preventDefault(); open(card.dataset.boardOpen); } });
-    root.addEventListener('storage', event => { if (event.key === prefs.storageKey) { selection = prefs.normalize(prefs.read(prefs.storageKey, localStorage)); generation++; render(); load(); } });
+    root.addEventListener('storage', event => { if (event.key === prefs.storageKey) { selection = prefs.normalize(prefs.read(prefs.storageKey, localStorage)); generation++; items = selection.keys.map(key => items.find(row => row.key === key)).filter(Boolean); render(); load(); } });
     document.addEventListener('visibilitychange', () => { if (!document.hidden) load(); });
   }
   root.MarketBoard = { load, open, close, resize: () => chart?.resize(), rerenderTheme: () => { if (detailKey) drawDetail(period === 'daily' ? dailyItem : items.find(row => row.key === detailKey)); } };
