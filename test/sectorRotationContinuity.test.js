@@ -73,3 +73,55 @@ test('display clock and explicit continuity metadata retain original observed ti
   assert.equal(after.sourceKey, 'fixture:unchanged');
   assert.equal(after.clockVersion, 'cn-continuous-samples/v1');
 });
+
+function withNoonSample() {
+  const s = lunchSamples();
+  const noon = structuredClone(s.find(p => p.receivedAt === '2026-09-17T03:30:00.000Z'));
+  noon.receivedAt = '2026-09-17T04:00:00.000Z';
+  // A manual lunch read is not another minute of turnover or a window endpoint.
+  noon.rows[0].combinedNetCents = '999999999999';
+  s.push(noon);
+  return { s, noon };
+}
+
+test('manual noon samples remain archived but do not interrupt trading windows or curves', () => {
+  const { s, noon } = withNoonSample();
+  const r = calculate(s);
+  assert.equal(r.eligible, 1);
+  assert.equal(r.detail.deltaCents, '500000000');
+  assert.equal(r.detail.elapsedMinutes, 5);
+  assert.equal(r.sampleCount, s.length);
+  assert.equal(r.detail.series.some(p => p.at === noon.receivedAt), false);
+  assert.equal(r.detail.series.find(p => p.at === '2026-09-17T05:00:00.000Z').gapBefore, false);
+});
+
+test('a noon sample cannot hide missing continuous-session observations', () => {
+  const { s } = withNoonSample();
+  const r = calculate(s.filter(p => !(p.receivedAt > '2026-09-17T03:25:00.000Z' &&
+    p.receivedAt < '2026-09-17T05:02:00.000Z' && p.receivedAt !== '2026-09-17T04:00:00.000Z')));
+  assert.equal(r.eligible, 0);
+  assert.equal(r.detail.series.find(p => p.at === '2026-09-17T05:02:00.000Z').gapBefore, true);
+});
+
+test('source or coverage changes during lunch remain barriers even when they change back', () => {
+  for (const mutate of [p => { p.sourceKey = 'other'; }, p => { p.coverage.totalReported = 2; }]) {
+    const { s, noon } = withNoonSample(); mutate(noon);
+    const r = calculate(s);
+    assert.equal(r.eligible, 0);
+    assert.equal(r.detail.series.find(p => p.at === '2026-09-17T05:00:00.000Z').gapBefore, true);
+  }
+});
+
+test('a stale noon row in an afternoon batch is not treated as a harmless lunch read', () => {
+  const s = lunchSamples();
+  s.find(p => p.receivedAt === '2026-09-17T05:02:00.000Z').rows[0].receivedAt = '2026-09-17T04:00:00.000Z';
+  assert.equal(calculate(s).eligible, 0);
+});
+
+test('historical endpoint selection also excludes unavailable lunch-only rows', () => {
+  const { s, noon } = withNoonSample(); noon.rows = [];
+  const r = calculate(s, { date: '2026-09-17', at: '13:02:00' });
+  assert.equal(r.eligible, 1);
+  assert.equal(r.windowEndAt, '2026-09-17T05:02:00.000Z');
+  assert.equal(r.detail.deltaCents, '500000000');
+});

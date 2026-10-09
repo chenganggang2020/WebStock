@@ -20,7 +20,8 @@ function samplingClock(value) {
   const phase = !open ? null : c.time >= '09:30:00' && c.time <= '11:30:00' ? c.date + ':am' :
     c.time >= '13:00:00' && c.time < '14:57:00' ? c.date + ':pm' : null;
   const sinceOpen = time - Date.parse(c.date + 'T09:30:00+08:00');
-  return {time, phase, clockDate:c.date, tradingTimeMs:phase ?
+  const recess = open && c.time > '11:30:00' && c.time < '13:00:00';
+  return {time, phase, recess, clockDate:c.date, tradingTimeMs:phase ?
     sinceOpen - (phase.endsWith(':pm') ? 90 * 60000 : 0) : null};
 }
 function session(value) { return samplingClock(value).phase; }
@@ -49,18 +50,42 @@ function windowDelta(points, endIndex, minutes, field) {
   }
   if (startIndex < 0) return null;
   const start = points[startIndex];
+  let previous = null;
   for (let i=startIndex; i<=endIndex; i++) {
     const p = points[i];
-    if (!p.phase || p.date !== end.date || p.sourceKey !== end.sourceKey || !p.row ||
-        p.date !== p.clockDate || p.total !== end.total ||
+    if (p.date !== end.date || p.sourceKey !== end.sourceKey ||
+        p.date !== p.clockDate || p.total !== end.total) return null;
+    // Retain lunch reads in history, but never count them as trading samples.
+    // Source/universe changes above still invalidate a window across the break.
+    if (p.recess) continue;
+    if (!p.phase || !p.row ||
         p.row.reconciled !== true || !validMoney(p.row[field]) ||
-        i>startIndex && !continuousPair(points[i-1], p)) return null;
+        previous && !continuousPair(previous, p)) return null;
+    previous = p;
   }
   const elapsed = (end.tradingTimeMs - start.tradingTimeMs) / 60000;
   if (elapsed <= 0) return null;
   const delta = BigInt(end.row[field]) - BigInt(start.row[field]);
   return {deltaCents:delta.toString(), speedYuanPerMinute:Number(delta)/100/elapsed,
     startIndex, startAt:start.at, endAt:end.at, elapsedMinutes:elapsed};
+}
+function plotSeries(points, field) {
+  const series = [];
+  let previous = null, interrupted = false;
+  for (const p of points) {
+    if (p.recess && p.clockDate === p.date) {
+      if (previous && (p.sourceKey !== previous.sourceKey || p.total !== previous.total)) interrupted = true;
+      continue;
+    }
+    if (!p.phase || p.clockDate !== p.date) { interrupted = true; continue; }
+    series.push({at:p.at,phase:p.phase,tradingTimeMs:p.tradingTimeMs,
+      clockVersion:'cn-continuous-samples/v1',gapBefore:interrupted || !!previous && !continuousPair(previous,p),
+      sourceKey:p.sourceKey,totalReported:p.total,
+      cumulativeCents:p.row && p.row.reconciled===true && validMoney(p.row[field])?p.row[field]:null,
+      changeRatio:p.row ? p.row.changeRatio:null});
+    previous = p; interrupted = false;
+  }
+  return series;
 }
 function rotationResult(snapshots, input = {}) {
   const q = validateQuery(input), now = input.now === undefined ? Date.now() : Number(input.now);
@@ -83,6 +108,7 @@ function rotationResult(snapshots, input = {}) {
     while(anchor>=0) {
       const window=windowDelta(indexed,anchor,q.minutes,'sample');
       if(window && [...indexed[anchor].rows.keys()].some(code=>indexed.slice(window.startIndex,anchor+1).every(p=>{
+        if (p.recess) return true;
         const row=p.rows.get(code);return row?.reconciled===true && validMoney(row[FIELDS[q.metric]]);
       })))break;
       anchor--;
@@ -93,7 +119,9 @@ function rotationResult(snapshots, input = {}) {
   const rows = (last ? last.rows : []).map(row=>{
     const points = indexed.map(p=>{
       const item=p.rows.get(row.code), at=item && item.receivedAt || p.at;
-      const timing = at === p.at ? {time:p.time,phase:p.phase,clockDate:p.clockDate,tradingTimeMs:p.tradingTimeMs} : samplingClock(at);
+      const timing = at === p.at ? {time:p.time,phase:p.phase,recess:p.recess,clockDate:p.clockDate,tradingTimeMs:p.tradingTimeMs} : samplingClock(at);
+      // A noon-stamped row inside an afternoon batch is stale, not a lunch read.
+      timing.recess = timing.recess && p.recess;
       return {row:item, at, ...timing, sourceKey:p.sourceKey,date:p.date,total:p.total};
     });
     const current=future?null:windowDelta(points,anchor,q.minutes,FIELDS[q.metric]);
@@ -111,12 +139,7 @@ function rotationResult(snapshots, input = {}) {
       state:delta===null?'数据不足':previous===null?'前窗不足':delta>0 && previous<0?'区间净额变化由负转正':delta<0 && previous>0?'区间净额变化由正转负':delta>0?'净额增加':delta<0?'净额减少':'净额未变',
       changeRatio:row.changeRatio, darkActivityRatio:row.darkActivityRatio,
       reason:current?null:'需同日同源的连续交易时间样本；缺失、断流或合计不符不计算',
-      ...(q.code===row.code ? {series:points.map((p,i)=>({...p,gapBefore:i>0 && !continuousPair(points[i-1],p)}))
-        .filter(p=>p.phase && p.clockDate===p.date).map(p=>({at:p.at,phase:p.phase,
-        tradingTimeMs:p.tradingTimeMs,clockVersion:'cn-continuous-samples/v1',gapBefore:p.gapBefore,
-        sourceKey:p.sourceKey,totalReported:p.total,
-        cumulativeCents:p.row && p.row.reconciled===true && validMoney(p.row[FIELDS[q.metric]])?p.row[FIELDS[q.metric]]:null,
-        changeRatio:p.row ? p.row.changeRatio:null}))} : {})};
+      ...(q.code===row.code ? {series:plotSeries(points,FIELDS[q.metric])} : {})};
   });
   const valid=rows.filter(r=>r.deltaCents!==null);
   const order=(key,sign)=>[...valid].filter(r=>r[key]!==null && r[key]*sign>0).sort((a,b)=>sign*(b[key]-a[key]) || a.code.localeCompare(b.code));
