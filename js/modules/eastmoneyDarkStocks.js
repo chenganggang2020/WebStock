@@ -13,6 +13,8 @@
       if(root.document.hidden || (!homeDetail && !['capitalFlow','market','watchlist','portfolio'].includes(active))) return;
       busy=true;
       try {
+        // Read existing observations independently of the slow external snapshot refresh.
+        if(homeDetail || active==='market') void view.history({automatic:true});
         const response=await root.fetch('/api/capital-flow/dark-session');
         const payload=await response.json();
         if(!response.ok || !payload.success) throw Error('交易时段状态暂不可用');
@@ -90,6 +92,7 @@
   function createDarkStockView(options) {
     const doc=options.document,now=options.now || Date.now,el=id=>doc.getElementById(id);
     let selected=null,generation=0,data=null,loadedAt=0,pendingKey='',viewName='market',historySequence=0,historyChart=null,refreshFollowupUntil=0;
+    let historyRequestKey='',historyPending='',historyReadAt=0;
     const refreshDelay=()=>data?.refreshing && now()<refreshFollowupUntil?5000:60000;
     const statusId=()=>viewName==='watchlist'?'watchlistDarkStockStatus':viewName==='portfolio'?'portfolioDarkStockStatus':'detailDarkStockStatus';
     function status(message) {const node=el(statusId());if(node) node.textContent=message;}
@@ -109,24 +112,28 @@
       const key=stockKey(stock);
       if(key!==selected) {
         selected=key;generation++;pendingKey='';historySequence++;
+        historyRequestKey='';historyPending='';
         if(historyChart) {historyChart.dispose();historyChart=null;}
-        const hint=el('detailDarkHistoryStatus');if(hint)hint.textContent='已切换股票，点击读取本机历史。';
+        const hint=el('detailDarkHistoryStatus');if(hint)hint.textContent='进入资金详情后自动读取本机历史，也可手动读取。';
         const date=el('detailDarkHistoryDate');if(date)date.innerHTML='<option value="">最近记录</option>';
       }
       draw('market');
     }
-    async function history() {
+    async function history({automatic=false}={}) {
       const hint=el('detailDarkHistoryStatus'),date=el('detailDarkHistoryDate'),box=el('detailDarkHistoryChart');
       if(!selected || !hint || !box)return;
+      const requestedDate=date?.value || '',requestKey=selected+':'+requestedDate;
+      if(automatic && (doc.hidden || historyPending===requestKey || historyRequestKey===requestKey && now()-historyReadAt<60000))return;
+      historyPending=requestKey;historyRequestKey=requestKey;historyReadAt=now();
       const key=selected,ticket=++historySequence,controller=new AbortController();
       const deadline=setTimeout(()=>controller.abort(),10000);
       hint.textContent='正在读取本机历史…';
       try {
-        const response=await options.fetch('/api/capital-flow/dark-stock-history?code='+encodeURIComponent(key)+(date?.value?'&date='+encodeURIComponent(date.value):''),{signal:controller.signal});
+        const response=await options.fetch('/api/capital-flow/dark-stock-history?code='+encodeURIComponent(key)+(requestedDate?'&date='+encodeURIComponent(requestedDate):''),{signal:controller.signal});
         const payload=await response.json();if(ticket!==historySequence || selected!==key)return;
         if(!response.ok || !payload.success || payload.data?.code!==key)throw Error('历史读取失败');
         const historyData=payload.data,points=historyData.points || [];
-        if(date)date.innerHTML='<option value="">最近记录</option>'+historyData.availableDates.map(day=>'<option value="'+escape(day)+'"'+(day===historyData.tradingDay?' selected':'')+'>'+escape(day)+'</option>').join('');
+        if(date)date.innerHTML='<option value="">最近记录</option>'+(historyData.availableDates || []).map(day=>'<option value="'+escape(day)+'"'+(day===requestedDate?' selected':'')+'>'+escape(day)+'</option>').join('');
         if(historyChart){historyChart.dispose();historyChart=null;}
         hint.textContent=(historyData.tradingDay || '')+' · '+points.length+' 个实际观察点 · '+(historyData.warning || historyData.note);
         box.textContent=points.length?'':'该股该日尚无本机历史记录；不是资金为零。';
@@ -140,12 +147,12 @@
           historyChart=options.echarts.init(box);
           const option={animation:false,legend:{data:['暗盘净额','明盘净额']},grid:{left:58,right:18,top:38,bottom:55},tooltip:{trigger:'axis'},
             xAxis:{type:'category',name:'采集时刻',data:rows.map(row=>row?time(row.receivedAt):'断采')},yAxis:{type:'value',name:'万元'},
-            series:[['暗盘净额','darkNetCents','#9b7aff'],['明盘净额','visibleNetCents','#27a6c8']].map(([name,field,color])=>({name,type:'line',connectNulls:false,showSymbol:points.length<20,lineStyle:{color},itemStyle:{color},data:rows.map(row=>row?Number(row[field])/1000000:null)}))};
+            series:[['暗盘净额','darkNetCents','#9b7aff'],['明盘净额','visibleNetCents','#27a6c8']].map(([name,field,color])=>({name,type:'line',connectNulls:false,showSymbol:points.length<20,lineStyle:{color},itemStyle:{color},data:rows.map(row=>row && /^-?\d+$/.test(String(row[field]))?Number(row[field])/1000000:null)}))};
           if(options.chartTheme)options.chartTheme.applyToOption(option,{dark:doc.body.classList.contains('dark')});
           historyChart.setOption(option);
         }
       }catch(_){if(ticket===historySequence)hint.textContent='历史读取未成功；请稍后重试，已保存记录未删除。';}
-      finally{clearTimeout(deadline);}
+      finally{clearTimeout(deadline);if(ticket===historySequence)historyPending='';}
     }
     function cell(stock) {
       const key=stockKey(stock),row=data && data.rows.find(r=>r.key===key);

@@ -122,3 +122,26 @@ test('coordinator schedules one minute ticks and stops for hidden or unrelated p
   doc.hidden=true;await scheduled.shift().fn();assert.equal(sessionCalls,2);assert.equal(scheduled.length,0);
   doc.hidden=false;root.State.currentMainView='news';await root.EastmoneyDarkStocks.sync();assert.equal(sessionCalls,2);
 });
+
+test('automatic history reads are bounded and latest mode does not pin yesterday',async()=>{
+ const doc=docFake();let now=0;const urls=[];
+ const view=createDarkStockView({document:doc,now:()=>now,fetch:async url=>{
+   urls.push(url);return response({code:'sh600487',availableDates:['2026-10-09'],tradingDay:'2026-10-09',points:[],note:'实际记录'});
+ }});
+ view.select({code:'600487'});
+ await view.history({automatic:true});await view.history({automatic:true});
+ assert.equal(urls.length,1);
+ assert.doesNotMatch(doc.getElementById('detailDarkHistoryDate').innerHTML,/ selected/);
+ now=60001;await view.history({automatic:true});assert.equal(urls.length,2);
+ doc.hidden=true;now=120002;await view.history({automatic:true});assert.equal(urls.length,2);
+});
+
+test('history missing amounts stay null, while a real zero stays zero',async()=>{
+ const doc=docFake();let option;
+ const view=createDarkStockView({document:doc,fetch:async()=>response({code:'sh600487',availableDates:[],points:[
+  {receivedAt:'2026-10-09T02:00:00Z',darkNetCents:null,visibleNetCents:'0'},
+  {receivedAt:'2026-10-09T02:05:00Z',darkNetCents:'1000000',visibleNetCents:undefined}
+ ]}),echarts:{init:()=>({dispose(){},setOption:o=>option=o})}});
+ view.select({code:'600487'});await view.history();
+ assert.deepEqual(option.series[0].data,[null,1]);assert.deepEqual(option.series[1].data,[0,null]);
+});
