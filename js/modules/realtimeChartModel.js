@@ -51,6 +51,28 @@
     return view === 'dashboard' ? DASHBOARD_REFRESH_MS : TRADING_REFRESH_MS;
   }
 
+  function quoteFreshness(quote, value) {
+    const current = quote || {};
+    const now = value == null ? new Date() : new Date(value);
+    const raw = String(current.providerObservedAt ||
+      (current.tradeDate && current.tradeTime ? current.tradeDate + ' ' + current.tradeTime : ''));
+    const local = /^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}$/.test(raw);
+    const at = /^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}/.test(raw)
+      ? Date.parse(local ? raw.replace(' ', 'T') + '+08:00' : raw) : NaN;
+    if (!Number.isFinite(at)) return { ageSeconds: null, delayed: false, label: '报价时间未提供，实时性未核验' };
+    const parts = Object.fromEntries(new Intl.DateTimeFormat('en-GB', {
+      timeZone: 'Asia/Shanghai', year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23'
+    }).formatToParts(new Date(at)).map(part => [part.type, part.value]));
+    const observed = parts.year + '-' + parts.month + '-' + parts.day + ' ' + parts.hour + ':' + parts.minute + ':' + parts.second;
+    const ageSeconds = Math.max(0, Math.floor((now.getTime() - at) / 1000));
+    const active = isChinaMarketDataSession(now) && current.quoteStatus !== 'latest-close';
+    const delayed = current.stale === true || current.quoteStatus === 'stale' || active && ageSeconds > 15;
+    return { ageSeconds, delayed, label: '报价源 ' + observed +
+      (delayed ? (active ? ' · 已滞后' + ageSeconds + '秒' : ' · 缓存/来源待更新') :
+        current.quoteStatus === 'latest-close' ? ' · 最近收盘' : !active ? ' · 休市保留' : '') };
+  }
+
   function timeKey(value) {
     const match = String(value || '').match(/(\d{2}):(\d{2})(?::(\d{2}))?/);
     if (!match) return '';
@@ -482,6 +504,7 @@
     isChinaMarketDataSession,
     refreshDelayMs,
     activeViewRefreshDelayMs,
+    quoteFreshness,
     timeKey,
     buildCompressedTradingAxis,
     buildFixedTradingViewport,

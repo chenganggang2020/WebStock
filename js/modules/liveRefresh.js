@@ -2,13 +2,15 @@
   let timer = null;
   let running = null;
   let stopped = false;
+  let holdingRefresh = null;
+  let holdingVersion = 0;
   const minuteSlots = new Map();
   const snapshotSignatures = new Map();
   const snapshotBatchCursors = new Map();
   const LOCAL_READ_INTERVAL_MS = 1000;
   const LOCAL_SNAPSHOT_BATCH_SIZE = 30;
   const LOCAL_STATUS_TEXT = '本机行情监控 · 每1秒检查（上游最快3秒）';
-  const LOCAL_SNAPSHOT_VIEWS = new Set(['dashboard', 'watchlist', 'portfolio']);
+  const LOCAL_SNAPSHOT_VIEWS = new Set(['dashboard', 'market', 'watchlist', 'portfolio']);
 
   function visible() {
     return document.visibilityState === 'visible';
@@ -113,37 +115,61 @@
     const watchlist = window.State && window.State.watchlist || [];
     const positions = window.State && window.State.positions || [];
     let codes = [];
+    const selected = (view === 'market' || view === 'dashboard')
+      ? uniqueCodes([window.State?.currentStock])[0] : null;
+    if (view === 'market') return selected ? [selected] : [];
     if (view === 'watchlist') codes = uniqueCodes(watchlist);
     else if (view === 'portfolio') codes = uniqueCodes(positions);
     else if (view === 'dashboard') codes = uniqueCodes((window.HomeTerminal ? window.HomeTerminal.groupItems() : []).concat(watchlist, positions));
-    if (codes.length <= LOCAL_SNAPSHOT_BATCH_SIZE) return codes;
+    if (selected) codes = codes.filter(code => code !== selected);
+    const batchSize = LOCAL_SNAPSHOT_BATCH_SIZE - (selected ? 1 : 0);
+    if (codes.length <= batchSize) return selected ? [selected].concat(codes) : codes;
 
     const start = (snapshotBatchCursors.get(view) || 0) % codes.length;
-    let batch = codes.slice(start, start + LOCAL_SNAPSHOT_BATCH_SIZE);
-    if (batch.length < LOCAL_SNAPSHOT_BATCH_SIZE) {
-      batch = batch.concat(codes.slice(0, LOCAL_SNAPSHOT_BATCH_SIZE - batch.length));
+    let batch = codes.slice(start, start + batchSize);
+    if (batch.length < batchSize) {
+      batch = batch.concat(codes.slice(0, batchSize - batch.length));
     }
-    snapshotBatchCursors.set(view, (start + LOCAL_SNAPSHOT_BATCH_SIZE) % codes.length);
-    return batch;
+    snapshotBatchCursors.set(view, (start + batchSize) % codes.length);
+    return selected ? [selected].concat(batch) : batch;
   }
 
   async function refreshLocalSnapshot(view) {
-    const holdings = (view === 'portfolio' || view === 'dashboard') && window.Portfolio &&
-      window.Portfolio.refreshHoldingSnapshot
-      ? await window.Portfolio.refreshHoldingSnapshot() : null;
+    const selectedCode = window.State?.currentStock?.code;
+    let holdings = null;
+    if ((view === 'portfolio' || view === 'dashboard') && window.Portfolio?.refreshHoldingSnapshot) {
+      if (!holdingRefresh) {
+        holdingRefresh = Promise.resolve(window.Portfolio.refreshHoldingSnapshot())
+          .then(result => { if (result?.changed) holdingVersion++; return result; })
+          .catch(error => { console.warn(error.message || error); return { ok: false }; })
+          .finally(() => { holdingRefresh = null; });
+      }
+      // The holdings page needs new membership; the chart must not wait for it.
+      if (view === 'portfolio') holdings = await holdingRefresh;
+    }
+    if (stopped || !visible() || currentView() !== view) return { skipped: true };
     const codes = localSnapshotCodes(view);
     if (!codes.length) return { ok: true, skipped: true, changed: false };
     const envelope = await window.ApiClient.fetchApiEnvelope(
       '/api/quote/snapshot?codes=' + encodeURIComponent(codes.join(',')),
-      { timeoutMs: 5000, dedupe: true }
+      { timeoutMs: 5000, retries: 0, dedupe: true }
     );
+    if (stopped || !visible() || currentView() !== view) return { skipped: true };
     const quotes = Array.isArray(envelope.data) ? envelope.data : [];
     const meta = envelope.meta || {};
     const model = window.QuoteSnapshotClientModel;
     const key = view + ':' + codes.join(',');
-    const signature = model && model.signature ? model.signature(quotes) : JSON.stringify(quotes);
+    const signature = (model && model.signature ? model.signature(quotes) : JSON.stringify(quotes)) +
+      ':holdings:' + holdingVersion;
     const changed = Boolean(holdings && holdings.changed) || snapshotSignatures.get(key) !== signature;
     snapshotSignatures.set(key, signature);
+
+    if ((view === 'dashboard' || view === 'market') && selectedCode === window.State?.currentStock?.code) {
+      const selectedQuote = quotes.find(quote => quote.code === selectedCode);
+      if (selectedQuote && window.RealtimeChart?.applyQuoteSnapshot) {
+        window.RealtimeChart.applyQuoteSnapshot(selectedQuote);
+      }
+    }
 
     if (changed) {
       if ((view === 'watchlist' || view === 'dashboard') && window.Watchlist && window.Watchlist.applyQuoteSnapshot) {

@@ -72,25 +72,62 @@ test('caps concurrent downloads at two and backs off failures without discarding
   assert.equal(count, 2);
 });
 
-test('observed-price buckets retain missing intervals and exclude auction, lunch and after-hours', () => {
+test('observed-price buckets retain missing intervals and boundary trades, excluding lunch and after-hours', () => {
   const rows = parsePage(page(0, sample + '|3/09:30:15/12/1/1/1200/B|4/11:30:03/13/1/1/1300/B|5/13:00:00/14/1/1/1400/B|6/14:57:00/15/1/1/1500/B|7/15:10:00/16/1/1/1600/B'), symbol, 0, '2026-09-18');
   const bars = aggregatePrices(rows, 5);
-  assert.deepEqual(bars.map(row => row.time), ['2026-09-18 09:30:05', '2026-09-18 09:30:15', '2026-09-18 13:00:05']);
-  assert.equal(bars[0].open, 10);
-  assert.equal(bars[0].price, 11);
-  assert.equal(bars[0].observedCount, 2);
-  assert.equal(bars[0].volume, 300);
-  assert.equal(bars[0].amount, 3200);
-  assert.equal(bars[0].volumeSource, 'tencent-public-detail-derived');
-  assert.equal(bars[0].averagePrice, null);
+  assert.deepEqual(bars.map(row => row.time), ['2026-09-18 09:25:00', '2026-09-18 09:30:05', '2026-09-18 09:30:15', '2026-09-18 13:00:05', '2026-09-18 14:57:00']);
+  assert.equal(bars[1].open, 10);
+  assert.equal(bars[1].price, 11);
+  assert.equal(bars[1].observedCount, 2);
+  assert.equal(bars[1].volume, 300);
+  assert.equal(bars[1].amount, 3200);
+  assert.equal(bars[1].volumeSource, 'tencent-public-detail-derived');
+  assert.equal(bars[1].averagePrice, null);
+});
+
+test('retains observed opening and closing trades with their original source times, not indicative auction values', () => {
+  const rows = parsePage(page(0,
+    '0/09:25:02/29.51/0/8453/24944833/B|1/09:30:02/29.53/0/4420/13055766/B|' +
+    '2/14:56:59/30.83/0/82/252748/B|3/14:57:02/30.82/0/56/172602/S|' +
+    '4/15:00:02/30.80/0/13152/40507390/M|5/15:10:00/30.80/0/1/3080/S'),
+  symbol, 0, '2026-09-18');
+  const model = require('../js/modules/realtimeChartModel');
+  for (const intervalSeconds of [5, 30]) {
+    const bars = aggregatePrices(rows, intervalSeconds);
+    assert.equal(bars.length, 5);
+    assert.equal(bars[0].time, '2026-09-18 09:25:00');
+    assert.equal(bars[0].providerLastAt, '2026-09-18 09:25:02');
+    assert.equal(bars[0].phase, 'opening-result');
+    assert.equal(bars[0].volume, 845300);
+    assert.equal(bars.at(-1).time, '2026-09-18 15:00:00');
+    assert.equal(bars.at(-1).providerLastAt, '2026-09-18 15:00:02');
+    assert.equal(bars.at(-1).phase, 'closing-result');
+    assert.equal(bars.at(-1).volume, 1315200);
+    assert.equal(bars.at(-1).auctionMatchedVolume, undefined);
+    const axis = model.buildCompressedTradingAxis(bars, { intervalSeconds, timestampMeaning: 'bar-end', includeAuction: true });
+    const series = model.buildMinuteSeries(axis.times, bars, { cutoffMinutes: 900 });
+    assert.equal(series.observedSamples, 5, 'boundary records must reach the rendered series');
+    assert.equal(series.prices[axis.times.indexOf('09:25')], 29.51);
+    assert.equal(series.prices[axis.times.indexOf('15:00')], 30.8);
+    assert.equal(series.prices[axis.times.indexOf('14:59')], null, 'no fictitious auction process between observed trades');
+  }
+});
+
+test('an invalid result quantity stays unknown without erasing valid continuous volume', () => {
+  const rows = parsePage(page(0, sample.replace('/2/2000/B', '/oops/2000/B')), symbol, 0, '2026-09-18');
+  const bars = aggregatePrices(rows, 5);
+  assert.equal(bars[0].time, '2026-09-18 09:25:00');
+  assert.equal(bars[0].volume, null);
+  assert.equal(bars[1].volume, 300);
 });
 
 test('invalid public-detail quantity fails closed without publishing partial bucket volume', () => {
   const rows = parsePage(page(0, sample.replace('2/09:30:03/11/1/2/2200/B', '2/09:30:03/11/1/oops/2200/B')), symbol, 0, '2026-09-18');
   const bars = aggregatePrices(rows, 5);
-  assert.equal(bars[0].price, 11);
-  assert.equal(bars[0].volume, null);
-  assert.equal(bars[0].amount, null);
+  const continuous = bars.find(row => row.time === '2026-09-18 09:30:05');
+  assert.equal(continuous.price, 11);
+  assert.equal(continuous.volume, null);
+  assert.equal(continuous.amount, null);
 });
 
 test('downloads indexed pages and rejects cross-day, incomplete and duplicate records', async () => {
@@ -132,7 +169,7 @@ test('retains sparse post-market source pages separately without fabricating mis
   assert.equal(result.records.length, 6);
   assert.equal(result.outsideSessionMissingRecords, 2);
   assert.equal(result.paginationComplete, false);
-  assert.equal(aggregatePrices(result.records).length, 1);
+  assert.equal(aggregatePrices(result.records).length, 2);
 });
 
 test('service returns promptly, deduplicates jobs and survives restart with dated raw cache', async t => {
@@ -154,7 +191,7 @@ test('service returns promptly, deduplicates jobs and survives restart with date
   assert.equal(complete.meta.rawRecordCount, 3);
   assert.equal(complete.meta.tradingDate, '2026-09-18');
   const restarted = createPublicPriceDetailService({ cacheDir: directory, download: async () => { throw Error('network disabled'); } });
-  assert.equal((await restarted.list('000001', { tradingDate: '2026-09-18' })).rows.length, 1);
+  assert.equal((await restarted.list('000001', { tradingDate: '2026-09-18' })).rows.length, 2);
   const otherDay = await restarted.list('000001', { tradingDate: '2026-09-17' });
   assert.equal(otherDay.rows.length, 0);
   assert.equal(otherDay.meta.backfillState, 'date-not-cached');

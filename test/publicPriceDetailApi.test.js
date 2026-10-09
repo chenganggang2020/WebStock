@@ -20,8 +20,8 @@ test('price backfill API reads dated cache, leaves local-only API intact and rej
     fs.rmSync(directory, { recursive: true, force: true });
   });
   const snapshot = await fetchSnapshot('000001', {
-    get: async p => p.action === 'info' ? 'v_detail_time_sz000001=[20260918,"09:30:00~09:30:03"]'
-      : 'v_detail_data_sz000001=[0,"0/09:30:00/10/0/1/1000/B|1/09:30:03/11/1/1/1100/B"]',
+    get: async p => p.action === 'info' ? 'v_detail_time_sz000001=[20260918,"09:25:02~15:00:02"]'
+      : 'v_detail_data_sz000001=[0,"0/09:25:02/10/0/2/2000/B|1/09:30:00/10/0/1/1000/B|2/09:30:03/11/1/1/1100/B|3/15:00:02/12/1/3/3600/M"]',
     delay: async () => {}
   });
   const service = createPublicPriceDetailService({ cacheDir: path.join(directory, 'public-price-details'), download: async () => snapshot });
@@ -32,10 +32,17 @@ test('price backfill API reads dated cache, leaves local-only API intact and rej
   assert.equal(remote.success, true);
   assert.equal(remote.meta.dataSource, 'tencent-public-detail');
   assert.equal(remote.meta.sampling.intervalSeconds, 5);
-  assert.equal(remote.data[0].price, 11);
-  assert.equal(remote.data[0].volume, 200);
-  assert.equal(remote.data[0].amount, 2100);
-  assert.equal(remote.data[0].volumeSource, 'tencent-public-detail-derived');
+  assert.equal(remote.data[1].price, 11);
+  assert.equal(remote.data[1].volume, 200);
+  assert.equal(remote.data[1].amount, 2100);
+  assert.equal(remote.data[1].volumeSource, 'tencent-public-detail-derived');
+  assert.equal(remote.data[0].time, '2026-09-18 09:25:00');
+  assert.equal(remote.data[0].providerLastAt, '2026-09-18 09:25:02');
+  assert.equal(remote.data.at(-1).time, '2026-09-18 15:00:00');
+  assert.equal(remote.data.at(-1).providerLastAt, '2026-09-18 15:00:02');
+  assert.equal(remote.meta.providerObservedAt, '2026-09-18 15:00:02');
+  assert.equal(remote.data.at(-1).auctionMatchedVolume, undefined);
+  assert.equal(remote.meta.realtimeGuaranteed, false);
   assert.equal(remote.meta.volumeCoverage, 'public-detail-derived');
   assert.equal((await read('&date=2026-09-18')).data.length, 0);
   const missing = await read('&source=public-detail&date=2026-09-17');

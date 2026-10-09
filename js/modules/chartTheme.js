@@ -162,6 +162,15 @@
     });
   }
 
+  function resizeVisible(chart) {
+    if (!chart || chart.isDisposed?.() || !chart.getDom || !chart.resize) return;
+    const dom = chart.getDom();
+    if (dom.clientWidth > 0 && dom.clientHeight > 0 &&
+        (chart.getWidth?.() !== dom.clientWidth || chart.getHeight?.() !== dom.clientHeight)) {
+      chart.resize({ animation: { duration: 0 } });
+    }
+  }
+
   // Preserve interaction only within the same stock, date and resolution.
   // A new instrument gets its own default viewport, not the previous stock's crop.
   function renderTo(engine, dom, current, option, frameKey) {
@@ -186,6 +195,7 @@
       });
     }
     chart.__terminalFrameKey = frameKey;
+    resizeVisible(chart);
     chart.setOption(option, { notMerge: true, lazyUpdate: false });
     return chart;
   }
@@ -233,6 +243,7 @@
     applyToOption: applyToOption,
     refreshExisting: refreshExisting,
     renderTo: renderTo,
+    resizeVisible: resizeVisible,
     bindReadout: bindReadout,
     formatAxisNumber: formatAxisNumber
   };

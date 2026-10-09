@@ -3,6 +3,31 @@ const assert = require('node:assert/strict');
 
 const ChartTheme = require('../js/modules/chartTheme');
 
+test('a reused chart restores its visible size after a hidden view was resized to zero', () => {
+  const dom = { clientWidth: 900, clientHeight: 450 };
+  let width = 0, height = 0, resizes = 0;
+  const chart = { getDom: () => dom, isDisposed: () => false,
+    getWidth: () => width, getHeight: () => height,
+    resize() { width = dom.clientWidth; height = dom.clientHeight; resizes++; },
+    setOption() { assert.equal(width, 900); assert.equal(height, 450); } };
+  assert.equal(ChartTheme.renderTo({}, dom, chart, { series: [] }, 'same-frame'), chart);
+  assert.equal(resizes, 1);
+  ChartTheme.renderTo({}, dom, chart, { series: [] }, 'same-frame');
+  assert.equal(resizes, 1, 'unchanged dimensions must not trigger another layout');
+});
+
+test('visible resize never shrinks a hidden chart and can restore an unchanged cached frame', () => {
+  const dom = { clientWidth: 0, clientHeight: 0 };
+  let resizes = 0;
+  const chart = { getDom: () => dom, getWidth: () => 0, getHeight: () => 0,
+    isDisposed: () => false, resize: () => resizes++ };
+  ChartTheme.resizeVisible(chart);
+  assert.equal(resizes, 0);
+  dom.clientWidth = 800; dom.clientHeight = 400;
+  ChartTheme.resizeVisible(chart);
+  assert.equal(resizes, 1);
+});
+
 test('Compact palette matches panel colors and keeps neutral axes readable in both themes', () => {
   for (const dark of [false, true]) {
     const colors = ChartTheme.get(dark).colors;

@@ -10,6 +10,7 @@ let realtimeAuctionEnabled = true;
 let realtimeStatusBase = '1分钟公开行情';
 let lastChartSamples = null;
 let lastChartSampleCode = '';
+const realtimeFrames = new Map();
 
 function normalizeRealtimeResolution(value) {
   return value === '5s' || value === '30s' ? value : '1m';
@@ -100,7 +101,7 @@ function updateRealtimeAuctionStatus(meta) {
   }
   const count = Number(meta && meta.auctionObservedPoints) || 0;
   target.textContent = count
-    ? '开盘竞价 9:15–9:25：本机 ' + count + ' 点 · 收盘竞价 14:57–15:00：见图中标记区'
+    ? '开盘竞价 9:15–9:25：观测 ' + count + ' 点 · 收盘竞价 14:57–15:00：见图中标记区'
     : '开盘竞价 9:15–9:25：暂无本机记录 · 收盘竞价 14:57–15:00：见图中标记区';
 }
 
@@ -249,6 +250,12 @@ function showRealtimeView() {
   State.currentPeriod = 'minute';
   document.getElementById('realtimeView').style.display = 'flex';
   document.getElementById('klineView').style.display = 'none';
+  // Hidden charts may have received a window resize (and become 0x0).
+  // Restore even an unchanged frame, without waiting for a network response.
+  if (window.ChartTheme.resizeVisible) {
+    window.ChartTheme.resizeVisible(State.timeChart);
+    window.ChartTheme.resizeVisible(State.volumeChart);
+  }
   const klineInsights = document.getElementById('klineInsights');
   const marketSidebarPlaceholder = document.getElementById('marketSidebarPlaceholder');
   if (klineInsights) klineInsights.hidden = true;
@@ -301,6 +308,7 @@ function showKlineView(period) {
   stopRealtimeRefresh({ invalidate: true, silent: true });
   document.getElementById('klineView').style.display = 'flex';
   document.getElementById('realtimeView').style.display = 'none';
+  if (window.ChartTheme.resizeVisible) window.ChartTheme.resizeVisible(State.klineChart);
   document.getElementById('indicatorBtns').classList.add('visible');
   document.getElementById('indicatorSelect').style.display = '';
   const nineTurnModeSelect = document.getElementById('nineTurnModeSelect');
@@ -332,11 +340,47 @@ function showKlineView(period) {
   }
 }
 
+function retainRealtimeHistory(previous, incoming, resolution) {
+  if (!previous) return incoming;
+  const oldMeta = previous.meta || {};
+  const meta = incoming.meta || {};
+  const date = meta.tradingDate || minuteDataDate(incoming.data);
+  const previousDate = oldMeta.tradingDate || minuteDataDate(previous.data);
+  if (date && previousDate && date < previousDate) {
+    return { data: previous.data, meta: Object.assign({}, oldMeta, {
+      stale: true, ignoredOlderTradingDate: date, retainedHistoryPoints: previous.data.length
+    }) };
+  }
+  if (!date || date !== previousDate ||
+      meta.sampling?.timestampMeaning !== oldMeta.sampling?.timestampMeaning ||
+      resolution === '1m' && meta.dataSource !== oldMeta.dataSource) return incoming;
+  const rows = new Map(previous.data.map(row => [row.time, Object.assign({ source: oldMeta.dataSource }, row)]));
+  let retainedVolumePoints = 0;
+  let overlap = 0;
+  incoming.data.forEach(row => {
+    const old = rows.get(row.time);
+    if (old) overlap++;
+    const next = Object.assign({ source: meta.dataSource }, row);
+    if (old && row.volume == null && old.volume != null) {
+      next.volume = old.volume;
+      next.amount = old.amount;
+      next.volumeSource = old.volumeSource || old.source || oldMeta.dataSource;
+      retainedVolumePoints++;
+    }
+    rows.set(row.time, next);
+  });
+  const retainedHistoryPoints = previous.data.length - overlap;
+  return { data: Array.from(rows.values()).sort((a, b) => a.time.localeCompare(b.time)),
+    meta: Object.assign({}, meta, { retainedHistoryPoints, retainedVolumePoints }) };
+}
+
 function loadRealtimeData(code) {
   const State = window.State;
   if (!code) return Promise.resolve({ skipped: true });
   if (realtimeLoadPromise && realtimeLoadCode === code) return realtimeLoadPromise;
   if (realtimeLoadPromise) invalidateRealtimeLoad();
+  // The preceding primary request may have finished with auxiliaries pending.
+  if (realtimeRequestController) realtimeRequestController.abort();
 
   const requestId = ++realtimeRequestSequence;
   const requestedResolution = realtimeResolution;
@@ -344,17 +388,63 @@ function loadRealtimeData(code) {
   realtimeRequestController = controller;
   realtimeLoadCode = code;
 
+  let minuteEnvelope = null;
+  let latestQuotes = [];
+  let latestAuction = null;
+  const frameKey = requestedResolution + ':' + code;
+  const cachedFrame = realtimeFrames.get(frameKey);
+  let usingCache = false;
+  let cachePending = true;
+  let primaryFailed = false;
+  const isCurrent = function() {
+    return !controller.signal.aborted && requestId === realtimeRequestSequence &&
+      requestedResolution === realtimeResolution && State.currentStock?.code === code &&
+      isRealtimeRefreshEligible();
+  };
+
   const request = (async function() {
    try {
     console.log('📡 加载实时数据:', code);
+    if (cachedFrame) {
+      usingCache = true;
+      minuteEnvelope = { data: cachedFrame.data, meta: Object.assign({}, cachedFrame.meta, { stale: true }) };
+      latestAuction = cachedFrame.auction;
+      paint([], latestAuction);
+    }
 
-    const auctionRequest = realtimeAuctionEnabled && requestedResolution === '1m'
+    const auctionRequest = (realtimeAuctionEnabled && requestedResolution === '1m'
       ? window.ApiClient.fetchApiEnvelope(realtimeMinuteUrl(code, '30s', true), { signal: controller.signal, dedupe: false })
-        .catch(function() { return null; })
-      : Promise.resolve(null);
+      : Promise.resolve(null)).then(function(envelope) {
+        latestAuction = envelope;
+        if (isCurrent() && minuteEnvelope && envelope) {
+          if (realtimeFrames.has(frameKey)) realtimeFrames.get(frameKey).auction = envelope;
+          paint(latestQuotes, envelope);
+        }
+      }).catch(function() {});
     const quoteRequest = window.ApiClient.fetchJsonData('/api/quote?codes=' + code, { signal: controller.signal, dedupe: false })
-      .catch(function() { return []; });
-    const minuteEnvelope = await window.ApiClient.fetchApiEnvelope(realtimeMinuteUrl(code, requestedResolution), { signal: controller.signal, dedupe: false });
+      .then(function(quotes) {
+        latestQuotes = Array.isArray(quotes) ? quotes : [];
+        if (!isCurrent()) return;
+        const quote = latestQuotes.find(row => row.code === code);
+        if (quote) applyRealtimeQuoteSnapshot(quote);
+        if (minuteEnvelope) paint(latestQuotes, latestAuction);
+      }).catch(function() {});
+    const minuteRequest = window.ApiClient.fetchApiEnvelope(realtimeMinuteUrl(code, requestedResolution), { signal: controller.signal, dedupe: false });
+    Promise.allSettled([minuteRequest, quoteRequest, auctionRequest]).then(function() {
+      if (realtimeRequestController === controller) realtimeRequestController = null;
+    });
+    const fetched = await minuteRequest;
+    if (!isCurrent()) return { stale: true };
+    cachePending = false;
+    if (Array.isArray(fetched.data) && fetched.data.length) {
+      usingCache = false;
+      minuteEnvelope = retainRealtimeHistory(cachedFrame, fetched, requestedResolution);
+      realtimeFrames.delete(frameKey);
+      realtimeFrames.set(frameKey, { data: minuteEnvelope.data, meta: minuteEnvelope.meta, auction: latestAuction });
+      while (realtimeFrames.size > 12) realtimeFrames.delete(realtimeFrames.keys().next().value);
+    } else if (!cachedFrame) {
+      minuteEnvelope = fetched;
+    }
     function paint(quotes, auctionEnvelope) {
     const primaryMinuteData = Array.isArray(minuteEnvelope.data) ? minuteEnvelope.data : [];
     const auctionData = auctionEnvelope && Array.isArray(auctionEnvelope.data) ? auctionEnvelope.data : primaryMinuteData;
@@ -372,7 +462,8 @@ function loadRealtimeData(code) {
     console.log('📦 行情数据:', quotes.length, '条');
     console.log('📦 分时数据:', Array.isArray(minuteData) ? minuteData.length : '非数组', '条');
 
-    const rawQuote = quotes.find(q => q.code === code) || (State.currentQuote && State.currentQuote.code === code ? State.currentQuote : {code, name: State.currentStock.name, quoteStatus: 'unavailable'});
+    const rawQuote = preferLatestRealtimeQuote(quotes.find(q => q.code === code), State.currentQuote) ||
+      {code, name: State.currentStock.name, quoteStatus: 'unavailable'};
     const quote = window.RealtimeChartModel.alignQuoteToMinute(rawQuote, minuteData, minuteMeta);
     if (quote) {
       State.currentQuote = quote;
@@ -433,10 +524,16 @@ function loadRealtimeData(code) {
         (publicDetailVolumePoints ? '公开明细派生 ' + publicDetailVolumePoints + ' 点' +
           (volumeCoveredPoints > publicDetailVolumePoints ? '，本机采样 ' + (volumeCoveredPoints - publicDetailVolumePoints) + ' 点' : '') +
           '，非交易所逐笔' : '仅本机连续报价') + '；缺失不补零）';
-      setRealtimeStatus(samplingLabel + ' · ' + realtimeSourceLabel(minuteMeta) +
+      setRealtimeStatus((primaryFailed ? '刷新失败，保留上次曲线 · ' : '') + samplingLabel + ' · ' + realtimeSourceLabel(minuteMeta) +
+        ' · 曲线截至 ' + String(minuteData.at(-1)?.providerLastAt || minuteData.at(-1)?.time || '未提供') +
         volumeCoverageLabel +
+        (minuteMeta.ignoredOlderTradingDate ? ' · 来源返回较旧日期，保留原日期记录' : '') +
+        (minuteMeta.retainedHistoryPoints ? ' · 保留此前已记录 ' + minuteMeta.retainedHistoryPoints + ' 点' : '') +
+        (minuteMeta.retainedVolumePoints ? ' · 沿用已有量能 ' + minuteMeta.retainedVolumePoints + ' 点' : '') +
         (minuteMeta.backfillState === 'loading' ? ' · 后台补取中' : minuteMeta.backfillState === 'failed' ? ' · 补取失败，保留已有记录' : '') +
-        (changed ? ' · 曲线已更新' : ' · 数据未变化'), changed ? 'updated' : 'unchanged');
+        (primaryFailed ? '' :
+          usingCache ? (cachePending ? ' · 缓存先显示，正在后台更新' : ' · 本次暂无新数据，保留原日期缓存') :
+          (changed ? ' · 曲线已更新' : ' · 数据未变化')), primaryFailed ? 'error' : usingCache ? 'cached' : changed ? 'updated' : 'unchanged');
       return { changed };
     }
     setRealtimeStatus(realtimeResolutionLabel(requestedResolution) + ' · 行情不可用', 'error');
@@ -444,13 +541,13 @@ function loadRealtimeData(code) {
     }
     // Minute history alone is sufficient to display the price curve. Order
     // book and locally observed auction rows are independent enhancements.
-    paint([], null);
-    const [quotes, auctionEnvelope] = await Promise.all([quoteRequest, auctionRequest]);
-    return paint(quotes, auctionEnvelope);
+    return paint(latestQuotes, latestAuction);
   } catch (e) {
     if (controller.signal.aborted || requestId !== realtimeRequestSequence) return { aborted: true };
     console.error('❌ 加载实时数据失败:', e);
     if (!State.currentStock || State.currentStock.code !== code) return { stale: true };
+    primaryFailed = true;
+    cachePending = false;
     setRealtimeStatus(realtimeResolutionLabel(requestedResolution) + ' · 刷新失败，保留上次曲线', 'error');
     if (lastRenderedRealtimeCode !== code) {
       renderTimeChart([]);
@@ -459,16 +556,42 @@ function loadRealtimeData(code) {
       lastRenderedRealtimeSnapshot = '';
     }
     return { error: true };
-  } finally {
-    if (realtimeRequestController === controller) realtimeRequestController = null;
+  }
+  })().finally(function() {
     if (realtimeLoadPromise === request) {
       realtimeLoadPromise = null;
       realtimeLoadCode = '';
     }
-  }
-  })();
+  });
   realtimeLoadPromise = request;
   return request;
+}
+
+function preferLatestRealtimeQuote(quote, current) {
+  const code = window.State.currentStock?.code;
+  if (current?.code !== code) current = null;
+  if (quote?.code !== code) return current;
+  const timestamp = function(row) {
+    const raw = String(row?.providerObservedAt ||
+      (row?.tradeDate && row.tradeTime ? row.tradeDate + ' ' + row.tradeTime : ''));
+    const local = /^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}$/.test(raw);
+    return Date.parse(local ? raw.replace(' ', 'T') + '+08:00' : raw) || 0;
+  };
+  if (current && Number(current.price) > 0 && (!(Number(quote.price) > 0) ||
+      timestamp(current) && timestamp(quote) < timestamp(current))) return current;
+  return quote;
+}
+
+function applyRealtimeQuoteSnapshot(quote) {
+  const State = window.State;
+  if (!quote || quote.code !== State.currentStock?.code ||
+      (!isRealtimeRefreshEligible() && !isDailyKlineRefreshEligible())) return;
+  if (preferLatestRealtimeQuote(quote, State.currentQuote) !== quote) return;
+  State.currentQuote = quote;
+  const rows = State.realtimeSeriesByResolution?.[realtimeResolution + ':' + quote.code] || [];
+  updateStockInfo(quote, rows, State.currentMinuteMeta || {});
+  updateOrderBook(quote);
+  if (window.StockList?.updateVisibleQuoteRows) window.StockList.updateVisibleQuoteRows({ [quote.code]: quote });
 }
 
 function updateStockInfo(quote, minuteData, minuteMeta) {
@@ -562,7 +685,12 @@ function updateStockInfo(quote, minuteData, minuteMeta) {
       const fetchedAt = minuteMeta.fetchedAt && window.WebStockTime
         ? window.WebStockTime.formatDateTime(minuteMeta.fetchedAt) : minuteMeta.fetchedAt || '';
       priceInfo.insertAdjacentHTML('beforeend', ' <span class="market-source-warning">· 缓存数据' +
-        (fetchedAt ? '（截至 ' + fetchedAt + '）' : '') + '</span>');
+        (fetchedAt ? '（获取于 ' + fetchedAt + '）' : '') + '</span>');
+    }
+    if (priceInfo && Number(quote.price) > 0 && window.RealtimeChartModel.quoteFreshness) {
+      const freshness = window.RealtimeChartModel.quoteFreshness(quote);
+      priceInfo.insertAdjacentHTML('beforeend', ' <span class="' +
+        (freshness.delayed ? 'market-source-warning' : 'muted') + '">· ' + freshness.label + '</span>');
     }
   }
 }
@@ -575,6 +703,10 @@ function updateOrderBook(quote) {
   if (status) {
     const hasDepth = Number(quote.buy1Price) > 0 || Number(quote.sell1Price) > 0;
     status.textContent = (original.code || '') + ' · ' + (original.quoteStatus === 'loading' ? '等待盘口' : !hasDepth ? '五档盘口不可用' : [quote.tradeDate, quote.tradeTime].filter(Boolean).join(' ') || '报价时间未提供') + ' · 数量：手';
+    if (hasDepth && window.RealtimeChartModel.quoteFreshness) {
+      const freshness = window.RealtimeChartModel.quoteFreshness(original);
+      status.textContent = (original.code || '') + ' · ' + freshness.label + ' · 数量：手';
+    }
   }
   const isDark = document.body.classList.contains('dark');
   const upColor = isDark ? '#ff6b6b' : '#e74c3c';
@@ -752,7 +884,7 @@ function renderTimeChart(minuteData) {
   const option = {
     backgroundColor: bgColor,
     title: {
-      text: sampling.label + ' · 已记录 ' + sampling.observedPoints + ' 点',
+      text: sampling.label + ' · 已显示 ' + minuteSeries.observedSamples + ' 点',
       subtext: realtimeResolution === '1m' ? '' :
         (State.currentMinuteMeta?.dataSource === 'tencent-public-detail' ? '公开秒级明细，按区间结束时间聚合' : '本机已记录报价聚合') +
         '；空白格无源记录，非零成交；竞价价格与匹配量分别展示。',
@@ -924,9 +1056,13 @@ function renderTimeChart(minuteData) {
     textAt(index) {
       const row = rowsByTime.get(times[index]);
       const matched = row && row.auctionMatchedVolume;
+      const result = row && ['opening-result', 'closing-result'].includes(row.phase);
       return times[index] + '   价格 ' + number(prices[index]) + '   均价 ' + number(avgPrices[index]) +
         (prices[index] == null ? '   此时间格无记录' : '') +
-        (times[index] <= '09:25' || times[index] >= '14:57'
+        (result ? '   ' + (row.phase === 'opening-result' ? '开盘' : '收盘时段') + '成交记录' +
+          '   成交量 ' + (row.volume == null ? '未知' : number(row.volume / 100) + '手') +
+          '   源时间 ' + (row.providerLastAt || row.time) + '（非虚拟匹配量）' :
+        times[index] <= '09:25' || times[index] >= '14:57'
           ? '   竞价匹配量 ' + (matched == null ? '来源未提供' : number(matched)) : '');
     }
   });
@@ -1161,6 +1297,7 @@ window.addEventListener('beforeunload', function() {
 });
 
 window.RealtimeChart = {
+  applyQuoteSnapshot: applyRealtimeQuoteSnapshot,
   beginStockSelection,
   showRealtimeView,
   showKlineView,

@@ -310,6 +310,30 @@ test('daily chart does not append an older minute session over newer historical 
   assert.notEqual(merged, daily);
 });
 
+test('quote freshness uses the provider time, never a fresh HTTP fetch time', () => {
+  const now = new Date('2026-10-09T10:03:00+08:00');
+  const result = RealtimeChartModel.quoteFreshness({
+    tradeDate: '2026-10-09', tradeTime: '10:00:00', quoteStatus: 'live',
+    fetchedAt: now.toISOString()
+  }, now);
+  assert.equal(result.delayed, true);
+  assert.equal(result.ageSeconds, 180);
+  assert.match(result.label, /10:00:00.*滞后180秒/);
+  assert.equal(RealtimeChartModel.quoteFreshness({ fetchedAt: now.toISOString() }, now).ageSeconds, null);
+});
+
+test('latest close, fresh quote, and malformed provider times have distinct freshness labels', () => {
+  const quote = { providerObservedAt: '2026-10-09T02:00:00Z', quoteStatus: 'live' };
+  assert.equal(RealtimeChartModel.quoteFreshness(quote, new Date('2026-10-09T10:00:03+08:00')).delayed, false);
+  const closed = RealtimeChartModel.quoteFreshness({ tradeDate: '2026-10-09', tradeTime: '15:00:01',
+    quoteStatus: 'latest-close' }, new Date('2026-10-09T15:35:00+08:00'));
+  assert.equal(closed.delayed, false);
+  assert.match(closed.label, /最近收盘/);
+  const unknown = RealtimeChartModel.quoteFreshness({ providerObservedAt: '<img onerror=x>' });
+  assert.match(unknown.label, /时间未提供/);
+  assert.doesNotMatch(unknown.label, /img/);
+});
+
 test('daily tooltip metrics expose price change percentage and amplitude against prior close', () => {
   const metrics = RealtimeChartModel.dailyBarMetrics([
     { date: '2026-09-01', close: 10 },

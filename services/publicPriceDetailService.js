@@ -64,22 +64,31 @@ function aggregatePrices(records, intervalSeconds = 5) {
   if (![5, 30].includes(intervalSeconds)) throw new Error('Invalid detail interval');
   const buckets = new Map();
   const continuous = records.filter(row => row.phase === 'continuous');
-  const validVolume = continuous.length > 0 && continuous.every(row => {
+  const hasValidVolume = row => {
     const lots = Number(row.quantityRaw);
     return /^\d+$/.test(String(row.quantityRaw)) && Number.isSafeInteger(lots) &&
       lots <= Number.MAX_SAFE_INTEGER / 100 && /^\d+(?:\.\d+)?$/.test(String(row.amountRaw)) &&
       Number.isFinite(Number(row.amountRaw));
-  });
-  continuous.forEach(row => {
+  };
+  const validContinuousVolume = continuous.length > 0 && continuous.every(hasValidVolume);
+  records.forEach(row => {
     const at = seconds(row.time.slice(11));
+    // Keep observed boundary trades, not hypothetical auction matching data.
+    // A provider can stamp the final result a few seconds after the session ends.
+    const openingResult = row.phase === 'opening-result' && at >= 33900 && at <= 33905;
+    const closingResult = row.phase === 'closing-result' && at >= 53820 && at <= 54005;
+    if (row.phase !== 'continuous' && !openingResult && !closingResult) return;
+    const validVolume = row.phase === 'continuous' ? validContinuousVolume : hasValidVolume(row);
     const start = at < 46800 ? 34200 : 46800;
-    const end = Math.min(at < 46800 ? 41400 : 53820, start + Math.max(intervalSeconds, Math.ceil((at - start) / intervalSeconds) * intervalSeconds));
+    const end = openingResult ? 33900 : Math.min(closingResult ? 54000 : at < 46800 ? 41400 : 53820,
+      start + Math.max(intervalSeconds, Math.ceil((at - start) / intervalSeconds) * intervalSeconds));
     const label = [Math.floor(end / 3600), Math.floor(end % 3600 / 60), end % 60].map(v => String(v).padStart(2, '0')).join(':');
     const time = row.time.slice(0, 11) + label;
     let bar = buckets.get(time);
     if (!bar) {
       bar = { time, open: row.price, high: row.price, low: row.price, price: row.price, volume: null, amount: null,
-        averagePrice: null, observedCount: 0, source: 'tencent-public-detail', providerLastAt: row.time };
+        averagePrice: null, observedCount: 0, source: 'tencent-public-detail', providerLastAt: row.time,
+        phase: row.phase };
       if (validVolume) {
         bar.volume = 0;
         bar.amount = 0;
@@ -92,7 +101,11 @@ function aggregatePrices(records, intervalSeconds = 5) {
     bar.price = row.price;
     bar.providerLastAt = row.time;
     bar.observedCount++;
-    if (validVolume) {
+    if (!validVolume) {
+      bar.volume = null;
+      bar.amount = null;
+      delete bar.volumeSource;
+    } else if (bar.volume !== null) {
       bar.volume += Number(row.quantityRaw) * 100;
       bar.amount += Number(row.amountRaw);
     }
