@@ -21,6 +21,36 @@ function app(){
 }
 const flush=()=>new Promise(resolve=>setImmediate(resolve));
 
+test('phone Back returns to watch home and never replays previously opened tabs',()=>{
+  const a=app();a.node('#searchResults').hidden=true;
+  a.api.navigate('docs');a.api.navigate('settings');
+  assert.equal(a.context.WebStockPhoneBack(),true);
+  assert.equal(a.context.document.body.dataset.page,'watch');
+  assert.equal(a.context.WebStockPhoneBack(),false);
+  assert.equal(a.context.document.body.dataset.page,'watch');
+  const nav=a.node('#bottomNav').innerHTML;
+  assert.deepEqual([...nav.matchAll(/<span>(.*?)<\/span>/g)].map(m=>m[1]),['自选','市场','研究','账户','我的']);
+});
+
+test('index entry retains exchange identity instead of opening the same-code stock',async()=>{
+  const a=app();a.api.setCatalog([{code:'000001',name:'平安银行'}]);a.api.navigate('dashboard');
+  assert.match(a.node('#content').innerHTML,/<button[^>]*data-stock="sh000001"/);
+  await a.api.openStock('sh000001');
+  assert.ok(a.requests.some(r=>r.path==='/kline?code=sh000001&period=day'));
+  assert.match(a.node('#content').innerHTML,/上证指数/);
+  assert.doesNotMatch(a.node('#content').innerHTML,/data-action="stock-trade"/);
+  await a.api.openStock('000001');
+  assert.match(a.node('#content').innerHTML,/平安银行/);
+});
+
+test('late phone chart completion cannot leave home after Back',async()=>{
+  const a=app();await a.api.openStock('000001');a.node('#searchResults').hidden=true;
+  const request=a.requests.find(r=>r.path.startsWith('/kline?'));
+  a.context.WebStockPhoneBack();a.respond(request,a.model());await flush();
+  assert.equal(a.context.document.body.dataset.page,'watch');
+  assert.equal(a.draws.length,0);
+});
+
 test('stock opens and asks for its chart before slow recent-history persistence completes',async()=>{
   const a=app();const opening=a.api.openStock('000001');await flush();
   assert.equal(a.context.document.body.dataset.page,'stock');

@@ -27,6 +27,15 @@ test('crosshair movement uses precomputed signals instead of rerunning the entir
   for(let i=0;i<15;i++)chart.emit('updateAxisPointer',{axesInfo:[{axisIndex:0,value:i}]});
   assert.equal(h.computations(),initial);
 });
+
+test('appending a new candle does not move a historical viewport',()=>{
+  const h=harness(),chart=h.api.draw(h.data,h.settings);
+  chart.dispatchAction({type:'dataZoom',start:20,end:80});
+  h.api.draw({...h.data,rows:h.data.rows.concat({...h.data.rows.at(-1),date:'2026-01-21'})},h.settings);
+  const zoom=chart.option.dataZoom[0],dates=chart.option.xAxis[0].data;
+  assert.equal(dates[Math.round(zoom.start/100*(dates.length-1))],'2026-01-05');
+  assert.equal(dates[Math.round(zoom.end/100*(dates.length-1))],'2026-01-16');
+});
 test('prepending history preserves the visible calendar interval instead of percentages',()=>{
   const h=harness(),chart=h.api.draw(h.data,h.settings);
   chart.dispatchAction({type:'dataZoom',start:20,end:80});

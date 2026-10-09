@@ -7,3 +7,5 @@ android/app/src/main/assets/web/
 source-manifest.json
 qa/output/
 qa/*.png
+qa/*.log
+qa/*-results.json

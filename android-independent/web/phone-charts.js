@@ -41,7 +41,7 @@
     series.push({name:'成交量(手)',type:'bar',xAxisIndex:volAxis,yAxisIndex:volAxis,data:rows.map((r,i)=>({value:r?.volume??null,itemStyle:{color:!r?ink:(minute?r.price>=(rows[i-1]?.price??data.previousClose??r.price):r.close>=r.open)?up:down,opacity:.75}}))});
     const previousZoom=saved.get(key),zoom=previousZoom?{start:previousZoom.start,end:previousZoom.end}:{start:minute?0:Math.max(0,100-65/rows.length*100),end:100};
     // Prepending history must not move the user's viewport to other calendar dates.
-    if(previousZoom&&previousZoom.first!==times[0]){
+    if(previousZoom&&(previousZoom.first!==times[0]||previousZoom.length!==times.length&&previousZoom.end<100)){
       const startIndex=times.indexOf(previousZoom.from),endIndex=times.indexOf(previousZoom.to);
       if(startIndex>=0&&endIndex>=0){zoom.start=startIndex/Math.max(1,rows.length-1)*100;zoom.end=endIndex/Math.max(1,rows.length-1)*100;}
     }
@@ -67,7 +67,7 @@
     const chartNode=document.querySelector('#chart');
     sizeObserver=new ResizeObserver(()=>{if(!chart.isDisposed()&&chartNode.clientWidth>0&&chartNode.clientHeight>0&&(chart.getWidth()!==chartNode.clientWidth||chart.getHeight()!==chartNode.clientHeight)){chart.setOption({yAxis:[priceAxisPadding()]});chart.resize();}});
     sizeObserver.observe(chartNode);
-    chart.on('datazoom',()=>{const z=chart.getOption().dataZoom[0];saved.set(key,{start:z.start,end:z.end,first:times[0],from:times[Math.round(z.start/100*(times.length-1))],to:times[Math.round(z.end/100*(times.length-1))]});});
+    chart.on('datazoom',()=>{const z=chart.getOption().dataZoom[0];saved.set(key,{start:z.start,end:z.end,length:times.length,first:times[0],from:times[Math.round(z.start/100*(times.length-1))],to:times[Math.round(z.end/100*(times.length-1))]});});
     const header=document.querySelector('#chartLegend');header.replaceChildren();
     for(const name of legend){const item=series.find(s=>s.name===name),label=document.createElement('span');label.style.color=item.lineStyle.color;label.textContent=name+'  ';header.append(label);}
     const volumeLabel=document.createElement('span');volumeLabel.textContent=' | 成交量（手）'+(nine&&!minute?' | 1–9准备 · C1–C13计数':'');header.append(volumeLabel);
