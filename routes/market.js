@@ -299,6 +299,20 @@ router.get('/market/global-index-trends',async function(req,res){
   catch(error){fail(res,error,502);}
 });
 
+router.get('/market/global-board', async function(req, res) {
+  try {
+    res.setHeader('Cache-Control', 'no-store');
+    const keys = typeof req.query.keys === 'string' ? req.query.keys.split(',').filter(Boolean) : undefined;
+    ok(res, await require('../services/globalMarketBoardService').fetch(keys));
+  } catch (error) { fail(res, error, 502); }
+});
+router.get('/market/global-board/:key', async function(req, res) {
+  try {
+    res.setHeader('Cache-Control', 'no-store');
+    ok(res, await require('../services/globalMarketBoardService').get(req.params.key, req.query.period || 'intraday'));
+  } catch (error) { fail(res, error, 400); }
+});
+
 router.get('/market/comparison-history', async function(req, res) {
   try {
     res.setHeader('Cache-Control', 'no-store');

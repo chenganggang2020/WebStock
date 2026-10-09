@@ -48,12 +48,6 @@
           <article class="kline-insight-card">
             <h3>形态提示</h3>
             <div id="klineSignalList" class="kline-signal-list"></div>
-            <details id="nineTurnHistory" class="nine-turn-history">
-              <summary id="nineTurnHistorySummary">简化九转 · 历史核对</summary>
-              <p id="nineTurnHistoryCoverage"></p>
-              <div id="nineTurnHistoryEvents" class="nine-turn-history-events"></div>
-              <small>事件后第1/5/20根日K线收盘涨跌，不是交易收益；不足窗口不填零。不含完整TD Sequential规则，未校验除权影响，不代表未来有效。</small>
-            </details>
           </article>
           <article class="kline-insight-card">
             <h3>开盘竞价观察</h3>
@@ -78,7 +72,7 @@
             <p data-chart-symbol="缺"><b>缺</b><span>相邻两根 K 线之间出现完整向上或向下缺口。</span></p>
             <p data-chart-symbol="量"><b>量</b><span>成交量达到前 20 期均量约 1.8 倍，且价格变动达到 1%。</span></p>
             <p data-chart-symbol="积"><b>积</b><span>本地规则识别的窄幅整理、站上 MA20 且近期量能增强。</span></p>
-            <p data-chart-symbol="9"><b>1–9</b><span>九转连续计数：上行标在K线上方，下行标在下方，9强调显示。悬浮数字查看两根比较价格；图表上方可展开“九转怎么算”。不是完整TD Sequential。</span></p>
+            <p data-chart-symbol="9"><b>1–9 / C13</b><span>九转可选基础或扩展规则；扩展中的1–9是准备阶段，C1–C13为非连续计数，+表示13对8尚未通过，✓为后续完善，R为循环重计。上行标在高点侧、下行在低点侧，悬浮查看依据；“九转怎么算”有精确定义与历史核对。未认证商业版等价。</span></p>
             <p data-chart-symbol="资"><b>资</b><span>资金流数据源给出的资金方向证据；缺数据时不会显示。</span></p>
           </div>
           <small>这些都是透明规则的观察标记，不是买卖指令，也不等同于同花顺专有信号。</small>
@@ -118,7 +112,7 @@
       <nav id="terminalWorkspaces" aria-label="工作区"></nav>
       <div class="terminal-search">
         <div class="search-box">
-          <input id="searchInput" type="text" placeholder="搜索股票代码 / 名称，点☆加入自选" aria-label="搜索股票并加入自选" autocomplete="off">
+          <input id="searchInput" type="text" placeholder="全市场搜索：代码 / 名称 / 拼音，点☆加入自选" aria-label="全市场搜索股票与ETF并加入自选" title="Ctrl+K 搜索全市场；自选页的筛选只作用于当前组" autocomplete="off">
           <button id="clearBtn" class="clear-btn" aria-label="清空搜索" title="清空搜索">✕</button>
           <div id="searchHistoryPanel" class="search-history-panel" style="display:none;"></div>
         </div>
@@ -398,6 +392,11 @@
         <span class="price-info" id="priceInfo"></span>
         <span id="chartRealtimeStatus" class="chart-realtime-status" data-state="idle" aria-live="polite">1分钟公开行情 · 等待选择股票</span>
         <div class="indicator-btns" id="indicatorBtns">
+          <div class="stock-navigation" role="group" aria-label="按来源列表连续查看股票">
+            <button id="previousStockBtn" class="small-btn" type="button" title="上一只（Alt+↑），保留当前周期" aria-label="上一只股票" disabled>↑ 上一只</button>
+            <span id="stockNavigationStatus" role="status" aria-live="polite">选择列表中的股票后可连续查看</span>
+            <button id="nextStockBtn" class="small-btn" type="button" title="下一只（Alt+↓），保留当前周期" aria-label="下一只股票" disabled>下一只 ↓</button>
+          </div>
           <select class="ind-select" id="indicatorSelect">
             <option value="ma" selected>均线</option>
             <option value="macd">MACD</option>
@@ -414,6 +413,10 @@
             <button class="period-btn" data-period="week">周线</button>
             <button class="period-btn" data-period="month">月线</button>
           </div>
+          <select id="nineTurnModeSelect" class="ind-select" aria-label="K线九转规则" title="仅作用于日、周、月K线；1分钟分时沿用基础1–9" style="display:none">
+            <option value="extended">九转：扩展9+13</option>
+            <option value="basic">九转：基础1–9</option>
+          </select>
           <button class="ma-set-btn" id="maSettingsBtn" aria-label="设置均线周期" title="设置均线周期">均线设置</button>
           <button class="chart-coach-trigger" id="chartCoachBtn" aria-pressed="false" title="把当前可见K线的确定性证据标到图上">显示图上提示</button>
           <button class="analysis-btn" id="analysisBtn" title="生成个股AI分析报告">🤖 AI分析</button>
@@ -422,14 +425,26 @@
       <section id="decisionGuideStrip" class="decision-guide-strip" data-state="idle" aria-live="polite" hidden></section>
       <section id="chartCoachEvidenceStrip" class="chart-coach-evidence-strip" aria-live="polite" hidden></section>
       <details id="nineTurnMethod" class="nine-turn-history">
-        <summary>九转怎么算 · 日线 / 1分钟分时</summary>
+        <summary>九转怎么算 · 规则选择 / 历史核对</summary>
+        <p id="nineTurnModeStatus">日/周/月K线默认扩展9+13；1分钟分时使用基础1–9，不混用规则。</p>
+        <p><b>扩展9+13 · sequential-public-rules-v1：</b>先出现严格价格翻转（本根与前4根的大小方向相反于上一根与其前4根），再连续比较计1–9；下行9的第8或9根低点须低于第6、7根，上行以高点镜像，未完善可等待后续。</p>
+        <p><b>非连续13 根：</b>从准备9当根开始，下行满足本根收盘≤前2根低点才加1，上行收盘≥前2根高点才加1。第13候选还要求下行低点≤第8计数根收盘，上行高点≥第8计数根收盘；未通过显示“+”，继续等待。C1–C13与准备1–9分层排列，✓为后续完善，R为重计。</p>
+        <p><b>取消、循环与完成：</b>反向完成9、突破对应TDST边界会取消未完成13；同向准备延伸22或后继准备真振幅处于前次100%–200%时重计。未收盘仅淡显预览，不入确认事件；周/月等待对应周期结束，来源明确完成时优先尊重来源。缺口与非法OHLC中断，过去事件不因未来完善、取消而被删除。</p>
+        <p><b>边界：</b>这是公开规则独立实现，未与授权商业版逐根对账；没有可选8对5、Intersection、Combo、商业版突破资格和风险价，不宣称完整商业版等价，也不是买卖指令。仅有价格的1分钟分时不补造OHLC套用本扩展规则。</p>
+        <p><b>基础1–9（兼容选项；1分钟分时仍用此规则）：</b>以下是原连续比较法，与上方扩展规则分别计算。</p>
         <p><b>比较对象：</b>C[t] 是本根K线收盘价，C[t−4] 是同周期前第4根K线收盘价；日线按交易日，1分钟分时按分钟根数，不混用周期。不是连续涨跌9天，也不使用均价线。</p>
         <p><b>上行：</b><code>C[t] &gt; C[t−4]</code>，连续满足时计 1、2…9，标在K线上方。<b>下行：</b><code>C[t] &lt; C[t−4]</code>，连续满足时计 1、2…9，标在K线下方。</p>
         <p><b>重置与缺口：</b>相等时计数归零；方向反转时从 1 重新开始。本根及前4根窗口存在已标记的数据缺口或无效收盘价时中断，不删除缺口来凑9；此前4根须已收盘。至少需要13根有效K线才能首次完成9。</p>
         <p><b>确认与显示：</b>未收盘数字淡显，仅作暂定计数；盘中可能变化或消失。日线将北京时间当日15:01前视为未确认；分时保守等待该分钟标签的下一分钟再确认，明确标记未完成的数据仍不确认。连续超过9不重复标9，须中断后开启新序列。悬浮任意数字可查看本根与前第4根的日期、价格和进度。</p>
-        <p><b>实现范围：</b>当前是连续比较的九转基础计数，未实现完整TD Sequential的其他条件，例如13 根倒计数、完善形态等。数字9不是买卖指令，不保证反转。</p>
+        <p><b>基础模式范围：</b>仅连续比较九转，不包含扩展模式的13 根倒计数、完善形态等。数字9不是买卖指令，不保证反转。</p>
         <p><b>1分钟九转：</b>在“1分钟公开行情”中逐根显示1–9；使用来源返回的分钟价格，未结束分钟仅为暂定价。午休跳过并衔接上午，跨日从头预热，不使用昨日计数；开盘竞价不参与。数据缺口中断，不插值、不补零。5秒/30秒报价和降级5分钟行情不计算这套1分钟九转，请切回1分钟查看。</p>
         <p>方法参考：<a href="https://demark.com/tradingview/" target="_blank" rel="noopener noreferrer">DeMARK对Setup 9与Countdown 13的说明</a>；以上逐条描述本程序当前实现，不宣称与官方指标完全等同。</p>
+        <details id="nineTurnHistory" class="nine-turn-history">
+          <summary id="nineTurnHistorySummary">九转 · 历史核对</summary>
+          <p id="nineTurnHistoryCoverage">选择K线后按实际已加载范围计算。</p>
+          <div id="nineTurnHistoryEvents" class="nine-turn-history-events"></div>
+          <small>事件后第1/5/20根同周期K线收盘涨跌，不是交易收益；不足窗口不填零。未校验交易成本、停牌可成交性和除权影响，不代表未来有效。</small>
+        </details>
       </details>
       <div id="realtimeView" class="main-content">
         <div class="realtime-left">
@@ -2490,7 +2505,8 @@
             <option value="change_desc">涨跌幅降序</option>
             <option value="change_asc">涨跌幅升序</option>
           </select>
-          <input id="watchlistSearchInput" placeholder="名称/代码">
+          <input id="watchlistSearchInput" placeholder="仅筛选当前组：名称/代码" aria-label="筛选当前自选组，不搜索全市场">
+          <button id="watchlistMarketSearchBtn" type="button" title="打开全市场搜索；不改变当前组或组内筛选">搜索全市场 / 添加</button>
           <button id="addCurrentToWatchlistBtn">添加当前股票</button>
           <button id="refreshWatchlistBtn">刷新行情</button>
           <button id="syncTonghuashunWatchlistBtn" title="读取同花顺本地文件到本程序，不会写回同花顺">从同花顺读取</button>
@@ -2724,6 +2740,22 @@
     </section>
   </div>
 
+  <div id="dashboardGlobalDetailOverlay" class="dashboard-index-detail-overlay" style="display:none;">
+    <section class="dashboard-index-detail" role="dialog" aria-modal="true" aria-labelledby="dashboardGlobalDetailTitle">
+      <header>
+        <div>
+          <span>CROSS-MARKET DETAIL</span>
+          <h3 id="dashboardGlobalDetailTitle">外部行情详情</h3>
+          <p id="dashboardGlobalDetailMeta">等待行情数据</p>
+        </div>
+        <button id="dashboardGlobalDetailClose" class="icon-btn" type="button" aria-label="关闭外部行情详情" title="关闭">×</button>
+      </header>
+      <nav id="marketBoardPeriods" class="market-board-periods" aria-label="外部行情周期"><button type="button" data-board-period="intraday">分时 · 1分钟</button><button type="button" data-board-period="daily">日 K</button></nav>
+      <div id="dashboardGlobalDetailChart" class="dashboard-index-detail-chart" role="img" aria-label="外部行情历史走势"></div>
+      <footer><span id="dashboardGlobalDetailSource">来源和覆盖情况将在加载后显示</span> <a id="dashboardGlobalDetailLink" href="#" target="_blank" rel="noopener noreferrer" hidden>查看原始来源</a></footer>
+    </section>
+  </div>
+
   <div id="maModalOverlay" class="modal-overlay" style="display:none;">
     <div class="modal">
       <h3>设置均线周期</h3>
@@ -2878,8 +2910,11 @@
   <script src="js/modules/marketVisualModel.js"></script>
   <script src="js/modules/auctionRules.js"></script>
   <script src="js/modules/marketSignalModel.js"></script>
+  <script src="js/modules/sequentialSignalModel.js"></script>
   <script src="js/modules/marketHeatmapModel.js"></script>
   <script src="js/modules/marketComparison.js"></script>
+  <script src="js/modules/marketBoardPreferences.js"></script>
+  <script src="js/modules/marketBoard.js"></script>
   <script src="js/modules/marketOverview.js"></script>
   <script src="js/modules/industryResearchGraph.js"></script>
   <script src="js/modules/industryWorkspace.js"></script>

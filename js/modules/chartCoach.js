@@ -419,8 +419,10 @@
     const state = window.State || {};
     const chart = state.klineChart;
     if (!chart || typeof chart.setOption !== 'function') return false;
-    const counts = state.currentPeriod === 'day' && Array.isArray(state.currentKlineSignalMarks)
-      ? state.currentKlineSignalMarks.filter(function(mark) { return mark.nineTurnCount; }) : [];
+    const counts = Array.isArray(state.currentKlineSignalMarks)
+      ? state.currentKlineSignalMarks.filter(function(mark) {
+        return mark.nineTurnCount && (mark.sequenceTimeframe || 'day') === state.currentPeriod;
+      }) : [];
     const points = marksVisible && marks ? marks.markPoint : { data: [] };
     const base = state.currentKlineWatchlistMarks || {};
     const active = marksVisible && marks ? marks : {};

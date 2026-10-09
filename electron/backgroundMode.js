@@ -68,6 +68,7 @@ function createBackgroundMode(options = {}) {
     tray.setToolTip('盯盘终端 · 后台采集');
     tray.setContextMenu(Menu.buildFromTemplate([
       { label: '打开盯盘终端', click: showMainWindow },
+      ...(options.onToggleWidget ? [{ label: '打开 / 关闭桌面挂件', click: options.onToggleWidget }] : []),
       { label: '立即检查全部创作者', click: syncAll },
       { type: 'separator' },
       { label: '完全退出', click: exit }

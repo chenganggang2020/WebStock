@@ -1,6 +1,8 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('webstockDesktop', Object.freeze({
+  getMarketWidget: () => ipcRenderer.invoke('webstock:market-widget-state'),
+  setMarketWidget: input => ipcRenderer.invoke('webstock:market-widget-set', { enabled: input?.enabled, alwaysOnTop: input?.alwaysOnTop }),
   reportDiagnostic(data) {
     if(!data || !['renderer','interaction'].includes(data.type))return;
     ipcRenderer.send('webstock:runtime-diagnostic',{type:data.type,visible:data.visible===true,

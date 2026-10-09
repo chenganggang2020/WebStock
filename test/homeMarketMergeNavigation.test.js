@@ -41,11 +41,11 @@ test('legacy market detail route highlights homepage and its back action returns
 test('watchlist double click keeps the stock-detail selection chain after the merge', () => {
   assert.match(watchlistSource, /tbody\.ondblclick\s*=\s*handleWatchlistDoubleClick/);
   assert.match(
-    watchlistSource,
-    /function selectStock\(code\)[\s\S]{0,320}switchMainView\('market'\)[\s\S]{0,180}StockList\.selectStock\(stock\)/
+    watchlistSource.slice(watchlistSource.indexOf('function selectStock(code)'), watchlistSource.indexOf('function analyzeStock(code)')),
+    /switchMainView\('market'\)[\s\S]*StockList\.selectStock\(stock, \{ navigation \}\)/
   );
   assert.match(
     stockListSource,
-    /async function selectStock\(stock\)[\s\S]{0,420}MarketOverview\.showDetail\(\)/
+    /async function selectStock\(stock, options\)[\s\S]{0,420}MarketOverview\.showDetail\(\)/
   );
 });

@@ -104,6 +104,9 @@ function bindButtons() {
   const Watchlist = window.Watchlist;
   const Trades = window.Trades;
   const Portfolio = window.Portfolio;
+  if (StockList.bindStockNavigation) StockList.bindStockNavigation();
+  const nineTurnModeSelect = document.getElementById('nineTurnModeSelect');
+  if (nineTurnModeSelect) nineTurnModeSelect.addEventListener('change', function() { KlineChart.setNineTurnMode(nineTurnModeSelect.value); });
   if (window.AIAssistant) window.AIAssistant.bind();
   if (window.ExpertTracker) window.ExpertTracker.bind();
   if (window.AIHistory) window.AIHistory.bind();
@@ -290,6 +293,12 @@ function bindButtons() {
   if (watchlistSortSelect) watchlistSortSelect.addEventListener('change', Watchlist.renderWatchlist);
   const watchlistSearchInput = document.getElementById('watchlistSearchInput');
   if (watchlistSearchInput) watchlistSearchInput.addEventListener('input', Watchlist.renderWatchlist);
+  const watchlistMarketSearchBtn = document.getElementById('watchlistMarketSearchBtn');
+  if (watchlistMarketSearchBtn) watchlistMarketSearchBtn.addEventListener('click', function() {
+    setMarketDrawerOpen(true, false);
+    searchInput.focus();
+    searchInput.select();
+  });
   const watchlistGroupSearch = document.getElementById('watchlistGroupSearch');
   if (watchlistGroupSearch) watchlistGroupSearch.addEventListener('input', function() {
     Watchlist.renderPortfolioWatchlistTabs(Watchlist.watchlistGroups());

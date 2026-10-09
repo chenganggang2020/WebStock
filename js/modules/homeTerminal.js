@@ -5,7 +5,7 @@
 })(typeof window !== 'undefined' ? window : null, function(root) {
   let bound = false;
   let groupKey = ':watchlist';
-  let visibleItems = [], rowLimit = 60, lookupRows = null, lookupQuery = '', searchSequence = 0, searchTimer = null;
+  let visibleItems = [], navigationItems = [], rowLimit = 60, lookupRows = null, lookupQuery = '', searchSequence = 0, searchTimer = null;
   let selecting = false;
   const origins = new Map();
   const charts = new Map();
@@ -81,6 +81,7 @@
     const local = !query ? source : groupKey === ':market' && root.Search ? root.Search.searchStocks(query)
       : source.filter(item => root.Search ? root.Search.matchScore(query, item) > 0 : (item.code + ' ' + item.name).toLowerCase().includes(query));
     const matches = groupKey === ':market' && query === lookupQuery && lookupRows ? lookupRows : local;
+    navigationItems = matches;
     const items = matches.slice(0, rowLimit);
     visibleItems = items;
     const selected = root.State.currentStock && root.State.currentStock.code;
@@ -113,7 +114,9 @@
   async function select(code) {
     const item = visibleItems.find(x => x.code === code) || (root.State.watchlist || []).find(x => x.code === code) || (root.State.allStocks || []).find(x => x.code === code);
     if (!item) return;
-    await root.StockList.selectStock(item);
+    const group = root.Watchlist.watchlistGroups().find(row => row.key === groupKey);
+    const label = groupKey === ':market' ? '全市场搜索' : groupKey === ':watchlist' ? '全部自选' : '自选 · ' + (group && group.name || '当前组');
+    await root.StockList.selectStock(item, { navigation: { items: navigationItems, label } });
     renderWatchlist();
   }
 
@@ -168,7 +171,7 @@
     html('homeIndices', indices.length ? indices.map((item, i) => {
       const history = indexHistory(series, item.key);
       const quote = root.MarketComparison.indexCardDisplayQuote(item, history);
-      return '<article class="home-panel home-index"><header><strong>' + escape(item.name || item.code) + '</strong><small>' + escape(item.code) + '</small></header><div class="home-index-value ' + trend(quote.changePct) + '"><b>' + formatNumber(quote.price) + '</b><span>' + pct(quote.changePct) + '</span></div><div id="homeIndexChart' + i + '" class="home-index-chart"></div><small>' + escape(root.MarketComparison.indexCardIntradayStatus(history)) + '</small></article>';
+      return '<article class="home-panel home-index" data-index-key="' + escape(item.key) + '" role="button" tabindex="0" title="点击查看指数详情"><header><strong>' + escape(item.name || item.code) + '</strong><small>' + escape(item.code) + '</small></header><div class="home-index-value ' + trend(quote.changePct) + '"><b>' + formatNumber(quote.price) + '</b><span>' + pct(quote.changePct) + '</span></div><div id="homeIndexChart' + i + '" class="home-index-chart"></div><small>' + escape(root.MarketComparison.indexCardIntradayStatus(history)) + '</small></article>';
     }).join('') : '<article class="home-panel home-empty">指数行情暂不可用</article>');
     if (!root.echarts) return;
     indices.forEach((item, i) => {

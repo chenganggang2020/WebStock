@@ -857,8 +857,10 @@ function stockFor(code) {
 function selectStock(code) {
   const stock = stockFor(code);
   if (stock && window.StockList) {
+    const group = watchlistGroups().find(item => item.key === selectedWatchlistGroupKey);
+    const navigation = { items: visibleWatchlistItems(), label: '自选 · ' + (group ? group.name : '全部') };
     window.switchMainView('market');
-    window.StockList.selectStock(stock).catch(function(error) { alert(error.message || 'Load stock failed'); });
+    window.StockList.selectStock(stock, { navigation }).catch(function(error) { alert(error.message || 'Load stock failed'); });
   }
 }
 

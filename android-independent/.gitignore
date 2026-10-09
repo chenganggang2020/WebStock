@@ -1,0 +1,9 @@
+android/.gradle/
+android/**/build/
+android/local.properties
+android/app/src/main/assets/web/
+*.apk
+*.apk.idsig
+source-manifest.json
+qa/output/
+qa/*.png

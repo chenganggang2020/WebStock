@@ -160,6 +160,21 @@ test('chart coach renders versioned rule definitions and non-predictive knowledg
   assert.match(html, /当前规则参考/);
 });
 
+test('coach preserves extended counts only for their originating Kline period', () => {
+  const fixture = loadInteractiveChartCoach([]);
+  const options = [];
+  const weekly = { nineTurnCount: true, sequenceTimeframe: 'week', value: 'C13', coord: ['2026-08-11', 9] };
+  const monthly = { nineTurnCount: true, sequenceTimeframe: 'month', value: '9', coord: ['2026-08-11', 9] };
+  const legacy = { nineTurnCount: true, value: '1', coord: ['2026-08-11', 9] };
+  fixture.state.currentKlineSignalMarks = [weekly, monthly, legacy];
+  fixture.state.klineChart = { setOption: option => options.push(option) };
+  for (const [period, expected] of [['week', weekly], ['month', monthly], ['day', legacy]]) {
+    fixture.state.currentPeriod = period;
+    fixture.ChartCoach.clearMarks();
+    assert.deepEqual(Array.from(options.at(-1).series[0].markPoint.data), [expected]);
+  }
+});
+
 test('coach toggles preserve watchlist price lines and zones without duplicating them on refresh', async () => {
   const requests = [];
   const fixture = loadInteractiveChartCoach(requests);

@@ -255,6 +255,8 @@ function showRealtimeView() {
   if (marketSidebarPlaceholder) marketSidebarPlaceholder.hidden = false;
   document.getElementById('indicatorBtns').classList.add('visible');
   document.getElementById('indicatorSelect').style.display = 'none';
+  const nineTurnModeSelect = document.getElementById('nineTurnModeSelect');
+  if (nineTurnModeSelect) nineTurnModeSelect.style.display = 'none';
   document.getElementById('maSettingsBtn').style.display = 'none';
   document.querySelectorAll('.period-btn').forEach(function(button) {
     button.classList.toggle('active', button.getAttribute('data-period') === 'minute');
@@ -301,6 +303,8 @@ function showKlineView(period) {
   document.getElementById('realtimeView').style.display = 'none';
   document.getElementById('indicatorBtns').classList.add('visible');
   document.getElementById('indicatorSelect').style.display = '';
+  const nineTurnModeSelect = document.getElementById('nineTurnModeSelect');
+  if (nineTurnModeSelect) nineTurnModeSelect.style.display = '';
   document.querySelectorAll('.period-btn').forEach(function(button) {
     button.classList.toggle('active', button.getAttribute('data-period') === nextPeriod);
   });

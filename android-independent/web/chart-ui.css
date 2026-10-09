@@ -1,0 +1,6 @@
+.chart-readout{min-height:104px}.chart-readout .signal-explain{grid-column:1/-1;justify-self:start;min-height:32px;padding:4px 8px;font-size:11px;border-radius:5px;color:var(--accent)}
+.chart-periods{display:flex;gap:5px;margin-bottom:6px}.chart-periods button{flex:1;min-height:40px;border-radius:6px;padding:5px;font-size:13px}.chart-periods button[aria-pressed=true]{color:var(--accent);border-color:var(--accent);background:var(--active)}
+.chart-controls .period-select{display:none}
+#chartSignalDialog{color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:12px;width:min(94vw,620px);max-height:82vh;padding:16px;font-size:13px}#chartSignalDialog::backdrop{background:#0006}#chartSignalDialog p{margin:8px 0}#chartSignalDialog button{position:sticky;bottom:0;width:100%}
+.chart-expanded .chart-periods{flex-shrink:0}.chart-expanded .chart-readout{flex-shrink:0}.chart-expanded .stock-switcher{flex-shrink:0}
+@media(orientation:landscape) and (max-height:550px){.chart-expanded .chart-periods{display:none}.chart-expanded .chart-controls .period-select:not([hidden]){display:block}.chart-expanded .stock-switcher{display:none}.chart-expanded .signal-explain{font-size:10px;padding:2px 4px;min-height:30px}.chart-expanded .chart-readout{max-height:100%;overflow:auto}}

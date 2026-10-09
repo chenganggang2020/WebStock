@@ -119,8 +119,9 @@ async function runAction(action, code) {
   const item = recentStockFor(code);
   if (!item) return;
   if (action === 'view') {
+    const navigation = { items: visibleRecentItems(), label: '最近查看' };
     window.switchMainView('market');
-    await window.StockList.selectStock(item);
+    await window.StockList.selectStock(item, { navigation });
   } else if (action === 'analysis') {
     window.switchMainView('market');
     await window.StockList.selectStock(item);

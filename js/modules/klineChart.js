@@ -27,6 +27,15 @@ function cancelKlineLoad() {
   klineRequestController = null;
 }
 let maLegendSelection = {};
+let nineTurnMode = 'extended';
+try { if (localStorage.getItem('webstock.nineTurnMode') === 'basic') nineTurnMode = 'basic'; } catch (_) {}
+
+function setNineTurnMode(value) {
+  nineTurnMode = value === 'basic' ? 'basic' : 'extended';
+  try { localStorage.setItem('webstock.nineTurnMode', nineTurnMode); } catch (_) {}
+  const State = window.State;
+  if (State.currentView === 'kline' && State.currentRawData.length) renderKlineChart(State.currentRawData, State.currentIndicator);
+}
 function parseMAPeriods(input) {
   const values = String(input).trim().split(/[,，\s]+/);
   if (!values.length || values.some(value=>!/^\d+$/.test(value))) throw Error('请输入1–1000的整数周期，用逗号分隔');
@@ -79,6 +88,27 @@ function renderKlineChart(rawData, indicator) {
 
   const dates = rawData.map(d => d.date);
   const isDaily = State.currentPeriod === 'day';
+  if (window.MarketSignalModel) {
+    const snapshot = prepareKlineSequenceSnapshot(rawData, State.currentKlineMeta, State.currentPeriod);
+    const overlay = buildKlineSequenceOverlay(snapshot.data, snapshot.context);
+    const otherMarks = isDaily && Array.isArray(State.currentKlineSignalMarks)
+      ? State.currentKlineSignalMarks.filter(mark => !mark.nineTurnCount) : [];
+    State.currentKlineSignalMarks = overlay.marks.concat(otherMarks);
+    renderNineTurnHistory(overlay.history, State.currentKlineMeta, { mode: overlay.mode, timeframe: State.currentPeriod,
+      snapshotAsOf: snapshot.context.asOf, snapshotTimeKnown: snapshot.timeKnown });
+    const modeSelect = document.getElementById('nineTurnModeSelect');
+    if (modeSelect) modeSelect.value = nineTurnMode;
+    const modeStatus = document.getElementById('nineTurnModeStatus');
+    if (modeStatus) modeStatus.textContent = overlay.mode === 'extended'
+      ? '当前K线：扩展9+13 · ' + overlay.ruleset + ' · ' + (overlay.latest && overlay.latest.label || '样本不足')
+      : '当前K线：基础1–9' + (nineTurnMode === 'extended' ? '（扩展模块未就绪，保留基础规则）' : '') + '；1分钟分时单独使用基础规则。';
+    const chip = document.getElementById('klineNineTurnState');
+    if (chip && overlay.mode === 'extended') {
+      chip.textContent = '扩展 · ' + (overlay.latest && overlay.latest.label || '样本不足');
+      chip.className = 'kline-signal-chip' + (overlay.latest && (overlay.latest.setup.triggered || overlay.latest.countdown.triggered) ? ' active' : '');
+      chip.title = overlay.rule;
+    }
+  }
   const candleVisuals = window.MarketVisualModel
     ? window.MarketVisualModel.candleColors(State.currentStock || {}, rawData, isDark)
     : rawData.map(function(d) { return { color: d.close >= d.open ? upColor : downColor }; });
@@ -150,7 +180,7 @@ function renderKlineChart(rawData, indicator) {
     markArea: baseSeries[0].markArea || { data: [] } };
   const localSignalMarks = Array.isArray(State.currentKlineSignalMarks)
     ? State.currentKlineSignalMarks : [];
-  if (isDaily && localSignalMarks.length) {
+  if (localSignalMarks.length) {
     baseSeries[0].markPoint = {
       symbol: 'pin',
       symbolSize: 42,
@@ -338,6 +368,16 @@ function renderKlineChart(rawData, indicator) {
       };
     });
   }
+
+  // Keep pixel-offset sequence labels inside the price panel, away from the date/volume axes.
+  const sequenceOffsets = (State.currentKlineSignalMarks || []).filter(mark => mark.nineTurnCount)
+    .map(mark => Number(mark.symbolOffset && mark.symbolOffset[1]) || 0);
+  const bottomLabelSpace = Math.max(0, ...sequenceOffsets) + (sequenceOffsets.some(offset => offset > 0) ? 14 : 0);
+  const topLabelSpace = Math.max(0, ...sequenceOffsets.map(offset => -offset)) + (sequenceOffsets.some(offset => offset < 0) ? 14 : 0);
+  const chartHeight = document.getElementById('chartContainer')?.clientHeight || 480;
+  const priceHeight = chartHeight * parseFloat(grids[0].height) / 100;
+  const dataHeight = Math.max(80, priceHeight - bottomLabelSpace - topLabelSpace);
+  yAxes[0].boundaryGap = [bottomLabelSpace / dataHeight, topLabelSpace / dataHeight];
 
   const zoomX = (indicator === 'ma' || !needThreeGrids) ? [0, 1] : [0, 1, 2];
   const option = {
@@ -570,6 +610,15 @@ function setAuctionCard(targetId, lines) {
 
 function hideKlineInsights(State) {
   State.currentKlineSignalMarks = [];
+  const history = document.getElementById('nineTurnHistoryEvents');
+  const coverage = document.getElementById('nineTurnHistoryCoverage');
+  const summary = document.getElementById('nineTurnHistorySummary');
+  const modeStatus = document.getElementById('nineTurnModeStatus');
+  if (history) history.textContent = '';
+  if (history && history.replaceChildren) history.replaceChildren();
+  if (summary) summary.textContent = '九转 · 等待当前K线';
+  if (coverage) coverage.textContent = '等待当前股票与周期的K线，不显示上一只股票的核对结果。';
+  if (modeStatus) modeStatus.textContent = 'K线规则 ' + (nineTurnMode === 'extended' ? '扩展9+13' : '基础1–9') + ' · 等待当前K线；1分钟分时单独使用基础规则。';
   const panel = document.getElementById('klineInsights');
   const placeholder = document.getElementById('marketSidebarPlaceholder');
   if (panel) panel.hidden = true;
@@ -579,6 +628,69 @@ function hideKlineInsights(State) {
 function nineTurnOutcomeText(outcome) {
   return outcome.status === 'available' ? metricText(outcome.returnPct, '%', true)
     : outcome.status === 'invalid' ? '数据缺口' : '待满窗口';
+}
+
+function prepareKlineSequenceSnapshot(data, meta, timeframe) {
+  const rows = Array.isArray(data) ? data : [];
+  const last = rows.at(-1);
+  // Server Kline meta.fetchedAt is preserved through cache reads. A check/render time is not evidence of a closing price.
+  function acquisitionTime(value) {
+    const text = String(value || '');
+    if (!/^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:\d{2})?$/.test(text)) return null;
+    const zoned = /(?:Z|[+-]\d{2}:\d{2})$/.test(text) ? text : text.replace(' ', 'T') + '+08:00';
+    const timestamp = Date.parse(zoned);
+    return Number.isFinite(timestamp) && timestamp <= Date.now() + 5000 ? new Date(timestamp).toISOString() : null;
+  }
+  const observedAt = acquisitionTime(last && last.observedAt);
+  const fetchedAt = acquisitionTime(meta && meta.fetchedAt);
+  const asOf = observedAt || fetchedAt;
+  if (asOf) return { data: rows, context: { asOf, timeframe }, timeKnown: true };
+  // With no acquisition clock, the existence of the final period gives only a lower bound.
+  // Earlier periods can still be checked, but an unverified final candle stays provisional.
+  const date = String(last && (last.date || last.time) || '').slice(0, 10);
+  const periodStart = /^\d{4}-\d{2}-\d{2}$/.test(date) ? Date.parse(date + 'T00:00:00+08:00') : NaN;
+  const lowerBound = Number.isFinite(periodStart) ? new Date(Math.min(periodStart, Date.now())).toISOString() : undefined;
+  const explicitCompletion = last && (last.incomplete === false || last.closed === true);
+  const safeRows = last && !explicitCompletion ? rows.slice(0, -1).concat(Object.assign({}, last, { incomplete: true })) : rows;
+  return { data: safeRows, context: { asOf: lowerBound, timeframe }, timeKnown: false };
+}
+
+function buildKlineSequenceOverlay(data, context) {
+  const model = window.SequentialSignalModel;
+  const timeframe = context.timeframe || 'day';
+  if (nineTurnMode !== 'extended' || !model) {
+    if (!window.MarketSignalModel || timeframe !== 'day') return { mode: 'basic', marks: [], history: null };
+    const history = window.MarketSignalModel.evaluateNineTurnHistory(data, context);
+    return { mode: 'basic', marks: buildNineTurnMarks(data, context, history), history };
+  }
+  const series = model.calculateSeries(data, context);
+  const history = model.evaluateHistory(data, context);
+  const marks = series.flatMap(function(item) {
+    return item.marks.map(function(mark) {
+      const upward = mark.direction === 'sell';
+      const countdown = mark.type === 'countdown';
+      const lane = mark.type === 'setup' ? 0 : countdown || mark.type === 'countdown-deferred' ? 1 : mark.type === 'perfection' ? 2 : 3;
+      const complete = mark.confirmed && (mark.type === 'setup' && mark.label === '9' || countdown && mark.label === '13');
+      const color = upward ? '#c47700' : '#2563eb';
+      const value = countdown ? 'C' + mark.label : mark.label;
+      const name = (upward ? '上行' : '下行') + (mark.type === 'setup' ? '准备 ' : countdown ? '衰竭计数 ' : '') + value;
+      let basis = mark.explanation + '；' + (mark.provisional ? '未收盘／完成状态未知，仅为预览' : '本根已收盘');
+      if (mark.type === 'setup' && mark.label === '9') basis += '；形态' + (item.setup.perfected ? '已完善' : '尚未完善，等待后续核验');
+      const event = (mark.type === 'setup' || countdown) && history.events.find(event => event.index === mark.index && event.type === (countdown ? 'countdown-complete' : 'setup-complete'));
+      if (event) basis += '；事后核对：' + [1, 5, 20].map(horizon => horizon + '根后 ' + nineTurnOutcomeText(event.outcomes[horizon])).join('；');
+      return {
+        nineTurnCount: true, sequenceType: mark.type, sequenceTimeframe: context.timeframe || 'day', name, value,
+        coord: [mark.date, mark.price], symbol: countdown ? 'roundRect' : 'circle',
+        symbolSize: countdown ? [complete ? 33 : 29, complete ? 22 : 17] : complete ? 22 : 16,
+        symbolOffset: [0, (upward ? -1 : 1) * (16 + lane * 24)],
+        itemStyle: { color: complete ? color : 'transparent', opacity: mark.provisional ? .5 : 1 },
+        label: { show: true, color: complete ? '#ffffff' : color, fontSize: 10, fontWeight: 700 },
+        signal: { label: mark.date + ' · ' + name, detail: model.ruleset + ' · ' + model.rule, basis,
+          limitations: model.limitations.concat([history.limitation]), triggerUsesFutureData: false }
+      };
+    });
+  });
+  return { mode: 'extended', marks, history, latest: series.at(-1), rule: model.rule, ruleset: model.ruleset };
 }
 
 function buildNineTurnMarks(data, context, history) {
@@ -625,20 +737,34 @@ function buildNineTurnMarks(data, context, history) {
   });
 }
 
-function renderNineTurnHistory(history, meta) {
+function renderNineTurnHistory(history, meta, options) {
   const summary = document.getElementById('nineTurnHistorySummary');
   const coverage = document.getElementById('nineTurnHistoryCoverage');
   const target = document.getElementById('nineTurnHistoryEvents');
   if (!summary || !coverage || !target) return;
-  summary.textContent = '简化九转 · 历史核对（' + history.events.length + '次）';
+  const extended = options && options.mode === 'extended';
+  const periodLabel = { day: '日线', week: '周线', month: '月线' }[options && options.timeframe || 'day'] || '当前周期';
+  if (!history) {
+    summary.textContent = '基础九转 · 当前周期未启用';
+    coverage.textContent = '基础模式仅在日线及1分钟分时启用；周/月线可选择扩展9+13。';
+    target.replaceChildren();
+    return;
+  }
+  summary.textContent = (extended ? '扩展9+13' : '简化九转') + ' · 历史核对（' + history.events.length + '次）';
   coverage.textContent = history.from + '—' + history.to + ' · 已加载' + history.barCount +
-    '根日线 · ' + (meta && meta.dataSource || '来源未标注') + '。仅覆盖当前加载范围，非全市场历史库。';
+    '根' + periodLabel + ' · ' + (meta && meta.dataSource || '来源未标注') + (extended ? ' · ' + history.ruleset : '') + '。仅覆盖当前加载范围，非全市场历史库。';
+  if (options && options.snapshotTimeKnown === true) {
+    const snapshotTime = window.WebStockTime ? window.WebStockTime.formatDateTime(options.snapshotAsOf) : options.snapshotAsOf;
+    coverage.textContent += ' 判定快照：' + snapshotTime + '；重绘不推进收盘状态。';
+  } else if (options && options.snapshotTimeKnown === false) {
+    coverage.textContent += ' 采集时间未提供；末根仅在来源明确完成时确认，否则保留暂定。';
+  }
   target.replaceChildren();
-  if (!history.events.length) target.textContent = '当前日线范围未出现确认九转。';
+  if (!history.events.length) target.textContent = '当前加载范围未出现确认' + (extended ? '准备9／衰竭13' : '九转') + '。';
   history.events.slice().reverse().forEach(function(event) {
     const item = document.createElement('article');
     const heading = document.createElement('b');
-    heading.textContent = event.date + ' · ' + event.label;
+    heading.textContent = event.date + ' · ' + (extended ? (event.direction === 'buy' ? '下行' : '上行') + (event.type === 'setup-complete' ? '准备9' : '衰竭13') : event.label);
     const results = document.createElement('div');
     results.className = 'nine-turn-outcomes';
     [1, 5, 20].forEach(function(horizon) {
@@ -660,9 +786,11 @@ function renderKlineInsights(State, data, minuteRows, minuteMeta, localRows, loc
     return;
   }
   const daily = model.analyzeDaily(data);
-  const nineTurnContext = { asOf: new Date().toISOString() };
-  const nineTurn = model.calculateNineTurn(data, nineTurnContext);
-  const nineTurnHistory = model.evaluateNineTurnHistory(data, nineTurnContext);
+  const sequenceSnapshot = prepareKlineSequenceSnapshot(data, State.currentKlineMeta, State.currentPeriod);
+  const nineTurnContext = sequenceSnapshot.context;
+  const extendedMode = nineTurnMode === 'extended' && window.SequentialSignalModel;
+  const nineTurn = extendedMode ? { label: '扩展9+13', rule: window.SequentialSignalModel.rule } : model.calculateNineTurn(sequenceSnapshot.data, nineTurnContext);
+  const nineTurnHistory = extendedMode ? null : model.evaluateNineTurnHistory(sequenceSnapshot.data, nineTurnContext);
   const auction = model.analyzeAuction(data, minuteRows, minuteMeta, localRows, localMeta);
   const signals = model.detectLocalSignals(data, minuteRows, minuteMeta);
   const metricGrid = document.getElementById('klineMetricGrid');
@@ -689,7 +817,7 @@ function renderKlineInsights(State, data, minuteRows, minuteMeta, localRows, loc
   appendMetric(metricGrid, 'MA20', metricText(daily.ma20, ''), '月度均价');
   appendMetric(metricGrid, '均线状态', daily.trend, '仅描述，不是预测');
   if (asOf) asOf.textContent = '截至 ' + daily.date + ' · 公开日线与分钟行情';
-  renderNineTurnHistory(nineTurnHistory, State.currentKlineMeta);
+  if (nineTurnHistory) renderNineTurnHistory(nineTurnHistory, State.currentKlineMeta);
 
   signalList.innerHTML = '';
   const displaySignals = [{
@@ -698,8 +826,9 @@ function renderKlineInsights(State, data, minuteRows, minuteMeta, localRows, loc
     reason: nineTurn.rule || '样本不足',
     rule: nineTurn.rule || ''
   }].concat(signals);
-  displaySignals.forEach(function(signal) {
+  displaySignals.forEach(function(signal, index) {
     const chip = document.createElement('span');
+    if (index === 0) chip.id = 'klineNineTurnState';
     chip.className = 'kline-signal-chip' + (signal.active ? ' active' : '');
     chip.textContent = signal.active ? signal.label : signal.label + '·未触发';
     chip.title = (signal.reason || '') + (signal.rule ? '\n' + signal.rule : '');
@@ -768,7 +897,7 @@ function renderKlineInsights(State, data, minuteRows, minuteMeta, localRows, loc
   if (limitation) limitation.textContent = auction.limitation + ' 数据源：' + auction.source + '。';
 
   const latest = data[data.length - 1];
-  const marks = buildNineTurnMarks(data, nineTurnContext, nineTurnHistory);
+  const marks = extendedMode ? [] : buildNineTurnMarks(sequenceSnapshot.data, nineTurnContext, nineTurnHistory);
   signals.filter(function(signal) {
     return signal.active && signal.key !== 'intraday-breakout';
   }).forEach(function(signal, index) {
@@ -922,6 +1051,7 @@ async function prefetchKlineSnapshot(code, period) {
 }
 
 window.KlineChart = {
+  setNineTurnMode,
   cancelLoad: cancelKlineLoad,
   parseMAPeriods,
   renderKlineChart,

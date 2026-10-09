@@ -1,0 +1,12 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'none'; frame-src 'none'">
+<title>桌面盯盘</title><link rel="icon" href="/icons/webstock.ico"><link rel="stylesheet" href="/css/market-widget.css"></head><body>
+<header class="widget-drag"><strong>桌面盯盘</strong><button id="widgetTop" title="切换置顶">置顶</button><button id="widgetMain" title="打开主窗口">主窗</button><button id="widgetClose" title="关闭挂件">×</button></header>
+<details id="widgetSettings"><summary>显示设置</summary><div class="widget-switches">
+<label><input id="showQuotes" type="checkbox">行情</label><label><input id="showPnl" type="checkbox">持仓盈亏</label><label><input id="showPositions" type="checkbox">持仓明细</label><label><input id="hideAmounts" type="checkbox">隐藏金额</label></div>
+<label>账户 <select id="widgetAccount"><option value="0">优先同花顺同步账户</option></select></label><div id="widgetQuoteChoices"></div></details>
+<main><section id="widgetPnl"></section><section id="widgetPositions"></section><section id="widgetQuotes"></section></main>
+<footer id="widgetStatus" role="status">正在读取；公开行情延迟未保证</footer>
+<script src="/js/modules/marketBoardPreferences.js"></script><script src="/js/modules/desktopWidget.js"></script>
+</body></html>

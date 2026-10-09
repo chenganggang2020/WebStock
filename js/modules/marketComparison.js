@@ -47,6 +47,10 @@
   let intradayRefreshTimer = null;
   let globalSignalsRefreshTimer = null;
   let globalSignalsSignature = '';
+  let globalSignalItems = [];
+  let globalHistories = [];
+  let globalSignalDetailKey = '';
+  let globalSignalDetailChart = null;
   const historyCacheByWindow = new Map();
   const comparisonCache = new Map();
   const HISTORY_CACHE_MS = 5 * 60 * 1000;
@@ -175,18 +179,149 @@
     };
   }
 
+  function closeGlobalSignalDetail() {
+    const overlay = root && root.document && root.document.getElementById('dashboardGlobalDetailOverlay');
+    if (overlay) overlay.style.display = 'none';
+    disposeChart(globalSignalDetailChart);
+    globalSignalDetailChart = null;
+    globalSignalDetailKey = '';
+  }
+
+  function mergeGlobalSignalHistory(quotes, histories) {
+    const byKey = new Map((histories || []).map(function(item) { return [item.key, item]; }));
+    return (quotes || []).map(function(item) {
+      const history = byKey.get(item.key);
+      if (!history) return item;
+      return Object.assign({}, item, {
+        value: finiteNumber(item.value),
+        trend: history.trend || [], candles: history.candles || [],
+        historySource: history.source, historyFetchedAt: history.fetchedAt,
+        historyStatus: history.historyStatus || history.status,
+        historyReason: history.refreshError || history.reason,
+        validCandleCount: history.validCandleCount,
+        dateConvention: history.dateConvention, sourceUrl: history.sourceUrl
+      });
+    });
+  }
+
+  function buildGlobalKlineOption(item) {
+    const rows = Array.isArray(item.candles) ? item.candles : [];
+    const option = buildIndexDetailOption({period: 'daily', name: item.name, history: {points: rows}});
+    const hasVolume = rows.some(function(row) { return finiteNumber(row.volume) !== null && Number(row.volume) > 0; });
+    option.series[0].data = rows.map(function(row) {
+      const values = [row.open, row.close, row.low, row.high].map(finiteNumber);
+      return values.every(function(value) { return value !== null; }) ? values : ['-', '-', '-', '-'];
+    });
+    option.series[0].barMaxWidth = 14;
+    option.series[1].name = '成交量（来源原值）';
+    option.series[1].data = rows.map(function(row) {
+      const value = finiteNumber(row.volume);
+      return value !== null && value > 0 ? value : null;
+    });
+    option.tooltip.formatter = function(params) {
+      const row = rows[params && params[0] && params[0].dataIndex] || {};
+      const digits = item.key === 'usd-cnh' ? 4 : 2;
+      const price = function(value) { const number = finiteNumber(value); return number === null ? '未提供' : number.toFixed(digits); };
+      return escapeHtml(row.date || '') + '<br>开 ' + price(row.open) + '　高 ' + price(row.high) +
+        '<br>低 ' + price(row.low) + '　收 ' + price(row.close) +
+        (hasVolume ? '<br>成交量（来源原值） ' + (finiteNumber(row.volume) === null ? '未提供' : Number(row.volume).toLocaleString('zh-CN')) : '');
+    };
+    if (!hasVolume) {
+      option.series = option.series.slice(0, 1);
+      option.grid = [{left: 70, right: 25, top: 25, bottom: 55}];
+      option.xAxis = option.xAxis.slice(0, 1);
+      option.yAxis = option.yAxis.slice(0, 1);
+      option.dataZoom.forEach(function(zoom) { zoom.xAxisIndex = [0]; });
+    } else {
+      option.grid[0].height = '58%';
+      option.grid[1].top = '72%';
+      option.grid[1].bottom = 55;
+    }
+    const start = rows.length > 90 ? (rows.length - 90) / rows.length * 100 : 0;
+    option.dataZoom.forEach(function(zoom) { zoom.start = start; zoom.filterMode = 'filter'; });
+    return option;
+  }
+
+  function openGlobalSignalDetail(key) {
+    const item = globalSignalItems.find(function(row) { return row.key === key; });
+    if (!item || !root || !root.document) return;
+    const overlay = root.document.getElementById('dashboardGlobalDetailOverlay');
+    const title = root.document.getElementById('dashboardGlobalDetailTitle');
+    const meta = root.document.getElementById('dashboardGlobalDetailMeta');
+    const chartNode = root.document.getElementById('dashboardGlobalDetailChart');
+    const source = root.document.getElementById('dashboardGlobalDetailSource');
+    const link = root.document.getElementById('dashboardGlobalDetailLink');
+    if (!overlay || !chartNode) return;
+    globalSignalDetailKey = key;
+    overlay.style.display = 'grid';
+    const display = globalSignalDisplay(item);
+    const trend = Array.isArray(item.trend) ? item.trend.filter(function(point) { return point && point.date; }) : [];
+    const candles = Array.isArray(item.candles) ? item.candles : [];
+    const hasCandles = candles.some(function(row) { return [row.open, row.high, row.low, row.close].every(function(value) { return finiteNumber(value) !== null; }); });
+    if (title) title.textContent = item.name || key;
+    if (meta) meta.textContent = (item.status === 'available'
+      ? display.value + (item.unit ? ' ' + item.unit : '') + ' · ' + display.change + ' · ' + (item.observedAt || '来源未提供更新时间')
+      : '报价暂不可用 · ' + (item.reason || '来源未返回有效值')) + (item.relevance ? ' · ' + item.relevance : '');
+    if (source) source.textContent = (item.historySource || item.source || '公开行情快照') + ' · ' +
+      (hasCandles ? '日 K · ' + candles[0].date + '—' + candles[candles.length-1].date + ' · 有效 ' +
+        (item.validCandleCount == null ? candles.length : item.validCandleCount) + '/' + candles.length + ' 根；缺失位置留空' +
+        (candles.some(function(row) { return finiteNumber(row.volume) !== null; }) ? ' · 成交量按来源原值显示' : ' · 成交量：来源未提供') +
+        (item.historyFetchedAt ? ' · 取数 ' + formatObservedAt(item.historyFetchedAt) : '') +
+        (item.historyStatus === 'cached' ? ' · 刷新未成功，保留历史缓存' : '') +
+        ' · ' + (item.dateConvention || '日 K 与最新报价可能不同步')
+      : trend.length ? '历史日线 ' + trend.length + ' 个日期；仅有收盘价，非完整 K 线' : '仅有最新快照，暂无可核验历史曲线' + (item.historyReason ? ' · ' + item.historyReason : ''));
+    if (link) {
+      const url = String(item.sourceUrl || '');
+      link.hidden = !/^https:\/\//i.test(url);
+      if (!link.hidden) link.href = url;
+    }
+    if ((!trend.length && !hasCandles) || !root.echarts) {
+      disposeChart(globalSignalDetailChart);
+      globalSignalDetailChart = null;
+      chartNode.innerHTML = '<div class="dashboard-market-unavailable">' +
+        (trend.length ? '历史日线已获取，图表组件暂不可用' : '该来源暂无可核验历史曲线；这里只显示真实报价，不补造 K 线。') + '</div>';
+      return;
+    }
+    if (!chartUsable(globalSignalDetailChart)) {
+      chartNode.innerHTML = '';
+      globalSignalDetailChart = root.echarts.init(chartNode);
+    }
+    const option = hasCandles ? buildGlobalKlineOption(item) : {
+      animation: false,
+      tooltip: { trigger: 'axis' },
+      grid: { left: 70, right: 25, top: 25, bottom: 42 },
+      xAxis: { type: 'category', boundaryGap: false, data: trend.map(function(point) { return point.date; }) },
+      yAxis: { type: 'value', scale: true },
+      series: [{ name: item.name || key, type: 'line', showSymbol: false, connectNulls: false,
+        data: trend.map(function(point) { return finiteNumber(point.close); }) }]
+    };
+    if (root.ChartTheme && root.ChartTheme.applyToOption) root.ChartTheme.applyToOption(option, {
+      dark: Boolean(root.document.body && root.document.body.classList.contains('dark'))
+    });
+    if (root.ChartTheme && root.ChartTheme.renderTo) {
+      globalSignalDetailChart = root.ChartTheme.renderTo(root.echarts, chartNode, globalSignalDetailChart, option, 'global-daily:' + key);
+    } else globalSignalDetailChart.setOption(option, true);
+    if (typeof globalSignalDetailChart.resize === 'function') globalSignalDetailChart.resize();
+  }
+
   function renderGlobalSignals(payload) {
     if (!root || !root.document) return;
     const box = root.document.getElementById('dashboardGlobalSignals');
     if (!box) return;
     const items = payload && Array.isArray(payload.items) ? payload.items : [];
+    globalSignalItems = items.map(function(item) {
+      return item.source ? item : Object.assign({}, item, {
+        source: payload && payload.source && payload.source.label || '公开行情快照（延迟未获来源保证）'
+      });
+    });
     const signature = JSON.stringify(items.map(function(item) {
-      return [item.key, item.status, item.value, item.changePct, item.observedAt,item.trend];
+      return [item.key, item.status, item.value, item.changePct, item.observedAt, item.trend, item.candles, item.historyStatus, item.historyFetchedAt, item.source, item.sourceUrl, item.reason];
     }));
     if (signature === globalSignalsSignature) return;
     globalSignalsSignature = signature;
     if (!items.length) {
       box.innerHTML = '<div class="dashboard-market-unavailable">跨市场行情暂不可用。</div>';
+      if (globalSignalDetailKey) closeGlobalSignalDetail();
       return;
     }
     box.innerHTML = items.map(function(item) {
@@ -198,26 +333,35 @@
       const min=Math.min(...values),span=Math.max(...values)-min || 1;
       let path='',connected=false;
       trend.forEach((point,index)=>{if(point.close==null){connected=false;return;}path+=(connected?'L':'M')+(index/Math.max(1,trend.length-1)*160).toFixed(2)+','+(24-(point.close-min)/span*21).toFixed(2)+' ';connected=true;});
-      const spark=trend.length>1?'<svg class="global-daily-spark" viewBox="0 0 160 27" preserveAspectRatio="none" role="img" aria-label="最近一个月日线走势"><path d="'+path+'" fill="none" stroke="currentColor" stroke-width="1.1" vector-effect="non-scaling-stroke"/></svg>':'';
-      return '<article class="dashboard-global-signal" data-direction="' + display.direction + '" data-state="' +
-        (available ? 'available' : 'unavailable') + '" title="' + escapeHtml(observed+' · '+(item.unit || '')+' · '+(item.source || '新浪公开快照 · 延迟未确定')) + '">' +
+      const spark=trend.length>1?'<svg class="global-daily-spark" viewBox="0 0 160 27" preserveAspectRatio="none" role="img" aria-label="历史日线走势，点击查看日K"><path d="'+path+'" fill="none" stroke="currentColor" stroke-width="1.1" vector-effect="non-scaling-stroke"/></svg>':'';
+      return '<article class="dashboard-global-signal" data-global-signal-key="' + escapeHtml(item.key) + '" role="button" tabindex="0" data-direction="' + display.direction + '" data-state="' +
+        (available ? 'available' : 'unavailable') + '" title="点击查看详情 · ' + escapeHtml(observed+' · '+(item.unit || '')+' · '+(item.source || '新浪公开快照 · 延迟未确定')) + '">' +
         '<header><strong>' + escapeHtml(item.name || item.key) + '</strong><small>' + escapeHtml(item.group || '') + '</small></header>' +
         '<div><b>' + display.value + '</b><span>' + display.change + '</span></div>' +
         spark+'<p>' + escapeHtml((item.unit ? item.unit + ' · ' : '') + observed) + '</p></article>';
     }).join('') + '<p class="dashboard-global-signals-note">' + escapeHtml(payload.source && payload.source.note ||
       '跨市场信号只作联动观察，相关不代表因果。') + '</p>';
+    if (globalSignalDetailKey) {
+      if (globalSignalItems.some(function(item) { return item.key === globalSignalDetailKey; })) openGlobalSignalDetail(globalSignalDetailKey);
+      else closeGlobalSignalDetail();
+    }
   }
 
   async function loadGlobalSignals(options) {
+    if (root && root.MarketBoard) return root.MarketBoard.load();
     if (!root || !root.ApiClient) return null;
     options = options || {};
     try {
       const [data,trends] = await Promise.all([
-        root.ApiClient.fetchJsonData('/api/market/global-signals' + (options.force ? '?refresh=1' : '')),
+        root.ApiClient.fetchJsonData('/api/market/global-signals' + (options.force ? '?refresh=1' : '')).then(function(quotes) {
+          quotes.items = mergeGlobalSignalHistory(quotes.items, globalHistories);
+          renderGlobalSignals(quotes);
+          return quotes;
+        }),
         root.ApiClient.fetchJsonData('/api/market/global-index-trends',{maxRetries:0}).catch(()=>({items:[]}))
       ]);
-      const byKey=new Map((trends.items || []).map(item=>[item.key,item]));
-      data.items=(data.items || []).map(item=>byKey.has(item.key)?Object.assign({},item,byKey.get(item.key)):item);
+      if (trends.items && trends.items.length) globalHistories = trends.items;
+      data.items = mergeGlobalSignalHistory(data.items, globalHistories);
       renderGlobalSignals(data);
       return data;
     } catch (error) {
@@ -1999,6 +2143,16 @@
     syncButtonState();
     renderSelection();
     root.document.addEventListener('click', function(event) {
+      const globalOverlay = root.document.getElementById('dashboardGlobalDetailOverlay');
+      if (event.target.closest('#dashboardGlobalDetailClose') || event.target === globalOverlay) {
+        closeGlobalSignalDetail();
+        return;
+      }
+      const globalCard = event.target.closest('[data-global-signal-key]');
+      if (globalCard) {
+        openGlobalSignalDetail(globalCard.getAttribute('data-global-signal-key'));
+        return;
+      }
       const detailClose = event.target.closest('#dashboardIndexDetailClose');
       const detailOverlay = root.document.getElementById('dashboardIndexDetailOverlay');
       if (detailClose || event.target === detailOverlay) {
@@ -2141,12 +2295,21 @@
       });
     }
     root.document.addEventListener('keydown', function(event) {
+      if ((event.key === 'Enter' || event.key === ' ') && event.target && event.target.matches && event.target.matches('[data-global-signal-key]')) {
+        event.preventDefault();
+        openGlobalSignalDetail(event.target.getAttribute('data-global-signal-key'));
+        return;
+      }
       if ((event.key === 'Enter' || event.key === ' ') && event.target && event.target.matches && event.target.matches('[data-index-key]')) {
         event.preventDefault();
         openIndexDetail(event.target.getAttribute('data-index-key'));
         return;
       }
       if (event.key !== 'Escape') return;
+      if (globalSignalDetailKey) {
+        closeGlobalSignalDetail();
+        return;
+      }
       if (indexDetailKey) {
         closeIndexDetail();
         return;
@@ -2179,20 +2342,24 @@
   }
 
   function resize() {
+    if (root && root.MarketBoard) root.MarketBoard.resize();
     if (chartUsable(comparisonChart) && typeof comparisonChart.resize === 'function') comparisonChart.resize();
     if (chartUsable(heatmapChart) && typeof heatmapChart.resize === 'function') heatmapChart.resize();
     if (chartUsable(indexDetailChart) && typeof indexDetailChart.resize === 'function') indexDetailChart.resize();
+    if (chartUsable(globalSignalDetailChart) && typeof globalSignalDetailChart.resize === 'function') globalSignalDetailChart.resize();
     miniCharts.forEach(function(chart) {
       if (chartUsable(chart) && typeof chart.resize === 'function') chart.resize();
     });
   }
 
   function rerenderTheme() {
+    if (root && root.MarketBoard) root.MarketBoard.rerenderTheme();
     indexCardsSignature = '';
     historyRenderSignature = '';
     heatmapRenderSignature = '';
     render(snapshot);
     renderIndexDetail();
+    if (globalSignalDetailKey) openGlobalSignalDetail(globalSignalDetailKey);
   }
 
   readPreferences();
@@ -2208,6 +2375,10 @@
     indexCardIntradayStatus,
     correlationCells,
     globalSignalDisplay,
+    mergeGlobalSignalHistory,
+    buildGlobalKlineOption,
+    openGlobalSignalDetail,
+    closeGlobalSignalDetail,
     renderGlobalSignals,
     loadGlobalSignals,
     buildHeatmapOption,

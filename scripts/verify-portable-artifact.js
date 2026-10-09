@@ -61,7 +61,7 @@ function stopProcessTree(child) {
 }
 
 async function verifyFrontendAssets(port) {
-  const files = ['index.html','css/fixed-workspace.css','css/compact-terminal.css','css/market-reading.css','js/modules/chartTheme.js','js/modules/fixedWorkspace.js','js/modules/homeTerminal.js','js/modules/compactTerminal.js','js/modules/news.js','js/modules/evidenceLibrary.js','js/modules/aiResearch.js','js/modules/capitalFlow.js','js/modules/realtimeChart.js','js/modules/darkRankBoardView.js','js/modules/hotMarket.js','js/modules/marketComparison.js','js/modules/pageRefresh.js','js/app.js','sw.js'];
+  const files = ['js/desktop-widget.html','css/market-widget.css','js/modules/marketBoard.js','js/modules/marketBoardPreferences.js','js/modules/desktopWidget.js','index.html','css/fixed-workspace.css','css/compact-terminal.css','css/market-reading.css','js/modules/chartTheme.js','js/modules/fixedWorkspace.js','js/modules/homeTerminal.js','js/modules/compactTerminal.js','js/modules/news.js','js/modules/evidenceLibrary.js','js/modules/aiResearch.js','js/modules/capitalFlow.js','js/modules/realtimeChart.js','js/modules/darkRankBoardView.js','js/modules/hotMarket.js','js/modules/marketComparison.js','js/modules/pageRefresh.js','js/app.js','sw.js'];
   const hash = bytes => createHash('sha256').update(bytes).digest('hex');
   files.push('css/industry-workspace.css', 'js/modules/industryWorkspace.js', 'js/modules/industryChain.js',
     'css/workspaces-refinement.css', 'js/modules/expertTracker.js', 'js/modules/klineChart.js', 'js/modules/stockList.js', 'js/modules/runtimeDiagnostics.js');
@@ -69,6 +69,8 @@ async function verifyFrontendAssets(port) {
   files.push('js/modules/portfolio.js');
   files.push('css/styles.css', 'js/modules/volumePace.js', 'js/modules/marketSignalModel.js');
   files.push('js/modules/search.js', 'js/modules/chartPriceLabels.js');
+  files.push('js/modules/sequentialSignalModel.js', 'js/modules/chartCoach.js',
+    'js/modules/watchlist.js', 'js/modules/recentStocks.js');
   for (const file of files) {
     const response = await fetch('http://127.0.0.1:' + port + '/' + file, {signal:AbortSignal.timeout(5000)});
     if (!response.ok) throw new Error('Packaged asset unavailable: ' + file);

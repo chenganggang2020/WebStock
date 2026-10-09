@@ -962,8 +962,9 @@ function applyQuoteSnapshot(quotes, meta) {
 function selectPositionStock(code) {
   const stock = stockLookup(code);
   if (stock && window.StockList) {
+    const navigation = { items: visiblePositions().map(pos => Object.assign({}, pos, { price: pos.currentPrice, change: pos.todayChange })), label: '当前账户持仓' };
     window.switchMainView('market');
-    window.StockList.selectStock(stock).catch(function(error) {
+    window.StockList.selectStock(stock, { navigation }).catch(function(error) {
       alert(error.message || 'Load stock failed');
     });
   }

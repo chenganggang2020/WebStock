@@ -170,8 +170,10 @@ test('daily view renders transparent metrics, auction cards and local signal rul
   assert.match(indexSource, /尾盘竞价观察/);
   assert.match(indexSource, /上交所集合竞价说明/);
   assert.match(klineSource, /analyzeDaily\(data\)/);
-  assert.match(klineSource, /calculateNineTurn\(data, nineTurnContext\)/);
-  assert.match(klineSource, /evaluateNineTurnHistory\(data, nineTurnContext\)/);
+  assert.match(klineSource, /prepareKlineSequenceSnapshot\(data, State\.currentKlineMeta, State\.currentPeriod\)/);
+  assert.match(klineSource, /nineTurnContext = sequenceSnapshot\.context/);
+  assert.match(klineSource, /calculateNineTurn\(sequenceSnapshot\.data, nineTurnContext\)/);
+  assert.match(klineSource, /evaluateNineTurnHistory\(sequenceSnapshot\.data, nineTurnContext\)/);
   assert.match(klineSource, /analyzeAuction\(data, minuteRows, minuteMeta, localRows, localMeta\)/);
   assert.match(klineSource, /detectLocalSignals\(data, minuteRows, minuteMeta\)/);
   assert.match(klineSource, /\/api\/minute\?code=/);

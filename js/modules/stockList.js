@@ -4,6 +4,8 @@ let suppressTagSchedule = false;
 let stockSelectionSequence = 0;
 let stockPageLoading = false;
 let quoteRefreshSequence = 0;
+let stockNavigation = { items: [], label: '' };
+let stockNavigationBound = false;
 const minutePrefetchRequests = new Map();
 const minutePrefetchQueue = [];
 const minutePrefetchQueuedCodes = new Set();
@@ -563,12 +565,12 @@ async function runRowAction(action, stock) {
   if (!stock) return;
   if (action === 'view') {
     if (window.switchMainView) window.switchMainView('market');
-    await selectStock(stock);
+    await window.StockList.selectStock(stock, { navigation: stockTableNavigation() });
     return;
   }
   if (action === 'analysis') {
     if (window.switchMainView) window.switchMainView('market');
-    await selectStock(stock);
+    await window.StockList.selectStock(stock, { navigation: stockTableNavigation() });
     if (window.Analysis) window.Analysis.openAnalysisPanel(stock);
     return;
   }
@@ -685,7 +687,7 @@ function renderStockTable(stocks) {
     const searchInput = document.getElementById('searchInput');
     if (window.Search && searchInput) window.Search.saveSearchHistory(searchInput.value || stock.code, stock);
     if (window.switchMainView) window.switchMainView('market');
-    await selectStock(stock);
+    await window.StockList.selectStock(stock, { navigation: stockTableNavigation() });
   }
 
   tbody.onclick = async function(event) {
@@ -741,7 +743,64 @@ function renderStockTable(stocks) {
   observeMinuteRows(tbody);
 }
 
-async function selectStock(stock) {
+function stockTableNavigation() {
+  const State = window.State;
+  return { items: State.searchQuery ? State.searchResults : State.allStocks,
+    label: State.searchQuery ? '全市场搜索 · ' + State.searchQuery : '全市场目录' };
+}
+
+function renderStockNavigation() {
+  const current = window.State.currentStock;
+  const index = stockNavigation.items.findIndex(item => current && item.code === current.code);
+  const previous = document.getElementById('previousStockBtn');
+  const next = document.getElementById('nextStockBtn');
+  const status = document.getElementById('stockNavigationStatus');
+  if (previous) previous.disabled = index <= 0;
+  if (next) next.disabled = index < 0 || index >= stockNavigation.items.length - 1;
+  if (status) status.textContent = index < 0 ? '选择列表中的股票后可连续查看'
+    : stockNavigation.label + ' · ' + (index + 1) + ' / ' + stockNavigation.items.length;
+}
+
+function captureStockNavigation(stock, navigation) {
+  const seen = new Set();
+  const items = (navigation && navigation.items || [stock]).filter(function(item) {
+    if (!item || !item.code || seen.has(item.code)) return false;
+    seen.add(item.code);
+    return true;
+  });
+  if (!seen.has(stock.code)) items.push(stock);
+  stockNavigation = { items: items.slice(), label: navigation && navigation.label || '当前股票' };
+}
+
+function stepStock(direction) {
+  const current = window.State.currentStock;
+  const index = stockNavigation.items.findIndex(item => current && item.code === current.code);
+  const nextIndex = index + (direction < 0 ? -1 : 1);
+  if (index < 0 || nextIndex < 0 || nextIndex >= stockNavigation.items.length) return Promise.resolve(false);
+  return window.StockList.selectStock(stockNavigation.items[nextIndex], { preserveNavigation: true }).then(() => true);
+}
+
+function bindStockNavigation() {
+  if (stockNavigationBound) return;
+  stockNavigationBound = true;
+  function step(direction) {
+    stepStock(direction).catch(function(error) { console.warn(error.message || error); });
+  }
+  const previous = document.getElementById('previousStockBtn');
+  const next = document.getElementById('nextStockBtn');
+  if (previous) previous.addEventListener('click', () => step(-1));
+  if (next) next.addEventListener('click', () => step(1));
+  document.addEventListener('keydown', function(event) {
+    if (!event.altKey || event.ctrlKey || event.metaKey || !['ArrowUp', 'ArrowDown'].includes(event.key)) return;
+    if (!['market', 'dashboard'].includes(window.State.currentMainView)) return;
+    if (event.target && event.target.closest && event.target.closest('input,textarea,select,[contenteditable="true"],dialog,[role="dialog"]')) return;
+    event.preventDefault();
+    step(event.key === 'ArrowUp' ? -1 : 1);
+  });
+  renderStockNavigation();
+}
+
+async function selectStock(stock, options) {
   stock = normalizeStock(stock);
   if (!stock || !stock.code) {
     alert('Invalid stock selection');
@@ -755,7 +814,11 @@ async function selectStock(stock) {
     return selectionId === stockSelectionSequence && State.currentStock && State.currentStock.code === stock.code;
   };
   if ((!State.currentStock || State.currentStock.code !== stock.code) && RealtimeChart.beginStockSelection) RealtimeChart.beginStockSelection(stock.code);
+  const reentering = State.currentStock && State.currentStock.code === stock.code && stockNavigation.items.some(item => item.code === stock.code);
   State.currentStock = stock;
+  if (options && options.navigation || (!reentering && !(options && options.preserveNavigation))) captureStockNavigation(stock, options && options.navigation);
+  renderStockNavigation();
+  if (window.HomeTerminal && window.HomeTerminal.renderWatchlist) window.HomeTerminal.renderWatchlist();
   if (window.DecisionGuide) window.DecisionGuide.refreshForStock(stock).catch(function(error) { console.warn(error.message || error); });
   if (window.RecentStocks) window.RecentStocks.record(stock).catch(function(error) { console.warn(error.message); });
   if (window.StockDetail) window.StockDetail.refresh(stock).catch(function(error) { console.warn(error.message); });
@@ -797,6 +860,8 @@ window.StockList = {
   primeStock,
   enrichStockTags,
   selectStock,
+  stepStock,
+  bindStockNavigation,
   runRowAction,
   miniChart: stockMiniChart,
   observeMinuteRows,

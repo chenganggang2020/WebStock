@@ -2,6 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
+const vm = require('node:vm');
 
 const root = path.resolve(__dirname, '..');
 
@@ -12,6 +13,86 @@ function loadSubject() {
     assert.fail('marketComparison view model is not implemented: ' + error.message);
   }
 }
+
+test('external K line uses true OHLC order, gaps and source-unit volume',()=>{
+  const view=loadSubject();
+  const item={name:'纽约原油 CFD',candles:[
+    {date:'2026-10-07',open:90,high:94,low:88,close:92,volume:150},
+    {date:'2026-10-08',open:93,high:94,low:90,close:null,volume:null}
+  ]};
+  const option=view.buildGlobalKlineOption(item);
+  assert.equal(option.series[0].type,'candlestick');
+  assert.deepEqual(option.series[0].data,[[90,92,88,94],['-','-','-','-']]);
+  assert.deepEqual(option.series[1].data,[150,null]);
+  assert.match(option.series[1].name,/来源原值/);
+  assert.match(option.tooltip.formatter([{dataIndex:0}]),/开.*90.*高.*94.*低.*88.*收.*92/);
+  assert.match(option.tooltip.formatter([{dataIndex:1}]),/未提供/);
+  assert.equal(option.dataZoom[0].type,'inside');
+  assert.equal(option.dataZoom[0].filterMode,'filter','price scale follows the visible candle window');
+  const withoutVolume=view.buildGlobalKlineOption({candles:[{date:'2026-10-07',open:10,high:12,low:9,close:11,volume:null}]});
+  assert.equal(withoutVolume.series.length,1,'an unavailable volume source must not render an all-zero panel');
+  assert.equal(withoutVolume.grid.length,1);
+});
+
+test('external history must not overwrite current quote price, timestamp or source',()=>{
+  const view=loadSubject();
+  const quote={key:'nikkei225',status:'available',value:69042.11,changePct:-1.42,observedAt:'2026-10-08 15:00',source:'新浪快照'};
+  const history={key:'nikkei225',status:'available',value:70000,changePct:1,observedAt:'2026-10-07',source:'Yahoo Finance',
+    candles:[{date:'2026-10-07',open:69000,high:71000,low:68000,close:70000}],fetchedAt:'2026-10-08T15:00:00Z',historyStatus:'cached'};
+  const result=view.mergeGlobalSignalHistory([quote],[history])[0];
+  assert.equal(result.value,quote.value);
+  assert.equal(result.changePct,quote.changePct);
+  assert.equal(result.observedAt,quote.observedAt);
+  assert.equal(result.source,quote.source);
+  assert.equal(result.historySource,history.source);
+  assert.equal(result.historyStatus,'cached');
+  assert.deepEqual(result.candles,history.candles);
+  const missing=view.mergeGlobalSignalHistory([{key:quote.key,status:'unavailable',reason:'quote failed'}],[history])[0];
+  assert.equal(missing.value,null,'history close is not a current quote');
+  assert.equal(missing.status,'unavailable');
+  assert.equal(missing.candles.length,1,'history remains accessible during a quote outage');
+});
+
+test('external quotes render before slow history and the clicked dialog uses candles',async()=>{
+  const nodes=new Map(['dashboardGlobalSignals','dashboardGlobalDetailOverlay','dashboardGlobalDetailTitle','dashboardGlobalDetailMeta','dashboardGlobalDetailChart','dashboardGlobalDetailSource']
+    .map(id=>[id,{innerHTML:'',textContent:'',style:{}}]));
+  let resolveHistory,chartOption;
+  const historyPromise=new Promise(resolve=>{resolveHistory=resolve;});
+  const browser={document:{getElementById:id=>nodes.get(id)||null},
+    ApiClient:{fetchJsonData:async url=>url.includes('global-index-trends')?historyPromise:
+      {items:[{key:'gold-future',name:'纽约黄金 CFD',value:4150,status:'available',observedAt:'2026-10-08 23:00'}]}},
+    echarts:{init:()=>({setOption:option=>{chartOption=option;},resize(){},dispose(){}})}};
+  vm.runInNewContext(fs.readFileSync(path.join(root,'js/modules/marketComparison.js'),'utf8'),{window:browser});
+  const loading=browser.MarketComparison.loadGlobalSignals();
+  try {
+    await settleHeatmapDrillTasks(1);
+    assert.match(nodes.get('dashboardGlobalSignals').innerHTML,/4150.00/,'history latency must not hide ready quotes');
+    resolveHistory({items:[{key:'gold-future',source:'新浪公开行情 · 日 K',status:'available',validCandleCount:1,volumeStatus:'unavailable',
+      candles:[{date:'2026-10-08',open:4136,high:4166,low:4128,close:4148,volume:null}],trend:[{date:'2026-10-08',close:4148}]}]});
+    await loading;
+    browser.MarketComparison.openGlobalSignalDetail('gold-future');
+    assert.equal(chartOption.series[0].type,'candlestick');
+    assert.deepEqual(Array.from(chartOption.series[0].data[0]),[4136,4148,4128,4166]);
+    assert.match(nodes.get('dashboardGlobalDetailMeta').textContent,/4150.00/);
+    assert.match(nodes.get('dashboardGlobalDetailSource').textContent,/成交量.*未提供/);
+  } finally {resolveHistory({items:[]});await loading;}
+});
+
+test('external quote refresh preserves the current K-line zoom window',()=>{
+  const nodes=new Map(['dashboardGlobalSignals','dashboardGlobalDetailOverlay','dashboardGlobalDetailTitle','dashboardGlobalDetailMeta','dashboardGlobalDetailChart','dashboardGlobalDetailSource']
+    .map(id=>[id,{innerHTML:'',textContent:'',style:{}}]));
+  let chartOption;
+  const chart={setOption:option=>{chartOption=option;},getOption:()=>chartOption,resize(){},dispose(){}};
+  const browser={document:{getElementById:id=>nodes.get(id)||null},echarts:{init:()=>chart},ChartTheme:require('../js/modules/chartTheme')};
+  vm.runInNewContext(fs.readFileSync(path.join(root,'js/modules/marketComparison.js'),'utf8'),{window:browser});
+  const item={key:'gold-future',name:'黄金 CFD',value:4150,status:'available',candles:[{date:'2026-10-08',open:4136,high:4166,low:4128,close:4148,volume:null}]};
+  browser.MarketComparison.renderGlobalSignals({items:[item]});
+  browser.MarketComparison.openGlobalSignalDetail(item.key);
+  chartOption.dataZoom.forEach(zoom=>{zoom.start=10;zoom.end=50;});
+  browser.MarketComparison.renderGlobalSignals({items:[{...item,value:4151}]});
+  assert.equal(chartOption.dataZoom[0].start,10);
+  assert.equal(chartOption.dataZoom[0].end,50);
+});
 
 test('homepage exposes index comparison, correlation and sector heatmap containers', () => {
   const source = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
@@ -36,6 +117,8 @@ test('homepage exposes index comparison, correlation and sector heatmap containe
   assert.match(source, /data-comparison-kind="style"[^>]*>风格/);
   assert.match(source, /id="dashboardIndexDetailOverlay"/);
   assert.match(source, /id="dashboardIndexDetailChart"/);
+  assert.match(source, /id="dashboardGlobalDetailOverlay"/);
+  assert.match(source, /id="dashboardGlobalDetailChart"/);
   assert.match(source, /data-index-detail-period="intraday"/);
   assert.match(source, /data-index-detail-period="daily"/);
 });
@@ -60,6 +143,38 @@ test('global signal display marks USD CNH as inverse for A-share interpretation'
   assert.equal(display.value, '7.1000');
   assert.equal(display.change, '+0.30%');
   assert.equal(display.direction, 'risk-off');
+});
+
+test('cross-market cards open a sourced detail and distinguish quote-only history', () => {
+  const nodes = new Map(['dashboardGlobalSignals','dashboardGlobalDetailOverlay','dashboardGlobalDetailTitle','dashboardGlobalDetailMeta','dashboardGlobalDetailChart','dashboardGlobalDetailSource'].map(id => [id,{innerHTML:'',textContent:'',style:{}}]));
+  const browser = {document:{getElementById:id=>nodes.get(id)||null}};
+  vm.runInNewContext(fs.readFileSync(path.join(root,'js/modules/marketComparison.js'),'utf8'),{window:browser});
+  const view = browser.MarketComparison;
+  view.renderGlobalSignals({items:[{key:'sp500-future',name:'标普500期货 CFD',status:'available',value:5900,changePct:0.2,source:'新浪公开快照',observedAt:'2026-10-08 21:00'}]});
+  assert.match(nodes.get('dashboardGlobalSignals').innerHTML,/data-global-signal-key="sp500-future"[^>]*role="button"[^>]*tabindex="0"/);
+  view.openGlobalSignalDetail('sp500-future');
+  assert.equal(nodes.get('dashboardGlobalDetailOverlay').style.display,'grid');
+  assert.match(nodes.get('dashboardGlobalDetailTitle').textContent,/标普500期货 CFD/);
+  assert.match(nodes.get('dashboardGlobalDetailChart').innerHTML,/暂无可核验历史/);
+  assert.match(nodes.get('dashboardGlobalDetailSource').textContent,/新浪公开快照/);
+});
+
+test('cross-market index detail plots only observed daily points and preserves source', () => {
+  const nodes = new Map(['dashboardGlobalSignals','dashboardGlobalDetailOverlay','dashboardGlobalDetailTitle','dashboardGlobalDetailMeta','dashboardGlobalDetailChart','dashboardGlobalDetailSource','dashboardGlobalDetailLink'].map(id => [id,{innerHTML:'',textContent:'',style:{},hidden:true}]));
+  let chartOption;
+  const browser = {document:{getElementById:id=>nodes.get(id)||null},echarts:{init:()=>({setOption:option=>{chartOption=option;},resize(){},dispose(){}})}};
+  vm.runInNewContext(fs.readFileSync(path.join(root,'js/modules/marketComparison.js'),'utf8'),{window:browser});
+  const view = browser.MarketComparison;
+  view.renderGlobalSignals({items:[{key:'nikkei225',name:'日经225',status:'available',value:69000,changePct:-1,
+    source:'Yahoo Finance · 日线',sourceUrl:'https://finance.yahoo.com/quote/%5EN225/history/',
+    trend:[{date:'2026-10-06',close:70000},{date:'2026-10-07',close:null},{date:'2026-10-08',close:69000}]}]});
+  view.openGlobalSignalDetail('nikkei225');
+  assert.deepEqual(Array.from(chartOption.series[0].data),[70000,null,69000]);
+  assert.equal(chartOption.series[0].connectNulls,false);
+  assert.match(nodes.get('dashboardGlobalDetailSource').textContent,/Yahoo Finance.*3 个日期/);
+  assert.equal(nodes.get('dashboardGlobalDetailLink').hidden,false);
+  view.closeGlobalSignalDetail();
+  assert.equal(nodes.get('dashboardGlobalDetailOverlay').style.display,'none');
 });
 
 test('available cross-market quotes without a provider timestamp stay labeled honestly', () => {
@@ -1823,6 +1938,31 @@ function delegatedClickTarget(selector, element) {
     closest: function(requestedSelector) { return requestedSelector === selector ? element : null; }
   };
 }
+
+test('cross-market card click reaches the detail dialog and Escape closes it', async () => {
+  const previousWindow = global.window;
+  const harness = createHeatmapDrillHarness();
+  for (const id of ['dashboardGlobalSignals','dashboardGlobalDetailOverlay','dashboardGlobalDetailTitle','dashboardGlobalDetailMeta','dashboardGlobalDetailChart','dashboardGlobalDetailSource']) {
+    harness.elements.set(id,{innerHTML:'',textContent:'',style:{}});
+  }
+  try {
+    delete require.cache[harness.modulePath];
+    global.window = harness.fakeWindow;
+    const view = require(harness.modulePath);
+    view.bind();
+    await settleHeatmapDrillTasks();
+    view.renderGlobalSignals({items:[{key:'sp500-future',name:'标普500期货 CFD',status:'available',value:5900,source:'新浪公开快照'}]});
+    const card = {getAttribute:()=> 'sp500-future'};
+    harness.documentHandlers.click[0]({target:delegatedClickTarget('[data-global-signal-key]',card)});
+    assert.equal(harness.elements.get('dashboardGlobalDetailOverlay').style.display,'grid');
+    harness.documentHandlers.keydown[0]({key:'Escape',target:{matches:()=>false}});
+    assert.equal(harness.elements.get('dashboardGlobalDetailOverlay').style.display,'none');
+  } finally {
+    delete require.cache[harness.modulePath];
+    if (previousWindow === undefined) delete global.window;
+    else global.window = previousWindow;
+  }
+});
 
 test('heatmap replaces its prior click handler before binding board drill behavior', async () => {
   const previousWindow = global.window;

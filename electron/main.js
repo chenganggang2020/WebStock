@@ -1,7 +1,7 @@
 const path = require('path');
 const fs = require('fs');
 const net = require('net');
-const { app, BrowserWindow, Menu, dialog, shell, ipcMain, Tray, session } = require('electron');
+const { app, BrowserWindow, Menu, dialog, shell, ipcMain, Tray, session, screen } = require('electron');
 const {
   migrateLegacyDatabase,
   readRegisteredDataDirectory,
@@ -32,6 +32,7 @@ let douyinSessionManager = null;
 let backgroundMode = null;
 let tailscaleAccess = null;
 let servicesStopped = false;
+let marketWidget = null;
 const showShutdownPending = require('./shutdownWindow').createShutdownWindow({ BrowserWindow, getParentWindow: () => mainWindow });
 const douyinLoginNotice = createDouyinLoginNotice({
   dialog, getParentWindow: () => mainWindow,
@@ -215,6 +216,26 @@ function assertMainWindowSender(event) {
   }
 }
 
+function assertWidgetSender(event) {
+  let trustedMain = false;
+  try {
+    const url = new URL(event.senderFrame.url);
+    trustedMain = isMainDiagnosticSender(event) && url.origin === 'http://127.0.0.1:' + runtimeConfig.port && ['/', '/index.html'].includes(url.pathname);
+  } catch (_) {}
+  if (!trustedMain && !marketWidget?.isSender(event)) throw new Error('不允许从此窗口调用挂件功能');
+}
+ipcMain.handle('webstock:market-widget-state', event => {
+  assertWidgetSender(event); return marketWidget?.state() || { enabled: false, alwaysOnTop: true };
+});
+ipcMain.handle('webstock:market-widget-set', (event, input) => {
+  assertWidgetSender(event);
+  if (!marketWidget) throw new Error('挂件尚未初始化');
+  return marketWidget.set(input && typeof input === 'object' ? input : {});
+});
+ipcMain.handle('webstock:market-widget-open-main', event => {
+  assertWidgetSender(event); backgroundMode?.showMainWindow();
+});
+
 async function startServer() {
   const migration = await migrateLegacyDatabase({
     portable: runtimeConfig.portable,
@@ -255,6 +276,7 @@ async function stopBackgroundServices() {
   if (shutdownTask) return shutdownTask;
   shutdownTask = (async function() {
     log('Shutdown: requested; draining current tasks');
+    marketWidget?.dispose();
     if (desktopBackend) await desktopBackend.stop();
     douyinLoginNotice.dispose();
     if (douyinSessionManager) douyinSessionManager.dispose();
@@ -271,6 +293,7 @@ function createBackgroundController() {
     Menu,
     iconPath: path.join(__dirname, '..', 'icons', process.platform === 'win32' ? 'webstock.ico' : 'webstock-512.png'),
     getMainWindow: function() { return mainWindow; },
+    onToggleWidget: () => marketWidget?.set({ enabled: !marketWidget.state().enabled }),
     onSyncAll: async function() {
       if (!desktopBackend) throw new Error('后台数据服务尚未启动');
       return desktopBackend.call('syncAll', [], { timeoutMs: 0 });
@@ -426,6 +449,8 @@ if (!gotLock) {
       createBackgroundController();
     }
     createWindow(url);
+    marketWidget = require('./marketWidget').createMarketWidget({ BrowserWindow, screen, userDataDir: runtimeConfig.userDataDir, url, log });
+    if (process.env.WEBSTOCK_BUILD_SMOKE_TEST !== '1') marketWidget.restore();
   }).catch(function(error) {
     log('WebStock startup failed', error);
     dialog.showErrorBox('程序启动失败', error.stack || error.message || String(error));

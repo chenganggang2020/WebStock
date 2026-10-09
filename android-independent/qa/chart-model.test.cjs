@@ -1,0 +1,13 @@
+const {test}=require('node:test');
+const assert=require('node:assert/strict');
+const fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
+const root=path.resolve(__dirname,'..');
+const model=require('../web/chart-model.js');
+const desktop=path.resolve(__dirname,'../../js/modules');
+const readIndicators=file=>{const box={window:{}};vm.runInNewContext(fs.readFileSync(file,'utf8'),box);return box.window.Indicators;};
+const bars=Array.from({length:80},(_,i)=>({date:new Date(Date.UTC(2026,0,i+1)).toISOString().slice(0,10),open:10+i/8,close:10+i/8+Math.sin(i),high:12+i/8,low:8+i/8,volume:100+i*11}));
+for(const name of ['calcMACD','calcKDJ','calcRSI','calcCCI','calcOBV','calcATR']) test(name+' matches desktop on identical bars',()=>{const a=structuredClone(bars),b=structuredClone(bars);readIndicators(path.join(desktop,'indicators.js'))[name](a);model.indicators[name](b);assert.deepEqual(b,a);});
+test('MA keeps warmup missing and custom periods match desktop',()=>{const a=structuredClone(bars),b=structuredClone(bars);readIndicators(path.join(desktop,'indicators.js')).calcMAFromData(a,[5,10,30,60]);model.indicators.calcMAFromData(b,[5,10,30,60]);assert.deepEqual(b,a);assert.equal(b[0].ma60,null);});
+test('MA settings reject malformed and excessive periods',()=>{assert.deepEqual(model.parseMA('5，10 20,60'),[5,10,20,60]);for(const text of ['', '0,5','5,x','1001','1,2,3,4,5,6,7,8,9'])assert.throws(()=>model.parseMA(text));});
+test('minute axis reserves afternoon without filling missing trades',()=>{const r=model.minuteSeries([{time:'0930',price:10,volume:100,averagePrice:10},{time:'1300',price:11,volume:50,averagePrice:10.5}]);assert.equal(r.times.length,242);assert.equal(r.times[120],'11:30');assert.equal(r.times[121],'13:00');assert.equal(r.rows[1],null);assert.equal(r.rows[121].price,11);assert.equal(r.rows[241],null);});
+test('nine turn resets, does not repeat nine and retains provisional state',()=>{const rows=bars.slice(0,18).map((r,i)=>({...r,close:20+i}));const series=model.nineTurn(rows,'2026-05-01T00:00:00Z');assert.deepEqual(series.filter(r=>r.count>0&&r.count<=9).map(r=>r.count),[1,2,3,4,5,6,7,8,9]);rows[12].incomplete=true;assert.equal(model.nineTurn(rows.slice(0,13),'2026-05-01T00:00:00Z')[12].triggered,false);});
