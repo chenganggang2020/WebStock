@@ -285,7 +285,8 @@
     const source = document.getElementById('marketOverviewSources');
     if (!status || !source) return;
     const partial = isPartialSnapshot(results);
-    status.textContent = partial ? '部分数据不可用，其余内容已更新' : '市场总览已更新';
+    const failed = snapshot.refreshErrors && Object.keys(snapshot.refreshErrors).length;
+    status.textContent = failed ? '部分刷新失败，保留上次结果；无历史项显示暂无' : partial ? '部分数据不可用，其余内容已更新' : '市场总览已更新';
     status.dataset.state = partial ? 'partial' : 'ready';
     const sources = [];
     if (snapshot.indices && snapshot.indices.source) sources.push(snapshot.indices.source.label);
@@ -308,38 +309,40 @@
       status.dataset.state = 'loading';
     }
     const historySequenceAtStart = indexHistorySequence;
-    const indicesRequest = root.ApiClient.fetchJsonData('/api/market/indices').then(function(value) {
-      if (requestId !== loadSequence) return value;
-      snapshot = Object.assign({}, snapshot || {}, { indices: value });
-      renderIndices(value);
+    function publish(key, value, error) {
+      if (requestId !== loadSequence) return;
+      // A newer user-selected history window owns its data, including on failure.
+      if (key === 'indexHistory' && (indexHistorySequence !== historySequenceAtStart || currentIndexWindow() !== indexWindow)) return;
+      const refreshErrors = Object.assign({}, snapshot && snapshot.refreshErrors);
+      if (error) refreshErrors[key] = error.message || '刷新失败';
+      else delete refreshErrors[key];
+      snapshot = Object.assign({}, snapshot || {}, { refreshErrors });
+      if (!error) snapshot[key] = value;
+      if (key === 'indices') renderIndices(snapshot.indices);
+      if (key === 'sentiment') renderBreadth(snapshot.sentiment);
+      if (key === 'indices' || key === 'hot') renderFlow(snapshot.hot, snapshot.indices);
+      if (key === 'hot') renderSectors(snapshot.hot);
       if (root.Dashboard && typeof root.Dashboard.renderMarketCockpit === 'function') {
-        root.Dashboard.renderMarketCockpit(snapshot);
+        root.Dashboard.renderMarketCockpit(snapshot, { changedSection: error ? 'status' : key });
       }
-      return value;
-    });
+    }
+    function section(key, url) {
+      return root.ApiClient.fetchJsonData(url).then(function(value) {
+        publish(key, value, null);
+        return value;
+      }, function(error) {
+        publish(key, null, error);
+        throw error;
+      });
+    }
     const request = Promise.allSettled([
-      indicesRequest,
-      root.ApiClient.fetchJsonData('/api/sentiment/overview' + refresh),
-      root.ApiClient.fetchJsonData('/api/hot-market/overview?fast=1' + (options.refresh ? '&refresh=1' : '')),
-      root.ApiClient.fetchJsonData('/api/market/index-history?window=' + indexWindow)
+      section('indices', '/api/market/indices'),
+      section('sentiment', '/api/sentiment/overview' + refresh),
+      section('hot', '/api/hot-market/overview?fast=1' + (options.refresh ? '&refresh=1' : '')),
+      section('indexHistory', '/api/market/index-history?window=' + indexWindow)
     ]).then(function(results) {
       if (requestId !== loadSequence) return snapshot;
-      const preserveNewerHistory = indexHistorySequence !== historySequenceAtStart ||
-        currentIndexWindow() !== indexWindow;
-      const latestHistory = preserveNewerHistory && snapshot && snapshot.indexHistory
-        ? snapshot.indexHistory
-        : (results[3].status === 'fulfilled' ? results[3].value : null);
-      snapshot = Object.assign({}, snapshot || {}, {
-        indices: results[0].status === 'fulfilled' ? results[0].value : null,
-        sentiment: results[1].status === 'fulfilled' ? results[1].value : null,
-        hot: results[2].status === 'fulfilled' ? results[2].value : null,
-        indexHistory: latestHistory
-      });
-      loadedAt = Date.now();
-      renderIndices(snapshot.indices);
-      renderBreadth(snapshot.sentiment);
-      renderFlow(snapshot.hot, snapshot.indices);
-      renderSectors(snapshot.hot);
+      loadedAt = results.every(item => item.status === 'fulfilled') ? Date.now() : 0;
       renderStatus(results);
       return snapshot;
     }).finally(function() {

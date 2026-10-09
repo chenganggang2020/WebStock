@@ -118,8 +118,9 @@ function dashboardMarketSourceLabel(value) {
   return labels[String(value || '')] || String(value || '');
 }
 
-function dashboardRenderMarketCockpit(snapshot) {
+function dashboardRenderMarketCockpit(snapshot, options) {
   snapshot = snapshot || {};
+  dashboardMarketSnapshot = snapshot;
   if (window.HomeTerminal) window.HomeTerminal.renderMarket(snapshot);
   const indicesBox = document.getElementById('dashboardMarketIndices');
   const sectorsBox = document.getElementById('dashboardMarketSectors');
@@ -259,15 +260,20 @@ function dashboardRenderMarketCockpit(snapshot) {
       && hotData && hotData.marketStatus === 'available' && !hotData.degraded
       && completeBoardChanges
       && completeFlow;
-    sourcesBox.dataset.state = overviewReady ? 'ready' : 'partial';
+    const failedSections = Object.keys(snapshot.refreshErrors || {});
+    const refreshFailed = Boolean(snapshot.error || failedSections.length);
+    sourcesBox.dataset.state = overviewReady && !refreshFailed ? 'ready' : 'partial';
     const stateText = overviewReady
       ? '完整'
       : '部分可用（' + (hotData && hotData.degraded ? '板块源降级' : '存在缺失或不可用字段') + '）';
     sourcesBox.textContent = '驾驶舱基础数据来源：' + (uniqueSources.join(' · ') || '当前来源暂不可用') +
       ' · 抓取时间：' + (observedTimes.join('；') || '未记录') +
-      ' · 驾驶舱基础数据状态：' + stateText + ' · 板块云图状态见云图图例';
+      ' · 驾驶舱基础数据状态：' + stateText + ' · 板块云图状态见云图图例' +
+      (refreshFailed ? ' · 刷新失败：保留上次结果（无历史则暂无）；' +
+        (snapshot.error || failedSections.map(key => ({ indices: '指数', sentiment: '情绪', hot: '板块', indexHistory: '指数历史' }[key] || key)).join('、')) : '');
   }
-  if (window.MarketComparison && typeof window.MarketComparison.render === 'function') {
+  if (!['sentiment', 'status'].includes(options && options.changedSection) &&
+      window.MarketComparison && typeof window.MarketComparison.render === 'function') {
     window.MarketComparison.render(snapshot);
   }
 }
@@ -279,9 +285,10 @@ async function dashboardLoadMarketCockpit(options) {
     dashboardRenderMarketCockpit(dashboardMarketSnapshot);
     return dashboardMarketSnapshot;
   }
-  dashboardMarketSnapshot = await window.MarketOverview.load({ refresh: Boolean(options.force) });
-  dashboardRenderMarketCockpit(dashboardMarketSnapshot);
-  return dashboardMarketSnapshot;
+  const result = await window.MarketOverview.load({ refresh: Boolean(options.force) });
+  // Progressive updates have already painted this exact snapshot.
+  if (result !== dashboardMarketSnapshot) dashboardRenderMarketCockpit(result);
+  return result;
 }
 
 function dashboardTodayKey() {
@@ -324,7 +331,9 @@ async function dashboardLoad(options) {
   options = options || {};
   const tasks = [
     dashboardLoadMarketCockpit(options).catch(function(error) {
-      dashboardMarketSnapshot = { error: error && error.message ? error.message : '市场驾驶舱加载失败' };
+      dashboardRenderMarketCockpit(Object.assign({}, dashboardMarketSnapshot || {}, {
+        error: error && error.message ? error.message : '市场驾驶舱加载失败'
+      }));
     })
   ];
   if (window.VolumePace && typeof window.VolumePace.load === 'function') {
@@ -339,7 +348,6 @@ async function dashboardLoad(options) {
   }
   await Promise.all(tasks);
   dashboardSetUpdatedAt();
-  dashboardRefreshCards();
   dashboardStartSentimentAutoRefresh();
 }
 
@@ -347,7 +355,7 @@ function dashboardSetUpdatedAt() {
   const target = document.getElementById('dashboardUpdatedAt');
   if (!target) return;
   target.className = 'muted';
-  target.textContent = '最后更新：' + (
+  target.textContent = '最近检查完成：' + (
     window.WebStockTime && window.WebStockTime.formatDateTime
       ? window.WebStockTime.formatDateTime(new Date())
       : new Date().toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' })

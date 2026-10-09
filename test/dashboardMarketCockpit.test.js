@@ -25,6 +25,7 @@ function loadDashboardContext(overrides) {
       State: {},
       MarketOverview: overrides.MarketOverview || MarketOverview,
       MarketComparison: overrides.MarketComparison,
+      VolumePace: overrides.VolumePace,
       apiFetch: overrides.apiFetch || (async function() { return {}; }),
       WebStockTime: null
     },
@@ -41,6 +42,34 @@ function loadDashboardContext(overrides) {
   vm.runInContext(dashboardSource, context);
   return { context, boxes };
 }
+
+test('slow volume completion does not repaint an already published cockpit', async () => {
+  let finishVolume, renders = 0;
+  const { context } = loadDashboardContext({
+    MarketOverview: { load: async () => ({ sentiment: null }) },
+    MarketComparison: { render: () => renders++ },
+    VolumePace: { load: () => new Promise(resolve => { finishVolume = resolve; }) }
+  });
+  const loading = context.window.Dashboard.load();
+  await new Promise(setImmediate);
+  assert.equal(renders, 1, 'cockpit appears before slow volume');
+  finishVolume(); await loading;
+  assert.equal(renders, 1, 'no redundant final repaint');
+});
+
+test('failed cockpit refresh retains the last snapshot and displays a failure', async () => {
+  let fail = false;
+  const values = [];
+  const snapshot = { indices: { indices: [] }, sentiment: { aShare: { score: 51 } } };
+  const { context, boxes } = loadDashboardContext({
+    MarketOverview: { load: async () => { if (fail) throw new Error('fixture timeout'); return snapshot; } },
+    MarketComparison: { render: value => values.push(value) }
+  });
+  await context.window.Dashboard.load(); fail = true;
+  await context.window.Dashboard.load({ force: true });
+  assert.equal(values.at(-1).indices, snapshot.indices);
+  assert.match(boxes.get('dashboardMarketSources').textContent, /刷新失败/);
+});
 
 test('unavailable sentiment has no fear color and explains missing data', () => {
   const { context, boxes } = loadDashboardContext();
