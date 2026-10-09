@@ -147,7 +147,9 @@
     const risks = root.Dashboard ? root.Dashboard.buildRisks().slice(0, 6) : [];
     html('homeRiskRows', risks.length ? risks.map(risk => '<button type="button" class="home-risk"' + (risk.code ? ' data-home-stock="' + escape(risk.code) + '"' : ' data-home-page="watchlist"') + '><strong>' + escape(risk.title) + '</strong><span>' + escape(risk.detail) + '</span></button>').join('') : '<p class="home-empty">当前无可用风险提示；不代表没有风险。</p>');
     const sources = (hot.sources || []).join(' / ') || '板块来源暂不可用';
-    el('homeSources').textContent = sources + ' · 板块更新 ' + displayTime(hot.generatedAt) + ' · 净额为供应商模型估算，行业与概念不可相加。';
+    const failed = Object.keys(snapshot.refreshErrors || {}).map(key => ({ indices: '指数', sentiment: '情绪', hot: '板块', indexHistory: '指数历史' }[key] || key));
+    el('homeSources').textContent = sources + ' · 板块更新 ' + displayTime(hot.generatedAt) + ' · 净额为供应商模型估算，行业与概念不可相加。' +
+      (snapshot.error || failed.length ? ' · 刷新失败，保留上次结果（无历史则暂无）：' + (snapshot.error || failed.join('、')) : '');
     renderWatchlist();
   }
 
