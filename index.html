@@ -22,6 +22,7 @@
   <link rel="stylesheet" href="css/market-reading.css">
   <link rel="stylesheet" href="css/industry-workspace.css">
   <link rel="stylesheet" href="css/workspaces-refinement.css">
+  <link rel="stylesheet" href="css/home-workbench.css">
 </head>
 
 <body class="compact-terminal">
@@ -30,6 +31,7 @@
       <div><strong>行情与资讯</strong><span>搜索结果 · 重点资讯 · 日线观察</span></div>
       <button id="marketDrawerClose" type="button" aria-label="关闭行情抽屉" title="关闭行情抽屉">✕</button>
     </header>
+    <nav class="market-browser-tools" aria-label="行情浏览方式"><button type="button" data-browser-tab="stocks" aria-pressed="true">股票</button><button type="button" data-browser-tab="news" aria-pressed="false">资讯</button><button type="button" id="marketDrawerPin" aria-pressed="true">取消固定</button></nav>
     <aside id="hotSidebarPanel" class="hot-sidebar-panel sidebar-news-panel" aria-label="重点资讯" aria-live="polite"></aside>
     <aside id="marketSidebarPanel" class="market-sidebar-panel" aria-label="日线关键信息" hidden>
       <div id="marketSidebarPlaceholder" class="market-sidebar-placeholder">
@@ -151,20 +153,22 @@
 
     <div id="dashboardView" class="main-view active">
       <div class="home-terminal">
+        <div id="homeMarketDock"></div>
         <aside id="homeWatchPane" class="home-panel" aria-label="首页自选与分组">
-          <header><strong>股票浏览</strong><button type="button" id="homeManageWatchlist" class="small-btn">自选管理</button></header>
-          <select id="homeGroups" aria-label="股票范围与自选分组"></select>
+          <header><strong>同花顺分组与股票</strong><button type="button" id="homeManageWatchlist" class="small-btn">自选管理</button></header>
+          <div class="home-browser-columns"><nav id="homeGroups" aria-label="股票范围与同花顺分组"></nav><div class="home-browser-list">
           <input id="homeWatchSearch" type="search" placeholder="代码 / 名称 / 拼音" aria-label="搜索左侧股票">
           <button id="homeAddWatchlist" type="button" class="small-btn" disabled>选中股票后加入自选</button>
           <div id="homeWatchRows"><p class="home-empty">正在读取本机自选…</p></div>
           <button id="homeLoadMore" type="button" class="small-btn" hidden>显示更多（60只）</button>
           <footer id="homeWatchStatus">本地自选与同花顺只读分组分别展示</footer>
+          </div></div>
         </aside>
         <div class="home-terminal-main">
           <section id="homeIndicators" aria-label="首页指数情绪与量能">
             <div id="homeIndices"></div>
             <article class="home-panel"><header><strong>市场情绪</strong></header><div id="homeSentiment" class="home-metrics">等待真实市场数据</div></article>
-            <article class="home-panel"><header><strong>量能对比</strong></header><div id="homeVolume" class="home-metrics">等待同时间量能数据</div></article>
+            <article class="home-panel home-volume-panel"><header><strong>量能对比</strong></header><div id="homeVolume" class="home-metrics">等待同时间量能数据</div><div id="homeVolumeCurve" aria-label="量能同比与环比曲线"></div></article>
           </section>
           <section class="home-chart-row" aria-label="个股主图与盘口联动">
             <div id="homeChartHost" class="home-panel"></div>

@@ -84,7 +84,7 @@
     root.CompactTerminal.open('market');root.State.currentPeriod='day';root.State.currentView='kline';
     root.StockList.selectStock({code:row.code,name:row.name,market:row.venue?.toLowerCase(),price:row.price,change:row.changeRatio==null?null:row.changeRatio*100}).catch(error=>console.warn(error));
     let back=el('darkBoardBack');
-    if(!back){back=root.document.createElement('button');back.id='darkBoardBack';back.className='small-btn';back.textContent='返回资金榜';el('chartTitle').parentElement.appendChild(back);back.onclick=()=>root.CompactTerminal.open('darkFlow');}
+    if(!back){back=root.document.createElement('button');back.id='darkBoardBack';back.className='small-btn';back.textContent='返回主页';el('chartTitle').parentElement.appendChild(back);back.onclick=()=>root.returnToHome();}
   }
   function reset() {generation++;pending=null;last=null;sectors=null;attemptedAt=0;capRetries=0;refreshFollowupUntil=0;clearTimeout(capTimer);['In','Out','Sectors','Summary'].forEach(k=>el('darkBoard'+k).innerHTML='');}
   function bind() {

@@ -36,6 +36,8 @@ function applyUiStyle(style, persist) {
 }
 
 function setMarketDrawerOpen(open, focusClose = true) {
+  if (open && window.HomeTerminal?.isDocked()) { document.getElementById('homeWatchSearch')?.focus(); return; }
+  if (!open && window.HomeTerminal?.isDocked()) return;
   const drawer = document.getElementById('marketDrawer');
   const toggle = document.getElementById('marketDrawerToggle');
   if (!drawer || !toggle) return;
@@ -66,7 +68,7 @@ function bindMarketDrawer() {
   toggle.addEventListener('click', function() {
     setMarketDrawerOpen(!document.body.classList.contains('market-drawer-open'));
   });
-  close.addEventListener('click', function() { setMarketDrawerOpen(false); });
+  close.addEventListener('click', function() { if (window.HomeTerminal?.isDocked()) window.HomeTerminal.setPinned(false); setMarketDrawerOpen(false); });
   backdrop.addEventListener('click', function() { setMarketDrawerOpen(false); });
   document.addEventListener('keydown', function(event) {
     if (event.key === 'Escape') setMarketDrawerOpen(false);
@@ -494,8 +496,8 @@ function syncMainViewHistory(view, options) {
   const state = { mainView: view, terminalPage: options && options.terminalPage || view };
   const url = '#' + encodeURIComponent(state.terminalPage);
   if (window.history.state && window.history.state.mainView === view && window.history.state.terminalPage === state.terminalPage) return;
-  if (options && options.replace) window.history.replaceState(state, '', url);
-  else window.history.pushState(state, '', url);
+  // Workspaces are destinations, not a browser navigation stack.
+  window.history.replaceState(state, '', url);
 }
 
 function setupPortfolioWatchlistPage() {
@@ -554,6 +556,7 @@ function switchMainView(view, options) {
     const requestedPage = window.CompactTerminal.resolve(options.terminalPage || view);
     if (requestedPage && !window.FixedWorkspace.canShow(requestedPage)) return;
   }
+  State.navigationRevision = (State.navigationRevision || 0) + 1;
   State.currentMainView = view;
   if (window.HomeTerminal) window.HomeTerminal.sync(view);
   if (window.EastmoneyDarkStocks) window.EastmoneyDarkStocks.sync();
@@ -693,9 +696,27 @@ window.addEventListener('webstock:network-recovered', function() {
   if (request) request.catch(function(error) { console.warn(error.message || error); });
 });
 
-window.addEventListener('popstate', function(event) {
-  if (!event.state || !event.state.mainView) return;
-  switchMainView(event.state.mainView, { history: false, terminalPage: event.state.terminalPage });
+function returnToHome() {
+  const dialogs = Array.from(document.querySelectorAll('dialog[open]'));
+  if (dialogs.length) { dialogs[dialogs.length - 1].close(); return; }
+  if (document.body.classList.contains('market-drawer-open')) {
+    setMarketDrawerOpen(false);
+    syncMainViewHistory(window.State.currentMainView, { replace: true });
+    return;
+  }
+  const modal = Array.from(document.querySelectorAll('.modal-overlay')).reverse().find(function(el) {
+    return !el.hidden && getComputedStyle(el).display !== 'none';
+  });
+  if (modal) {
+    const close = modal.querySelector('[data-close], .modal-close, .close-btn, [aria-label="关闭"]');
+    if (close) { close.click(); return; }
+  }
+  switchMainView('dashboard', { replace: true });
+}
+window.returnToHome = returnToHome;
+window.addEventListener('popstate', returnToHome);
+document.addEventListener('keydown', function(event) {
+  if (event.altKey && event.key === 'ArrowLeft') { event.preventDefault(); returnToHome(); }
 });
 
 let chartResizeTimer = null;

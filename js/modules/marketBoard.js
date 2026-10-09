@@ -27,7 +27,7 @@
     if (renderedBox !== box) {
       box.innerHTML = '<div class="market-board-toolbar"><strong>跨市场盯盘</strong><span id="marketBoardStatus">1分钟数据 · 30秒检查 · 北京时间</span><button type="button" id="marketBoardWidget">桌面挂件</button></div>' +
         '<details id="marketBoardChoices" class="market-board-choices"><summary id="marketBoardSelectionCount"></summary><div id="marketBoardChoiceList"></div>' +
-        '<button type="button" id="marketBoardDefaults">恢复默认</button><button type="button" id="marketBoardNone">隐藏全部</button><p id="marketBoardOrder"></p></details>' +
+        '<div id="homeIndexChoices" aria-label="国内指数展示设置"></div><button type="button" id="marketBoardDefaults">恢复默认</button><button type="button" id="marketBoardNone">隐藏跨市场</button><p id="marketBoardOrder"></p></details>' +
         '<div id="marketBoardCards" style="display:contents"></div>' +
         '<p class="dashboard-global-signals-note">公开源延迟未保证；缺口保留。点击卡片查看分时 / 日 K。指数、CFD、汇率分别标识。</p>';
       renderedBox = box;
@@ -105,6 +105,7 @@
     chart.resize();
   }
   async function open(key, nextPeriod = 'intraday') {
+    root.HomeTerminal?.activateInstrument('global');
     bind(); detailKey = key; period = nextPeriod; const request = ++detailRequest;
     detailSignature = ''; lastDetailItem = null;
     el('dashboardGlobalDetailOverlay').style.display = 'grid';
@@ -121,7 +122,7 @@
       drawDetail(item);
     } catch (error) { if (request === detailRequest) el('dashboardGlobalDetailSource').textContent = '读取失败：' + error.message; }
   }
-  function close() { detailRequest++; detailKey = ''; chart?.dispose(); chart = null; detailSignature = ''; lastDetailItem = null; el('dashboardGlobalDetailOverlay').style.display = 'none'; }
+  function close() { detailRequest++; detailKey = ''; chart?.dispose(); chart = null; detailSignature = ''; lastDetailItem = null; el('dashboardGlobalDetailOverlay').style.display = 'none'; root.HomeTerminal?.closeInstrument('global'); }
   async function toggleWidget() {
     const status = el('marketBoardStatus');
     if (!root.webstockDesktop?.setMarketWidget) { status.textContent = '悬浮挂件需在 Windows 安装版中开启；浏览器不支持系统置顶。'; return; }

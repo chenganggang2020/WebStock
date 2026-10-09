@@ -3,7 +3,7 @@
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   if (root) root.CompactTerminal = api;
 })(typeof window !== 'undefined' ? window : null, function(root) {
-  const groups = { market: '盯盘', watch: '自选与账户', capital: '资金', research: '研究', collect: '采集', paper: '模拟', settings: '设置' };
+  const groups = { market: '主页', watch: '自选与账户', capital: '资金', research: '研究', collect: '采集', paper: '模拟', settings: '设置' };
   const pages = [
     ['dashboard', '市场总览', 'market'], ['market', '个股详情', 'market'], ['sectors', '板块观察', 'market'],
     ['auction', '集合竞价', 'market', 'market', 'openingAuctionSummary'], ['etf', 'ETF / 期货盘中', 'market'],
@@ -66,12 +66,16 @@
     const nav = doc.getElementById('terminalWorkspaces');
     const tabs = doc.getElementById('mainTabs');
     const picker = doc.getElementById('terminalPageSelect');
+    const menu = doc.createElement('details'); menu.className = 'workspace-menu';
+    const summary = doc.createElement('summary'); summary.textContent = '工作区 ▾'; menu.appendChild(summary);
+    const menuItems = doc.createElement('div'); menu.appendChild(menuItems);
     Object.keys(groups).forEach(function(key) {
       const button = doc.createElement('button');
       button.type = 'button'; button.dataset.workspace = key; button.textContent = groups[key];
-      button.addEventListener('click', function() { open(lastPages[key] || pages.find(function(page) { return page.workspace === key; }).id); });
-      nav.appendChild(button);
+      button.addEventListener('click', function() { menu.open = false; open(key === 'market' ? 'dashboard' : lastPages[key] || pages.find(function(page) { return page.workspace === key; }).id); });
+      (key === 'market' ? nav : menuItems).appendChild(button);
     });
+    nav.appendChild(menu);
     pages.forEach(function(page) {
       let button = tabs.querySelector('[data-main-view="' + page.id + '"]');
       if (!button) {

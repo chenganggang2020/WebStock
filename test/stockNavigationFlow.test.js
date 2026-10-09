@@ -118,3 +118,21 @@ test('re-entering the current stock keeps the captured list without rebuilding i
   await r.window.StockList.stepStock(1);
   assert.equal(r.State.currentStock.code, '000070');
 });
+
+test('late stock selection cannot reopen an analysis panel after the user returned home', async () => {
+  const r = harness();
+  const panels = [];
+  let completeQuote;
+  r.window.ApiClient.fetchJsonData = url => url.startsWith('/api/quote')
+    ? new Promise(resolve => { completeQuote = resolve; }) : Promise.resolve([]);
+  r.window.switchMainView = view => { r.State.currentMainView = view; };
+  r.window.Analysis = { openAnalysisPanel(stock) { panels.push(stock.code); } };
+  const opening = r.window.StockList.runRowAction('analysis', { code: '600183', name: '生益科技' });
+  assert.equal(r.State.currentMainView, 'market');
+  r.window.switchMainView('dashboard');
+  completeQuote([]);
+  await opening;
+
+  assert.equal(r.State.currentMainView, 'dashboard');
+  assert.deepEqual(panels, [], 'an abandoned async action must not open a floating panel on the home page');
+});

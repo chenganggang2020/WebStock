@@ -497,7 +497,8 @@ async function saveWatchlistStock(stock, options) {
     watchlistLoadSequence += 1;
     window.State.watchlist = rows.map(function(row) { return Object.assign({}, previous.get(row.code) || {}, row); });
     const actualGroup = item.groupName || '默认分组';
-    if (options.reveal !== false) {
+    const canReveal = options.reveal !== false && options.navigationRevision === window.State.navigationRevision;
+    if (canReveal) {
       selectedWatchlistGroupKey = 'local:' + actualGroup;
       watchlistLocatedCode = item.code;
       watchlistLocatePending = true;
@@ -509,7 +510,7 @@ async function saveWatchlistStock(stock, options) {
     renderWatchlist();
     setWatchlistActionStatus((item.name || stock.name || stock.code) + (existing ? ' 已存在于【' : ' 已加入【') +
       actualGroup + '】· 本地自选，未写回同花顺', 'ok');
-    if (options.reveal !== false && window.switchMainView) window.switchMainView('watchlist');
+    if (canReveal && window.switchMainView) window.switchMainView('watchlist');
     if (window.StockList && window.StockList.renderStockTable) window.StockList.renderStockTable(window.State.filteredStocks);
     return item;
   } catch (error) {
@@ -520,6 +521,7 @@ async function saveWatchlistStock(stock, options) {
 
 async function addStock(stock, options) {
   if (!options || !Object.prototype.hasOwnProperty.call(options, 'groupName')) return openWatchlistAddDialog(stock);
+  options = Object.assign({}, options, { navigationRevision: window.State.navigationRevision });
   const key = String(stock && stock.code || '');
   if (watchlistAddRequests.has(key)) return watchlistAddRequests.get(key);
   const pending = watchlistAddQueue.then(function() { return saveWatchlistStock(stock, options); });

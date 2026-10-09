@@ -10,6 +10,12 @@
   const origins = new Map();
   const charts = new Map();
   let indicesSignature = '';
+  let pinned = true, browserTab = 'stocks', instrument = '', volumeChart;
+  let lastIndices, lastIntraday, indexSelection = null;
+  try {
+    pinned = root?.localStorage?.getItem('webstock-home-pin') !== 'false';
+    indexSelection = JSON.parse(root?.localStorage?.getItem('webstock-home-indices') || 'null');
+  } catch (_) {}
   const el = id => root && root.document.getElementById(id);
   const finite = value => value === null || value === undefined || value === '' || !Number.isFinite(Number(value)) ? null : Number(value);
   const escape = value => String(value == null ? '' : value).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -22,6 +28,48 @@
   // Live quote polling is bounded even when the user browses the whole catalog.
   const groupItems = () => visibleItems.slice(0, 60);
   const displayTime = value => value && root.WebStockTime ? root.WebStockTime.formatDateTime(value) : value || '未记录';
+
+  function browserGroups(groups) {
+    return [{ key: ':watchlist', name: '全部自选' }, { key: ':market', name: '全市场' }].concat((groups || []).filter(group => group.readOnly));
+  }
+  function sentimentBand(value) {
+    const n = finite(value);
+    return n === null ? 'unknown' : n < 25 ? 'fear-extreme' : n < 45 ? 'fear' : n <= 55 ? 'neutral' : n <= 75 ? 'greed' : 'greed-extreme';
+  }
+  function syncBrowser(view) {
+    const drawer = el('marketDrawer'), dock = el('homeMarketDock');
+    if (!drawer || !dock) return;
+    const docked = pinned && view === 'dashboard';
+    move(drawer, dock, docked);
+    drawer.classList.toggle('home-docked', docked);
+    drawer.dataset.browserTab = browserTab;
+    dock.hidden = !docked;
+    root.document.body.classList.toggle('home-browser-pinned', docked);
+    if (docked) { drawer.removeAttribute('inert'); drawer.setAttribute('aria-hidden', 'false'); root.document.body.classList.remove('market-drawer-open'); }
+    else if (!root.document.body.classList.contains('market-drawer-open')) { drawer.setAttribute('inert', ''); drawer.setAttribute('aria-hidden', 'true'); }
+    if (el('marketDrawerPin')) { el('marketDrawerPin').textContent = pinned ? '取消固定' : '固定到主页'; el('marketDrawerPin').setAttribute('aria-pressed', String(pinned)); }
+  }
+  function setPinned(value) {
+    pinned = value;
+    try { root.localStorage.setItem('webstock-home-pin', String(value)); } catch (_) {}
+    syncBrowser(root.State.currentMainView); resize();
+  }
+  function activateInstrument(kind) {
+    if (kind && root.State.currentMainView !== 'dashboard') root.switchMainView('dashboard');
+    if (kind !== 'index') root.MarketComparison?.closeIndexDetail?.();
+    if (kind !== 'global') root.MarketBoard?.close?.();
+    instrument = kind;
+    if (el('homeChartHost')) el('homeChartHost').dataset.instrument = kind;
+    if (el('homeBookHost')) el('homeBookHost').hidden = Boolean(kind);
+    root.requestAnimationFrame(resize);
+  }
+  function closeInstrument(kind) {
+    if (instrument !== kind) return;
+    instrument = '';
+    if (el('homeChartHost')) el('homeChartHost').dataset.instrument = '';
+    if (el('homeBookHost')) el('homeBookHost').hidden = false;
+    root.requestAnimationFrame(resize);
+  }
 
   function rankBoards(boards, kind) {
     const field = kind === 'industry' ? 'mainNetInflow' : 'dailyChangePct';
@@ -47,6 +95,8 @@
 
   function sync(view) {
     const active = view === 'dashboard';
+    syncBrowser(view);
+    if (!active && instrument) activateInstrument('');
     // A deep link primes the security without calling showRealtimeView().
     // Reveal its controls when the shared chart is brought into a visible view.
     if (isChartView(view) && root.State.currentStock) el('indicatorBtns')?.classList.add('visible');
@@ -65,14 +115,16 @@
       if (chart) chart.resize();
     });
     charts.forEach(chart => chart.resize());
+    volumeChart?.resize();
+    root.MarketBoard?.resize?.();
+    root.MarketComparison?.resize?.();
   }
 
   function renderWatchlist() {
     if (!root.Watchlist || !root.Watchlist.getGroupItems) return;
-    const groups = root.Watchlist.watchlistGroups().slice().sort((a, b) => Number(a.readOnly) - Number(b.readOnly));
+    const groups = root.Watchlist.watchlistGroups();
     if (![':market', ':watchlist'].includes(groupKey) && !groups.some(group => group.key === groupKey)) groupKey = ':watchlist';
-    html('homeGroups', '<option value=":watchlist">全部自选（去重）</option><option value=":market">A股 / ETF · 全市场检索</option>' + groups.map(group => '<option value="' + escape(group.key) + '">' + escape(group.name) + ' · ' + (group.readOnly ? '同花顺 · 只读' : '本地自选') + '</option>').join(''));
-    el('homeGroups').value = groupKey;
+    html('homeGroups', browserGroups(groups).map(group => '<button type="button" data-home-group="' + escape(group.key) + '" aria-pressed="' + (group.key === groupKey) + '">' + escape(group.name) + '</button>').join(''));
     const query = (el('homeWatchSearch').value || '').trim().toLowerCase();
     el('homeWatchSearch').placeholder = groupKey === ':market' ? '代码 / 名称 / 拼音 · 联网补查' : '筛选自选；全市场请切换上方范围';
     const source = groupKey === ':market' ? (root.State.allStocks || []) : groupKey === ':watchlist'
@@ -116,12 +168,13 @@
     if (!item) return;
     const group = root.Watchlist.watchlistGroups().find(row => row.key === groupKey);
     const label = groupKey === ':market' ? '全市场搜索' : groupKey === ':watchlist' ? '全部自选' : '自选 · ' + (group && group.name || '当前组');
+    if (root.State.currentMainView !== 'dashboard') root.switchMainView?.('dashboard');
     await root.StockList.selectStock(item, { navigation: { items: navigationItems, label } });
     renderWatchlist();
   }
 
   function ensureSelection() {
-    if (selecting || root.State.currentMainView !== 'dashboard') return;
+    if (selecting || instrument || root.State.currentMainView !== 'dashboard') return;
     renderWatchlist();
     const stock = root.State.currentStock || groupItems()[0];
     if (!stock) return;
@@ -137,7 +190,7 @@
     data.updatedAt = displayTime(data.updatedAt);
     const a = data.aShare || {};
     const unavailable = ['unavailable', 'fallback'].includes(a.sourceStatus);
-    html('homeSentiment', '<strong class="home-score">' + (unavailable ? '—' : formatNumber(a.score)) + '<small>' + escape(unavailable ? '行情不可用' : a.label || '情绪估算') + '</small></strong><dl><dt>上涨 / 下跌</dt><dd><span class="pnl-up">' + escape(unavailable ? '—' : a.advancing ?? '—') + '</span> / <span class="pnl-down">' + escape(unavailable ? '—' : a.declining ?? '—') + '</span></dd><dt>上涨占比</dt><dd>' + (unavailable ? '—' : pct(a.breadthPct)) + '</dd><dt>涨停 / 大跌样本</dt><dd>' + escape(unavailable ? '—' : a.limitUpLike ?? '—') + ' / ' + escape(unavailable ? '—' : a.sharpDown ?? '—') + '</dd></dl><small>' + escape(a.source || '公开行情估算') + ' · ' + escape(data.updatedAt || '时间未记录') + '</small>');
+    html('homeSentiment', '<strong class="home-score" data-band="' + sentimentBand(unavailable ? null : a.score) + '">' + (unavailable ? '—' : formatNumber(a.score)) + '<small>' + escape(unavailable ? '行情不可用' : a.label || '情绪估算') + '</small></strong><dl><dt>上涨 / 下跌</dt><dd><span class="pnl-up">' + escape(unavailable ? '—' : a.advancing ?? '—') + '</span> / <span class="pnl-down">' + escape(unavailable ? '—' : a.declining ?? '—') + '</span></dd><dt>上涨占比</dt><dd>' + (unavailable ? '—' : pct(a.breadthPct)) + '</dd><dt>涨停 / 大跌样本</dt><dd>' + escape(unavailable ? '—' : a.limitUpLike ?? '—') + ' / ' + escape(unavailable ? '—' : a.sharpDown ?? '—') + '</dd></dl><small>' + escape(a.source || '公开行情估算') + ' · ' + escape(data.updatedAt || '时间未记录') + '</small>');
     const hot = snapshot.hot || {};
     const boards = hot.marketStatus === 'unavailable' ? [] : hot.boards && hot.boards.day || [];
     ['industry', 'concept'].forEach(kind => {
@@ -158,12 +211,27 @@
     const m = data && data.metrics || {};
     const usable = !(data && data.quality && data.quality.usable === false);
     const measure = data && data.measure;
+    const curve = el('homeVolumeCurve');
+    if (curve && root.echarts) {
+      if (!volumeChart) volumeChart = root.echarts.init(curve);
+      const points = data?.series || [];
+      volumeChart.setOption({ animation: false, grid: { left: 30, right: 5, top: 5, bottom: 17 },
+        tooltip: { trigger: 'axis', valueFormatter: pct },
+        xAxis: { type: 'category', data: points.map(p => p.label), axisLabel: { fontSize: 9, hideOverlap: true }, boundaryGap: false },
+        yAxis: { type: 'value', axisLabel: { fontSize: 9, formatter: '{value}%' }, splitNumber: 2 },
+        series: [['累计同比','cumulativeYoYPct','#d94355'],['5分同比','rolling5YoYPct','#488de0'],['5分环比','rolling5SequentialPct','#ce9b28']].map(([name,key,color]) => ({ name, type: 'line', symbol: 'none', connectNulls: false, lineStyle: { width: 1, color }, data: points.map(p => finite(p[key])) }))
+      }, true);
+    }
     html('homeVolume', '<dl><dt>' + (measure === 'amount' ? '同时间成交额' : '同时间成交量（降级）') + '</dt><dd>' + (usable ? amount(m.todayCumulativeValue) : '—') + '</dd><dt>累计同比</dt><dd class="' + trend(m.cumulativeYoYPct) + '">' + (usable ? pct(m.cumulativeYoYPct) : '—') + '</dd><dt>近5分钟同比</dt><dd class="' + trend(m.rolling5YoYPct) + '">' + pct(m.rolling5YoYPct) + '</dd><dt>近5分钟环比</dt><dd class="' + trend(m.rolling5SequentialPct) + '">' + pct(m.rolling5SequentialPct) + '</dd></dl><small>' + escape(data && data.tradingDate || '无交易日期') + ' ' + escape(data && data.asOf || '') + ' · ' + escape(data && data.source && data.source.label || '来源不可用') + '</small>');
   }
 
   function renderIndices(indicesData, intradayData) {
     if (!el('homeIndices')) return;
-    const indices = (indicesData && indicesData.indices || []).slice(0, 3);
+    lastIndices = indicesData; lastIntraday = intradayData;
+    const all = indicesData && indicesData.indices || [];
+    if (!Array.isArray(indexSelection) && all.length) indexSelection = all.map(item => item.key);
+    html('homeIndexChoices', all.map(item => '<label><input type="checkbox" data-home-index="' + escape(item.key) + '" ' + (indexSelection.includes(item.key) ? 'checked' : '') + '> ' + escape(item.name) + '</label>').join(''));
+    const indices = all.filter(item => (indexSelection || []).includes(item.key));
     const series = intradayData && intradayData.series || [];
     const signature = JSON.stringify([indices, series, root.document.body.classList.contains('dark')]);
     if (indicesSignature === signature) return;
@@ -194,17 +262,39 @@
     bound = true;
     const globals = el('dashboardGlobalSignals');
     if (globals) el('homeIndicators').after(globals);
-    el('homeGroups').addEventListener('change', event => {
-      groupKey = event.target.value;
+    el('marketDrawer')?.appendChild(el('homeWatchPane'));
+    ['dashboardIndexDetailOverlay', 'dashboardGlobalDetailOverlay'].forEach(id => {
+      const node = el(id); if (!node) return;
+      el('homeChartHost').appendChild(node); node.classList.add('home-instrument-chart');
+      node.querySelector('[role="dialog"]')?.removeAttribute('aria-modal');
+    });
+    el('homeGroups').addEventListener('click', event => {
+      const button = event.target.closest('[data-home-group]'); if (!button) return;
+      groupKey = button.dataset.homeGroup;
       search();
     });
-    el('dashboardView').addEventListener('click', event => {
+    root.document.addEventListener('click', event => {
+      if (event.target.id === 'marketDrawerPin') { setPinned(!pinned); return; }
+      const tab = event.target.closest('[data-browser-tab]');
+      if (tab) { browserTab = tab.dataset.browserTab; syncBrowser(root.State.currentMainView); root.document.querySelectorAll('[data-browser-tab]').forEach(button => button.setAttribute('aria-pressed', String(button === tab))); }
       const stock = event.target.closest('[data-home-stock]');
       const page = event.target.closest('[data-home-page]');
       if (stock) select(stock.dataset.homeStock).catch(error => { el('homeWatchStatus').textContent = error.message; });
       if (page) root.switchMainView(page.dataset.homePage);
     });
+    root.document.addEventListener('change', event => {
+      const key = event.target.dataset.homeIndex; if (!key) return;
+      indexSelection = event.target.checked ? [...new Set(indexSelection.concat(key))] : indexSelection.filter(id => id !== key);
+      try { root.localStorage.setItem('webstock-home-indices', JSON.stringify(indexSelection)); } catch (_) {}
+      renderIndices(lastIndices, lastIntraday);
+    });
     el('homeWatchSearch').addEventListener('input', search);
+    el('searchInput')?.addEventListener('input', event => {
+      if (!event.target.value.trim()) return;
+      groupKey = ':market'; browserTab = 'stocks';
+      el('homeWatchSearch').value = event.target.value;
+      syncBrowser(root.State.currentMainView); search();
+    });
     el('homeLoadMore')?.addEventListener('click', () => { rowLimit += 60; renderWatchlist(); });
     el('homeAddWatchlist')?.addEventListener('click', async () => {
       if (!root.State.currentStock) return;
@@ -223,5 +313,5 @@
     root.addEventListener('resize', resize);
   }
 
-  return { bind, sync, resize, renderWatchlist, renderMarket, renderVolume, renderIndices, ensureSelection, isChartView, rankBoards, formatNumber, indexHistory, groupItems };
+  return { bind, sync, resize, renderWatchlist, renderMarket, renderVolume, renderIndices, ensureSelection, isChartView, rankBoards, formatNumber, indexHistory, groupItems, browserGroups, sentimentBand, setPinned, activateInstrument, closeInstrument, isDocked: () => pinned && root.State.currentMainView === 'dashboard' };
 });

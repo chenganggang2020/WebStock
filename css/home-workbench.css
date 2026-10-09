@@ -1,0 +1,55 @@
+/* Chart-first workbench: one browser, one primary chart, no duplicate windows. */
+.workspace-menu{position:relative;color:var(--text);font-size:13px}
+.workspace-menu>summary{padding:7px 12px;cursor:pointer;list-style:none}
+.workspace-menu>div{position:absolute;top:100%;left:0;width:180px;z-index:120;background:var(--card-bg);border:1px solid var(--border);box-shadow:0 6px 18px #0002;padding:5px;display:grid}
+.workspace-menu>div button{text-align:left!important}
+.fixed-terminal .home-terminal{grid-template-columns:minmax(0,1fr)}
+.fixed-terminal.home-browser-pinned .home-terminal{grid-template-columns:320px minmax(0,1fr)}
+#homeMarketDock{min-height:0;min-width:0;height:100%}
+.fixed-terminal #marketDrawer.home-docked{position:static!important;transform:none!important;visibility:visible!important;width:100%!important;height:100%;max-height:none;margin:0;box-shadow:none;z-index:auto;display:flex;flex-direction:column;border:1px solid var(--border)}
+.market-browser-tools{display:flex;gap:5px;padding:6px;border-bottom:1px solid var(--border);flex:none}
+.market-browser-tools button{font-size:12px;border:1px solid var(--border);background:var(--card-bg);color:var(--text);padding:4px 9px}
+.market-browser-tools button[aria-pressed=true]{color:var(--accent);background:var(--active)}
+#marketDrawerPin{margin-left:auto}
+#marketDrawer[data-browser-tab]>.stock-table-wrap,#marketDrawer[data-browser-tab]>#stockListStatus,#marketDrawer[data-browser-tab]>#marketSidebarPanel{display:none!important}
+#marketDrawer[data-browser-tab=stocks]>#hotSidebarPanel,#marketDrawer[data-browser-tab=news]>#homeWatchPane{display:none!important}
+#marketDrawer[data-browser-tab=news]>#hotSidebarPanel{display:block!important;overflow:auto;flex:1}
+#marketDrawer #homeWatchPane{border:0;flex:1;min-height:0;position:static;height:auto}
+.home-browser-columns{display:grid;grid-template-columns:112px minmax(0,1fr);flex:1;min-height:0}
+.fixed-terminal #homeGroups{display:flex;flex-direction:column;overflow-y:auto;width:auto;margin:0;gap:2px;padding:4px;border-right:1px solid var(--border);min-height:0}
+#homeGroups button{flex:none;white-space:normal;text-align:left;font-size:11px;padding:8px 5px;border:0;background:transparent;color:var(--text);min-height:34px}
+.home-browser-list{display:flex;flex-direction:column;min-height:0;min-width:0}
+#homeWatchStatus{max-height:48px;overflow:auto}#homeWatchRows button{min-height:42px!important}
+#homeWatchPane header{font-size:12px}.home-docked .market-drawer-header{padding:6px 8px}.home-docked .market-drawer-header span{display:none}
+.fixed-terminal #homeIndicators{grid-template-columns:minmax(0,1fr) 175px 255px;grid-template-rows:minmax(0,150px);max-height:150px;height:150px;min-height:0;flex:none}
+.fixed-terminal #homeIndicators>*{min-height:0;overflow:auto}
+#homeIndices{display:flex!important;overflow-x:auto;min-width:0;gap:5px;grid-column:auto;height:150px}
+#homeIndices .home-index{flex:0 0 153px;min-width:0}.home-index-chart{height:36px!important}
+#homeIndicators .home-index-value b{font-size:18px}#homeIndicators .home-index-value span{font-size:11px}
+#homeIndicators .home-index>small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
+#homeVolume{font-size:10px}#homeVolume dl{display:grid;grid-template-columns:1fr auto 1fr auto;gap:2px 5px;margin:1px 0}
+#homeVolume dl dt,#homeVolume dl dd{font-size:10px;line-height:12px;margin:0}
+#homeSentiment dl{margin:2px 0}#homeSentiment dl dt,#homeSentiment dl dd{font-size:10px;line-height:12px;margin:0}
+#homeSentiment>small{display:block;font-size:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#homeVolumeCurve{height:54px;min-width:0}#homeVolume>small{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:9px}
+.home-score[data-band=fear-extreme]{color:#087d62}.home-score[data-band=fear]{color:#25948b}.home-score[data-band=neutral]{color:#65738a}.home-score[data-band=greed]{color:#bc7a05}.home-score[data-band=greed-extreme]{color:#d93656}
+.home-terminal-main #dashboardGlobalSignals{position:relative;display:flex!important;flex-wrap:nowrap;align-items:center;overflow:visible!important;min-height:78px;max-height:88px;gap:5px}
+#marketBoardCards{display:flex!important;flex:1;gap:5px;overflow-x:auto;min-width:0;height:85px}
+#marketBoardCards .dashboard-global-signal{flex:0 0 144px;cursor:pointer}
+#dashboardGlobalSignals>.market-board-toolbar{width:105px;display:grid;flex:none;font-size:10px}
+#dashboardGlobalSignals>.market-board-toolbar #marketBoardStatus{display:none}
+#dashboardGlobalSignals>.dashboard-global-signals-note{display:none}
+#marketBoardChoices{position:absolute;left:0;top:57px;z-index:30;font-size:11px;max-width:min(780px,80vw)}
+#marketBoardChoices>summary{cursor:pointer;list-style:none;padding:3px;color:var(--accent);width:105px}
+#marketBoardChoices[open]{background:var(--card-bg);border:1px solid var(--border);box-shadow:0 5px 18px #0003;padding:8px;width:760px;max-height:55vh;overflow:auto}
+#marketBoardChoiceList,#homeIndexChoices{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;padding:8px 0}
+#homeIndexChoices{border-top:1px solid var(--border)}#marketBoardOrder button{margin:3px}
+#homeChartHost[data-instrument=index]>#stockWorkspace,#homeChartHost[data-instrument=global]>#stockWorkspace{display:none!important}
+.home-chart-row:has(#homeBookHost[hidden]){grid-template-columns:minmax(0,1fr)}
+#homeChartHost>.home-instrument-chart{position:static;inset:auto;background:none;backdrop-filter:none;padding:0;z-index:auto;flex:1;min-width:0;width:100%;height:100%;overflow:hidden}
+#homeChartHost .home-instrument-chart>.dashboard-index-detail{width:100%;max-width:none;height:100%;max-height:none;border:0;border-radius:0;box-shadow:none;display:flex;flex-direction:column;padding:8px;min-height:0}
+#homeChartHost .home-instrument-chart .dashboard-index-detail-chart{height:auto;min-height:100px;flex:1}
+#homeChartHost .home-instrument-chart header{flex:none}#homeChartHost .home-instrument-chart h3{font-size:15px;margin:0}
+#homeChartHost .home-instrument-chart footer{font-size:10px;max-height:42px;overflow:auto;flex:none}
+#homeChartHost .chart-coach-evidence-strip{max-height:96px;line-height:1.6;overflow:auto;white-space:normal}
+@media(max-width:1250px){.fixed-terminal.home-browser-pinned .home-terminal{grid-template-columns:275px minmax(0,1fr)}.home-browser-columns{grid-template-columns:96px minmax(0,1fr)}.fixed-terminal #homeIndicators{grid-template-columns:minmax(0,1fr) 145px 205px}.home-chart-row{grid-template-columns:minmax(0,1fr) 155px}}

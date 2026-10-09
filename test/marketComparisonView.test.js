@@ -1837,6 +1837,10 @@ function createHeatmapDrillHarness() {
     location: { href: 'http://localhost/#dashboard' },
     history: {
       state: { mainView: 'dashboard' },
+      replaceState: function(state, title, url) {
+        this.state = state;
+        historyCalls.push(['replace', state, url]);
+      },
       pushState: function(state, title, url) {
         this.state = state;
         historyCalls.push(['push', state, url]);
@@ -2176,7 +2180,7 @@ test('drilled heatmap exposes a clickable return breadcrumb and constituent clic
   }
 });
 
-test('browser mouse back returns a drilled heatmap to the complete board cloud', async () => {
+test('heatmap drill does not grow browser history and old popstate still clears the drill', async () => {
   const previousWindow = global.window;
   const harness = createHeatmapDrillHarness();
 
@@ -2193,7 +2197,8 @@ test('browser mouse back returns a drilled heatmap to the complete board cloud',
     await settleHeatmapDrillTasks();
 
     assert.equal(harness.fakeWindow.history.state.webstockHeatmapDrill.code, 'BK0816');
-    assert.equal(harness.historyCalls.filter(function(call) { return call[0] === 'push'; }).length, 1);
+    assert.equal(harness.historyCalls.filter(function(call) { return call[0] === 'push'; }).length, 0);
+    assert.equal(harness.historyCalls.filter(function(call) { return call[0] === 'replace'; }).length, 1);
     const breadcrumb = harness.elements.get('dashboardHeatmapBreadcrumb');
     assert.equal(breadcrumb.hidden, false);
 

@@ -570,7 +570,9 @@ async function runRowAction(action, stock) {
   }
   if (action === 'analysis') {
     if (window.switchMainView) window.switchMainView('market');
+    const revision = window.State.navigationRevision;
     await window.StockList.selectStock(stock, { navigation: stockTableNavigation() });
+    if (window.State.currentMainView !== 'market' || window.State.navigationRevision !== revision) return;
     if (window.Analysis) window.Analysis.openAnalysisPanel(stock);
     return;
   }
@@ -808,6 +810,7 @@ async function selectStock(stock, options) {
   }
   const State = window.State;
   const RealtimeChart = window.RealtimeChart;
+  window.HomeTerminal?.activateInstrument?.('');
   if (window.MarketOverview) window.MarketOverview.showDetail();
   const selectionId = ++stockSelectionSequence;
   const isCurrentSelection = function() {

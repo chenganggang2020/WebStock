@@ -897,6 +897,7 @@
     disposeChart(indexDetailChart);
     indexDetailChart = null;
     indexDetailKey = '';
+    root.HomeTerminal?.closeInstrument('index');
   }
 
   function indexDetailRefreshPlan(live) {
@@ -956,16 +957,20 @@
       element.innerHTML = '';
       indexDetailChart = root.echarts.init(element);
     }
-    indexDetailChart.setOption(buildIndexDetailOption({
+    const option = buildIndexDetailOption({
       period: indexDetailPeriod,
       name: item.name || item.code,
       history
-    }), true);
+    });
+    if (root.ChartTheme?.renderTo) indexDetailChart = root.ChartTheme.renderTo(root.echarts, element, indexDetailChart, option,
+      'index:' + indexDetailKey + ':' + indexDetailPeriod + ':' + (history.tradingDate || '') + ':' + (history.provider || ''));
+    else indexDetailChart.setOption(option, true);
     if (typeof indexDetailChart.resize === 'function') indexDetailChart.resize();
   }
 
   function openIndexDetail(key) {
     if (!key) return;
+    root.HomeTerminal?.activateInstrument('index');
     indexDetailKey = String(key);
     indexDetailPeriod = selectedPeriod;
     renderIndexDetail();
@@ -1281,13 +1286,13 @@
     return root && root.history && root.history.state && root.history.state[HEATMAP_DRILL_HISTORY_KEY];
   }
 
-  function pushHeatmapDrillHistory(board) {
-    if (!board || !root || !root.history || typeof root.history.pushState !== 'function' || !root.location) return;
+  function rememberHeatmapDrill(board) {
+    if (!board || !root || !root.history || typeof root.history.replaceState !== 'function' || !root.location) return;
     const current = heatmapHistoryMarker();
     if (current && current.code === board.code && current.taxonomy === board.taxonomy) return;
     const state = Object.assign({}, root.history.state || {});
     state[HEATMAP_DRILL_HISTORY_KEY] = { code: board.code, taxonomy: board.taxonomy };
-    root.history.pushState(state, '', root.location.href);
+    root.history.replaceState(state, '', root.location.href);
   }
 
   function renderHeatmapOverview() {
@@ -1295,11 +1300,14 @@
     renderHeatmapIfChanged(heatmapSnapshotLoaded ? heatmapSnapshot : snapshot && snapshot.hot);
   }
 
-  function returnHeatmapToOverview(consumeHistory) {
-    const shouldConsumeHistory = consumeHistory && Boolean(heatmapHistoryMarker()) &&
-      root && root.history && typeof root.history.back === 'function';
+  function returnHeatmapToOverview() {
     renderHeatmapOverview();
-    if (shouldConsumeHistory) root.history.back();
+    if (root?.history?.replaceState && root.location) {
+      const state = Object.assign({}, root.history.state || {});
+      delete state[HEATMAP_DRILL_HISTORY_KEY];
+      root.history.replaceState(state, '', root.location.href);
+    }
+    root?.returnToHome?.();
   }
 
   function openHeatmapStock(item) {
@@ -1320,7 +1328,7 @@
     const requestId = ++heatmapRequestSequence;
     const requestedBoard = { code: requestedCode, name: String(item.name || item.code), taxonomy };
     heatmapDrillBoard = requestedBoard;
-    pushHeatmapDrillHistory(requestedBoard);
+    rememberHeatmapDrill(requestedBoard);
     heatmapDrillSnapshot = { status: 'loading', taxonomy, board: heatmapDrillBoard, items: [] };
     renderHeatmapBreadcrumb();
     renderHeatmapIfChanged(heatmapDrillSnapshot);
@@ -2179,7 +2187,7 @@
       }
       const heatmapBack = event.target.closest('[data-heatmap-back]');
       if (heatmapBack) {
-        returnHeatmapToOverview(true);
+        returnHeatmapToOverview();
         return;
       }
       const heatmapStock = event.target.closest('[data-heatmap-stock]');
@@ -2370,6 +2378,7 @@
     buildMiniIndexOption,
     buildMiniIntradayOption,
     buildIndexDetailOption,
+    closeIndexDetail,
     buildIntradayComparisonOption,
     indexCardDisplayQuote,
     indexCardIntradayStatus,

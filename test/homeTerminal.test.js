@@ -5,6 +5,20 @@ const path = require('node:path');
 const vm = require('node:vm');
 const home = require('../js/modules/homeTerminal');
 
+test('home group rail exposes THS groups without deleting or presenting local groups', () => {
+  const groups=[{key:'local:x',name:'本地',readOnly:false},{key:'ths:a',name:'同花顺自选',readOnly:true},{key:'ths:b',name:'半导体',readOnly:true}];
+  assert.deepEqual(home.browserGroups(groups).map(x=>x.key),[':watchlist',':market','ths:a','ths:b']);
+  assert.equal(groups.length,3);
+});
+
+test('sentiment colors separate missing, neutral and both extremes',()=>{
+  assert.equal(home.sentimentBand(null),'unknown');
+  assert.equal(home.sentimentBand(10),'fear-extreme');
+  assert.equal(home.sentimentBand(50),'neutral');
+  assert.equal(home.sentimentBand(58),'greed');
+  assert.equal(home.sentimentBand(90),'greed-extreme');
+});
+
 test('returning from a deep-linked settings page reveals chart controls for a primed stock', () => {
   const classes = new Set();
   const control = {classList:{add:name=>classes.add(name)}};
