@@ -8,9 +8,8 @@ function normalizePort(value) {
   return Number.isInteger(port) && port > 0 && port <= 65535 ? port : DEFAULT_DESKTOP_PORT;
 }
 
-function readManagedDataDirectory(executableDir) {
-  if (!executableDir) return '';
-  const file = path.join(executableDir, 'runtime-location.json');
+function readLocationFile(file) {
+  if (!file) return '';
   if (!fs.existsSync(file)) return '';
   const value = JSON.parse(fs.readFileSync(file, 'utf8'));
   if (value.schema !== 'webstock.runtime-location/v1') throw new Error('Unsupported runtime location schema');
@@ -19,6 +18,16 @@ function readManagedDataDirectory(executableDir) {
     throw new Error('Configured runtime database is missing; refusing to create an empty replacement');
   }
   return path.resolve(value.dataDir);
+}
+
+function readManagedDataDirectory(executableDir, options = {}) {
+  const local = readLocationFile(executableDir && path.join(executableDir, 'runtime-location.json'));
+  const stable = readLocationFile(options.stableConfigFile);
+  const equalPath = (a, b) => process.platform === 'win32' ? a.toLowerCase() === b.toLowerCase() : a === b;
+  if (local && stable && !equalPath(local, stable)) {
+    throw new Error('Runtime location conflict: installed and stable configuration disagree; refusing to open another database');
+  }
+  return stable || local;
 }
 
 function resolveRuntimeConfig(options = {}) {

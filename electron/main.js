@@ -46,9 +46,12 @@ const defaultUserDataDir = app.getPath('userData');
 const linkedDataDir = readRegisteredDataDirectory(defaultUserDataDir);
 let managedDataDir;
 try {
-  managedDataDir = readManagedDataDirectory(process.env.PORTABLE_EXECUTABLE_DIR || (app.isPackaged ? path.dirname(process.execPath) : ''));
+  managedDataDir = readManagedDataDirectory(process.env.PORTABLE_EXECUTABLE_DIR || (app.isPackaged ? path.dirname(process.execPath) : ''), {
+    stableConfigFile: app.isPackaged && !process.env.PORTABLE_EXECUTABLE_DIR && process.platform === 'win32' && process.env.ProgramData
+      ? path.join(process.env.ProgramData, 'WebStock', 'runtime-location.json') : ''
+  });
 } catch (error) {
-  dialog.showErrorBox('数据目录不可用', '请恢复 runtime-location.json 中配置的原数据目录，再启动程序。不会创建空数据库。\n' + error.message);
+  dialog.showErrorBox('数据目录不可用', '安装目录或 ProgramData/WebStock 中的数据定位配置无效或冲突，请恢复原配置和原数据目录。不会创建空数据库。\n' + error.message);
   app.exit(1);
   throw error;
 }
