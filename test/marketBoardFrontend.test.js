@@ -32,6 +32,13 @@ test('closed dialog cannot be reopened by an in-flight request', async () => {
 
 const quote = { key: 'sox', name: 'SOX', source: 'fixture', sessionDate: '2026-10-08', value: 102,
   points: [{ time: 1000000, close: 100 }, { time: 1060000, close: null }, { time: 1120000, close: 102 }] };
+test('global minute direction uses valid reference and neutral for unknown, preserving gaps',async()=>{
+  for(const [previousClose,expected]of [[100,'#c72d3d'],[104,'#087f5b'],[102,'#586c81'],[null,'#586c81'],[0,'#586c81']]){
+    const h=harness(),opening=h.root.MarketBoard.open('sox');h.requests[0].resolve({...quote,previousClose});await opening;
+    assert.equal(h.drawn().series[0].lineStyle.color,expected);
+    assert.equal(h.drawn().series[0].connectNulls,false);
+  }
+});
 async function loadBoard(h, item = quote) {
   const loading = h.root.MarketBoard.load();
   h.requests.at(-1).resolve({ items: [item] }); await loading;

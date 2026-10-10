@@ -66,11 +66,16 @@
   function changeSelection() { generation++; save(); items = selection.keys.map(key => items.find(row => row.key === key)).filter(Boolean); render(); load(); }
   function minuteOption(item) {
     const points = item.points || [];
+    const dark = document.body.classList.contains('dark');
+    const colors = root.ChartTheme?.get(dark).colors || (dark ? {up:'#ff6368',down:'#36d19d',text:'#b4b4b4'} : {up:'#c72d3d',down:'#087f5b',text:'#586c81'});
+    const price = points.findLast(row => row.close != null && Number.isFinite(Number(row.close)))?.close;
+    const direction = price != null && Number.isFinite(Number(item.previousClose)) && item.previousClose > 0 ? Math.sign(price-item.previousClose) : 0;
+    const color = direction > 0 ? colors.up : direction < 0 ? colors.down : colors.text;
     return { animation: false, grid: { left: 76, right: 30, top: 30, bottom: 60 },
       tooltip: { trigger: 'axis', formatter: params => { const row = points[params?.[0]?.dataIndex]; return row ? time(row.time) + '<br>价格 ' + format(row.close, item.digits) : ''; } },
       xAxis: { type: 'category', boundaryGap: false, data: points.map(row => time(row.time)), axisLabel: { formatter: value => value.split(' ').at(-1)?.slice(0, 5) || value } },
       yAxis: { type: 'value', scale: true }, dataZoom: [{ type: 'inside' }, { type: 'slider', height: 18, bottom: 10 }],
-      series: [{ name: item.name, type: 'line', data: points.map(row => row.close), showSymbol: false, connectNulls: false, lineStyle: { width: 1.2 },
+      series: [{ name: item.name, type: 'line', data: points.map(row => row.close), showSymbol: false, connectNulls: false, lineStyle: { width: 1.4, color }, itemStyle: { color },
         markLine: item.previousClose > 0 ? { silent: true, symbol: 'none', data: [{ yAxis: item.previousClose, name: '前收' }], label: { formatter: '前收 {c}' } } : undefined }] };
   }
   function drawDetail(item) {

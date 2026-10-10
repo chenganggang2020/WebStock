@@ -14,29 +14,43 @@
     const colors=['#c18b0d','#a66adb','#3099c5','#ed805a','#46aa85','#ce81ba','#7c8cff','#919820'];
     const intraday=minute?model.minuteSeries(data.rows):null,rows=minute?intraday.rows:data.rows.map(row=>({...row})),times=minute?intraday.times:rows.map(row=>row.date);
     const aux=!minute&&indicator!=='ma',axes=aux?[0,1,2]:[0,1],volAxis=aux?2:1;
+    const chartNode=document.querySelector('#chart');
+    const layout=()=>{
+      const gap=12,top=12,available=Math.max(40,chartNode.clientHeight-top-42-gap*(axes.length-1));
+      const ratios=aux?[.65,.17,.18]:[.8,.2];let cursor=top;
+      return ratios.map(ratio=>{const grid={top:cursor,height:available*ratio,left:48,right:14};cursor+=grid.height+gap;return grid;});
+    };
     if(!minute){model.indicators.calcMAFromData(rows,maPeriods);const calc={macd:'calcMACD',kdj:'calcKDJ',rsi:'calcRSI',cci:'calcCCI',obv:'calcOBV',atr:'calcATR'}[indicator];if(calc)model.indicators[calc](rows);}
     const chart=echarts.getInstanceByDom(document.querySelector('#chart'))||echarts.init(document.querySelector('#chart')),series=[],legend=[];
     const signals=nine?model.chartSignals(data,settings):{series:[]},nineSeries=signals.series;
     const addLine=(name,values,color,axis=0)=>{legend.push(name);series.push({name,type:'line',data:values,xAxisIndex:axis,yAxisIndex:axis,symbol:'none',connectNulls:false,lineStyle:{width:1.25,color},itemStyle:{color},emphasis:{disabled:true}});};
     if(minute){
-      addLine('价格',rows.map(r=>r?.price??null),'#4285ef');addLine('均价',rows.map(r=>r?.averagePrice??null),colors[0]);
+      const latest=rows.findLast(r=>finite(r?.price))?.price,reference=data.previousClose;
+      const direction=finite(latest)&&finite(reference)&&reference>0?Math.sign(latest-reference):0;
+      addLine('价格',rows.map(r=>r?.price??null),direction>0?up:direction<0?down:ink);addLine('均价',rows.map(r=>r?.averagePrice??null),colors[0]);
       if(finite(data.previousClose)&&data.previousClose>0)series[0].markLine={silent:true,symbol:'none',label:{show:false},lineStyle:{color:ink,width:1,type:'dashed'},data:[{yAxis:data.previousClose}]};
     }else{
-      series.push({name:'K线',type:'candlestick',data:rows.map(r=>[r.open,r.close,r.low,r.high]),itemStyle:{color:up,color0:down,borderColor:up,borderColor0:down},xAxisIndex:0,yAxisIndex:0});
+      series.push({name:'K线',type:'candlestick',data:rows.map(r=>[r.open,r.close,r.low,r.high]),barWidth:'68%',barMaxWidth:14,itemStyle:{color:up,color0:down,borderColor:up,borderColor0:down},xAxisIndex:0,yAxisIndex:0});
       maPeriods.forEach((p,i)=>addLine('MA'+p,rows.map(r=>r['ma'+p]),colors[i%colors.length]));
       const lines={macd:[['DIF','macd_dif'],['DEA','macd_dea']],kdj:[['K','kdj_k'],['D','kdj_d'],['J','kdj_j']],rsi:[['RSI(14)','rsi']],cci:[['CCI(14)','cci']],obv:[['OBV','obv']],atr:[['ATR(14)','atr']]}[indicator]||[];
       lines.forEach(([label,field],i)=>addLine(label,rows.map(r=>r[field]),colors[i],1));
       if(indicator==='macd')series.push({name:'MACD柱',type:'bar',xAxisIndex:1,yAxisIndex:1,data:rows.map(r=>({value:r.macd_bar,itemStyle:{color:r.macd_bar>=0?up:down}}))});
     }
     if(nine){
-      series[0].markPoint={silent:false,data:nineSeries.flatMap(item=>item?.marks||[]).map(mark=>{
+      // Labels have their own collision layout; they never participate in price-axis padding.
+      series.push({name:'九转标记',type:'scatter',symbolSize:0,xAxisIndex:0,yAxisIndex:0,z:8,
+        tooltip:{show:false},labelLayout(params){const grid=layout()[0],rect=params.labelRect;return {
+          x:Math.max(grid.left,Math.min(chartNode.clientWidth-grid.right-rect.width,rect.x)),
+          y:Math.max(grid.top,Math.min(grid.top+grid.height-rect.height,rect.y)),hideOverlap:true};},
+        data:nineSeries.flatMap(item=>item?.marks||[]).map(mark=>{
         const upper=mark.direction==='sell',countdown=mark.type==='countdown',color=upper?up:down;
         const lane=mark.type==='setup'?0:countdown||mark.type==='countdown-deferred'?1:mark.type==='perfection'?2:3;
         const complete=mark.confirmed&&(mark.type==='setup'&&mark.label==='9'||countdown&&mark.label==='13');
-        return {coord:[times[mark.index],mark.price],value:countdown?'C'+mark.label:mark.label,signalIndex:mark.index,explanation:mark.explanation,
-          symbol:countdown?'roundRect':'circle',symbolSize:countdown?[28,16]:16,
-          symbolOffset:[0,(upper?-1:1)*(10+lane*14)],itemStyle:{color:complete?color:'transparent',opacity:mark.provisional?.5:1},label:{color:complete?'#fff':color,fontSize:10,show:true}};
-      })};
+        return {value:[times[mark.index],mark.price],signalIndex:mark.index,explanation:mark.explanation,
+          label:{formatter:countdown?'C'+mark.label:mark.label,position:upper?'top':'bottom',distance:6+lane*12,
+            backgroundColor:complete?color:'transparent',padding:[2,3],borderRadius:4,opacity:mark.provisional?.5:1,
+            color:complete?'#fff':color,fontSize:10,show:true}};
+      })});
     }
     series.push({name:'成交量(手)',type:'bar',xAxisIndex:volAxis,yAxisIndex:volAxis,data:rows.map((r,i)=>({value:r?.volume??null,itemStyle:{color:!r?ink:(minute?r.price>=(rows[i-1]?.price??data.previousClose??r.price):r.close>=r.open)?up:down,opacity:.75}}))});
     const previousZoom=saved.get(key),zoom=previousZoom?{start:previousZoom.start,end:previousZoom.end}:{start:minute?0:Math.max(0,100-65/rows.length*100),end:100};
@@ -45,32 +59,28 @@
       const startIndex=times.indexOf(previousZoom.from),endIndex=times.indexOf(previousZoom.to);
       if(startIndex>=0&&endIndex>=0){zoom.start=startIndex/Math.max(1,rows.length-1)*100;zoom.end=endIndex/Math.max(1,rows.length-1)*100;}
     }
-    const grids=aux?[{top:25,height:'43%'},{top:'54%',height:'17%'},{top:'78%',height:'12%'}]:[{top:25,height:'60%'},{top:'74%',height:'16%'}];
+    const grids=layout();
     const option={animation:false,backgroundColor:'transparent',legend:{show:false},tooltip:{trigger:'axis',showContent:false,triggerOn:'mousemove|click',axisPointer:{type:'cross'}},axisPointer:{link:[{xAxisIndex:'all'}],label:{show:false}},
-      grid:grids.map(g=>({...g,left:49,right:16})),
+      grid:grids,
       xAxis:axes.map((id)=>({type:'category',data:times,gridIndex:id,boundaryGap:!minute,axisLine:{lineStyle:{color:lineColor}},axisTick:{show:false},axisLabel:{show:id===volAxis,color:ink,fontSize:10,hideOverlap:true,...(minute?{interval:index=>[0,60,120,181,241].includes(index),showMinLabel:true,showMaxLabel:true}:{}),formatter:minute?value=>value==='11:30'?'11:30 / 13:00':value:value=>value.slice(2)},axisPointer:{label:{show:false}}})),
       yAxis:axes.map(id=>({type:'value',gridIndex:id,scale:true,splitNumber:id===0?4:2,axisLabel:{color:ink,fontSize:10,formatter:id===0?fmt:compact},axisLine:{show:false},axisTick:{show:false},splitLine:{lineStyle:{color:lineColor,type:'dashed'}},axisPointer:{label:{show:false}}})),
       dataZoom:[{type:'inside',xAxisIndex:axes,filterMode:'filter',zoomOnMouseWheel:true,moveOnMouseMove:true,...zoom},{type:'slider',xAxisIndex:axes,filterMode:'filter',height:16,bottom:2,showDetail:false,borderColor:lineColor,fillerColor:'rgba(80,130,220,.15)',...zoom}],series};
-    const offsets=(series[0].markPoint?.data||[]).map(mark=>mark.symbolOffset[1]);
-    const bottomSpace=offsets.some(v=>v>0)?Math.max(...offsets)+10:0,topSpace=offsets.some(v=>v<0)?Math.max(...offsets.map(v=>-v))+10:0;
     const minutePrices=minute?rows.flatMap(r=>r?[r.price,r.averagePrice].filter(finite):[]):[];
     const minuteDelta=minute&&finite(data.previousClose)&&data.previousClose>0?Math.max(data.previousClose*.005,...minutePrices.map(p=>Math.abs(p-data.previousClose))):null;
     const priceAxisPadding=()=>{
-      const height=document.querySelector('#chart').clientHeight*parseFloat(grids[0].height)/100;
-      const available=Math.max(1,height-bottomSpace-topSpace),gap=[bottomSpace/available,topSpace/available];
-      return minuteDelta!==null?{min:data.previousClose-minuteDelta*(1+2*gap[0]),max:data.previousClose+minuteDelta*(1+2*gap[1])}:{boundaryGap:gap};
+      return minuteDelta!==null?{min:data.previousClose-minuteDelta*1.06,max:data.previousClose+minuteDelta*1.06}:{boundaryGap:[.06,.08]};
     };
     Object.assign(option.yAxis[0],priceAxisPadding());
     chart.setOption(option,{notMerge:true,lazyUpdate:false});
     // Source/readout wrapping and Android insets may resize the flex item after initial paint.
     // Observe the actual chart box so the canvas cannot retain its former height over the buttons.
-    const chartNode=document.querySelector('#chart');
-    sizeObserver=new ResizeObserver(()=>{if(!chart.isDisposed()&&chartNode.clientWidth>0&&chartNode.clientHeight>0&&(chart.getWidth()!==chartNode.clientWidth||chart.getHeight()!==chartNode.clientHeight)){chart.setOption({yAxis:[priceAxisPadding()]});chart.resize();}});
+    let layoutWidth=chartNode.clientWidth,layoutHeight=chartNode.clientHeight;
+    sizeObserver=new ResizeObserver(()=>{if(!chart.isDisposed()&&chartNode.clientWidth>0&&chartNode.clientHeight>0&&(layoutWidth!==chartNode.clientWidth||layoutHeight!==chartNode.clientHeight)){layoutWidth=chartNode.clientWidth;layoutHeight=chartNode.clientHeight;chart.resize();chart.setOption({grid:layout(),yAxis:[priceAxisPadding()]});}});
     sizeObserver.observe(chartNode);
     chart.on('datazoom',()=>{const z=chart.getOption().dataZoom[0];saved.set(key,{start:z.start,end:z.end,length:times.length,first:times[0],from:times[Math.round(z.start/100*(times.length-1))],to:times[Math.round(z.end/100*(times.length-1))]});});
     const header=document.querySelector('#chartLegend');header.replaceChildren();
     for(const name of legend){const item=series.find(s=>s.name===name),label=document.createElement('span');label.style.color=item.lineStyle.color;label.textContent=name+'  ';header.append(label);}
-    const volumeLabel=document.createElement('span');volumeLabel.textContent=' | 成交量（手）'+(nine&&!minute?' | 1–9准备 · C1–C13计数':'');header.append(volumeLabel);
+    const volumeLabel=document.createElement('span');volumeLabel.textContent=' | 成交量（手）'+(nine?' | 密集标记避让；放大或点选查看完整序列':'');header.append(volumeLabel);
     const read=index=>{
       if(index<0||index>=rows.length)return;selected=index;selections.set(key,times[index]);const r=rows[index],node=document.querySelector('#chartReadout');
       if(!r){node.textContent=times[index]+' · 该时段暂无数据（未补造价格或成交量）';return;}
@@ -86,7 +96,7 @@
       if(nine){const explain=document.createElement('button');explain.className='signal-explain';explain.textContent='信号解释 / 历史核对';explain.addEventListener('click',()=>showSignals(data,settings,signals,index));node.append(explain);}
     };
     chart.on('updateAxisPointer',event=>{const info=event.axesInfo?.find(i=>i.axisIndex===0);if(info){const index=typeof info.value==='number'?info.value:times.indexOf(info.value);read(index);}});
-    chart.on('click',event=>{if(event.componentType==='markPoint'){const index=event.data?.signalIndex;if(Number.isInteger(index)){read(index);showSignals(data,settings,signals,index);}}});
+    chart.on('click',event=>{if(event.seriesName==='九转标记'){const index=event.data?.signalIndex;if(Number.isInteger(index)){read(index);showSignals(data,settings,signals,index);}}});
     activeRows=rows;activeChart=chart;activeRead=read;
     let last=times.indexOf(selections.get(key));if(last<0)last=rows.length-1;while(last>=0&&!rows[last])last--;read(last);
     return chart;

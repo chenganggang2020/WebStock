@@ -3882,6 +3882,11 @@ body.dark .dashboard-comparison-option:hover { background: #172033; }
 .dashboard-global-signal > p { margin: 4px 0 0; color: var(--muted); font-size: 9px; line-height: 1.35; }
 .dashboard-global-signal[data-direction="up"] > div span { color: var(--up); }
 .dashboard-global-signal[data-direction="down"] > div span { color: var(--down); }
+.dashboard-global-signal[data-direction="up"] > div b,
+.dashboard-global-signal[data-direction="up"] > svg { color: var(--up); }
+.dashboard-global-signal[data-direction="down"] > div b,
+.dashboard-global-signal[data-direction="down"] > svg { color: var(--down); }
+.dashboard-global-signal[data-direction="flat"] > svg { color: var(--muted); }
 .dashboard-global-signal[data-direction="risk-off"] > div span { color: #f59e0b; }
 .dashboard-global-signal[data-state="unavailable"] { opacity: 0.68; }
 .dashboard-global-signals-note { grid-column: 1 / -1; margin: 0; color: var(--muted); font-size: 10px; }
