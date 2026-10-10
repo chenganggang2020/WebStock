@@ -66,16 +66,12 @@
     const nav = doc.getElementById('terminalWorkspaces');
     const tabs = doc.getElementById('mainTabs');
     const picker = doc.getElementById('terminalPageSelect');
-    const menu = doc.createElement('details'); menu.className = 'workspace-menu';
-    const summary = doc.createElement('summary'); summary.textContent = '工作区 ▾'; menu.appendChild(summary);
-    const menuItems = doc.createElement('div'); menu.appendChild(menuItems);
     Object.keys(groups).forEach(function(key) {
       const button = doc.createElement('button');
       button.type = 'button'; button.dataset.workspace = key; button.textContent = groups[key];
-      button.addEventListener('click', function() { menu.open = false; open(key === 'market' ? 'dashboard' : lastPages[key] || pages.find(function(page) { return page.workspace === key; }).id); });
-      (key === 'market' ? nav : menuItems).appendChild(button);
+      button.addEventListener('click', function() { open(key === 'market' ? 'dashboard' : lastPages[key] || pages.find(function(page) { return page.workspace === key; }).id); });
+      nav.appendChild(button);
     });
-    nav.appendChild(menu);
     pages.forEach(function(page) {
       let button = tabs.querySelector('[data-main-view="' + page.id + '"]');
       if (!button) {

@@ -1,8 +1,4 @@
 /* Chart-first workbench: one browser, one primary chart, no duplicate windows. */
-.workspace-menu{position:relative;color:var(--text);font-size:13px}
-.workspace-menu>summary{padding:7px 12px;cursor:pointer;list-style:none}
-.workspace-menu>div{position:absolute;top:100%;left:0;width:180px;z-index:120;background:var(--card-bg);border:1px solid var(--border);box-shadow:0 6px 18px #0002;padding:5px;display:grid}
-.workspace-menu>div button{text-align:left!important}
 .fixed-terminal .home-terminal{grid-template-columns:minmax(0,1fr)}
 .fixed-terminal.home-browser-pinned .home-terminal{grid-template-columns:320px minmax(0,1fr)}
 #homeMarketDock{min-height:0;min-width:0;height:100%}
