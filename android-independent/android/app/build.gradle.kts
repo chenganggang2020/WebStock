@@ -10,10 +10,12 @@ android {
         applicationId = "com.webstock.companion"
         minSdk = 26
         targetSdk = 37
-        versionCode = 20261009
-        versionName = "2.4.0"
+        versionCode = 20261010
+        versionName = "2.4.1"
         testInstrumentationRunner = "com.webstock.companion.StandaloneSmokeInstrumentation"
     }
+
+    buildFeatures { buildConfig = true }
 
     val signingStore = System.getenv("WEBSTOCK_ANDROID_KEYSTORE")
     val signingStorePassword = System.getenv("WEBSTOCK_ANDROID_STORE_PASSWORD")

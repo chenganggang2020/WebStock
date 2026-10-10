@@ -21,6 +21,30 @@ function app(){
 }
 const flush=()=>new Promise(resolve=>setImmediate(resolve));
 
+test('watch groups are direct buttons and color tags never recolor quote values',async()=>{
+  const a=app(),state=a.api.getState();
+  state.watch=[{id:'a',code:'000001',name:'平安银行',group:'银行'},{id:'b',code:'000002',name:'万科A',group:'观察'}];
+  state.watchGroups=[{id:'g1',name:'银行',color:'violet'},{id:'g2',name:'观察',color:'blue'}];state.watchStyles=[];
+  a.api.render();let html=a.node('#content').innerHTML;
+  assert.doesNotMatch(html,/<select id="watchGroup"/);
+  assert.match(html,/data-watch-group="银行"/);assert.match(html,/data-watch-group="观察"/);
+  assert.match(html,/data-group-color="violet"/);assert.match(html,/<div class="quote-price">/);
+  const button={dataset:{watchGroup:'银行'},hasAttribute:k=>k==='data-watch-group',disabled:false};
+  await a.listeners.click({target:{closest:()=>button}});html=a.node('#content').innerHTML;
+  assert.match(html,/平安银行/);assert.doesNotMatch(html,/data-stock="000002"/);
+});
+
+test('stock color override is consistent across memberships and invalid tokens are neutral',()=>{
+  const a=app(),state=a.api.getState();
+  state.watch=[{id:'a',code:'000001',name:'平安银行',group:'银行'},{id:'b',code:'000001',name:'平安银行',group:'观察'}];
+  state.watchGroups=[{id:'g1',name:'银行',color:'violet'},{id:'g2',name:'观察',color:'blue'}];
+  state.watchStyles=[{id:'sz000001',color:'amber'}];a.api.render();
+  assert.equal((a.node('#content').innerHTML.match(/class="quote-row" data-code="000001" data-group-color="amber"/g)||[]).length,2);
+  state.watchStyles=[{id:'sz000001',color:'inherit',primaryGroupId:'g2'}];a.api.render();
+  assert.equal((a.node('#content').innerHTML.match(/class="quote-row" data-code="000001" data-group-color="blue"/g)||[]).length,2);
+  state.watchStyles=[{id:'sz000001',color:'url(evil)'}];a.api.render();assert.doesNotMatch(a.node('#content').innerHTML,/url\(evil\)/);
+});
+
 test('phone Back returns to watch home and never replays previously opened tabs',()=>{
   const a=app();a.node('#searchResults').hidden=true;
   a.api.navigate('docs');a.api.navigate('settings');

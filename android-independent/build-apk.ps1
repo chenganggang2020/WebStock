@@ -17,7 +17,7 @@ try {
   & .\gradlew.bat --no-daemon test assembleRelease
   if($LASTEXITCODE -ne 0) {throw 'Android build or tests failed'}
 } finally {Pop-Location}
-$apk=Join-Path $PSScriptRoot 'WebStock-Android-Independent-2.4.0-20261009.apk'
+$apk=Join-Path $PSScriptRoot 'WebStock-Android-Independent-2.4.1-20261010.apk'
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'android\app\build\outputs\apk\release\app-release.apk') -Destination $apk -Force
 & (Join-Path $toolchain.sdkRoot 'build-tools\36.0.0\apksigner.bat') verify --verbose --print-certs $apk
 if($LASTEXITCODE -ne 0) {throw 'APK signature verification failed'}

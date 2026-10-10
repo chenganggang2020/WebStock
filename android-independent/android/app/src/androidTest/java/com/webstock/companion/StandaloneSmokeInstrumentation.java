@@ -39,6 +39,7 @@ public final class StandaloneSmokeInstrumentation extends Instrumentation {
     @Override public void onStart() {
         Bundle result=new Bundle();String dbName="standalone-instrumentation.db";
         try {
+            if(mode.equals("watch-colors")){JSONObject report=new WatchColorsAudit().run(getTargetContext());result.putString("summary",report.toString());finish(report.getInt("pass")==report.getInt("total")?Activity.RESULT_OK:Activity.RESULT_CANCELED,result);return;}
             if(mode.equals("seed220")){seed220();return;}
             if(mode.equals("upgrade230") || mode.equals("offline230")){release230Audit();return;}
             if(mode.equals("seed211")){seed211();return;}
