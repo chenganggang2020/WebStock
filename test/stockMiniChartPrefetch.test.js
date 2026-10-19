@@ -1,0 +1,190 @@
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+const vm = require('node:vm');
+
+function tick() {
+  return new Promise(resolve => setTimeout(resolve, 0));
+}
+
+function createCell(code) {
+  return {
+    code,
+    innerHTML: '等待加载',
+    isConnected: true,
+    getAttribute(name) {
+      return name === 'data-mini-chart-code' ? code : null;
+    }
+  };
+}
+
+function loadStockList(cells, fetchApiEnvelope) {
+  let observer;
+  class FakeIntersectionObserver {
+    constructor(callback) {
+      this.callback = callback;
+      observer = this;
+    }
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  }
+
+  const document = {
+    body: { classList: { contains() { return false; } } },
+    querySelectorAll(selector) {
+      return selector === '[data-mini-chart-code]' ? cells : [];
+    }
+  };
+  const window = {
+    State: {
+      minuteSeriesByCode: {},
+      filteredStocks: [],
+      allStocks: [],
+      searchResults: [],
+      watchlist: []
+    },
+    ApiClient: { fetchApiEnvelope },
+    MarketVisualModel: {
+      trendColor(change) {
+        if (change === null || change === undefined || !Number.isFinite(Number(change))) return '#64748b';
+        return Number(change) > 0 ? '#ff2d2d' : Number(change) < 0 ? '#00b050' : '#64748b';
+      }
+    }
+  };
+  const context = {
+    window,
+    document,
+    IntersectionObserver: FakeIntersectionObserver,
+    setTimeout,
+    clearTimeout,
+    console: { warn() {}, error() {}, log() {} }
+  };
+  const source = fs.readFileSync(path.resolve(__dirname, '../js/modules/stockList.js'), 'utf8');
+  vm.runInNewContext(source, context, { filename: 'stockList.js' });
+  return { StockList: window.StockList, state: window.State, window, getObserver() { return observer; } };
+}
+
+test('visible row minute prefetch is lazy, bounded, deduplicated, and keeps failures explicit', async () => {
+  const codes = ['000001', '000002', '000003', '000004', '000005', '000006'];
+  const duplicate = createCell('000001');
+  const cells = codes.map(createCell).concat(duplicate);
+  const pending = new Map();
+  const calls = [];
+  let active = 0;
+  let maxActive = 0;
+
+  const loaded = loadStockList(cells, function(url) {
+    const code = new URL(url, 'http://localhost').searchParams.get('code');
+    calls.push(code);
+    active += 1;
+    maxActive = Math.max(maxActive, active);
+    return new Promise(function(resolve, reject) {
+      pending.set(code, {
+        resolve(value) { active -= 1; resolve(value); },
+        reject(error) { active -= 1; reject(error); }
+      });
+    });
+  });
+
+  const root = { querySelectorAll() { return cells; } };
+  loaded.StockList.observeMinuteRows(root);
+  loaded.getObserver().callback(cells.map(function(cell) {
+    return { target: cell, isIntersecting: cell.code !== '000006' };
+  }));
+  await tick();
+
+  assert.equal(calls.length, 3, 'only the bounded worker count may start immediately');
+  calls.slice(0, 3).forEach(function(code) {
+    pending.get(code).resolve({
+      data: [
+        { time: '2026-08-12 09:35:00', price: 10, volume: 100 },
+        { time: '2026-08-12 09:40:00', price: 10.1, volume: 120 }
+      ],
+      meta: { sampling: { intervalMinutes: 5 } }
+    });
+  });
+  await tick();
+  await tick();
+
+  assert.equal(calls.length, 5, 'remaining visible codes should start after a worker is free');
+  pending.get('000004').resolve({
+    data: [
+      { time: '2026-08-12 09:35:00', price: 10, volume: 100 },
+      { time: '2026-08-12 09:40:00', price: 10.2, volume: 120 }
+    ],
+    meta: { sampling: { intervalMinutes: 5 } }
+  });
+  pending.get('000005').reject(new Error('planned minute failure'));
+  await loaded.StockList.waitForMinutePrefetchIdle();
+
+  assert.ok(maxActive <= 3, 'minute prefetch concurrency must stay bounded');
+  assert.equal(calls.filter(code => code === '000001').length, 1, 'duplicate visible cells share one request');
+  assert.equal(calls.includes('000006'), false, 'off-screen rows are not prefetched');
+  assert.match(cells[0].innerHTML, /polyline/);
+  assert.match(duplicate.innerHTML, /polyline/);
+  assert.match(cells[4].innerHTML, /行情源无分时/);
+  assert.equal(cells[5].innerHTML, '等待加载');
+});
+
+test('missing minute data keeps an honest placeholder but colors it from the daily change', () => {
+  const loaded = loadStockList([], async function() { return { data: [], meta: {} }; });
+  const down = loaded.StockList.miniChart({ code: '000001', change: -1.25 }, '#00b050');
+  const up = loaded.StockList.miniChart({ code: '600000', change: 2.5 }, '#ff2d2d');
+
+  assert.match(down, /行情源无分时|暂无真实分时/);
+  assert.match(down, /#00b050/);
+  assert.match(up, /行情源无分时|暂无真实分时/);
+  assert.match(up, /#ff2d2d/);
+  assert.doesNotMatch(down, /polyline/);
+});
+
+test('minute prefetch rerender prefers the quoted watchlist row over the unquoted base catalog', async () => {
+  const cell = createCell('601138');
+  const loaded = loadStockList([cell], async function() {
+    return {
+      data: [
+        { time: '2026-08-14 09:35:00', price: 65.5 },
+        { time: '2026-08-14 15:00:00', price: 66.19 }
+      ],
+      meta: { sampling: { intervalMinutes: 5 } }
+    };
+  });
+  loaded.state.allStocks = [{ code: '601138', name: '工业富联' }];
+  loaded.state.watchlist = [{ code: '601138', name: '工业富联', change: 1.47, prevClose: 65.23 }];
+
+  loaded.StockList.observeMinuteRows({ querySelectorAll() { return [cell]; } });
+  loaded.getObserver().callback([{ target: cell, isIntersecting: true }]);
+  await loaded.StockList.waitForMinutePrefetchIdle();
+
+  assert.match(cell.innerHTML, /polyline/);
+  assert.match(cell.innerHTML, /stroke="#ff2d2d"/);
+  assert.doesNotMatch(cell.innerHTML, /stroke="#64748b"[^>]*polyline/);
+});
+
+test('minute prefetch uses the visible Tonghuashun row quote so red and green do not turn gray', async () => {
+  const cell = createCell('601138');
+  const loaded = loadStockList([cell], async function() {
+    return {
+      data: [
+        { time: '2026-09-01 09:35:00', price: 64.5 },
+        { time: '2026-09-01 15:00:00', price: 62.94 }
+      ],
+      meta: { sampling: { intervalMinutes: 5 } }
+    };
+  });
+  loaded.state.allStocks = [{ code: '601138', name: '工业富联' }];
+  loaded.window.Watchlist = {
+    getMiniChartStock(code) {
+      return code === '601138' ? { code, name: '工业富联', change: -2.93, prevClose: 64.84 } : null;
+    }
+  };
+
+  loaded.StockList.observeMinuteRows({ querySelectorAll() { return [cell]; } });
+  loaded.getObserver().callback([{ target: cell, isIntersecting: true }]);
+  await loaded.StockList.waitForMinutePrefetchIdle();
+
+  assert.match(cell.innerHTML, /stroke="#00b050"/);
+  assert.doesNotMatch(cell.innerHTML, /stroke="#64748b"[^>]*polyline/);
+});

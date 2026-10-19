@@ -1,0 +1,16 @@
+services:
+  webstock:
+    build: .
+    container_name: webstock
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      OPENAI_BASE_URL: https://api.openai.com/v1
+      OPENAI_MODEL: gpt-5-mini
+      OPENAI_MAX_COMPLETION_TOKENS: 4096
+      OPENAI_TIMEOUT_MS: 120000
+      OPENAI_ENABLED: "true"
+    restart: unless-stopped

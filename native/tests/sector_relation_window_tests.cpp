@@ -1,0 +1,86 @@
+#include <QtTest>
+#include <QtWidgets>
+#include "window.hpp"
+#include "sector_ai_page.hpp"
+#include "sector_relation_page.hpp"
+#include "research_companies_page.hpp"
+#ifdef Q_OS_WIN
+#include <windows.h>
+#endif
+
+// Reuses the existing actual Window friend; no Window test stub or shared header change.
+class SectorAiWindowTests:public QObject {
+ Q_OBJECT
+ static QString output(){auto p=qEnvironmentVariable("NATIVE_QA_OUTPUT");return p.isEmpty()?QString(V69_OUTPUT):p;}
+ static void need(bool ok,const char*why){if(!ok)throw std::runtime_error(why);}
+ template<class T>static T* get(QObject*p,const char*name){auto w=p->findChild<T*>(name);need(w!=nullptr,name);return w;}
+ static QPushButton* label(QWidget*p,const QString&text){for(auto b:p->findChildren<QPushButton*>())if(b->text()==text)return b;throw std::runtime_error("labeled original action missing");}
+ static void click(QWidget*p,const char*name){auto b=get<QPushButton>(p,name);need(b->isVisible()&&b->isEnabled(),name);b->click();QCoreApplication::processEvents();}
+ static QJsonObject byId(const QJsonArray&rows,const QString&id){for(auto v:rows)if(v.toObject()["id"]==id)return v.toObject();return {};}
+ static QByteArray bytes(QString path){QFile file(path);need(file.open(QIODevice::ReadOnly),"evidence file unreadable");return file.readAll();}
+ static void visibleMarker(QPlainTextEdit*reader,const QString&marker){auto at=reader->toPlainText().indexOf(marker);need(at>=0,"complete marker absent");QTextCursor cursor=reader->textCursor();cursor.setPosition(at);reader->setTextCursor(cursor);reader->ensureCursorVisible();QTest::qWait(20);need(reader->isVisible()&&reader->viewport()->rect().contains(reader->cursorRect().center()),"original marker outside visible viewport");}
+ struct Rig {
+  QTemporaryDir dir;std::unique_ptr<Window>w;QWidget*parent=nullptr;SectorAiPage*ai=nullptr;SectorRelationPage*relation=nullptr;ResearchCompaniesPage*standalone=nullptr;
+  QJsonObject doc,topic,oldManual,record,scope;QString business,research,standaloneDraft;
+  Rig(bool withStandalone=false):dir(output()+"/relation-window-XXXXXX"){
+   need(dir.isValid(),"isolated Window directory");dir.setAutoRemove(false);w=std::make_unique<Window>(true,dir.filePath("settings.ini"),dir.path());need(w->testing&&w->feed==nullptr,"actual Window must be offline");business=w->businessStore->filePath();need(business.startsWith(dir.path()+"/"),"business path escaped isolation");research=business+".sector-research.sqlite";standaloneDraft=QFileInfo(business).absolutePath()+"/research-company-drafts-v1.json";
+   QString quote="甲公司在隔离资料中声称生产光模块，客户、收入与供货关系尚需独立公告核验。";
+   QString text="V69_DOC_BEGIN\n"+quote+"\n原有公司在人工材料中生产原有产品，旧观点需保留。\n";for(int i=0;i<100;i++)text+=QString("完整来源段%1：原文与元数据保留，关系复核不推断市场、证券、营收或供货身份。\n").arg(i);text+="V69_DOC_END";
+   doc=w->businessStore->save("docs",{{"id","v69-source"},{"title","隔离完整关系资料"},{"text",text},{"originalText","V69_ORIGINAL_BEGIN\n保留完整原始版本。\nV69_ORIGINAL_END"},{"sourceUrl","https://example.org/v69-source"},{"fixtureMetadata",QJsonObject{{"purpose","synthetic-only"},{"revision",1}}}});
+   topic=w->businessStore->save("topics",{{"id","v69-topic"},{"name","明确已有产业主题"}});
+   oldManual=w->businessStore->save("relations",{{"id","v69-old-manual"},{"topicId","v69-topic"},{"documentId","v69-source"},{"stage","materials"},{"product","原有产品"},{"company",QJsonObject{{"name","原有公司"}}},{"quote","原有公司在人工材料中生产原有产品，旧观点需保留。"},{"claim","用户原独立入口保留的关系"},{"verification","unverified"},{"polarity","supports"},{"manualNote","must-survive-review"}});
+   for(auto v:w->sectorResearchScopes())if(v.toObject()["id"]=="business:topics:v69-topic")scope=v.toObject();need(!scope.isEmpty(),"actual Window scope provider");
+   auto plan=sectorAi::freeze(scope,QJsonArray{QJsonObject{{"kind","docs"},{"id",doc["id"]},{"row",doc}}},"原人工草稿保持","逐条核对材料支持的关系与缺失证据");
+   auto prepared=sectorAi::request(plan,{{"provider","openai"},{"endpoint","https://api.openai.com/v1/chat/completions"},{"model","v69-local-fixture"},{"enabledPreference",true}});
+   QJsonObject report{{"schema","sector-ai-report/v1"},{"planId",plan["planId"]},{"scopeKey",sectorResearch::scopeKey(scope)},{"summary","隔离本机报告，不代表事实或投资结论。"},{"relations",QJsonArray{QJsonObject{{"stage","components"},{"product","光模块"},{"companyName","甲公司"},{"claim","材料中的待核验观点"},{"polarity","supports"},{"evidenceId","docs:v69-source"},{"quote",quote}}}},{"risks",QJsonArray{"受控资料不能代替公告"}},{"missingData",QJsonArray{"缺独立客户与收入证据"}}};
+   QString raw=QString::fromUtf8(QJsonDocument(report).toJson(QJsonDocument::Compact));
+   QJsonObject attempt{{"schema","native-knowledge-ai-attempt/v1"},{"id","v69-local-fixture"},{"status","completed"},{"errorCode",""},{"preview",prepared.preview()},{"previewDigest",prepared.digest()},{"verification","unverified"},{"finishReason","stop"},{"provenance","local-fixture"},{"networkAttempted",false},{"report",raw},{"providerResponse",QJsonObject{{"choices",QJsonArray{QJsonObject{{"index",0},{"finish_reason","stop"},{"message",QJsonObject{{"role","assistant"},{"content",raw}}}}}}}}};
+   record=sectorAi::completed(plan,prepared.preview(),attempt);SectorResearchStore(research).put(record);
+   w->resize(1600,1000);w->show();w->raise();w->activateWindow();QTest::qWait(40);
+   if(withStandalone){w->researchView();auto root=w->pages.value("research");standalone=dynamic_cast<ResearchCompaniesPage*>(root->findChild<QWidget*>("researchCompaniesPage"));need(standalone!=nullptr,"original standalone companies factory");for(auto tabs:root->findChildren<QTabWidget*>())for(int i=0;i<tabs->count();i++)if(tabs->widget(i)==standalone||tabs->widget(i)->isAncestorOf(standalone))tabs->setCurrentIndex(i);for(QWidget*child=standalone;child&&child!=root;child=child->parentWidget())if(auto stack=qobject_cast<QStackedWidget*>(child->parentWidget()))stack->setCurrentWidget(child);QCoreApplication::processEvents();standalone->setTopic("v69-topic");auto table=get<QTableWidget>(standalone,"researchCompanyTable");need(table->rowCount()==1,"standalone original relation");QMetaObject::invokeMethod(table,"cellClicked",Qt::DirectConnection,Q_ARG(int,0),Q_ARG(int,0));need(standalone->isVisible(),"standalone page visible for draft edit");get<QLineEdit>(standalone,"companyProduct")->setText("独立页人工草稿必须保留");}
+   route();
+  }
+  void route(){w->sectorResearchView("industry","business:topics:v69-topic");w->raise();w->activateWindow();QTest::qWait(20);parent=w->pages.value("sectorResearch");need(parent&&parent->isVisible(),"original Window report factory");}
+  void openReport(){auto b=label(parent,"完整材料AI报告");need(b->isVisible()&&b->isEnabled(),"original report entry not available");b->click();QCoreApplication::processEvents();auto widget=parent->findChild<QWidget*>("sectorAiPage");if(!widget){QStringList why;for(auto label:parent->findChildren<QLabel*>(QString(),Qt::FindDirectChildrenOnly))why<<label->text();throw std::runtime_error(("actual AI entry: "+why.join(" | ")).toStdString());}ai=dynamic_cast<SectorAiPage*>(widget);need(ai&&ai->isVisible(),"actual internal report page");auto history=get<QComboBox>(ai,"sectorAiHistory");auto at=history->findData(record["id"].toString());need(at>=0,"saved local report in original history");history->setCurrentIndex(at);QMetaObject::invokeMethod(history,"activated",Qt::DirectConnection,Q_ARG(int,at));need(ai->viewedHistoryId==record["id"].toString(),"explicit complete history read");}
+  void openReview(){openReport();click(ai,"sectorAiReview");relation=dynamic_cast<SectorRelationPage*>(get<QWidget>(parent,"sectorRelationPage"));need(relation&&relation->isVisible(),"actual report review forwarding");}
+  void prepare(){openReview();auto topics=get<QComboBox>(relation,"sectorRelationTopic");need(topics->currentData().toString().isEmpty(),"target topic was inferred");topics->setCurrentIndex(topics->findData("v69-topic"));click(relation,"sectorRelationPreview");auto rows=get<QTableWidget>(relation,"sectorRelationDecisions");need(rows->rowCount()==1,"one full explicit source relation");auto action=qobject_cast<QComboBox*>(rows->cellWidget(0,1));need(action&&action->currentData().toString().isEmpty(),"relation decision inferred");action->setCurrentIndex(action->findData("verify"));get<QPlainTextEdit>(relation,"sectorRelationNote")->setPlainText("人工复核所引本机原文，未绑定证券身份或升级事实");get<QCheckBox>(relation,"sectorRelationConsent")->setChecked(true);}
+  SectorRelationStore store(){return SectorRelationStore(research,business);}
+  ResearchCompaniesPage* savedGraph(){prepare();click(relation,"sectorRelationSave");need(store().versions("v69-topic").size()==1,"actual UI append did not commit");click(relation,"sectorRelationGraph");auto graph=dynamic_cast<ResearchCompaniesPage*>(get<QWidget>(relation,"researchCompaniesPage"));need(graph&&graph->isVisible(),"existing graph constructor and saved relation");return graph;}
+ };
+private slots:
+ void initTestCase(){QDir().mkpath(output());QFontDatabase::addApplicationFont("C:/Windows/Fonts/msyh.ttc");qApp->setFont(QFont("Microsoft YaHei",10));}
+ void hiddenGraphSave(){try{Rig rig;auto graph=rig.savedGraph();get<QLineEdit>(graph,"companyProduct")->setText("隐藏旧按钮不应写入");auto before=rig.w->businessStore->read("relations");auto button=get<QPushButton>(graph,"companySave");rig.w->home();QVERIFY(!graph->isVisible());QVERIFY(button->isEnabled());QSignalSpy fired(button,&QPushButton::clicked);button->click();QCOMPARE(fired.count(),1);QCOMPARE(rig.w->businessStore->read("relations"),before);}catch(const std::exception&e){QFAIL(e.what());}}
+ void hiddenGraphDiscard(){try{Rig rig;auto graph=rig.savedGraph();get<QLineEdit>(graph,"companyProduct")->setText("隐藏图草稿保持");auto before=graph->saveState();auto button=get<QPushButton>(graph,"companyDiscard");rig.w->home();QVERIFY(!graph->isVisible());button->click();QCOMPARE(graph->saveState(),before);}catch(const std::exception&e){QFAIL(e.what());}}
+ void nestedGraphCannotOverwriteStandaloneDraft(){try{Rig rig(true);auto expected=rig.standalone->saveState()["drafts"].toObject();QVERIFY(!expected.isEmpty());auto graph=rig.savedGraph();QVERIFY(graph->isVisible());auto path=rig.standaloneDraft;rig.w.reset();auto saved=QJsonDocument::fromJson(bytes(path)).object();QCOMPARE(saved["drafts"].toObject(),expected);}catch(const std::exception&e){QFAIL(e.what());}}
+ void actualReportReviewGraphAndRebuild(){try{Rig rig;rig.prepare();auto before=rig.oldManual;auto original=get<QPlainTextEdit>(rig.relation,"sectorRelationOriginal");auto tabs=qobject_cast<QTabWidget*>(original->parentWidget()->parentWidget());need(tabs,"original full reader tab");tabs->setCurrentWidget(original);QTest::qWait(30);QVERIFY(original->visibleRegion().boundingRect().height()>=300);for(auto mode:QStringList{"quotes","classic","focus"}){rig.w->setLayoutMode(mode);visibleMarker(original,"V69_DOC_END");QVERIFY(rig.w->grab().save(output()+"/qt-v69-"+mode+"-review-original.png"));}
+   click(rig.relation,"sectorRelationSave");auto ids=rig.store().versions("v69-topic");QCOMPARE(ids.size(),1);auto version=rig.store().readVersion(ids[0]);QCOMPARE(version["inserts"].toArray().size(),1);QCOMPARE(version["inserts"].toArray()[0].toObject()["company"].toObject().size(),1);QCOMPARE(byId(rig.w->businessStore->read("relations"),"v69-old-manual"),before);QCOMPARE(SectorResearchStore(rig.research).preview(SectorResearchStore(rig.research).backup())["records"].toArray().size(),2);
+   click(rig.relation,"sectorRelationGraph");auto graph=get<QWidget>(rig.relation,"researchCompaniesPage");auto body=get<QPlainTextEdit>(graph,"companyOriginal");visibleMarker(body,"V69_DOC_END");QVERIFY(rig.w->grab().save(output()+"/qt-v69-existing-graph.png"));auto back=label(rig.relation,"返回复核版本");back->click();QCoreApplication::processEvents();QVERIFY(get<QPushButton>(rig.relation,"sectorRelationBack")->isVisible());QPointer<QPushButton> staleSave=get<QPushButton>(rig.relation,"sectorRelationSave");QVERIFY(rig.w->closeInternalReader());QVERIFY(rig.ai->isVisible());QVERIFY(staleSave&&!staleSave->isVisible());staleSave->click();QCOMPARE(rig.store().versions("v69-topic").size(),1);QVERIFY(rig.w->closeInternalReader());QCoreApplication::sendPostedEvents(nullptr,QEvent::DeferredDelete);QVERIFY(label(rig.parent,"完整材料AI报告")->isVisible());rig.w.reset();rig.w=std::make_unique<Window>(true,rig.dir.filePath("settings.ini"),rig.dir.path());rig.w->resize(1600,1000);rig.w->show();rig.w->activateWindow();QTest::qWait(40);rig.route();rig.openReview();auto topic=get<QComboBox>(rig.relation,"sectorRelationTopic");QVERIFY(topic->currentData().toString().isEmpty());topic->setCurrentIndex(topic->findData("v69-topic"));click(rig.relation,"sectorRelationReadHistory");QCOMPARE(rig.store().readVersion(ids[0]),version);QVERIFY(get<QPlainTextEdit>(rig.relation,"sectorRelationOriginal")->toPlainText().contains("V69_DOC_END"));QCOMPARE(byId(rig.w->businessStore->read("relations"),"v69-old-manual"),before);
+  }catch(const std::exception&e){QFAIL(e.what());}}
+ void sourceChangeAndCancelledOldCallbacks(){try{Rig rig;rig.prepare();auto old=get<QPushButton>(rig.ai,"sectorAiReview");auto before=rig.w->businessStore->read("relations");auto doc=rig.doc;doc["fixtureMetadata"]=QJsonObject{{"revision",2}};rig.w->businessStore->save("docs",doc);click(rig.relation,"sectorRelationSave");QVERIFY(rig.store().versions("v69-topic").isEmpty());QCOMPARE(rig.w->businessStore->read("relations"),before);QVERIFY(get<QLabel>(rig.relation,"sectorRelationStatus")->text().contains("变化"));rig.w->home();auto active=rig.w->workspaceTabs->currentWidget();QVERIFY(!old->isVisible());old->click();get<QPushButton>(rig.relation,"sectorRelationSave")->click();QCOMPARE(rig.w->workspaceTabs->currentWidget(),active);QVERIFY(rig.store().versions("v69-topic").isEmpty());QCOMPARE(rig.w->businessStore->read("relations"),before);
+  }catch(const std::exception&e){QFAIL(e.what());}}
+ void existingAbnormalGraphDraftFilesPreserved(){try{
+  for(auto kind:QStringList{"corrupt","schema","oversize","unreadable"}){
+   Rig rig;auto graph=rig.savedGraph();auto path=graph->property("sectorRelationDraftPath").toString();QVERIFY(!path.isEmpty());QVERIFY(rig.w->closeInternalReader());QVERIFY(rig.w->closeInternalReader());QCoreApplication::sendPostedEvents(nullptr,QEvent::DeferredDelete);
+   QByteArray original=kind=="corrupt"?QByteArray("{broken-json"):kind=="schema"?QByteArray("{\"schema\":\"foreign-drafts/v1\",\"drafts\":{\"keep\":true}}"):kind=="oversize"?QByteArray(4*1024*1024+1,'X'):QByteArray("{\"schema\":\"research-company-drafts/v1\",\"drafts\":{},\"external\":\"locked\"}");
+   {QFile file(path);QVERIFY(file.open(QIODevice::WriteOnly|QIODevice::Truncate));QCOMPARE(file.write(original),qint64(original.size()));}
+#ifdef Q_OS_WIN
+   HANDLE locked=INVALID_HANDLE_VALUE;if(kind=="unreadable"){auto nativePath=QStringLiteral("\\\\?\\")+QDir::toNativeSeparators(QFileInfo(path).absoluteFilePath());locked=CreateFileW(reinterpret_cast<LPCWSTR>(nativePath.utf16()),GENERIC_READ,0,nullptr,OPEN_EXISTING,FILE_ATTRIBUTE_NORMAL,nullptr);auto error=GetLastError();QVERIFY2(locked!=INVALID_HANDLE_VALUE,qPrintable(QString("exclusive read fixture error %1, path length %2").arg(error).arg(path.size())));}
+#endif
+   rig.openReview();auto topics=get<QComboBox>(rig.relation,"sectorRelationTopic");topics->setCurrentIndex(topics->findData("v69-topic"));click(rig.relation,"sectorRelationReadHistory");click(rig.relation,"sectorRelationGraph");graph=dynamic_cast<ResearchCompaniesPage*>(get<QWidget>(rig.relation,"researchCompaniesPage"));QVERIFY(graph);QString message=get<QLabel>(graph,"companyState")->text();rig.w.reset();
+#ifdef Q_OS_WIN
+   if(locked!=INVALID_HANDLE_VALUE)CloseHandle(locked);
+#endif
+   QCOMPARE(bytes(path),original);QVERIFY2(message.contains("保留"),qPrintable(kind+": "+message));
+  }
+ }catch(const std::exception&e){QFAIL(e.what());}}
+ void externallyChangedGraphDraftPreserved(){try{
+  for(bool existing:{false,true}){
+   Rig rig;auto graph=rig.savedGraph();auto path=graph->property("sectorRelationDraftPath").toString();QVERIFY(!path.isEmpty());
+   if(existing){QVERIFY(rig.w->closeInternalReader());QVERIFY(rig.w->closeInternalReader());QCoreApplication::sendPostedEvents(nullptr,QEvent::DeferredDelete);QVERIFY(QFileInfo::exists(path));rig.openReview();auto topics=get<QComboBox>(rig.relation,"sectorRelationTopic");topics->setCurrentIndex(topics->findData("v69-topic"));click(rig.relation,"sectorRelationReadHistory");click(rig.relation,"sectorRelationGraph");graph=dynamic_cast<ResearchCompaniesPage*>(get<QWidget>(rig.relation,"researchCompaniesPage"));QVERIFY(graph);}else QVERIFY(!QFileInfo::exists(path));
+   QByteArray external="{\"schema\":\"research-company-drafts/v1\",\"drafts\":{\"external-editor\":{\"note\":\"keep\"}},\"externalEpoch\":2}";{QFile file(path);QVERIFY(file.open(QIODevice::WriteOnly|QIODevice::Truncate));QCOMPARE(file.write(external),qint64(external.size()));}
+   get<QLineEdit>(graph,"companyProduct")->setText("本图本机临时编辑");click(graph,"companyDiscard");QString message=get<QLabel>(graph,"companyState")->text();QCOMPARE(bytes(path),external);QVERIFY(message.contains("保留"));rig.w.reset();QCOMPARE(bytes(path),external);
+  }
+ }catch(const std::exception&e){QFAIL(e.what());}}
+};
+QTEST_MAIN(SectorAiWindowTests)
+#include "sector_relation_window_tests.moc"

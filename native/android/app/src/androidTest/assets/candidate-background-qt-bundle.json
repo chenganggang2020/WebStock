@@ -1,0 +1,899 @@
+{
+  "adapter": {
+    "backgrounds": {
+      "SH:stock:600001": {
+        "adapterDiagnostics": [
+          "holdings：当前本机完整观察；业务时点未改写",
+          "recent：当前本机完整观察；业务时点未改写",
+          "leaders：当前本机完整观察；业务时点未改写",
+          "themes：来源未提供或不可用",
+          "demand：来源未提供或不可用"
+        ],
+        "adapterInputHash": "9d3889b356799b65174570d0893586dbea106f7e936540fea45369888f563190",
+        "adapterVersion": "native-candidate-background-adapter/v1",
+        "holdings": {
+          "accountScope": {
+            "accountIds": [
+              "account-A"
+            ],
+            "kind": "explicit-ledger-accounts"
+          },
+          "asOf": "2026-10-13T08:00:00.000Z",
+          "complete": true,
+          "items": [
+            {
+              "accountId": "account-A",
+              "basis": "all-local-recorded-transactions",
+              "businessAsOf": null,
+              "holdingId": "ledger:account-A:SH:stock:600001",
+              "observedAt": "2026-10-13T08:00:00.000Z",
+              "quantity": 100,
+              "rawPosition": {
+                "averageCost": 10,
+                "cost": 1000,
+                "instrumentId": "SH:stock:600001",
+                "marketValue": 1400,
+                "name": "字段样例",
+                "price": 14,
+                "quantity": 100,
+                "quoteDate": "2026-06-20",
+                "quoteTime": "15:00:00",
+                "realized": 0,
+                "unrealized": 400
+              },
+              "securityId": "SH:stock:600001",
+              "source": "native-local/holdings@4bef42c450ab8ef82ded0e29d967f830d0a704eac41515831d89d52160a619bc"
+            }
+          ],
+          "observationBasis": "current-local-records-not-business-event",
+          "observedAt": "2026-10-13T08:00:00.000Z",
+          "securityId": "SH:stock:600001",
+          "source": "native-local/holdings@4bef42c450ab8ef82ded0e29d967f830d0a704eac41515831d89d52160a619bc · 当前本机记录观察",
+          "status": "known"
+        },
+        "leaders": {
+          "asOf": "2026-10-13T08:00:00.000Z",
+          "complete": true,
+          "items": [
+            {
+              "configRevision": 2,
+              "configUpdatedAt": "2026-10-12T04:00:00.000Z",
+              "kind": "manual-unverified",
+              "label": "人工板块字段样例",
+              "labelId": "label-A",
+              "observedAt": "2026-10-13T08:00:00.000Z",
+              "rawLabel": {
+                "code": "600001",
+                "fullId": "SH:stock:600001",
+                "id": "label-A",
+                "identityState": "confirmed-user",
+                "name": "字段样例",
+                "note": "",
+                "reason": "人工记录",
+                "role": "总龙头",
+                "sectorId": "board-A",
+                "weight": 1
+              },
+              "role": "总龙头",
+              "securityId": "SH:stock:600001",
+              "source": "native-local/leaders@0598403d51ee7654fdb3b9e15d9f91ee2ff533b576ca24700c681c2c826fec0d"
+            }
+          ],
+          "observationBasis": "current-local-records-not-business-event",
+          "observedAt": "2026-10-13T08:00:00.000Z",
+          "securityId": "SH:stock:600001",
+          "source": "native-local/leaders@0598403d51ee7654fdb3b9e15d9f91ee2ff533b576ca24700c681c2c826fec0d · 当前本机记录观察",
+          "status": "known"
+        },
+        "recent": {
+          "asOf": "2026-10-13T08:00:00.000Z",
+          "complete": true,
+          "items": [
+            {
+              "eventId": "recent:SH:stock:600001:2026-10-13T07:00:00.000Z",
+              "observedAt": "2026-10-13T08:00:00.000Z",
+              "rank": 1,
+              "rawRecent": {
+                "canOpen": true,
+                "code": "600001",
+                "createdAt": "2026-10-11T02:00:00.000Z",
+                "id": "SH:stock:600001",
+                "lastViewedAt": "2026-10-13T07:00:00.000Z",
+                "name": "合成字段样例",
+                "origin": "native-active-view",
+                "quote": {
+                  "checkedAt": "2026-10-13T08:00:00.000Z",
+                  "price": 10,
+                  "source": "cached-fixture"
+                },
+                "symbol": "sh600001",
+                "viewCount": 2
+              },
+              "securityId": "SH:stock:600001",
+              "source": "native-local/recent@1b33ebdc1200d4e89cc073b4318407fe5a82b3701c3a850d5f3fea2959118811",
+              "viewedAt": "2026-10-13T07:00:00.000Z"
+            }
+          ],
+          "observationBasis": "current-local-records-not-business-event",
+          "observedAt": "2026-10-13T08:00:00.000Z",
+          "securityId": "SH:stock:600001",
+          "selectionPolicy": "latest-80-lastViewedAt-desc-id-asc",
+          "source": "native-local/recent@1b33ebdc1200d4e89cc073b4318407fe5a82b3701c3a850d5f3fea2959118811 · 当前本机记录观察",
+          "status": "known"
+        },
+        "schema": "native-candidate-background/v1",
+        "themes": {
+          "items": [],
+          "observedAt": "2026-10-13T08:00:00.000Z",
+          "reason": "来源未提供或不可用",
+          "securityId": "SH:stock:600001",
+          "source": "",
+          "status": "unknown"
+        }
+      }
+    },
+    "input": {
+      "accountScope": {
+        "accountIds": [
+          "account-A"
+        ],
+        "kind": "explicit-ledger-accounts"
+      },
+      "capturedAt": "2026-10-13T08:00:00.000Z",
+      "hostPaths": {
+        "business": "D:/CodexData/CodexHome-Final/worktrees/runtime-lifecycle-cleanup/Webstock/output/native-ui-design-20261010/parallel-20261012/continuation-v39/host-kktavM/business.sqlite",
+        "leaders": "D:/CodexData/CodexHome-Final/worktrees/runtime-lifecycle-cleanup/Webstock/output/native-ui-design-20261010/parallel-20261012/continuation-v39/host-kktavM/leaders.sqlite",
+        "recent": "D:/CodexData/CodexHome-Final/worktrees/runtime-lifecycle-cleanup/Webstock/output/native-ui-design-20261010/parallel-20261012/continuation-v39/host-kktavM/recent.sqlite"
+      },
+      "mode": "current-observation",
+      "observedAt": "2026-10-13T08:00:00.000Z",
+      "schema": "native-candidate-background-sources/v1",
+      "selectedIds": [
+        "SH:stock:600001"
+      ],
+      "sources": {
+        "holdings": {
+          "afterHash": "4bef42c450ab8ef82ded0e29d967f830d0a704eac41515831d89d52160a619bc",
+          "beforeHash": "4bef42c450ab8ef82ded0e29d967f830d0a704eac41515831d89d52160a619bc",
+          "complete": true,
+          "data": {
+            "accounts": [
+              {
+                "id": "account-A",
+                "name": "账本字段样例",
+                "type": "ledger",
+                "updatedAt": "2026-10-12T03:00:00.000Z"
+              },
+              {
+                "id": "paper",
+                "name": "纸面账户字段样例",
+                "type": "paper"
+              }
+            ],
+            "ledgers": [
+              {
+                "accountId": "account-A",
+                "asOf": null,
+                "basis": "all-local-recorded-transactions",
+                "positions": [
+                  {
+                    "averageCost": 10,
+                    "cost": 1000,
+                    "instrumentId": "SH:stock:600001",
+                    "marketValue": 1400,
+                    "name": "字段样例",
+                    "price": 14,
+                    "quantity": 100,
+                    "quoteDate": "2026-06-20",
+                    "quoteTime": "15:00:00",
+                    "realized": 0,
+                    "unrealized": 400
+                  }
+                ],
+                "positionsComplete": true
+              }
+            ],
+            "trades": [
+              {
+                "accountId": "account-A",
+                "date": "2026-10-12",
+                "fee": 0,
+                "id": "trade-A",
+                "instrumentId": "SH:stock:600001",
+                "name": "字段样例",
+                "price": 10,
+                "quantity": 100,
+                "side": "buy",
+                "tax": 0,
+                "updatedAt": "2026-10-12T03:00:00.000Z"
+              }
+            ]
+          },
+          "observedAt": "2026-10-13T08:00:00.000Z",
+          "readEvidence": {
+            "exists": true,
+            "readOk": true
+          },
+          "source": "native-local/holdings",
+          "status": "available"
+        },
+        "leaders": {
+          "afterHash": "0598403d51ee7654fdb3b9e15d9f91ee2ff533b576ca24700c681c2c826fec0d",
+          "beforeHash": "0598403d51ee7654fdb3b9e15d9f91ee2ff533b576ca24700c681c2c826fec0d",
+          "complete": true,
+          "data": {
+            "revision": 2,
+            "schema": "native-sector-leaders/v1",
+            "sectors": [
+              {
+                "description": "非已核验商业龙头",
+                "id": "board-A",
+                "leaders": [
+                  {
+                    "code": "600001",
+                    "fullId": "SH:stock:600001",
+                    "id": "label-A",
+                    "identityState": "confirmed-user",
+                    "name": "字段样例",
+                    "note": "",
+                    "reason": "人工记录",
+                    "role": "总龙头",
+                    "sectorId": "board-A",
+                    "weight": 1
+                  }
+                ],
+                "name": "人工板块字段样例",
+                "sortOrder": 0
+              }
+            ],
+            "updatedAt": "2026-10-12T04:00:00.000Z"
+          },
+          "observedAt": "2026-10-13T08:00:00.000Z",
+          "readEvidence": {
+            "exists": true,
+            "readOk": true
+          },
+          "source": "native-local/leaders",
+          "status": "available"
+        },
+        "recent": {
+          "afterHash": "1b33ebdc1200d4e89cc073b4318407fe5a82b3701c3a850d5f3fea2959118811",
+          "beforeHash": "1b33ebdc1200d4e89cc073b4318407fe5a82b3701c3a850d5f3fea2959118811",
+          "complete": true,
+          "data": {
+            "limit": 10000,
+            "query": "",
+            "rows": [
+              {
+                "canOpen": true,
+                "code": "600001",
+                "createdAt": "2026-10-11T02:00:00.000Z",
+                "id": "SH:stock:600001",
+                "lastViewedAt": "2026-10-13T07:00:00.000Z",
+                "name": "合成字段样例",
+                "origin": "native-active-view",
+                "quote": {
+                  "checkedAt": "2026-10-13T08:00:00.000Z",
+                  "price": 10,
+                  "source": "cached-fixture"
+                },
+                "symbol": "sh600001",
+                "viewCount": 2
+              },
+              {
+                "canOpen": true,
+                "code": "000002",
+                "createdAt": "2026-10-11T02:00:00.000Z",
+                "id": "SZ:stock:000002",
+                "lastViewedAt": "2026-10-13T06:00:00.000Z",
+                "name": "合成字段样例",
+                "origin": "native-active-view",
+                "quote": {
+                  "checkedAt": "2026-10-13T08:00:00.000Z",
+                  "price": 10,
+                  "source": "cached-fixture"
+                },
+                "symbol": "sz000002",
+                "viewCount": 2
+              }
+            ],
+            "sort": "last_viewed"
+          },
+          "observedAt": "2026-10-13T08:00:00.000Z",
+          "readEvidence": {
+            "exists": true,
+            "readOk": true
+          },
+          "source": "native-local/recent",
+          "status": "available"
+        }
+      }
+    },
+    "inputHash": "9d3889b356799b65174570d0893586dbea106f7e936540fea45369888f563190",
+    "model": "native-candidate-background-adapter/v1"
+  },
+  "result": {
+    "input": {
+      "capturedAt": "2026-10-13T08:00:00Z",
+      "inputs": [
+        {
+          "backgroundInput": {
+            "adapterDiagnostics": [
+              "holdings：当前本机完整观察；业务时点未改写",
+              "recent：当前本机完整观察；业务时点未改写",
+              "leaders：当前本机完整观察；业务时点未改写",
+              "themes：来源未提供或不可用",
+              "demand：来源未提供或不可用"
+            ],
+            "adapterInputHash": "9d3889b356799b65174570d0893586dbea106f7e936540fea45369888f563190",
+            "adapterVersion": "native-candidate-background-adapter/v1",
+            "holdings": {
+              "accountScope": {
+                "accountIds": [
+                  "account-A"
+                ],
+                "kind": "explicit-ledger-accounts"
+              },
+              "asOf": "2026-10-13T08:00:00.000Z",
+              "complete": true,
+              "items": [
+                {
+                  "accountId": "account-A",
+                  "basis": "all-local-recorded-transactions",
+                  "businessAsOf": null,
+                  "holdingId": "ledger:account-A:SH:stock:600001",
+                  "observedAt": "2026-10-13T08:00:00.000Z",
+                  "quantity": 100,
+                  "rawPosition": {
+                    "averageCost": 10,
+                    "cost": 1000,
+                    "instrumentId": "SH:stock:600001",
+                    "marketValue": 1400,
+                    "name": "字段样例",
+                    "price": 14,
+                    "quantity": 100,
+                    "quoteDate": "2026-06-20",
+                    "quoteTime": "15:00:00",
+                    "realized": 0,
+                    "unrealized": 400
+                  },
+                  "securityId": "SH:stock:600001",
+                  "source": "native-local/holdings@4bef42c450ab8ef82ded0e29d967f830d0a704eac41515831d89d52160a619bc"
+                }
+              ],
+              "observationBasis": "current-local-records-not-business-event",
+              "observedAt": "2026-10-13T08:00:00.000Z",
+              "securityId": "SH:stock:600001",
+              "source": "native-local/holdings@4bef42c450ab8ef82ded0e29d967f830d0a704eac41515831d89d52160a619bc · 当前本机记录观察",
+              "status": "known"
+            },
+            "leaders": {
+              "asOf": "2026-10-13T08:00:00.000Z",
+              "complete": true,
+              "items": [
+                {
+                  "configRevision": 2,
+                  "configUpdatedAt": "2026-10-12T04:00:00.000Z",
+                  "kind": "manual-unverified",
+                  "label": "人工板块字段样例",
+                  "labelId": "label-A",
+                  "observedAt": "2026-10-13T08:00:00.000Z",
+                  "rawLabel": {
+                    "code": "600001",
+                    "fullId": "SH:stock:600001",
+                    "id": "label-A",
+                    "identityState": "confirmed-user",
+                    "name": "字段样例",
+                    "note": "",
+                    "reason": "人工记录",
+                    "role": "总龙头",
+                    "sectorId": "board-A",
+                    "weight": 1
+                  },
+                  "role": "总龙头",
+                  "securityId": "SH:stock:600001",
+                  "source": "native-local/leaders@0598403d51ee7654fdb3b9e15d9f91ee2ff533b576ca24700c681c2c826fec0d"
+                }
+              ],
+              "observationBasis": "current-local-records-not-business-event",
+              "observedAt": "2026-10-13T08:00:00.000Z",
+              "securityId": "SH:stock:600001",
+              "source": "native-local/leaders@0598403d51ee7654fdb3b9e15d9f91ee2ff533b576ca24700c681c2c826fec0d · 当前本机记录观察",
+              "status": "known"
+            },
+            "recent": {
+              "asOf": "2026-10-13T08:00:00.000Z",
+              "complete": true,
+              "items": [
+                {
+                  "eventId": "recent:SH:stock:600001:2026-10-13T07:00:00.000Z",
+                  "observedAt": "2026-10-13T08:00:00.000Z",
+                  "rank": 1,
+                  "rawRecent": {
+                    "canOpen": true,
+                    "code": "600001",
+                    "createdAt": "2026-10-11T02:00:00.000Z",
+                    "id": "SH:stock:600001",
+                    "lastViewedAt": "2026-10-13T07:00:00.000Z",
+                    "name": "合成字段样例",
+                    "origin": "native-active-view",
+                    "quote": {
+                      "checkedAt": "2026-10-13T08:00:00.000Z",
+                      "price": 10,
+                      "source": "cached-fixture"
+                    },
+                    "symbol": "sh600001",
+                    "viewCount": 2
+                  },
+                  "securityId": "SH:stock:600001",
+                  "source": "native-local/recent@1b33ebdc1200d4e89cc073b4318407fe5a82b3701c3a850d5f3fea2959118811",
+                  "viewedAt": "2026-10-13T07:00:00.000Z"
+                }
+              ],
+              "observationBasis": "current-local-records-not-business-event",
+              "observedAt": "2026-10-13T08:00:00.000Z",
+              "securityId": "SH:stock:600001",
+              "selectionPolicy": "latest-80-lastViewedAt-desc-id-asc",
+              "source": "native-local/recent@1b33ebdc1200d4e89cc073b4318407fe5a82b3701c3a850d5f3fea2959118811 · 当前本机记录观察",
+              "status": "known"
+            },
+            "schema": "native-candidate-background/v1",
+            "themes": {
+              "items": [],
+              "observedAt": "2026-10-13T08:00:00.000Z",
+              "reason": "来源未提供或不可用",
+              "securityId": "SH:stock:600001",
+              "source": "",
+              "status": "unknown"
+            }
+          },
+          "day": [
+            {
+              "close": 10,
+              "closed": true,
+              "high": 10.2,
+              "label": "2026-06-01",
+              "low": 9.8,
+              "open": 9.98,
+              "time": 1780297200000,
+              "valid": true,
+              "volume": 1000
+            },
+            {
+              "close": 10.11442176872377,
+              "closed": true,
+              "high": 10.314421768723768,
+              "label": "2026-06-02",
+              "low": 9.91442176872377,
+              "open": 10.09442176872377,
+              "time": 1780383600000,
+              "valid": true,
+              "volume": 1000
+            },
+            {
+              "close": 10.198544972998846,
+              "closed": true,
+              "high": 10.398544972998845,
+              "label": "2026-06-03",
+              "low": 9.998544972998847,
+              "open": 10.178544972998846,
+              "time": 1780470000000,
+              "valid": true,
+              "volume": 1000
+            },
+            {
+              "close": 10.236320936664887,
+              "closed": true,
+              "high": 10.436320936664886,
+              "label": "2026-06-04",
+              "low": 10.036320936664888,
+              "open": 10.216320936664887,
+              "time": 1780556400000,
+              "valid": true,
+              "volume": 1000
+            },
+            {
+              "close": 10.23349881501559,
+              "closed": true,
+              "high": 10.43349881501559,
+              "label": "2026-06-05",
+              "low": 10.03349881501559,
+              "open": 10.21349881501559,
+              "time": 1780642800000,
+              "valid": true,
+              "volume": 1000
+            },
+            {
+              "close": 10.214921677231038,
+              "closed": true,
+              "high": 10.414921677231037,
+              "label": "2026-06-06",
+              "low": 10.014921677231039,
+              "open": 10.194921677231038,
+              "time": 1780729200000,
+              "valid": true,
+              "volume": 1000
+            },
+            {
+              "close": 10.212842422758643,
+              "closed": true,
+              "high": 10.412842422758642,
+              "label": "2026-06-07",
+              "low": 10.012842422758643,
+              "open": 10.192842422758643,
+              "time": 1780815600000,
+              "valid": true,
+              "volume": 1000
+            },
+            {
+              "close": 10.251754738737567,
+              "closed": true,
+              "high": 10.451754738737566,
+              "label": "2026-06-08",
+              "low": 10.051754738737568,
+              "open": 10.231754738737568,
+              "time": 1780902000000,
+              "valid": true,
+              "volume": 1000
+            },
+            {
+              "close": 10.336873336212768,
+              "closed": true,
+              "high": 10.536873336212768,
+              "label": "2026-06-09",
+              "low": 10.13687333621277,
+              "open": 10.316873336212769,
+              "time": 1780988400000,
+              "valid": true,
+              "volume": 1000
+            },
+            {
+              "close": 10.451681390048435,
+              "closed": true,
+              "high": 10.651681390048434,
+              "label": "2026-06-10",
+              "low": 10.251681390048436,
+              "open": 10.431681390048436,
+              "time": 1781074800000,
+              "valid": true,
+              "volume": 1000
+            },
+            {
+              "close": 10.56569865987188,
+              "closed": true,
+              "high": 10.765698659871878,
+              "label": "2026-06-11",
+              "low": 10.36569865987188,
+              "open": 10.54569865987188,
+              "time": 1781161200000,
+              "valid": true,
+              "volume": 1000
+            },
+            {
+              "close": 10.648816823387701,
+              "closed": true,
+              "high": 10.8488168233877,
+              "label": "2026-06-12",
+              "low": 10.448816823387702,
+              "open": 10.628816823387702,
+              "time": 1781247600000,
+              "valid": true,
+              "volume": 1000
+            },
+            {
+              "close": 10.685459890808827,
+              "closed": true,
+              "high": 10.885459890808827,
+              "label": "2026-06-13",
+              "low": 10.485459890808828,
+              "open": 10.665459890808828,
+              "time": 1781334000000,
+              "valid": true,
+              "volume": 1000
+            },
+            {
+              "close": 10.681909836234935,
+              "closed": true,
+              "high": 10.881909836234934,
+              "label": "2026-06-14",
+              "low": 10.481909836234935,
+              "open": 10.661909836234935,
+              "time": 1781420400000,
+              "valid": true,
+              "volume": 1000
+            },
+            {
+              "close": 10.663352087074806,
+              "closed": true,
+              "high": 10.863352087074805,
+              "label": "2026-06-15",
+              "low": 10.463352087074806,
+              "open": 10.643352087074806,
+              "time": 1781506800000,
+              "valid": true,
+              "volume": 1000
+            },
+            {
+              "close": 10.662030424002833,
+              "closed": true,
+              "high": 10.862030424002832,
+              "label": "2026-06-16",
+              "low": 10.462030424002833,
+              "open": 10.642030424002833,
+              "time": 1781593200000,
+              "valid": true,
+              "volume": 1400
+            },
+            {
+              "close": 10.702082227084869,
+              "closed": true,
+              "high": 10.902082227084868,
+              "label": "2026-06-17",
+              "low": 10.50208222708487,
+              "open": 10.68208222708487,
+              "time": 1781679600000,
+              "valid": true,
+              "volume": 1400
+            },
+            {
+              "close": 10.788186288776297,
+              "closed": true,
+              "high": 10.988186288776296,
+              "label": "2026-06-18",
+              "low": 10.588186288776297,
+              "open": 10.768186288776297,
+              "time": 1781766000000,
+              "valid": true,
+              "volume": 1400
+            },
+            {
+              "close": 10.903362304722114,
+              "closed": true,
+              "high": 11.103362304722113,
+              "label": "2026-06-19",
+              "low": 10.703362304722114,
+              "open": 10.883362304722114,
+              "time": 1781852400000,
+              "valid": true,
+              "volume": 1400
+            },
+            {
+              "close": 11.01695697621966,
+              "closed": true,
+              "high": 11.21695697621966,
+              "label": "2026-06-20",
+              "low": 10.816956976219661,
+              "open": 10.99695697621966,
+              "time": 1781938800000,
+              "valid": true,
+              "volume": 1400
+            }
+          ],
+          "dayMeta": {
+            "adjustment": "qfq",
+            "cached": true,
+            "checkedAt": "2026-10-12T08:00:00Z",
+            "dataDate": "2026-06-20",
+            "source": "受控日线",
+            "timeUnit": "milliseconds",
+            "volumeUnit": "手"
+          },
+          "group": "测试分组",
+          "id": "SH:stock:600001",
+          "inWatchlist": true,
+          "name": "测试600000",
+          "quote": {
+            "amount": 700000000,
+            "cached": true,
+            "changePercent": 3.1,
+            "checkedAt": "2026-10-12T08:00:00Z",
+            "price": 14,
+            "source": "受控报价",
+            "tradeDate": "2026-06-20",
+            "tradeTime": "15:00:00",
+            "volume": 100000
+          },
+          "symbol": "sh600001"
+        }
+      ],
+      "model": "native-local-candidates/v2-background",
+      "strategy": "stable"
+    },
+    "inputHash": "e26d0f3c32be2b0b05ef1e99a3156ab4a8d334419c1f7f735f047432bea5518d",
+    "model": "native-local-candidates/v2-background",
+    "rows": [
+      {
+        "background": "背景仅计已知贡献；未知项不补0。人工龙头为未核验标签；主营、估值、AI未参与。",
+        "backgroundEvaluation": {
+          "completeDelta": null,
+          "factors": [
+            {
+              "label": "本机持仓",
+              "points": 6,
+              "reason": "截至计算时点的明确本机记录",
+              "rule": "holdings",
+              "sourceRefs": [
+                "native-local/holdings@4bef42c450ab8ef82ded0e29d967f830d0a704eac41515831d89d52160a619bc · 当前本机记录观察 · 观察 2026-10-13T08:00:00.000Z · 截面 2026-10-13T08:00:00.000Z",
+                "ledger:account-A:SH:stock:600001 · SH:stock:600001 · 账户 account-A · 数量 100 · native-local/holdings@4bef42c450ab8ef82ded0e29d967f830d0a704eac41515831d89d52160a619bc · 观察 2026-10-13T08:00:00.000Z"
+              ],
+              "state": "included"
+            },
+            {
+              "label": "最近查看（原80条名单成员）",
+              "points": 8,
+              "reason": "截至计算时点的明确本机记录",
+              "rule": "recent",
+              "sourceRefs": [
+                "native-local/recent@1b33ebdc1200d4e89cc073b4318407fe5a82b3701c3a850d5f3fea2959118811 · 当前本机记录观察 · 观察 2026-10-13T08:00:00.000Z · 截面 2026-10-13T08:00:00.000Z",
+                "recent:SH:stock:600001:2026-10-13T07:00:00.000Z · SH:stock:600001 · 查看 2026-10-13T07:00:00.000Z · 原名单位次 1 · native-local/recent@1b33ebdc1200d4e89cc073b4318407fe5a82b3701c3a850d5f3fea2959118811 · 观察 2026-10-13T08:00:00.000Z"
+              ],
+              "state": "included"
+            },
+            {
+              "label": "人工龙头标签（未核验）",
+              "points": 12,
+              "reason": "截至计算时点的明确本机记录",
+              "rule": "leader",
+              "sourceRefs": [
+                "native-local/leaders@0598403d51ee7654fdb3b9e15d9f91ee2ff533b576ca24700c681c2c826fec0d · 当前本机记录观察 · 观察 2026-10-13T08:00:00.000Z · 截面 2026-10-13T08:00:00.000Z",
+                "label-A · SH:stock:600001 · 人工未核验 · 人工板块字段样例 · 总龙头 · native-local/leaders@0598403d51ee7654fdb3b9e15d9f91ee2ff533b576ca24700c681c2c826fec0d · 观察 2026-10-13T08:00:00.000Z"
+              ],
+              "state": "included"
+            },
+            {
+              "label": "龙头需求增量（28−12）",
+              "points": null,
+              "reason": "需求文本来源或观察时间未知",
+              "rule": "leaderDemand",
+              "sourceRefs": [
+                "native-local/leaders@0598403d51ee7654fdb3b9e15d9f91ee2ff533b576ca24700c681c2c826fec0d · 当前本机记录观察 · 观察 2026-10-13T08:00:00.000Z · 截面 2026-10-13T08:00:00.000Z",
+                "label-A · SH:stock:600001 · 人工未核验 · 人工板块字段样例 · 总龙头 · native-local/leaders@0598403d51ee7654fdb3b9e15d9f91ee2ff533b576ca24700c681c2c826fec0d · 观察 2026-10-13T08:00:00.000Z"
+              ],
+              "state": "unknown"
+            },
+            {
+              "label": "稳健模板持仓增量（8−4）",
+              "points": 4,
+              "reason": "截至计算时点的明确本机记录",
+              "rule": "holdingTemplate",
+              "sourceRefs": [
+                "native-local/holdings@4bef42c450ab8ef82ded0e29d967f830d0a704eac41515831d89d52160a619bc · 当前本机记录观察 · 观察 2026-10-13T08:00:00.000Z · 截面 2026-10-13T08:00:00.000Z",
+                "ledger:account-A:SH:stock:600001 · SH:stock:600001 · 账户 account-A · 数量 100 · native-local/holdings@4bef42c450ab8ef82ded0e29d967f830d0a704eac41515831d89d52160a619bc · 观察 2026-10-13T08:00:00.000Z"
+              ],
+              "state": "included"
+            },
+            {
+              "label": "需求主题命中（一次计分）",
+              "points": null,
+              "reason": "明确需求主题及来源时间缺失，未推断主题",
+              "rule": "themeDemand",
+              "sourceRefs": [],
+              "state": "unknown"
+            }
+          ],
+          "knownDelta": 30,
+          "model": "native-candidate-background/v1",
+          "status": "partial"
+        },
+        "barCount": 20,
+        "contributions": [
+          {
+            "label": "基础观察分",
+            "points": 45,
+            "rule": "base"
+          },
+          {
+            "label": "成交额≥5亿元",
+            "points": 6,
+            "rule": "amount"
+          },
+          {
+            "label": "MA5≥MA20",
+            "points": 5,
+            "rule": "ma20"
+          },
+          {
+            "label": "末5/前5均量≥1.2",
+            "points": 5,
+            "rule": "volume"
+          },
+          {
+            "label": "实际窗口波动率≤4%",
+            "points": 5,
+            "rule": "volatility"
+          },
+          {
+            "label": "明确属于当前自选",
+            "points": 14,
+            "rule": "watchlist"
+          },
+          {
+            "label": "规则模板常量；非外部证据",
+            "points": 4,
+            "rule": "template"
+          },
+          {
+            "label": "本机持仓：截至计算时点的明确本机记录 [native-local/holdings@4bef42c450ab8ef82ded0e29d967f830d0a704eac41515831d89d52160a619bc · 当前本机记录观察 · 观察 2026-10-13T08:00:00.000Z · 截面 2026-10-13T08:00:00.000Z；ledger:account-A:SH:stock:600001 · SH:stock:600001 · 账户 account-A · 数量 100 · native-local/holdings@4bef42c450ab8ef82ded0e29d967f830d0a704eac41515831d89d52160a619bc · 观察 2026-10-13T08:00:00.000Z]",
+            "points": 6,
+            "rule": "background.holdings"
+          },
+          {
+            "label": "最近查看（原80条名单成员）：截至计算时点的明确本机记录 [native-local/recent@1b33ebdc1200d4e89cc073b4318407fe5a82b3701c3a850d5f3fea2959118811 · 当前本机记录观察 · 观察 2026-10-13T08:00:00.000Z · 截面 2026-10-13T08:00:00.000Z；recent:SH:stock:600001:2026-10-13T07:00:00.000Z · SH:stock:600001 · 查看 2026-10-13T07:00:00.000Z · 原名单位次 1 · native-local/recent@1b33ebdc1200d4e89cc073b4318407fe5a82b3701c3a850d5f3fea2959118811 · 观察 2026-10-13T08:00:00.000Z]",
+            "points": 8,
+            "rule": "background.recent"
+          },
+          {
+            "label": "人工龙头标签（未核验）：截至计算时点的明确本机记录 [native-local/leaders@0598403d51ee7654fdb3b9e15d9f91ee2ff533b576ca24700c681c2c826fec0d · 当前本机记录观察 · 观察 2026-10-13T08:00:00.000Z · 截面 2026-10-13T08:00:00.000Z；label-A · SH:stock:600001 · 人工未核验 · 人工板块字段样例 · 总龙头 · native-local/leaders@0598403d51ee7654fdb3b9e15d9f91ee2ff533b576ca24700c681c2c826fec0d · 观察 2026-10-13T08:00:00.000Z]",
+            "points": 12,
+            "rule": "background.leader"
+          },
+          {
+            "label": "稳健模板持仓增量（8−4）：截至计算时点的明确本机记录 [native-local/holdings@4bef42c450ab8ef82ded0e29d967f830d0a704eac41515831d89d52160a619bc · 当前本机记录观察 · 观察 2026-10-13T08:00:00.000Z · 截面 2026-10-13T08:00:00.000Z；ledger:account-A:SH:stock:600001 · SH:stock:600001 · 账户 account-A · 数量 100 · native-local/holdings@4bef42c450ab8ef82ded0e29d967f830d0a704eac41515831d89d52160a619bc · 观察 2026-10-13T08:00:00.000Z]",
+            "points": 4,
+            "rule": "background.holdingTemplate"
+          }
+        ],
+        "dataDate": "2026-06-20",
+        "factors": {
+          "amount": 700000000,
+          "change": 3.1,
+          "ma20": 10.478435778828773,
+          "ma5": 10.814523644161154,
+          "ma60": null,
+          "macdDea": null,
+          "macdDif": null,
+          "macdHist": null,
+          "trend20": 10.169569762196605,
+          "trend5": 3.3288833186763567,
+          "trend60": null,
+          "volatility": 0.4717941324272394,
+          "volumeRatio5": 1.4
+        },
+        "group": "测试分组",
+        "id": "SH:stock:600001",
+        "missing": [
+          "MA/首末变化60需60根闭合日K，现有20",
+          "MACD DEA需34根闭合日K完成原生预热",
+          "因子 ma60 不可用（缺数或数值超出有限范围），未参与计分",
+          "因子 trend60 不可用（缺数或数值超出有限范围），未参与计分",
+          "因子 macdDif 不可用（缺数或数值超出有限范围），未参与计分",
+          "因子 macdDea 不可用（缺数或数值超出有限范围），未参与计分",
+          "因子 macdHist 不可用（缺数或数值超出有限范围），未参与计分",
+          "背景未知 · 龙头需求增量（28−12）：需求文本来源或观察时间未知 [native-local/leaders@0598403d51ee7654fdb3b9e15d9f91ee2ff533b576ca24700c681c2c826fec0d · 当前本机记录观察 · 观察 2026-10-13T08:00:00.000Z · 截面 2026-10-13T08:00:00.000Z；label-A · SH:stock:600001 · 人工未核验 · 人工板块字段样例 · 总龙头 · native-local/leaders@0598403d51ee7654fdb3b9e15d9f91ee2ff533b576ca24700c681c2c826fec0d · 观察 2026-10-13T08:00:00.000Z]",
+          "背景未知 · 需求主题命中（一次计分）：明确需求主题及来源时间缺失，未推断主题 []"
+        ],
+        "name": "测试600000",
+        "rawScore": 114,
+        "risks": [
+          "交易日覆盖未核验；本机留存数据不保证实时或历史时点可得性",
+          "MACD采用同原生公式，但候选最多末80根闭合日K窗口；与更长图表历史的初始段不同，不保证逐值相同"
+        ],
+        "score": 100,
+        "source": {
+          "dayMeta": {
+            "adjustment": "qfq",
+            "cached": true,
+            "checkedAt": "2026-10-12T08:00:00Z",
+            "dataDate": "2026-06-20",
+            "source": "受控日线",
+            "timeUnit": "milliseconds",
+            "volumeUnit": "手"
+          },
+          "quote": {
+            "amount": 700000000,
+            "cached": true,
+            "changePercent": 3.1,
+            "checkedAt": "2026-10-12T08:00:00Z",
+            "price": 14,
+            "source": "受控报价",
+            "tradeDate": "2026-06-20",
+            "tradeTime": "15:00:00",
+            "volume": 100000
+          }
+        },
+        "status": "partial"
+      }
+    ]
+  },
+  "schema": "native-candidate-background-host/v1"
+}

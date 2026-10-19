@@ -1,0 +1,194 @@
+{
+  "schema": "native-paper-session-catalog/v1",
+  "revision": "official-2026-rules-july-v1",
+  "auditedAt": "2026-10-13T02:21:35Z",
+  "calendarFrom": "2026-01-01",
+  "calendarThrough": "2026-12-31",
+  "sessionFrom": "2026-07-06",
+  "sessionThrough": "2026-12-31",
+  "timezone": "Asia/Shanghai",
+  "basis": "official-published-regular-schedule",
+  "liveExchangeStatusVerified": false,
+  "holidays": [
+    [
+      "2026-01-01",
+      "2026-01-03"
+    ],
+    [
+      "2026-02-15",
+      "2026-02-23"
+    ],
+    [
+      "2026-04-04",
+      "2026-04-06"
+    ],
+    [
+      "2026-05-01",
+      "2026-05-05"
+    ],
+    [
+      "2026-06-19",
+      "2026-06-21"
+    ],
+    [
+      "2026-09-25",
+      "2026-09-27"
+    ],
+    [
+      "2026-10-01",
+      "2026-10-07"
+    ]
+  ],
+  "weekendClosureBasis": "SH 2.4.1; SZ 2.3.1; BJ 2.3.1",
+  "continuous": [
+    [
+      "09:30:00",
+      "11:30:00"
+    ],
+    [
+      "13:00:00",
+      "14:57:00"
+    ]
+  ],
+  "markets": [
+    {
+      "exchange": "SH",
+      "types": [
+        "stock",
+        "etf"
+      ],
+      "holiday": "sh-holidays",
+      "rule": "sh-rules",
+      "ruleSections": [
+        "2.4.1",
+        "2.4.2"
+      ],
+      "notice": "上证公告〔2025〕45号"
+    },
+    {
+      "exchange": "SZ",
+      "types": [
+        "stock",
+        "etf"
+      ],
+      "holiday": "sz-holidays",
+      "rule": "sz-rules",
+      "ruleSections": [
+        "2.3.1",
+        "2.3.2"
+      ],
+      "notice": "深证会〔2025〕481号"
+    },
+    {
+      "exchange": "BJ",
+      "types": [
+        "stock"
+      ],
+      "holiday": "bj-holidays",
+      "rule": "bj-rules",
+      "ruleSections": [
+        "2.3.1",
+        "2.3.2"
+      ],
+      "notice": "北证公告〔2025〕58号"
+    }
+  ],
+  "sources": [
+    {
+      "id": "sh-holidays",
+      "url": "https://www.sse.com.cn/disclosure/announcement/general/c/c_20251222_10802507.shtml",
+      "publishedAt": "2025-12-22",
+      "files": [
+        {
+          "file": "sh-holidays.html",
+          "sha256": "4e260b815ce1309175ed994e6490a4ccd51b998a5f92bcdc41cec00fc6823dc7"
+        }
+      ]
+    },
+    {
+      "id": "sz-holidays",
+      "url": "https://investor.szse.cn/disclosure/notice/general/t20251222_618087.html",
+      "publishedAt": "2025-12-22",
+      "files": [
+        {
+          "file": "sz-holidays.html",
+          "sha256": "1656d8708d5faed33c7588538639d96128f39fdface02cfa6eb66d796c40f14e"
+        }
+      ]
+    },
+    {
+      "id": "bj-holidays",
+      "url": "https://www.bse.cn/important_news/200027428.html",
+      "publishedAt": "2025-12-22",
+      "files": [
+        {
+          "file": "bj-holidays.html",
+          "sha256": "1d6178157837f021dcb98c1206ee2f6f8cafcadbbb5b1cb0ac3637bbe82387ab"
+        }
+      ]
+    },
+    {
+      "id": "sh-rules",
+      "url": "https://www.sse.com.cn/lawandrules/sselawsrules2025/stocks/exchange/c/c_20260424_10816482.shtml",
+      "publishedAt": "2026-04-24",
+      "files": [
+        {
+          "file": "sh-rules.html",
+          "sha256": "43423b7096f6a2397d904566de7920454c850e19fb0bb8cbe43af5b696e093aa"
+        },
+        {
+          "file": "sh-rules.docx",
+          "sha256": "fc922c433438b2636cb631eab25cca405209712acbb6aaded768c45456ff8888"
+        }
+      ]
+    },
+    {
+      "id": "sz-rules",
+      "url": "https://investor.szse.cn/lawrules/rule/trade/t20260424_620190.html",
+      "publishedAt": "2026-04-24",
+      "files": [
+        {
+          "file": "sz-rules.html",
+          "sha256": "0dcb0971ac96123f369178ce8f5397d948190d41281175694664de1d1dd4dce5"
+        },
+        {
+          "file": "sz-rules.pdf",
+          "sha256": "9b66f8b0db70f84a25ef1ccb4ee2351001724e408117552d75f6d8993483c586"
+        }
+      ]
+    },
+    {
+      "id": "bj-rules",
+      "url": "https://www.bse.cn/jygl_list/200028217.html",
+      "publishedAt": "2026-04-24",
+      "files": [
+        {
+          "file": "bj-rules.html",
+          "sha256": "f15d8685e71e5686343600d68a7c8c8d11386bee54fc998b5638273c9ae1fbc4"
+        }
+      ]
+    },
+    {
+      "id": "sh-deferred",
+      "url": "https://www.sse.com.cn/lawandrules/sselawsrules2025/stocks/exchange/c/10816482/files/50dcc6f2be1b4177b044ff7334e0f970.docx",
+      "publishedAt": "2026-04-24",
+      "files": [
+        {
+          "file": "sh-deferred.docx",
+          "sha256": "f4a0d0976a01e3e95f82460170900993824b70d91183e42d09e13ba10a9958c5"
+        }
+      ]
+    }
+  ],
+  "attachmentUrls": {
+    "sh-rules.docx": "https://www.sse.com.cn/lawandrules/sselawsrules2025/stocks/exchange/c/10816482/files/72a6404194404b898258b6edfc5f6e0f.docx",
+    "sz-rules.pdf": "https://docs.static.szse.cn/www/lawrules/rule/trade/W020260424690713155663.pdf"
+  },
+  "limitations": [
+    "A scheduled open day is not proof against an emergency exchange suspension.",
+    "No individual instrument halt, futures, after-hours or auction eligibility is asserted.",
+    "Dates before the verified rule effective date and outside 2026 are unknown.",
+    "BJ ETF evidence is not covered; no identity is inferred from a name.",
+    "checkedAt is local evaluation time; auditedAt records the independent source audit, not live exchange polling."
+  ]
+}

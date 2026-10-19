@@ -1,0 +1,253 @@
+{
+  "schema": "v88-controlled-knowledge-index-fixture/v1",
+  "materials": [
+    {
+      "kind": "docs",
+      "id": "title",
+      "row": {
+        "id": "title",
+        "title": "光模块",
+        "text": "没有该词的资料正文，保留完整来源身份。",
+        "originalText": "未检索的原文档案：original-only-needle",
+        "publishedAt": "2026-10-10",
+        "updatedAt": "2026-10-14T02:30:00.123456789+08:00",
+        "author": "title author",
+        "tags": [
+          "普通"
+        ],
+        "stockCodes": [
+          "300308"
+        ],
+        "sectors": [
+          "通信"
+        ]
+      }
+    },
+    {
+      "kind": "docs",
+      "id": "content",
+      "row": {
+        "id": "content",
+        "title": "正文资料",
+        "text": "光模块是本行词；alpha-beta CPO_100 SQL%like A.B\r\n后续😀保持原偏移。",
+        "originalText": "未检索的原文档案：original-only-needle",
+        "publishedAt": "2026-10-10",
+        "updatedAt": "2026-10-14T02:30:00.123456789+08:00",
+        "author": "other"
+      }
+    },
+    {
+      "kind": "collections",
+      "id": "author",
+      "row": {
+        "id": "author",
+        "title": "作者匹配",
+        "text": "完整人工文本和旧质量历史只作为选择材料，不改写。",
+        "originalText": "未检索的原文档案：original-only-needle",
+        "publishedAt": "2026-10-10",
+        "updatedAt": "2026-10-14T02:30:00.123456789+08:00",
+        "author": "光模块",
+        "sourceUrl": "https://example.test/author"
+      }
+    },
+    {
+      "kind": "collections",
+      "id": "tags",
+      "row": {
+        "id": "tags",
+        "title": "标签匹配",
+        "text": "不含查询词的全文，元数据来自明确材料。",
+        "originalText": "未检索的原文档案：original-only-needle",
+        "publishedAt": "2026-10-12",
+        "updatedAt": "2026-10-14T02:30:00.123456789+08:00",
+        "tags": [
+          "光模块"
+        ],
+        "stockCodes": [
+          "300502"
+        ],
+        "sectors": [
+          "通信设备"
+        ]
+      }
+    },
+    {
+      "kind": "docs",
+      "id": "original-only",
+      "row": {
+        "id": "original-only",
+        "title": "只有旧全文命中",
+        "text": "原text没有查询词的正文。",
+        "originalText": "光模块 original-only-needle",
+        "publishedAt": "2026-10-10",
+        "updatedAt": "2026-10-14T02:30:00.123456789+08:00"
+      }
+    },
+    {
+      "kind": "docs",
+      "id": "legacy",
+      "row": {
+        "id": "legacy",
+        "title": "旧元数据资料",
+        "text": "只有旧字段作者、标签与来源日期，原文未改。",
+        "originalText": "未检索的原文档案：original-only-needle",
+        "publishedAt": "",
+        "updatedAt": "2026-10-14T02:30:00.123456789+08:00",
+        "legacyOriginal": {
+          "author": "legacy author 光模块",
+          "tags_json": "[\"硅光\", \"CPO\"]",
+          "stock_codes_json": "[\"688001\"]",
+          "sectors_json": "[\"设备\"]",
+          "published_at": "2026-10-13 09:30:00.123456789",
+          "source_url": "https://example.test/legacy"
+        }
+      }
+    },
+    {
+      "kind": "docs",
+      "id": "same",
+      "row": {
+        "id": "same",
+        "title": "相同ID的文档",
+        "text": "光模块重复词的完整来源，不能与采集ID合并。",
+        "originalText": "未检索的原文档案：original-only-needle",
+        "publishedAt": "2026-10-11",
+        "updatedAt": "2026-10-14T02:30:00.123456789+08:00"
+      }
+    },
+    {
+      "kind": "collections",
+      "id": "same",
+      "row": {
+        "id": "same",
+        "title": "相同ID的采集",
+        "text": "光模块重复词的完整来源，不能与文档ID合并。",
+        "originalText": "未检索的原文档案：original-only-needle",
+        "publishedAt": "2026-10-11",
+        "updatedAt": "2026-10-14T02:30:00.123456789+08:00"
+      }
+    },
+    {
+      "kind": "docs",
+      "id": "long",
+      "row": {
+        "id": "long",
+        "title": "长原文资料",
+        "text": "  开始😀\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n普通正文，含空格与CRLF；光模块 alpha-beta。\r\n末尾不是截断 tail-88😀\n",
+        "originalText": "未检索的原文档案：original-only-needle",
+        "publishedAt": "invalid date",
+        "updatedAt": "2026-10-14T02:30:00.123456789+08:00",
+        "author": "long author"
+      }
+    }
+  ],
+  "queries": [
+    "光模块",
+    "张三怎么看光模块",
+    "光模块产业链核心变量哪些",
+    "CPO 300308",
+    "CPO_100",
+    "alpha-beta",
+    "硅光",
+    "光模",
+    "SQL%like",
+    "%",
+    "_",
+    "ordinary-missing",
+    "original-only-needle",
+    "token0 token1 token2 token3 token4 token5 token6 token7 token8 token9 token10 token11 token12 token13 token14 token15 token16 token17 token18 token19 token20 token21 token22 token23 token24 token25 token26 token27 token28 token29 token30 token31",
+    "😀",
+    "设备"
+  ],
+  "legacyTokens": [
+    [
+      "光模块"
+    ],
+    [
+      "张三",
+      "光模块"
+    ],
+    [
+      "光模块产业链核心变量",
+      "光模块",
+      "模块产",
+      "块产业",
+      "产业链",
+      "业链核",
+      "链核心",
+      "核心变",
+      "心变量",
+      "光模块产",
+      "模块产业",
+      "块产业链",
+      "产业链核",
+      "业链核心",
+      "链核心变",
+      "核心变量",
+      "光模块产业",
+      "模块产业链",
+      "块产业链核",
+      "产业链核心",
+      "业链核心变",
+      "链核心变量"
+    ],
+    [
+      "CPO",
+      "300308"
+    ],
+    [
+      "CPO_100"
+    ],
+    [
+      "alpha-beta"
+    ],
+    [
+      "硅光"
+    ],
+    [
+      "光模"
+    ],
+    [
+      "SQL",
+      "like"
+    ],
+    [],
+    [],
+    [
+      "ordinary-missing"
+    ],
+    [
+      "original-only-needle"
+    ],
+    [
+      "token0",
+      "token1",
+      "token2",
+      "token3",
+      "token4",
+      "token5",
+      "token6",
+      "token7",
+      "token8",
+      "token9",
+      "token10",
+      "token11",
+      "token12",
+      "token13",
+      "token14",
+      "token15",
+      "token16",
+      "token17",
+      "token18",
+      "token19",
+      "token20",
+      "token21",
+      "token22",
+      "token23"
+    ],
+    [],
+    [
+      "设备"
+    ]
+  ]
+}

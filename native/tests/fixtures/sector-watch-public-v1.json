@@ -1,0 +1,6 @@
+{
+  "fixtureNote": "Deterministic synthetic public-source shapes. Not a live market snapshot.",
+  "eastCatalog": {"rc":0,"data":{"total":2,"diff":[{"f12":"BK0001","f14":"示例半导体","f2":100,"f3":0,"f6":0,"f62":null},{"f12":"BK0002","f14":"示例银行","f2":200,"f3":-1.2,"f6":null,"f62":null}]}},
+  "sinaNodes": [["申万二级",[["示例半导体","","sw2_801080"]],"","sw2_hy","cn"],["热门概念",[["示例概念","","chgn_100"]],"","ch_gn","cn"]],
+  "sinaMembers": [{"symbol":"sh600000","code":"600000","name":"示例证券甲","trade":"10.00","changepercent":"0","amount":"0"},{"symbol":"bj830001","code":"830001","name":"示例证券乙","trade":"20.00","changepercent":"-1.00","amount":"10000"}]
+}

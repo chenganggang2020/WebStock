@@ -1,0 +1,25 @@
+.eastmoney-etf-daily-report { grid-column: 1 / -1; min-width: 0; padding: 20px; background: var(--card-bg); color: var(--text); border: 1px solid var(--border); border-top: 3px solid var(--accent); border-radius: 12px; }
+.eastmoney-etf-daily-report > header { display: flex; justify-content: space-between; align-items: flex-start; gap: 18px; flex-wrap: wrap; }
+.eastmoney-etf-daily-report h3 { font-size: 21px; margin: 4px 0 10px; }
+.eastmoney-etf-daily-report h4 { font-size: 16px; margin: 0 0 12px; }
+.eastmoney-etf-daily-report header > div > span { color: var(--text-secondary); font-size: 12px; letter-spacing: .05em; }
+.eastmoney-etf-daily-date, .eastmoney-etf-daily-status { color: var(--text-secondary); font-size: 13px; line-height: 1.7; overflow-wrap: anywhere; }
+.eastmoney-etf-daily-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.eastmoney-etf-daily-actions a, .eastmoney-etf-daily-actions button { background: var(--btn-bg); border: 1px solid var(--btn-border); border-radius: 6px; color: var(--btn-color); padding: 8px 12px; font-size: 14px; text-decoration: none; cursor: pointer; }
+.eastmoney-etf-daily-report [hidden] { display: none !important; }
+.eastmoney-etf-daily-metrics { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 14px; margin: 12px 0 22px; }
+.eastmoney-etf-daily-metrics > div { display: flex; flex-direction: column; gap: 8px; border: 1px solid var(--border); background: var(--muted-bg); border-radius: 9px; padding: 16px; }
+.eastmoney-etf-daily-metrics > div > span:first-child { color: var(--text-secondary); font-size: 15px; }
+.eastmoney-etf-daily-total, .eastmoney-etf-daily-stock { font-size: 32px; font-variant-numeric: tabular-nums; line-height: 1.2; }
+.eastmoney-etf-daily-report .in { color: var(--up); }
+.eastmoney-etf-daily-report .out { color: var(--down); }
+.eastmoney-etf-daily-report .flat { color: var(--text-secondary); }
+.eastmoney-etf-daily-lists { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 28px; }
+.eastmoney-etf-daily-list { list-style: none; padding: 0; margin: 0; }
+.eastmoney-etf-daily-list li { display: flex; gap: 12px; align-items: baseline; border-top: 1px solid var(--border); padding: 12px 0; font-size: 15px; }
+.eastmoney-etf-daily-list li > b { font-size: 13px; font-variant-numeric: tabular-nums; color: var(--text-secondary); }
+.eastmoney-etf-daily-list li > span { flex: 1; overflow-wrap: anywhere; }
+.eastmoney-etf-daily-list strong { font-size: 18px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.eastmoney-etf-daily-note { font-size: 13px; color: var(--text-secondary); line-height: 1.7; margin: 14px 0 0; }
+@media (max-width: 900px) { .eastmoney-etf-daily-lists { grid-template-columns: 1fr; gap: 20px; } }
+@media (max-width: 560px) { .eastmoney-etf-daily-metrics { grid-template-columns: 1fr; } .eastmoney-etf-daily-report { padding: 14px; } .eastmoney-etf-daily-list li { gap: 8px; font-size: 14px; } }

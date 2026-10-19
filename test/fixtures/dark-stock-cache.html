@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="zh-CN"><meta charset="utf-8"><link rel="icon" href="data:,"><title>明暗盘缓存隔离验证</title>
+<style>body{font:14px sans-serif;padding:24px;max-width:850px;background:#edf1f5;color:#23364b}button{padding:8px;margin-right:8px}section{background:white;padding:20px;margin:12px 0}small{display:block;margin:8px 0}.dark-stock-amounts div{display:flex;justify-content:space-between}.dark-rank-up{color:#d92344}.dark-rank-down{color:#009674}</style>
+<h1>明暗盘缓存隔离验证</h1><p>仅固定测试数据，不连接生产服务，不保存历史。</p>
+<button id="begin">显示缓存并后台更新</button><button id="finish">完成后台更新</button><button id="detailDarkStockRefresh">手动刷新</button>
+<p id="requests">股票请求 0 次</p><p id="fixtureState">等待开始</p>
+<section><div id="detailDarkStockStatus"></div><div id="detailDarkStockData"></div></section>
+<script>
+window.State={currentMainView:'market'};
+window.EastmoneyDarkRank={formatMoney:value=>value==null?'--':(Number(value)/1000000).toFixed(2)+' 万元'};
+let fixtureDone=false,requests=0;
+window.fetch=async url=>{
+  let data;
+  if(url==='/api/capital-flow/dark-session') data={today:'2026-09-17',dataDate:'2026-09-17',pollAllowed:true,reason:'测试盘中'};
+  else if(url.startsWith('/api/capital-flow/dark-stocks?')){
+    requests++;document.getElementById('requests').textContent='股票请求 '+requests+' 次'+(url.includes('force=1')?' · 已传递手动刷新':'');
+    const receivedAt=fixtureDone?'2026-09-17T02:05:01Z':'2026-09-17T02:00:00Z';
+    data={tradingDay:'2026-09-17',receivedAt,stale:!fixtureDone,refreshing:!fixtureDone,coverage:{complete:true},missing:[],
+      rows:[{key:'sh600487',code:'600487',name:'测试公司',darkNetCents:fixtureDone?'2000000':'1000000',visibleNetCents:'-1000000',combinedNetCents:fixtureDone?'1000000':'0',darkActivityRatio:0.05,reconciled:true,receivedAt}]};
+  } else throw Error('Unexpected isolated fixture request');
+  return {ok:true,json:async()=>({success:true,data})};
+};
+</script>
+<script src="../../js/modules/eastmoneyDarkStocks.js"></script>
+<script>
+document.getElementById('begin').onclick=()=>{EastmoneyDarkStocks.select({code:'600487'});EastmoneyDarkStocks.sync();};
+document.getElementById('finish').onclick=()=>{fixtureDone=true;document.getElementById('fixtureState').textContent='后台测试结果已准备，等待自动显示';};
+</script></html>

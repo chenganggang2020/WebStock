@@ -1,0 +1,624 @@
+require('dotenv').config();
+
+const axios = require('axios');
+const fs = require('fs');
+const path = require('path');
+const db = require('../db');
+
+const DEFAULT_LARGE_ORDER_THRESHOLD = 500000;
+const CONFIG_KEYS = [
+  'provider',
+  'baseUrl',
+  'apiKey',
+  'authHeader',
+  'authPrefix',
+  'depthEndpoint',
+  'tradesEndpoint',
+  'ordersEndpoint',
+  'timeoutMs',
+  'largeOrderThreshold',
+  'volumeUnit',
+  'loginUrl'
+];
+
+function getConfigPath(env = process.env) {
+  return env.WEBSTOCK_LEVEL2_CONFIG_PATH || path.join(path.dirname(db.dbPath), 'level2-config.json');
+}
+
+function readSavedConfig(env = process.env) {
+  const file = getConfigPath(env);
+  try {
+    if (!fs.existsSync(file)) return {};
+    const parsed = JSON.parse(fs.readFileSync(file, 'utf8'));
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch (error) {
+    console.warn('[Level2] Could not read saved config:', error.message);
+    return {};
+  }
+}
+
+function writeSavedConfig(config, env = process.env) {
+  const file = getConfigPath(env);
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.writeFileSync(file, JSON.stringify(config, null, 2));
+}
+
+function envFirst(env, names, fallback) {
+  for (let i = 0; i < names.length; i++) {
+    const value = env[names[i]];
+    if (value !== undefined && String(value).trim() !== '') return String(value).trim();
+  }
+  return fallback;
+}
+
+function toNumber(value, fallback = 0) {
+  if (value === undefined || value === null || typeof value === 'boolean' || String(value).trim() === '') return fallback;
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric : fallback;
+}
+
+function roundMoney(value) {
+  return Number(toNumber(value).toFixed(2));
+}
+
+function normalizeCode(code) {
+  return String(code || '').trim().replace(/^(sh|sz|SH|SZ)/, '');
+}
+
+function getLevel2Config(env = process.env) {
+  const saved = readSavedConfig(env);
+  const provider = envFirst(env, ['LEVEL2_PROVIDER', 'TONGHUASHUN_LEVEL2_PROVIDER'], 'disabled').toLowerCase();
+  const baseUrl = envFirst(env, ['LEVEL2_BASE_URL', 'TONGHUASHUN_LEVEL2_BASE_URL'], '');
+  const envConfig = {
+    provider,
+    baseUrl: baseUrl.replace(/\/+$/, ''),
+    apiKey: envFirst(env, ['LEVEL2_API_KEY', 'TONGHUASHUN_LEVEL2_API_KEY'], ''),
+    authHeader: envFirst(env, ['LEVEL2_AUTH_HEADER', 'TONGHUASHUN_LEVEL2_AUTH_HEADER'], 'Authorization'),
+    authPrefix: envFirst(env, ['LEVEL2_AUTH_PREFIX', 'TONGHUASHUN_LEVEL2_AUTH_PREFIX'], 'Bearer'),
+    depthEndpoint: envFirst(env, ['LEVEL2_DEPTH_ENDPOINT', 'TONGHUASHUN_LEVEL2_DEPTH_ENDPOINT'], '/depth?code={code}'),
+    tradesEndpoint: envFirst(env, ['LEVEL2_TRADES_ENDPOINT', 'TONGHUASHUN_LEVEL2_TRADES_ENDPOINT'], '/trades?code={code}&limit={limit}'),
+    ordersEndpoint: envFirst(env, ['LEVEL2_ORDERS_ENDPOINT', 'TONGHUASHUN_LEVEL2_ORDERS_ENDPOINT'], '/orders?code={code}&limit={limit}'),
+    timeoutMs: toNumber(envFirst(env, ['LEVEL2_TIMEOUT_MS', 'TONGHUASHUN_LEVEL2_TIMEOUT_MS'], '5000'), 5000),
+    largeOrderThreshold: toNumber(envFirst(env, ['LEVEL2_LARGE_ORDER_THRESHOLD'], String(DEFAULT_LARGE_ORDER_THRESHOLD)), DEFAULT_LARGE_ORDER_THRESHOLD),
+    volumeUnit: envFirst(env, ['LEVEL2_VOLUME_UNIT'], 'share').toLowerCase(),
+    loginUrl: envFirst(env, ['LEVEL2_LOGIN_URL', 'TONGHUASHUN_LEVEL2_LOGIN_URL'], 'https://quantapi.10jqka.com.cn/')
+  };
+  return normalizeConfig(Object.assign({}, envConfig, saved));
+}
+
+function maskSecret(value) {
+  if (!value) return '';
+  if (value.length <= 8) return '***';
+  return value.slice(0, 4) + '...' + value.slice(-4);
+}
+
+function getPublicStatus(env = process.env) {
+  const config = getLevel2Config(env);
+  return {
+    provider: config.provider,
+    configured: config.provider !== 'disabled' && !!config.baseUrl,
+    baseUrl: config.baseUrl,
+    hasApiKey: !!config.apiKey,
+    apiKeyPreview: maskSecret(config.apiKey),
+    depthEndpoint: config.depthEndpoint,
+    tradesEndpoint: config.tradesEndpoint,
+    ordersEndpoint: config.ordersEndpoint,
+    largeOrderThreshold: config.largeOrderThreshold,
+    volumeUnit: config.volumeUnit,
+    loginUrl: config.loginUrl
+  };
+}
+
+function normalizeConfig(input) {
+  const config = {};
+  CONFIG_KEYS.forEach(function (key) {
+    if (input[key] !== undefined) config[key] = input[key];
+  });
+  config.provider = String(config.provider || 'disabled').trim().toLowerCase();
+  config.baseUrl = String(config.baseUrl || '').trim().replace(/\/+$/, '');
+  config.apiKey = String(config.apiKey || '').trim();
+  config.authHeader = String(config.authHeader || 'Authorization').trim();
+  config.authPrefix = String(config.authPrefix || 'Bearer').trim();
+  config.depthEndpoint = String(config.depthEndpoint || '/depth?code={code}').trim();
+  config.tradesEndpoint = String(config.tradesEndpoint || '/trades?code={code}&limit={limit}').trim();
+  config.ordersEndpoint = String(config.ordersEndpoint || '/orders?code={code}&limit={limit}').trim();
+  config.timeoutMs = toNumber(config.timeoutMs, 5000);
+  config.largeOrderThreshold = toNumber(config.largeOrderThreshold, DEFAULT_LARGE_ORDER_THRESHOLD);
+  config.volumeUnit = String(config.volumeUnit || 'share').trim().toLowerCase() === 'lot' ? 'lot' : 'share';
+  config.loginUrl = String(config.loginUrl || 'https://quantapi.10jqka.com.cn/').trim();
+  return config;
+}
+
+function configError(message) {
+  const error = new Error(message);
+  error.statusCode = 400;
+  return error;
+}
+
+function isLoopbackHostname(hostname) {
+  const value = String(hostname || '').toLowerCase();
+  return value === 'localhost' || value === '127.0.0.1' || value === '::1';
+}
+
+function validateProviderConfig(config) {
+  if (!config.baseUrl) return;
+
+  let baseUrl;
+  try {
+    baseUrl = new URL(config.baseUrl);
+  } catch (error) {
+    throw configError('Level-2 base URL must be a valid HTTP(S) URL');
+  }
+  if (!['http:', 'https:'].includes(baseUrl.protocol) || baseUrl.username || baseUrl.password) {
+    throw configError('Level-2 base URL must be a valid HTTP(S) URL without embedded credentials');
+  }
+  if (baseUrl.protocol !== 'https:' && !isLoopbackHostname(baseUrl.hostname)) {
+    throw configError('Remote Level-2 gateways must use HTTPS; HTTP is allowed only for a loopback gateway');
+  }
+
+  ['depthEndpoint', 'tradesEndpoint', 'ordersEndpoint'].forEach(function (key) {
+    const endpoint = String(config[key] || '');
+    if (!endpoint || /^[a-z][a-z\d+.-]*:/i.test(endpoint) || endpoint.startsWith('//')) {
+      throw configError('Level-2 ' + key + ' must be a relative endpoint on the configured gateway');
+    }
+    const resolved = new URL(endpoint, baseUrl);
+    if (resolved.origin !== baseUrl.origin) {
+      throw configError('Level-2 ' + key + ' must stay on the configured gateway');
+    }
+  });
+}
+
+function getEditableConfig(env = process.env) {
+  const config = getLevel2Config(env);
+  const result = Object.assign({}, config);
+  delete result.apiKey;
+  result.hasApiKey = !!config.apiKey;
+  result.apiKeyPreview = maskSecret(config.apiKey);
+  result.configured = config.provider !== 'disabled' && !!config.baseUrl;
+  return result;
+}
+
+function saveLevel2Config(input, env = process.env) {
+  const current = getLevel2Config(env);
+  const nextInput = {};
+  CONFIG_KEYS.forEach(function (key) {
+    if (Object.prototype.hasOwnProperty.call(input, key)) nextInput[key] = input[key];
+  });
+  const shouldPreserveApiKey = !Object.prototype.hasOwnProperty.call(nextInput, 'apiKey') || String(nextInput.apiKey || '').trim() === '';
+  const merged = Object.assign({}, current, nextInput);
+  if (shouldPreserveApiKey && input.clearApiKey !== true) merged.apiKey = current.apiKey;
+  if (input.clearApiKey === true) merged.apiKey = '';
+
+  const saved = normalizeConfig(merged);
+  validateProviderConfig(saved);
+  writeSavedConfig(saved, env);
+  return getEditableConfig(env);
+}
+
+function ensureConfigured(config) {
+  if (config.provider === 'disabled' || !config.baseUrl) {
+    const error = new Error('Level-2 provider is not configured. Set LEVEL2_PROVIDER and LEVEL2_BASE_URL after buying an authorized data API.');
+    error.statusCode = 503;
+    throw error;
+  }
+  validateProviderConfig(config);
+}
+
+function buildAuthHeaders(config) {
+  const headers = {};
+  if (!config.apiKey || !config.authHeader) return headers;
+
+  if (config.authHeader.toLowerCase() === 'authorization') {
+    const hasScheme = /^(bearer|basic)\s+/i.test(config.apiKey);
+    headers[config.authHeader] = hasScheme || !config.authPrefix
+      ? config.apiKey
+      : config.authPrefix + ' ' + config.apiKey;
+  } else {
+    headers[config.authHeader] = config.authPrefix
+      ? config.authPrefix + ' ' + config.apiKey
+      : config.apiKey;
+  }
+  return headers;
+}
+
+function buildUrl(config, endpoint, params) {
+  let rendered = endpoint;
+  Object.keys(params).forEach(function (key) {
+    rendered = rendered.replace(new RegExp('\\{' + key + '\\}', 'g'), encodeURIComponent(String(params[key])));
+  });
+
+  const baseUrl = new URL(config.baseUrl + '/');
+  const url = new URL(rendered, baseUrl);
+  if (url.origin !== baseUrl.origin) {
+    throw configError('Level-2 endpoint must stay on the configured gateway');
+  }
+  Object.keys(params).forEach(function (key) {
+    if (!endpoint.includes('{' + key + '}') && params[key] !== undefined && params[key] !== null && params[key] !== '') {
+      url.searchParams.set(key, String(params[key]));
+    }
+  });
+  return url.toString();
+}
+
+function unwrapPayload(payload) {
+  if (!payload || typeof payload !== 'object') return payload;
+  if (payload.success && payload.data !== undefined) return payload.data;
+  if (payload.result !== undefined) return payload.result;
+  if (payload.payload !== undefined) return payload.payload;
+  return payload.data !== undefined ? payload.data : payload;
+}
+
+async function requestProvider(endpoint, params, env = process.env) {
+  const config = getLevel2Config(env);
+  ensureConfigured(config);
+  const url = buildUrl(config, endpoint, params);
+  const response = await axios.get(url, {
+    timeout: config.timeoutMs,
+    headers: buildAuthHeaders(config)
+  });
+  return { config, data: unwrapPayload(response.data) };
+}
+
+function valueFrom(item, keys, fallback) {
+  for (let i = 0; i < keys.length; i++) {
+    if (item && item[keys[i]] !== undefined) return item[keys[i]];
+  }
+  return fallback;
+}
+
+function normalizeBookRows(rows) {
+  if (!Array.isArray(rows)) return [];
+  return rows.map(function (row, index) {
+    if (Array.isArray(row)) {
+      return {
+        level: index + 1,
+        price: toNumber(row[0]),
+        volume: toNumber(row[1]),
+        orderCount: toNumber(row[2], null)
+      };
+    }
+    return {
+      level: toNumber(valueFrom(row, ['level', 'rank'], index + 1), index + 1),
+      price: toNumber(valueFrom(row, ['price', 'p', 'bidPrice', 'askPrice'])),
+      volume: toNumber(valueFrom(row, ['volume', 'vol', 'qty', 'quantity'])),
+      orderCount: toNumber(valueFrom(row, ['orderCount', 'orders'], null), null)
+    };
+  }).filter(function (row) {
+    return row.price > 0 || row.volume > 0;
+  });
+}
+
+function normalizeDepth(payload, options = {}) {
+  const data = unwrapPayload(payload) || {};
+  const code = normalizeCode(options.code || data.code || data.symbol);
+  const bidRows = data.bid || data.bids || data.buy || data.buyBook;
+  const askRows = data.ask || data.asks || data.sell || data.sellBook;
+  let bid = normalizeBookRows(bidRows);
+  let ask = normalizeBookRows(askRows);
+
+  if (bid.length === 0 || ask.length === 0) {
+    bid = bid.length ? bid : [];
+    ask = ask.length ? ask : [];
+    for (let i = 1; i <= 10; i++) {
+      const bidPrice = toNumber(valueFrom(data, ['bid' + i + 'Price', 'buy' + i + 'Price', 'bidPrice' + i, 'buyPrice' + i, 'bp' + i]));
+      const bidVolume = toNumber(valueFrom(data, ['bid' + i + 'Vol', 'buy' + i + 'Vol', 'bidVolume' + i, 'buyVolume' + i, 'bv' + i]));
+      const askPrice = toNumber(valueFrom(data, ['ask' + i + 'Price', 'sell' + i + 'Price', 'askPrice' + i, 'sellPrice' + i, 'ap' + i]));
+      const askVolume = toNumber(valueFrom(data, ['ask' + i + 'Vol', 'sell' + i + 'Vol', 'askVolume' + i, 'sellVolume' + i, 'av' + i]));
+      if (bidPrice > 0 || bidVolume > 0) bid.push({ level: i, price: bidPrice, volume: bidVolume, orderCount: null });
+      if (askPrice > 0 || askVolume > 0) ask.push({ level: i, price: askPrice, volume: askVolume, orderCount: null });
+    }
+  }
+
+  return {
+    code,
+    provider: options.provider || data.provider || 'level2',
+    timestamp: data.timestamp || data.time || new Date().toISOString(),
+    lastPrice: toNumber(valueFrom(data, ['lastPrice', 'price', 'latestPrice'])),
+    bid,
+    ask
+  };
+}
+
+function normalizeSide(value) {
+  const text = String(value || '').trim().toLowerCase();
+  if (['b', 'buy', '1', 'bid', '主动买入', '买入', '外盘'].includes(text) || /买|外盘|主动买入/i.test(text)) return 'buy';
+  if (['s', 'sell', '2', 'ask', '主动卖出', '卖出', '内盘'].includes(text) || /卖|内盘|主动卖出/i.test(text)) return 'sell';
+  return 'neutral';
+}
+
+function normalizeTradeRows(payload) {
+  const data = unwrapPayload(payload);
+  if (Array.isArray(data)) return data;
+  if (!data || typeof data !== 'object') return [];
+  return data.trades || data.ticks || data.items || data.list || [];
+}
+
+function normalizeTrades(payload, options = {}) {
+  const config = options.config || getLevel2Config();
+  const multiplier = config.volumeUnit === 'lot' ? 100 : 1;
+  return normalizeTradeRows(payload).map(function (item, index) {
+    const price = toNumber(valueFrom(item, ['price', 'tradePrice', '成交价']), null);
+    const volume = toNumber(valueFrom(item, ['volume', 'vol', 'qty', 'quantity', 'tradeQty', '成交量']), null);
+    const providedAmount = toNumber(valueFrom(item, ['amount', 'tradeAmount', '成交额']), null);
+    const amount = providedAmount !== null
+      ? roundMoney(providedAmount)
+      : (price > 0 && volume !== null && volume >= 0 ? roundMoney(price * volume * multiplier) : null);
+    return {
+      sequence: valueFrom(item, ['sequence', 'seq', 'id'], index + 1),
+      time: valueFrom(item, ['time', 'tradeTime', 'datetime', '成交时间'], ''),
+      price,
+      volume,
+      amount,
+      side: normalizeSide(valueFrom(item, ['side', 'bs', 'direction', 'type', 'buySellFlag'], 'neutral')),
+      orderId: valueFrom(item, ['orderId', 'orderNo'], '')
+    };
+  }).filter(function (trade) {
+    return trade.price > 0 || trade.volume > 0 || trade.amount > 0;
+  });
+}
+
+function calculateLargeOrderStats(trades, options = {}) {
+  const threshold = toNumber(options.threshold, DEFAULT_LARGE_ORDER_THRESHOLD);
+  const stats = {
+    threshold,
+    tradeCount: trades.length,
+    missingAmountCount: 0,
+    buyCount: 0,
+    sellCount: 0,
+    neutralCount: 0,
+    totalAmount: 0,
+    buyAmount: 0,
+    sellAmount: 0,
+    neutralAmount: 0,
+    largeTradeCount: 0,
+    largeBuyCount: 0,
+    largeSellCount: 0,
+    largeNeutralCount: 0,
+    largeAmount: 0,
+    largeBuyAmount: 0,
+    largeSellAmount: 0,
+    largeNeutralAmount: 0,
+    largeNetAmount: 0,
+    largeAmountRatio: 0,
+    topLargeTrades: []
+  };
+
+  trades.forEach(function (trade) {
+    const amount = typeof trade.amount === 'boolean' || String(trade.amount).trim() === ''
+      ? null : toNumber(trade.amount, null);
+    if (amount === null || amount < 0) {
+      stats.missingAmountCount += 1;
+      if (trade.side === 'buy') stats.buyCount += 1;
+      else if (trade.side === 'sell') stats.sellCount += 1;
+      else stats.neutralCount += 1;
+      return;
+    }
+    stats.totalAmount += amount;
+    if (trade.side === 'buy') {
+      stats.buyCount += 1;
+      stats.buyAmount += amount;
+    } else if (trade.side === 'sell') {
+      stats.sellCount += 1;
+      stats.sellAmount += amount;
+    } else {
+      stats.neutralCount += 1;
+      stats.neutralAmount += amount;
+    }
+
+    if (amount >= threshold) {
+      stats.largeTradeCount += 1;
+      stats.largeAmount += amount;
+      if (trade.side === 'buy') {
+        stats.largeBuyCount += 1;
+        stats.largeBuyAmount += amount;
+      } else if (trade.side === 'sell') {
+        stats.largeSellCount += 1;
+        stats.largeSellAmount += amount;
+      } else {
+        stats.largeNeutralCount += 1;
+        stats.largeNeutralAmount += amount;
+      }
+      stats.topLargeTrades.push(trade);
+    }
+  });
+
+  stats.largeNetAmount = stats.largeBuyAmount - stats.largeSellAmount;
+  [
+    'totalAmount',
+    'buyAmount',
+    'sellAmount',
+    'neutralAmount',
+    'largeAmount',
+    'largeBuyAmount',
+    'largeSellAmount',
+    'largeNeutralAmount',
+    'largeNetAmount'
+  ].forEach(function (key) {
+    stats[key] = stats.missingAmountCount ? null : roundMoney(stats[key]);
+  });
+  stats.largeAmountRatio = stats.missingAmountCount ? null : (stats.totalAmount ? Number((stats.largeAmount / stats.totalAmount).toFixed(4)) : 0);
+  stats.status = stats.missingAmountCount ? 'partial' : 'available';
+  stats.reason = stats.missingAmountCount ? '部分逐笔金额缺失，无法计算完整金额及大单占比' : '';
+  stats.topLargeTrades = stats.topLargeTrades
+    .sort(function (a, b) { return b.amount - a.amount; })
+    .slice(0, 10);
+  return stats;
+}
+
+async function getDepth(code, env = process.env) {
+  const config = getLevel2Config(env);
+  const result = await requestProvider(config.depthEndpoint, { code: normalizeCode(code) }, env);
+  return normalizeDepth(result.data, { code, provider: result.config.provider });
+}
+
+async function getTrades(code, options = {}, env = process.env) {
+  const config = getLevel2Config(env);
+  const limit = toNumber(options.limit, 200);
+  const result = await requestProvider(config.tradesEndpoint, { code: normalizeCode(code), limit }, env);
+  return {
+    code: normalizeCode(code),
+    provider: result.config.provider,
+    timestamp: new Date().toISOString(),
+    trades: normalizeTrades(result.data, { config: result.config })
+  };
+}
+
+async function getLargeOrderStats(code, options = {}, env = process.env) {
+  const tradesResult = await getTrades(code, options, env);
+  const threshold = toNumber(options.threshold, getLevel2Config(env).largeOrderThreshold);
+  return {
+    code: normalizeCode(code),
+    provider: tradesResult.provider,
+    timestamp: tradesResult.timestamp,
+    stats: calculateLargeOrderStats(tradesResult.trades, { threshold })
+  };
+}
+
+function toEastmoneySecid(code) {
+  const normalized = normalizeCode(code);
+  const first = normalized.charAt(0);
+  const market = first === '6' || first === '5' || first === '9' ? '1' : '0';
+  return market + '.' + normalized;
+}
+
+function normalizeEastmoneyMoneyFlow(row, options = {}) {
+  const data = row || {};
+  function field(keys, money = false) {
+    const value = valueFrom(data, keys, null);
+    if (typeof value !== 'number' && typeof value !== 'string') return null;
+    const number = toNumber(value, null);
+    return number === null ? null : money ? roundMoney(number) : number;
+  }
+  const mainNetAmount = field(['f62', 'mainNetAmount'], true);
+  const superLargeNetAmount = field(['f66', 'superLargeNetAmount'], true);
+  const largeNetAmount = field(['f72', 'largeNetAmount'], true);
+  const mediumNetAmount = field(['f78', 'mediumNetAmount'], true);
+  const smallNetAmount = field(['f84', 'smallNetAmount'], true);
+  const result = {
+    code: normalizeCode(options.code || data.f12 || data.code),
+    name: data.f14 || data.name || '',
+    provider: 'eastmoney-free-flow',
+    sourceType: 'free-estimated',
+    timestamp: new Date().toISOString(),
+    // This response has no provider observation timestamp. Fetch time is not quote time.
+    observedAt: null,
+    price: field(['f2', 'price']),
+    changePct: field(['f3', 'changePct']),
+    mainNetAmount,
+    mainNetRatio: field(['f184', 'mainNetRatio']),
+    superLargeNetAmount,
+    superLargeNetRatio: field(['f69', 'superLargeNetRatio']),
+    largeNetAmount,
+    largeNetRatio: field(['f75', 'largeNetRatio']),
+    mediumNetAmount,
+    mediumNetRatio: field(['f81', 'mediumNetRatio']),
+    smallNetAmount,
+    smallNetRatio: field(['f87', 'smallNetRatio']),
+    simulatedLargeNetAmount: superLargeNetAmount === null || largeNetAmount === null
+      ? null : roundMoney(superLargeNetAmount + largeNetAmount),
+    note: '东方财富普通资金分类数据，不是暗盘原指标，也不是交易所原始 Level-2 逐笔数据；来源行情时刻未提供。'
+  };
+  const fields = ['mainNetAmount', 'superLargeNetAmount', 'largeNetAmount', 'mediumNetAmount',
+    'smallNetAmount', 'mainNetRatio', 'superLargeNetRatio', 'largeNetRatio', 'mediumNetRatio', 'smallNetRatio'];
+  result.missingFields = fields.filter(function (key) { return result[key] === null; });
+  result.status = result.missingFields.length === fields.length ? 'unavailable'
+    : result.missingFields.length ? 'partial' : 'available';
+  return result;
+}
+
+async function getFreeMoneyFlow(code) {
+  const normalized = normalizeCode(code);
+  const response = await axios.get('https://push2.eastmoney.com/api/qt/ulist.np/get', {
+    timeout: 8000,
+    headers: { Referer: 'https://quote.eastmoney.com/' },
+    params: {
+      fltt: 2,
+      secids: toEastmoneySecid(normalized),
+      fields: 'f2,f3,f12,f14,f62,f66,f69,f72,f75,f78,f81,f84,f87,f184'
+    }
+  });
+  const diff = response.data && response.data.data && Array.isArray(response.data.data.diff)
+    ? response.data.data.diff
+    : [];
+  if (!diff.length) {
+    const error = new Error('Free money-flow data is unavailable for ' + normalized);
+    error.statusCode = 502;
+    throw error;
+  }
+  return normalizeEastmoneyMoneyFlow(diff[0], { code: normalized });
+}
+
+function parseManualTrades(text, options = {}) {
+  const config = Object.assign({ volumeUnit: 'share' }, options);
+  const multiplier = config.volumeUnit === 'lot' ? 100 : 1;
+  const lines = String(text || '').split(/\r?\n/);
+  const trades = [];
+
+  lines.forEach(function (line, index) {
+    const raw = line.trim();
+    if (!raw || /时间|成交|价格|方向|买卖|现手|总手/.test(raw)) return;
+    const columns = raw.split(/\t|,|，|\s{2,}/).map(function (part) { return part.trim(); }).filter(Boolean);
+    const parts = columns.length > 1 ? columns : raw.split(/\s+/).filter(Boolean);
+    const joined = parts.join(' ');
+    const timeMatch = joined.match(/\b\d{1,2}:\d{2}(?::\d{2})?\b/);
+    const side = normalizeSide(joined);
+    const numbers = parts
+      .map(function (part) { return String(part).replace(/[,+]/g, '').replace(/[手股元万亿]/g, ''); })
+      .filter(function (part) { return /^-?\d+(?:\.\d+)?$/.test(part); })
+      .map(Number);
+    if (numbers.length < 2) return;
+
+    const price = numbers.find(function (number) { return number > 0 && number < 10000; }) || 0;
+    const priceIndex = numbers.indexOf(price);
+    const volume = numbers[priceIndex + 1] || numbers[1] || 0;
+    let amount = numbers.find(function (number, numberIndex) {
+      return numberIndex > priceIndex + 1 && number >= 10000;
+    }) || 0;
+    if (!amount && price && volume) amount = price * volume * multiplier;
+
+    trades.push({
+      sequence: index + 1,
+      time: timeMatch ? timeMatch[0] : '',
+      price: toNumber(price),
+      volume: toNumber(volume),
+      amount: roundMoney(amount),
+      side
+    });
+  });
+
+  return trades;
+}
+
+function analyzeManualTrades(input = {}) {
+  const trades = parseManualTrades(input.text || '', {
+    volumeUnit: input.volumeUnit || 'share'
+  });
+  const threshold = toNumber(input.threshold, DEFAULT_LARGE_ORDER_THRESHOLD);
+  return {
+    code: normalizeCode(input.code || ''),
+    provider: 'manual-level2-paste',
+    sourceType: 'manual-simulation',
+    timestamp: new Date().toISOString(),
+    trades,
+    stats: calculateLargeOrderStats(trades, { threshold }),
+    note: 'Manual paste simulation from a retail Level-2 screen. Accuracy depends on copied columns and visible rows.'
+  };
+}
+
+module.exports = {
+  DEFAULT_LARGE_ORDER_THRESHOLD,
+  getLevel2Config,
+  getPublicStatus,
+  getEditableConfig,
+  saveLevel2Config,
+  normalizeEastmoneyMoneyFlow,
+  getFreeMoneyFlow,
+  parseManualTrades,
+  analyzeManualTrades,
+  normalizeDepth,
+  normalizeTrades,
+  calculateLargeOrderStats,
+  getDepth,
+  getTrades,
+  getLargeOrderStats
+};

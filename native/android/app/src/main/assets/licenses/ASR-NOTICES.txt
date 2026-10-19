@@ -1,0 +1,22 @@
+On-device transcription dependencies (review build 0.11)
+
+Vosk API 0.3.75, Alpha Cephei Inc.
+https://github.com/alphacep/vosk-api
+Apache License 2.0; full license: Vosk-Apache-2.0.txt.
+
+JNA 5.18.1, Java Native Access contributors.
+https://github.com/java-native-access/jna/tree/5.18.1
+Dual license Apache-2.0 OR LGPL-2.1-or-later. This application uses the Apache-2.0 option.
+Upstream license notice: JNA-LICENSE.txt. Apache license text included above.
+
+Optional separate model: vosk-model-small-cn-0.22, Alpha Cephei.
+https://alphacephei.com/vosk/models
+Official model catalog lists Apache 2.0; model is downloaded/imported separately, not inside APK.
+Artifact URL: https://alphacephei.com/vosk/models/vosk-model-small-cn-0.22.zip
+SHA256 of artifact fetched via official HTTPS on 2026-10-12:
+3af8b0e7e0f835ae9d414ce5df580237a3cfb08d586c9fbbb0f7ff29ad5b14ba
+This locally recorded digest is not a publisher signature.
+
+This is an internal review build, not public distribution approval.
+Transcriptions are machine-generated drafts, may contain substantial errors,
+and are stored as unverified evidence. No cloud/desktop transcription fallback.

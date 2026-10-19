@@ -1,0 +1,10411 @@
+[
+  {
+    "code": "159001",
+    "abbr": "HBETFYFD",
+    "name": "货币ETF易方达",
+    "fundType": "货币型-普通货币",
+    "type": "fund"
+  },
+  {
+    "code": "159003",
+    "abbr": "ZSKXETF",
+    "name": "招商快线ETF",
+    "fundType": "货币型-普通货币",
+    "type": "fund"
+  },
+  {
+    "code": "159005",
+    "abbr": "KQETFHTF",
+    "name": "快钱ETF汇添富",
+    "fundType": "货币型-普通货币",
+    "type": "fund"
+  },
+  {
+    "code": "159007",
+    "abbr": "HTBRZZXMYZCYETF",
+    "name": "华泰柏瑞中证畜牧养殖产业ETF",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159008",
+    "abbr": "JSCCZZQZZQGSETF",
+    "name": "景顺长城中证全指证券公司ETF",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159009",
+    "abbr": "YFDCYBXNYETF",
+    "name": "易方达创业板新能源ETF",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159010",
+    "abbr": "GGTKJETFBS",
+    "name": "港股通科技ETF博时",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159012",
+    "abbr": "PHKCCY50ETF",
+    "name": "鹏华科创创业50ETF",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159013",
+    "abbr": "DCZZGYHLWZTETF",
+    "name": "大成中证工业互联网主题ETF",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159015",
+    "abbr": "HSGGTKJETFGL",
+    "name": "恒生港股通科技ETF国联",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159016",
+    "abbr": "ZQETFGF",
+    "name": "证券ETF广发",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159017",
+    "abbr": "GYRXGZSYTRQETF",
+    "name": "工银瑞信国证石油天然气ETF",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159018",
+    "abbr": "GFGZSYTRQETF",
+    "name": "广发国证石油天然气ETF",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159019",
+    "abbr": "HBGZSYTRQETF",
+    "name": "华宝国证石油天然气ETF",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159020",
+    "abbr": "YFDZZXMYZCYETF",
+    "name": "易方达中证畜牧养殖产业ETF",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159021",
+    "abbr": "HXGZDPJZETF",
+    "name": "华夏国证大盘价值ETF",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159022",
+    "abbr": "FGZZKCCYRGZNETF",
+    "name": "富国中证科创创业人工智能ETF",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159026",
+    "abbr": "NFGZSYTRQETF",
+    "name": "南方国证石油天然气ETF",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159027",
+    "abbr": "XMYZETFDC",
+    "name": "畜牧养殖ETF大成",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159028",
+    "abbr": "GGQCETFTH",
+    "name": "港股汽车ETF天弘",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159029",
+    "abbr": "GFZZYSJSKYZTETF",
+    "name": "广发中证有色金属矿业主题ETF",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159030",
+    "abbr": "LSETFHX",
+    "name": "粮食ETF华夏",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159031",
+    "abbr": "LSETFBS",
+    "name": "粮食ETF博时",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159032",
+    "abbr": "GYYSETFYFD",
+    "name": "工业有色ETF易方达",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159033",
+    "abbr": "LSETFGT",
+    "name": "粮食ETF国泰",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159035",
+    "abbr": "THZZRJFWETF",
+    "name": "天弘中证软件服务ETF",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159036",
+    "abbr": "RJKFETFHB",
+    "name": "软件开发ETF华宝",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159037",
+    "abbr": "JZETFPH",
+    "name": "价值ETF鹏华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159038",
+    "abbr": "YFDGZLSCYETF",
+    "name": "易方达国证粮食产业ETF",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159041",
+    "abbr": "NYETFPH",
+    "name": "农业ETF鹏华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159042",
+    "abbr": "JZETFHTF",
+    "name": "价值ETF汇添富",
+    "fundType": "",
+    "type": "fund"
+  },
+  {
+    "code": "159043",
+    "abbr": "SPETFHA",
+    "name": "食品ETF华安",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159051",
+    "abbr": "YLQXETFYFD",
+    "name": "医疗器械ETF易方达",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159052",
+    "abbr": "XNYDCETFJS",
+    "name": "新能源电池ETF嘉实",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159055",
+    "abbr": "XYJSETFFG",
+    "name": "稀有金属ETF富国",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159056",
+    "abbr": "YLQXETFFG",
+    "name": "医疗器械ETF富国",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159057",
+    "abbr": "YLQXETFPH",
+    "name": "医疗器械ETF鹏华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159060",
+    "abbr": "LSETFPY",
+    "name": "粮食ETF浦银",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159100",
+    "abbr": "BXETFHX",
+    "name": "巴西ETF华夏",
+    "fundType": "指数型-海外股票",
+    "type": "fund"
+  },
+  {
+    "code": "159101",
+    "abbr": "GGTKJETFHX",
+    "name": "港股通科技ETF华夏",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159102",
+    "abbr": "GGTSWKJETFHA",
+    "name": "港股通生物科技ETF华安",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159103",
+    "abbr": "JRKJETFHTF",
+    "name": "金融科技ETF汇添富",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159105",
+    "abbr": "HSSWKJETFYFD",
+    "name": "恒生生物科技ETF易方达",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159106",
+    "abbr": "MQ300ETFQHKY",
+    "name": "民企300ETF前海开源",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159107",
+    "abbr": "CYBRJETFFG",
+    "name": "创业板软件ETF富国",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159108",
+    "abbr": "GYRJETFBS",
+    "name": "工业软件ETF博时",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159109",
+    "abbr": "HS50ETFJS",
+    "name": "恒生50ETF景顺",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159110",
+    "abbr": "KCZETFWJ",
+    "name": "科创债ETF万家",
+    "fundType": "指数型-固收",
+    "type": "fund"
+  },
+  {
+    "code": "159111",
+    "abbr": "KCZETFTH",
+    "name": "科创债ETF天弘",
+    "fundType": "指数型-固收",
+    "type": "fund"
+  },
+  {
+    "code": "159112",
+    "abbr": "KCZETFYH",
+    "name": "科创债ETF银华",
+    "fundType": "指数型-固收",
+    "type": "fund"
+  },
+  {
+    "code": "159113",
+    "abbr": "KCZETFDC",
+    "name": "科创债ETF大成",
+    "fundType": "指数型-固收",
+    "type": "fund"
+  },
+  {
+    "code": "159115",
+    "abbr": "KCZETFHA",
+    "name": "科创债ETF华安",
+    "fundType": "指数型-固收",
+    "type": "fund"
+  },
+  {
+    "code": "159116",
+    "abbr": "KCZETFGY",
+    "name": "科创债ETF工银",
+    "fundType": "指数型-固收",
+    "type": "fund"
+  },
+  {
+    "code": "159117",
+    "abbr": "GGTHLDBETFPH",
+    "name": "港股通红利低波ETF鹏华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159118",
+    "abbr": "GGTHLDBETFHX",
+    "name": "港股通红利低波ETF华夏",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159119",
+    "abbr": "800XJLETFZS",
+    "name": "800现金流ETF招商",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159120",
+    "abbr": "GGTKJETFGLA",
+    "name": "港股通科技ETF国联安",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159121",
+    "abbr": "GGTQCETFYFD",
+    "name": "港股通汽车ETF易方达",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159122",
+    "abbr": "CYBXNYETFFG",
+    "name": "创业板新能源ETF富国",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159123",
+    "abbr": "GFETFJS",
+    "name": "光伏ETF嘉实",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159125",
+    "abbr": "GGTKJETFZS",
+    "name": "港股通科技ETF招商",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159126",
+    "abbr": "GGT50ETFNF",
+    "name": "港股通50ETF南方",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159127",
+    "abbr": "GGTHLETFNF",
+    "name": "港股通红利ETF南方",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159128",
+    "abbr": "GGKJETFTH",
+    "name": "港股科技ETF天弘",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159129",
+    "abbr": "HGETFJS",
+    "name": "化工ETF嘉实",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159130",
+    "abbr": "HSSWKJETFPH",
+    "name": "恒生生物科技ETF鹏华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159131",
+    "abbr": "GGTXXJSETFHB",
+    "name": "港股通信息技术ETF华宝",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159132",
+    "abbr": "HSSWKJETFFG",
+    "name": "恒生生物科技ETF富国",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159133",
+    "abbr": "HGETFTH",
+    "name": "化工ETF天弘",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159135",
+    "abbr": "GGTKJETFQHKY",
+    "name": "港股通科技ETF前海开源",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159136",
+    "abbr": "A50ETFGF",
+    "name": "A50ETF广发",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159137",
+    "abbr": "GGTYLETFHB",
+    "name": "港股通医疗ETF华宝",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159138",
+    "abbr": "GCJXETFYFD",
+    "name": "工程机械ETF易方达",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159139",
+    "abbr": "KCCYRGZNETFHTBR",
+    "name": "科创创业人工智能ETF华泰柏瑞",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159140",
+    "abbr": "KCCYRGZNETFYFD",
+    "name": "科创创业人工智能ETF易方达",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159141",
+    "abbr": "KCCYRGZNETFYY",
+    "name": "科创创业人工智能ETF永赢",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159142",
+    "abbr": "KCCYRGZNETFJS",
+    "name": "科创创业人工智能ETF景顺",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159143",
+    "abbr": "GGTYQHLETFPA",
+    "name": "港股通央企红利ETF平安",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159145",
+    "abbr": "GYRJETFGF",
+    "name": "工业软件ETF广发",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159146",
+    "abbr": "DLETFHB",
+    "name": "电力ETF华宝",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159147",
+    "abbr": "DCETFNF",
+    "name": "电池ETF南方",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159148",
+    "abbr": "SYETFFG",
+    "name": "石油ETF富国",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159149",
+    "abbr": "CYBXNYETFGY",
+    "name": "创业板新能源ETF工银",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159150",
+    "abbr": "SZ50ETFYFD",
+    "name": "深证50ETF易方达",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159151",
+    "abbr": "SPETFHX",
+    "name": "食品ETF华夏",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159152",
+    "abbr": "GGTKJETFPA",
+    "name": "港股通科技ETF平安",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159153",
+    "abbr": "XFDZETFPH",
+    "name": "消费电子ETF鹏华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159155",
+    "abbr": "DCETFDC",
+    "name": "电池ETF大成",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159156",
+    "abbr": "DCETFWJ",
+    "name": "电池ETF万家",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159157",
+    "abbr": "YSJSETFTH",
+    "name": "有色金属ETF天弘",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159158",
+    "abbr": "DLETFJS",
+    "name": "电力ETF景顺",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159159",
+    "abbr": "GYSYETFGTRY",
+    "name": "公用事业ETF国投瑞银",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159160",
+    "abbr": "DCETFDC",
+    "name": "电池ETF东财",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159162",
+    "abbr": "GYYSETFPH",
+    "name": "工业有色ETF鹏华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159163",
+    "abbr": "YSETFTK",
+    "name": "有色ETF泰康",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159165",
+    "abbr": "YZETFYY",
+    "name": "养殖ETF永赢",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159166",
+    "abbr": "XJLETFCC",
+    "name": "现金流ETF长城",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159167",
+    "abbr": "GGTYLETFGY",
+    "name": "港股通医疗ETF工银",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159168",
+    "abbr": "YSETFFG",
+    "name": "有色ETF富国",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159169",
+    "abbr": "HSSWKJETFGF",
+    "name": "恒生生物科技ETF广发",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159170",
+    "abbr": "GGTHLWETFYY",
+    "name": "港股通互联网ETF永赢",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159171",
+    "abbr": "GYYSETFBS",
+    "name": "工业有色ETF博时",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159172",
+    "abbr": "YZETFHTF",
+    "name": "养殖ETF汇添富",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159173",
+    "abbr": "NFZZQZNMYETF",
+    "name": "南方中证全指农牧渔ETF",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159175",
+    "abbr": "DCETFYFD",
+    "name": "电池ETF易方达",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159176",
+    "abbr": "HBZZQZJYDQETF",
+    "name": "华宝中证全指家用电器ETF",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159177",
+    "abbr": "PHZZGCJXZTETF",
+    "name": "鹏华中证工程机械主题ETF",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159178",
+    "abbr": "HTFGZXFDZZTETF",
+    "name": "汇添富国证消费电子主题ETF",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159179",
+    "abbr": "GGTHLWETFGY",
+    "name": "港股通互联网ETF工银",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159180",
+    "abbr": "YHGZGYRJZTETF",
+    "name": "银华国证工业软件主题ETF",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159181",
+    "abbr": "SYETFYFD",
+    "name": "石油ETF易方达",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159182",
+    "abbr": "NFZZQZJYDQETF",
+    "name": "南方中证全指家用电器ETF",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159183",
+    "abbr": "XNYCETFZS",
+    "name": "新能源车ETF招商",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159185",
+    "abbr": "PHZZGGTXXJSZHETF",
+    "name": "鹏华中证港股通信息技术综合ETF",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159186",
+    "abbr": "PHHSGGTQCZTETF",
+    "name": "鹏华恒生港股通汽车主题ETF",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159187",
+    "abbr": "CYBXNYETFJS",
+    "name": "创业板新能源ETF景顺",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159188",
+    "abbr": "JSCCBPZGAGHL100ETF",
+    "name": "景顺长城标普中国A股红利100ETF",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159189",
+    "abbr": "SYETFHX",
+    "name": "石油ETF华夏",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159190",
+    "abbr": "CYBXNYETFTH",
+    "name": "创业板新能源ETF天弘",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159191",
+    "abbr": "GGTKJETFYFD",
+    "name": "港股通科技ETF易方达",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159192",
+    "abbr": "HTFZZJDLTETF",
+    "name": "汇添富中证家电龙头ETF",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159193",
+    "abbr": "XNYDCETFYH",
+    "name": "新能源电池ETF银华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159195",
+    "abbr": "HAGZSYTRQETF",
+    "name": "华安国证石油天然气ETF",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159196",
+    "abbr": "YFDZZGGTXXJSZHETF",
+    "name": "易方达中证港股通信息技术综合ETF",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159197",
+    "abbr": "ZSGZSYTRQETF",
+    "name": "招商国证石油天然气ETF",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159198",
+    "abbr": "FGZZGGTXXJSZHETF",
+    "name": "富国中证港股通信息技术综合ETF",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159199",
+    "abbr": "PAGZSYTRQETF",
+    "name": "平安国证石油天然气ETF",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159200",
+    "abbr": "KCZETFFG",
+    "name": "科创债ETF富国",
+    "fundType": "指数型-固收",
+    "type": "fund"
+  },
+  {
+    "code": "159201",
+    "abbr": "ZYXJLETFHX",
+    "name": "自由现金流ETF华夏",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159202",
+    "abbr": "HSHLWETFWJ",
+    "name": "恒生互联网ETF万家",
+    "fundType": "指数型-海外股票",
+    "type": "fund"
+  },
+  {
+    "code": "159203",
+    "abbr": "DPCZETFBS",
+    "name": "大盘成长ETF博时",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159205",
+    "abbr": "CYBETFDC",
+    "name": "创业板ETF东财",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159206",
+    "abbr": "WXETFYY",
+    "name": "卫星ETF永赢",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159207",
+    "abbr": "GGXETFGF",
+    "name": "高股息ETF广发",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159208",
+    "abbr": "HKHTETFWJ",
+    "name": "航空航天ETF万家",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159209",
+    "abbr": "HLZLETFZS",
+    "name": "红利质量ETF招商",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159210",
+    "abbr": "GGTQCETFHTF",
+    "name": "港股通汽车ETF汇添富",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159211",
+    "abbr": "SZ100ETFFG",
+    "name": "深证100ETF富国",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159212",
+    "abbr": "S100ETFNF",
+    "name": "深100ETF南方",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159213",
+    "abbr": "JQRETFHTF",
+    "name": "机器人ETF汇添富",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159215",
+    "abbr": "A500ETFPA",
+    "name": "A500ETF平安",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159216",
+    "abbr": "SZ100ETFDC",
+    "name": "深证100ETF大成",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159217",
+    "abbr": "GGTCXYETFGY",
+    "name": "港股通创新药ETF工银",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159218",
+    "abbr": "WXETFZS",
+    "name": "卫星ETF招商",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159219",
+    "abbr": "SZ100ETFRT",
+    "name": "深证100ETF融通",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159220",
+    "abbr": "GGTHLDBETFHB",
+    "name": "港股通红利低波ETF华宝",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159221",
+    "abbr": "XJLETFJS",
+    "name": "现金流ETF嘉实",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159222",
+    "abbr": "ZYXJLETFYFD",
+    "name": "自由现金流ETF易方达",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159223",
+    "abbr": "XJLETFYY",
+    "name": "现金流ETF永赢",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159225",
+    "abbr": "XJLETFYH",
+    "name": "现金流ETF银华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159226",
+    "abbr": "ZZA500ZQETFGT",
+    "name": "中证A500增强ETF国泰",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159227",
+    "abbr": "HKHTETFHX",
+    "name": "航空航天ETF华夏",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159228",
+    "abbr": "HLDBETFCC",
+    "name": "红利低波ETF长城",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159229",
+    "abbr": "ZYXJLETFGF",
+    "name": "自由现金流ETF广发",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159230",
+    "abbr": "TYHKETFHX",
+    "name": "通用航空ETF华夏",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159231",
+    "abbr": "TYHKETFHB",
+    "name": "通用航空ETF华宝",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159232",
+    "abbr": "ZYXJLETFNF",
+    "name": "自由现金流ETF南方",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159233",
+    "abbr": "ZYXJLETFPA",
+    "name": "自由现金流ETF平安",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159235",
+    "abbr": "ZZXJLETFDC",
+    "name": "中证现金流ETF大成",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159236",
+    "abbr": "ZYXJLETFGY",
+    "name": "自由现金流ETF工银",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159237",
+    "abbr": "GGQCETFGY",
+    "name": "港股汽车ETF工银",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159238",
+    "abbr": "HS300ZQETFJS",
+    "name": "沪深300增强ETF景顺",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159239",
+    "abbr": "GGTQCETFFG",
+    "name": "港股通汽车ETF富国",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159240",
+    "abbr": "A500ZQETFTH",
+    "name": "A500增强ETF天弘",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159241",
+    "abbr": "HKHTETFTH",
+    "name": "航空航天ETF天弘",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159242",
+    "abbr": "CYBRGZNETFDC",
+    "name": "创业板人工智能ETF大成",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159243",
+    "abbr": "CYBRGZNETFZS",
+    "name": "创业板人工智能ETF招商",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159245",
+    "abbr": "GGTXFETFFG",
+    "name": "港股通消费ETF富国",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159246",
+    "abbr": "CYBRGZNETFFG",
+    "name": "创业板人工智能ETF富国",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159247",
+    "abbr": "CYBETFHTF",
+    "name": "创业板ETF汇添富",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159248",
+    "abbr": "RGZNETFWJ",
+    "name": "人工智能ETF万家",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159249",
+    "abbr": "A500ZQETFGY",
+    "name": "A500增强ETF工银",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159251",
+    "abbr": "GGTKJETFWJ",
+    "name": "港股通科技ETF万家",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159253",
+    "abbr": "YHETFBS",
+    "name": "银行ETF博时",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159255",
+    "abbr": "TYHKETFYFD",
+    "name": "通用航空ETF易方达",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159256",
+    "abbr": "CYBRJETFHX",
+    "name": "创业板软件ETF华夏",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159257",
+    "abbr": "HKETFHTF",
+    "name": "航空ETF汇添富",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159258",
+    "abbr": "JQRETFNF",
+    "name": "机器人ETF南方",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159259",
+    "abbr": "CZETFYFD",
+    "name": "成长ETF易方达",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159260",
+    "abbr": "ZQETFBS",
+    "name": "证券ETF博时",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159261",
+    "abbr": "CYBXNYETFPH",
+    "name": "创业板新能源ETF鹏华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159262",
+    "abbr": "GGTKJETFGF",
+    "name": "港股通科技ETF广发",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159263",
+    "abbr": "JZETFYFD",
+    "name": "价值ETF易方达",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159265",
+    "abbr": "GGXFETFPH",
+    "name": "港股消费ETF鹏华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159266",
+    "abbr": "GGYQHLETFYY",
+    "name": "港股央企红利ETF永赢",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159267",
+    "abbr": "HTETFHA",
+    "name": "航天ETF华安",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159268",
+    "abbr": "GGTXFETFHTF",
+    "name": "港股通消费ETF汇添富",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159269",
+    "abbr": "GGTKJETFNF",
+    "name": "港股通科技ETF南方",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159270",
+    "abbr": "CYB200ETFNF",
+    "name": "创业板200ETF南方",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159271",
+    "abbr": "HSETFPH",
+    "name": "恒生ETF鹏华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159272",
+    "abbr": "JQRETFFG",
+    "name": "机器人ETF富国",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159273",
+    "abbr": "YJSETFHTF",
+    "name": "云计算ETF汇添富",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159275",
+    "abbr": "NMYETFHB",
+    "name": "农牧渔ETF华宝",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159276",
+    "abbr": "XJLETFHTF",
+    "name": "现金流ETF汇添富",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159277",
+    "abbr": "GGTHLETFFG",
+    "name": "港股通红利ETF富国",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159278",
+    "abbr": "JQRETFPH",
+    "name": "机器人ETF鹏华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159279",
+    "abbr": "CYBRGZNETFHA",
+    "name": "创业板人工智能ETF华安",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159280",
+    "abbr": "GGTHLWETFHTF",
+    "name": "港股通互联网ETF汇添富",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159281",
+    "abbr": "GGYQHLETFTH",
+    "name": "港股央企红利ETF天弘",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159283",
+    "abbr": "TYHKETFNF",
+    "name": "通用航空ETF南方",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159285",
+    "abbr": "GGTXFETFHA",
+    "name": "港股通消费ETF华安",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159286",
+    "abbr": "GGTCXYETFPH",
+    "name": "港股通创新药ETF鹏华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159287",
+    "abbr": "CYBZETFBS",
+    "name": "创业板综ETF博时",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159288",
+    "abbr": "CYBZETFYH",
+    "name": "创业板综ETF银华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159289",
+    "abbr": "CYBZZETFPH",
+    "name": "创业板综指ETF鹏华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159290",
+    "abbr": "CYBZZZQETFDC",
+    "name": "创业板综指增强ETF东财",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159291",
+    "abbr": "CYBZZQETFZS",
+    "name": "创业板综增强ETF招商",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159292",
+    "abbr": "CYBZZQETFHB",
+    "name": "创业板综增强ETF华宝",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159293",
+    "abbr": "CYBZZQETFJX",
+    "name": "创业板综增强ETF建信",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159295",
+    "abbr": "CYZZETFXBLD",
+    "name": "创业综指ETF西部利得",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159296",
+    "abbr": "A500HLDBETFHB",
+    "name": "A500红利低波ETF华宝",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159297",
+    "abbr": "GGTCXYETFNF",
+    "name": "港股通创新药ETF南方",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159298",
+    "abbr": "CYB50ETFDC",
+    "name": "创业板50ETF大成",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159299",
+    "abbr": "JRKJETFYFD",
+    "name": "金融科技ETF易方达",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159300",
+    "abbr": "HS300ETFFG",
+    "name": "沪深300ETF富国",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159301",
+    "abbr": "GYSYETFHX",
+    "name": "公用事业ETF华夏",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159302",
+    "abbr": "GGGGXETFYH",
+    "name": "港股高股息ETF银华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159303",
+    "abbr": "HSYLETFDC",
+    "name": "恒生医疗ETF大成",
+    "fundType": "指数型-海外股票",
+    "type": "fund"
+  },
+  {
+    "code": "159305",
+    "abbr": "CNDCETFGF",
+    "name": "储能电池ETF广发",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159306",
+    "abbr": "QCLBJETFPA",
+    "name": "汽车零部件ETF平安",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159307",
+    "abbr": "HLDB100ETFBS",
+    "name": "红利低波100ETF博时",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159309",
+    "abbr": "YQETFHTF",
+    "name": "油气ETF汇添富",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159310",
+    "abbr": "XPETFTH",
+    "name": "芯片ETF天弘",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159311",
+    "abbr": "SZJJETFYFD",
+    "name": "数字经济ETF易方达",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159312",
+    "abbr": "HZGGTETFGF",
+    "name": "恒指港股通ETF广发",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159315",
+    "abbr": "HJGETFGY",
+    "name": "黄金股ETF工银",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159316",
+    "abbr": "GGTCXYETFYFD",
+    "name": "港股通创新药ETF易方达",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159318",
+    "abbr": "HZGGTETFYH",
+    "name": "恒指港股通ETF银华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159320",
+    "abbr": "DWSBETFGF",
+    "name": "电网设备ETF广发",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159321",
+    "abbr": "HJGETFHA",
+    "name": "黄金股ETF华安",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159322",
+    "abbr": "HJGETFPA",
+    "name": "黄金股ETF平安",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159323",
+    "abbr": "GGTQCETFHX",
+    "name": "港股通汽车ETF华夏",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159325",
+    "abbr": "BDTETFNF",
+    "name": "半导体ETF南方",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159326",
+    "abbr": "DWSBETFHX",
+    "name": "电网设备ETF华夏",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159327",
+    "abbr": "BDTSBETFWJ",
+    "name": "半导体设备ETF万家",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159328",
+    "abbr": "JDETFYFD",
+    "name": "家电ETF易方达",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159329",
+    "abbr": "STETFNF",
+    "name": "沙特ETF南方",
+    "fundType": "指数型-海外股票",
+    "type": "fund"
+  },
+  {
+    "code": "159330",
+    "abbr": "HS300ETFDC",
+    "name": "沪深300ETF东财",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159331",
+    "abbr": "HLGGETFGT",
+    "name": "红利港股ETF国泰",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159332",
+    "abbr": "YQHLETFFG",
+    "name": "央企红利ETF富国",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159333",
+    "abbr": "GGYQHLETFWJ",
+    "name": "港股央企红利ETF万家",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159335",
+    "abbr": "YQKCETFRT",
+    "name": "央企科创ETF融通",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159336",
+    "abbr": "YQHLETFRT",
+    "name": "央企红利ETF融通",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159337",
+    "abbr": "ZZ500ETFDC",
+    "name": "中证500ETF东财",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159338",
+    "abbr": "ZZA500ETFGT",
+    "name": "中证A500ETF国泰",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159339",
+    "abbr": "A500ETFYH",
+    "name": "A500ETF银华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159350",
+    "abbr": "SZ50ETFFG",
+    "name": "深证50ETF富国",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159351",
+    "abbr": "A500ETFJS",
+    "name": "A500ETF嘉实",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159352",
+    "abbr": "A500ETFNF",
+    "name": "A500ETF南方",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159353",
+    "abbr": "ZZA500ETFJS",
+    "name": "中证A500ETF景顺",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159355",
+    "abbr": "800HLDBETFHB",
+    "name": "800红利低波ETF华宝",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159356",
+    "abbr": "A500ETFWJ",
+    "name": "A500ETF万家",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159357",
+    "abbr": "A500ETFBS",
+    "name": "A500ETF博时",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159358",
+    "abbr": "ZZA500ETFDC",
+    "name": "中证A500ETF大成",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159359",
+    "abbr": "A500ETFHA",
+    "name": "A500ETF华安",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159360",
+    "abbr": "A500ETFTH",
+    "name": "A500ETF天弘",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159361",
+    "abbr": "A500ETFYFD",
+    "name": "A500ETF易方达",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159362",
+    "abbr": "A500ETFGY",
+    "name": "A500ETF工银",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159363",
+    "abbr": "CYBRGZNETFHB",
+    "name": "创业板人工智能ETF华宝",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159365",
+    "abbr": "HZGGTETFFG",
+    "name": "恒指港股通ETF富国",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159366",
+    "abbr": "GGYLETFYY",
+    "name": "港股医疗ETF永赢",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159367",
+    "abbr": "CYB50ETFHX",
+    "name": "创业板50ETF华夏",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159368",
+    "abbr": "CYBXNYETFHX",
+    "name": "创业板新能源ETF华夏",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159369",
+    "abbr": "CYB50ETFYFD",
+    "name": "创业板50ETF易方达",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159370",
+    "abbr": "C50ETFGY",
+    "name": "创50ETF工银",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159371",
+    "abbr": "CYB50ETFFG",
+    "name": "创业板50ETF富国",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159372",
+    "abbr": "CYB50ETFWJ",
+    "name": "创业板50ETF万家",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159373",
+    "abbr": "CYB50ETFJS",
+    "name": "创业板50ETF嘉实",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159375",
+    "abbr": "CYB50ETFGT",
+    "name": "创业板50ETF国泰",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159376",
+    "abbr": "A500ETFPY",
+    "name": "A500ETF浦银",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159377",
+    "abbr": "CYBYYETFGT",
+    "name": "创业板医药ETF国泰",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159378",
+    "abbr": "TYHKETFYY",
+    "name": "通用航空ETF永赢",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159379",
+    "abbr": "A500ETFRT",
+    "name": "A500ETF融通",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159380",
+    "abbr": "A500ETFDC",
+    "name": "A500ETF东财",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159381",
+    "abbr": "CYBRGZNETFHX",
+    "name": "创业板人工智能ETF华夏",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159382",
+    "abbr": "CYBRGZNETFNF",
+    "name": "创业板人工智能ETF南方",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159383",
+    "abbr": "CYB50ETFHTBR",
+    "name": "创业板50ETF华泰柏瑞",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159385",
+    "abbr": "SZJJETFFG",
+    "name": "数字经济ETF富国",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159386",
+    "abbr": "A500ETFYY",
+    "name": "A500ETF永赢",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159387",
+    "abbr": "CYBXNYETFGT",
+    "name": "创业板新能源ETF国泰",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159388",
+    "abbr": "CYBRGZNETFGT",
+    "name": "创业板人工智能ETF国泰",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159389",
+    "abbr": "SZJJETFJS",
+    "name": "数字经济ETF嘉实",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159390",
+    "abbr": "ZZA50ETFGL",
+    "name": "中证A50ETF国联",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159391",
+    "abbr": "DPJZETFBS",
+    "name": "大盘价值ETF博时",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159392",
+    "abbr": "HKETFFG",
+    "name": "航空ETF富国",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159393",
+    "abbr": "HS300ETFWJ",
+    "name": "沪深300ETF万家",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159395",
+    "abbr": "XYZETFDC",
+    "name": "信用债ETF大成",
+    "fundType": "指数型-固收",
+    "type": "fund"
+  },
+  {
+    "code": "159396",
+    "abbr": "XYZETFBS",
+    "name": "信用债ETF博时",
+    "fundType": "指数型-固收",
+    "type": "fund"
+  },
+  {
+    "code": "159397",
+    "abbr": "XYZETFGF",
+    "name": "信用债ETF广发",
+    "fundType": "指数型-固收",
+    "type": "fund"
+  },
+  {
+    "code": "159398",
+    "abbr": "XYZETFTH",
+    "name": "信用债ETF天弘",
+    "fundType": "指数型-固收",
+    "type": "fund"
+  },
+  {
+    "code": "159399",
+    "abbr": "XJLETFGT",
+    "name": "现金流ETF国泰",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159400",
+    "abbr": "KCZETFJS",
+    "name": "科创债ETF景顺",
+    "fundType": "指数型-固收",
+    "type": "fund"
+  },
+  {
+    "code": "159500",
+    "abbr": "ZZ500ETFFG",
+    "name": "中证500ETF富国",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159501",
+    "abbr": "NZETFJS",
+    "name": "纳指ETF嘉实",
+    "fundType": "指数型-海外股票",
+    "type": "fund"
+  },
+  {
+    "code": "159502",
+    "abbr": "BPSWKJETFJS",
+    "name": "标普生物科技ETF嘉实",
+    "fundType": "指数型-海外股票",
+    "type": "fund"
+  },
+  {
+    "code": "159505",
+    "abbr": "GZ2000ETFBS",
+    "name": "国证2000ETF博时",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159506",
+    "abbr": "GGTYLETFFG",
+    "name": "港股通医疗ETF富国",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159507",
+    "abbr": "TXETFGF",
+    "name": "通信ETF广发",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159508",
+    "abbr": "SWYYETFHA",
+    "name": "生物医药ETF华安",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159509",
+    "abbr": "NZKJETFJS",
+    "name": "纳指科技ETF景顺",
+    "fundType": "指数型-海外股票",
+    "type": "fund"
+  },
+  {
+    "code": "159510",
+    "abbr": "HS300JZETFHX",
+    "name": "沪深300价值ETF华夏",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159511",
+    "abbr": "TXETFNF",
+    "name": "通信ETF南方",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159512",
+    "abbr": "QCETFGF",
+    "name": "汽车ETF广发",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159513",
+    "abbr": "NSDK100ETFDC",
+    "name": "纳斯达克100ETF大成",
+    "fundType": "指数型-海外股票",
+    "type": "fund"
+  },
+  {
+    "code": "159515",
+    "abbr": "GQHLETFPY",
+    "name": "国企红利ETF鹏扬",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159516",
+    "abbr": "BDTSBETFGT",
+    "name": "半导体设备ETF国泰",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159517",
+    "abbr": "ZZ800ZQETFYH",
+    "name": "中证800增强ETF银华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159518",
+    "abbr": "BPYQETFJS",
+    "name": "标普油气ETF嘉实",
+    "fundType": "指数型-海外股票",
+    "type": "fund"
+  },
+  {
+    "code": "159519",
+    "abbr": "GGGQETFGT",
+    "name": "港股国企ETF国泰",
+    "fundType": "指数型-海外股票",
+    "type": "fund"
+  },
+  {
+    "code": "159520",
+    "abbr": "XFLTETFGY",
+    "name": "消费龙头ETF工银",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159521",
+    "abbr": "GZ2000ETFPA",
+    "name": "国证2000ETF平安",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159523",
+    "abbr": "HS300CZETFHX",
+    "name": "沪深300成长ETF华夏",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159525",
+    "abbr": "HLDBETFFG",
+    "name": "红利低波ETF富国",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159526",
+    "abbr": "JQRETFJS",
+    "name": "机器人ETF嘉实",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159527",
+    "abbr": "YJSETFGF",
+    "name": "云计算ETF广发",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159528",
+    "abbr": "GQGGETFFG",
+    "name": "国企改革ETF富国",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159529",
+    "abbr": "BPXFETFJS",
+    "name": "标普消费ETF景顺",
+    "fundType": "指数型-海外股票",
+    "type": "fund"
+  },
+  {
+    "code": "159530",
+    "abbr": "JQRETFYFD",
+    "name": "机器人ETF易方达",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159531",
+    "abbr": "ZZ2000ETFNF",
+    "name": "中证2000ETF南方",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159532",
+    "abbr": "ZZ2000ETFYFD",
+    "name": "中证2000ETF易方达",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159533",
+    "abbr": "ZZ2000ETFBS",
+    "name": "中证2000ETF博时",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159535",
+    "abbr": "ZZ2000ETFJS",
+    "name": "中证2000ETF嘉实",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159536",
+    "abbr": "ZZ2000ETFHTF",
+    "name": "中证2000ETF汇添富",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159537",
+    "abbr": "XCETFGT",
+    "name": "信创ETF国泰",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159538",
+    "abbr": "XCETFFG",
+    "name": "信创ETF富国",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159539",
+    "abbr": "XCETFGF",
+    "name": "信创ETF广发",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159540",
+    "abbr": "XCETFYFD",
+    "name": "信创ETF易方达",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159541",
+    "abbr": "CYBZETFWJ",
+    "name": "创业板综ETF万家",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159542",
+    "abbr": "GCJXETFDC",
+    "name": "工程机械ETF大成",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159543",
+    "abbr": "GZ2000ETFGY",
+    "name": "国证2000ETF工银",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159545",
+    "abbr": "HSHLDBETFYFD",
+    "name": "恒生红利低波ETF易方达",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159546",
+    "abbr": "JCDLETFGT",
+    "name": "集成电路ETF国泰",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159547",
+    "abbr": "HLDBETFHX",
+    "name": "红利低波ETF华夏",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159549",
+    "abbr": "HLDBETFTH",
+    "name": "红利低波ETF天弘",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159550",
+    "abbr": "HLWETFDC",
+    "name": "互联网ETF东财",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159551",
+    "abbr": "JQRETFGT",
+    "name": "机器人ETF国泰",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159552",
+    "abbr": "ZZ2000ZQETFZS",
+    "name": "中证2000增强ETF招商",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159553",
+    "abbr": "ZZ2000ZQETFHFT",
+    "name": "中证2000增强ETF海富通",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159555",
+    "abbr": "ZZ2000ZQETFYH",
+    "name": "中证2000增强ETF银华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159556",
+    "abbr": "ZZ2000ZQETFPA",
+    "name": "中证2000增强ETF平安",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159557",
+    "abbr": "HSYLETFJS",
+    "name": "恒生医疗ETF嘉实",
+    "fundType": "指数型-海外股票",
+    "type": "fund"
+  },
+  {
+    "code": "159558",
+    "abbr": "BDTSBETFYFD",
+    "name": "半导体设备ETF易方达",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159559",
+    "abbr": "JQRETFJS",
+    "name": "机器人ETF景顺",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159560",
+    "abbr": "XPETFJS",
+    "name": "芯片ETF景顺",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159561",
+    "abbr": "DGETFJS",
+    "name": "德国ETF嘉实",
+    "fundType": "指数型-海外股票",
+    "type": "fund"
+  },
+  {
+    "code": "159562",
+    "abbr": "HJGETFHX",
+    "name": "黄金股ETF华夏",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159563",
+    "abbr": "CYBZETFHX",
+    "name": "创业板综ETF华夏",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159565",
+    "abbr": "QCLBJETFYFD",
+    "name": "汽车零部件ETF易方达",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159566",
+    "abbr": "CNDCETFYFD",
+    "name": "储能电池ETF易方达",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159567",
+    "abbr": "GGCXYETFYH",
+    "name": "港股创新药ETF银华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159568",
+    "abbr": "GGHLWETFBS",
+    "name": "港股互联网ETF博时",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159569",
+    "abbr": "GGHLDBETFJS",
+    "name": "港股红利低波ETF景顺",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159570",
+    "abbr": "GGTCXYETFHTF",
+    "name": "港股通创新药ETF汇添富",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159571",
+    "abbr": "CYB200ETFFG",
+    "name": "创业板200ETF富国",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159572",
+    "abbr": "CYB200ETFYFD",
+    "name": "创业板200ETF易方达",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159573",
+    "abbr": "CYB200ETFHX",
+    "name": "创业板200ETF华夏",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159575",
+    "abbr": "CYB200ETFYH",
+    "name": "创业板200ETF银华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159576",
+    "abbr": "SZ100ETFGF",
+    "name": "深证100ETF广发",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159577",
+    "abbr": "MG50ETFHTF",
+    "name": "美国50ETF汇添富",
+    "fundType": "指数型-海外股票",
+    "type": "fund"
+  },
+  {
+    "code": "159578",
+    "abbr": "SZZB50ETFNF",
+    "name": "深证主板50ETF南方",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159581",
+    "abbr": "HLETFWJ",
+    "name": "红利ETF万家",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159582",
+    "abbr": "BDTETFBS",
+    "name": "半导体ETF博时",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159583",
+    "abbr": "TXETFFG",
+    "name": "通信ETF富国",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159586",
+    "abbr": "JSJETFNF",
+    "name": "计算机ETF南方",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159587",
+    "abbr": "LSETFGF",
+    "name": "粮食ETF广发",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159588",
+    "abbr": "SYETFJS",
+    "name": "石油ETF景顺",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159589",
+    "abbr": "HLETFGF",
+    "name": "红利ETF广发",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159590",
+    "abbr": "RJETFHTF",
+    "name": "软件ETF汇添富",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159591",
+    "abbr": "A50ETFFG",
+    "name": "A50ETF富国",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159592",
+    "abbr": "A50ETFYH",
+    "name": "A50ETF银华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159593",
+    "abbr": "ZZA50ETFPA",
+    "name": "中证A50ETF平安",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159595",
+    "abbr": "ZZA50ETFDC",
+    "name": "中证A50ETF大成",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159596",
+    "abbr": "A50ETFHB",
+    "name": "A50ETF华宝",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159597",
+    "abbr": "CYBCZETFYFD",
+    "name": "创业板成长ETF易方达",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159599",
+    "abbr": "XPETFDC",
+    "name": "芯片ETF东财",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159600",
+    "abbr": "KCZETFJS",
+    "name": "科创债ETF嘉实",
+    "fundType": "指数型-固收",
+    "type": "fund"
+  },
+  {
+    "code": "159601",
+    "abbr": "A50ETFHX",
+    "name": "A50ETF华夏",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159602",
+    "abbr": "ZGA50ETFNF",
+    "name": "中国A50ETF南方",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159603",
+    "abbr": "KCCYETFTH",
+    "name": "科创创业ETF天弘",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159605",
+    "abbr": "ZGHLETFGF",
+    "name": "中概互联ETF广发",
+    "fundType": "指数型-海外股票",
+    "type": "fund"
+  },
+  {
+    "code": "159606",
+    "abbr": "ZZ500CZETFYFD",
+    "name": "中证500成长ETF易方达",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159607",
+    "abbr": "ZGHLWETFJS",
+    "name": "中概互联网ETF嘉实",
+    "fundType": "指数型-海外股票",
+    "type": "fund"
+  },
+  {
+    "code": "159608",
+    "abbr": "XYJSETFGF",
+    "name": "稀有金属ETF广发",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159609",
+    "abbr": "GFETFPY",
+    "name": "光伏ETF浦银",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159610",
+    "abbr": "ZZ500ZQETFJS",
+    "name": "中证500增强ETF景顺",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159611",
+    "abbr": "DLETFGF",
+    "name": "电力ETF广发",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159612",
+    "abbr": "BP500ETFGT",
+    "name": "标普500ETF国泰",
+    "fundType": "指数型-海外股票",
+    "type": "fund"
+  },
+  {
+    "code": "159613",
+    "abbr": "XXAQETFJS",
+    "name": "信息安全ETF嘉实",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159615",
+    "abbr": "HSSWKJETFNF",
+    "name": "恒生生物科技ETF南方",
+    "fundType": "指数型-海外股票",
+    "type": "fund"
+  },
+  {
+    "code": "159616",
+    "abbr": "NMETFJX",
+    "name": "农牧ETF建信",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159617",
+    "abbr": "ZZ500JZETFHX",
+    "name": "中证500价值ETF华夏",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159618",
+    "abbr": "GFETFHA",
+    "name": "光伏ETF华安",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159619",
+    "abbr": "JJETFGT",
+    "name": "基建ETF国泰",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159620",
+    "abbr": "ZZ500CZETFHX",
+    "name": "中证500成长ETF华夏",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159621",
+    "abbr": "ESGETFGT",
+    "name": "ESGETF国泰",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159622",
+    "abbr": "CXYETFDC",
+    "name": "创新药ETF东财",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159623",
+    "abbr": "CYJJQETFBS",
+    "name": "成渝经济圈ETF博时",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159625",
+    "abbr": "LSDLETFJS",
+    "name": "绿色电力ETF嘉实",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159627",
+    "abbr": "A100ETFHX",
+    "name": "A100ETF华夏",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159628",
+    "abbr": "GZ2000ETFWJ",
+    "name": "国证2000ETF万家",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159629",
+    "abbr": "ZZ1000ETFFG",
+    "name": "中证1000ETF富国",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159630",
+    "abbr": "A100ETFHTF",
+    "name": "A100ETF汇添富",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159631",
+    "abbr": "A100ETFZS",
+    "name": "A100ETF招商",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159632",
+    "abbr": "NSDKETFHA",
+    "name": "纳斯达克ETF华安",
+    "fundType": "指数型-海外股票",
+    "type": "fund"
+  },
+  {
+    "code": "159633",
+    "abbr": "ZZ1000ETFYFD",
+    "name": "中证1000ETF易方达",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159635",
+    "abbr": "JJETFHX",
+    "name": "基建ETF华夏",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159636",
+    "abbr": "GGTKJ30ETFGY",
+    "name": "港股通科技30ETF工银",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159637",
+    "abbr": "XNYCETFDC",
+    "name": "新能源车ETF东财",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159638",
+    "abbr": "GDZBETFJS",
+    "name": "高端装备ETF嘉实",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159639",
+    "abbr": "TZHETFNF",
+    "name": "碳中和ETF南方",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159640",
+    "abbr": "TZHLTETFGY",
+    "name": "碳中和龙头ETF工银",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159641",
+    "abbr": "TZHETFZS",
+    "name": "碳中和ETF招商",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159642",
+    "abbr": "TZHETFDC",
+    "name": "碳中和ETF大成",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159643",
+    "abbr": "YMETFGT",
+    "name": "疫苗ETF国泰",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159645",
+    "abbr": "YMETFFG",
+    "name": "疫苗ETF富国",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159647",
+    "abbr": "ZYETFPH",
+    "name": "中药ETF鹏华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159649",
+    "abbr": "GKZETFHA",
+    "name": "国开债ETF华安",
+    "fundType": "指数型-固收",
+    "type": "fund"
+  },
+  {
+    "code": "159650",
+    "abbr": "GKZETFBS",
+    "name": "国开债ETF博时",
+    "fundType": "指数型-固收",
+    "type": "fund"
+  },
+  {
+    "code": "159651",
+    "abbr": "GKZETFPA",
+    "name": "国开债ETF平安",
+    "fundType": "指数型-固收",
+    "type": "fund"
+  },
+  {
+    "code": "159652",
+    "abbr": "YSETFHTF",
+    "name": "有色ETF汇添富",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159653",
+    "abbr": "ESG300ETFGLA",
+    "name": "ESG300ETF国联安",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159655",
+    "abbr": "BP500ETFHX",
+    "name": "标普500ETF华夏",
+    "fundType": "指数型-海外股票",
+    "type": "fund"
+  },
+  {
+    "code": "159656",
+    "abbr": "HS300CZETFWJ",
+    "name": "沪深300成长ETF万家",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159657",
+    "abbr": "YMETFPH",
+    "name": "疫苗ETF鹏华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159658",
+    "abbr": "SZJJETFHA",
+    "name": "数字经济ETF华安",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159659",
+    "abbr": "NSDK100ETFZS",
+    "name": "纳斯达克100ETF招商",
+    "fundType": "指数型-海外股票",
+    "type": "fund"
+  },
+  {
+    "code": "159660",
+    "abbr": "NZETFHTF",
+    "name": "纳指ETF汇添富",
+    "fundType": "指数型-海外股票",
+    "type": "fund"
+  },
+  {
+    "code": "159661",
+    "abbr": "A100ETFJS",
+    "name": "A100ETF嘉实",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159662",
+    "abbr": "JYETFNF",
+    "name": "交运ETF南方",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159663",
+    "abbr": "JCETFHX",
+    "name": "机床ETF华夏",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159665",
+    "abbr": "BDTLTETFGY",
+    "name": "半导体龙头ETF工银",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159666",
+    "abbr": "JTYSETFHX",
+    "name": "交通运输ETF华夏",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159667",
+    "abbr": "GYMJETFGT",
+    "name": "工业母机ETF国泰",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159669",
+    "abbr": "LSDLETFGT",
+    "name": "绿色电力ETF国泰",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159670",
+    "abbr": "XF50ETFGLA",
+    "name": "消费50ETF国联安",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159671",
+    "abbr": "XYJSETFGY",
+    "name": "稀有金属ETF工银",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159672",
+    "abbr": "XFETFBS",
+    "name": "消费ETF博时",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159673",
+    "abbr": "HS300ETFPH",
+    "name": "沪深300ETF鹏华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159675",
+    "abbr": "CYBZQETFJS",
+    "name": "创业板增强ETF嘉实",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159676",
+    "abbr": "CYBZQETFFG",
+    "name": "创业板增强ETF富国",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159677",
+    "abbr": "ZZ1000ZQETFYH",
+    "name": "中证1000增强ETF银华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159678",
+    "abbr": "500ZQETFBS",
+    "name": "500增强ETF博时",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159679",
+    "abbr": "ZZ1000ZQETFGT",
+    "name": "中证1000增强ETF国泰",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159680",
+    "abbr": "ZZ1000ZQETFZS",
+    "name": "中证1000增强ETF招商",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159681",
+    "abbr": "CYB50ETFPH",
+    "name": "创业板50ETF鹏华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159682",
+    "abbr": "CYB50ETFJS",
+    "name": "创业板50ETF景顺",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159685",
+    "abbr": "1000ZQETFTH",
+    "name": "1000增强ETF天弘",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159686",
+    "abbr": "A100ETFYFD",
+    "name": "A100ETF易方达",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159687",
+    "abbr": "YTJXETFNF",
+    "name": "亚太精选ETF南方",
+    "fundType": "指数型-海外股票",
+    "type": "fund"
+  },
+  {
+    "code": "159688",
+    "abbr": "HSHLWETFHA",
+    "name": "恒生互联网ETF华安",
+    "fundType": "指数型-海外股票",
+    "type": "fund"
+  },
+  {
+    "code": "159689",
+    "abbr": "XFETFNF",
+    "name": "消费ETF南方",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159690",
+    "abbr": "YSKYETFZS",
+    "name": "有色矿业ETF招商",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159691",
+    "abbr": "GGHLETFGY",
+    "name": "港股红利ETF工银",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159692",
+    "abbr": "ZQETFDC",
+    "name": "证券ETF东财",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159695",
+    "abbr": "TXETFJS",
+    "name": "通信ETF嘉实",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159696",
+    "abbr": "NZETFYFD",
+    "name": "纳指ETF易方达",
+    "fundType": "指数型-海外股票",
+    "type": "fund"
+  },
+  {
+    "code": "159697",
+    "abbr": "SYETFPH",
+    "name": "石油ETF鹏华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159698",
+    "abbr": "LSETFPH",
+    "name": "粮食ETF鹏华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159699",
+    "abbr": "HSXFETFGF",
+    "name": "恒生消费ETF广发",
+    "fundType": "指数型-海外股票",
+    "type": "fund"
+  },
+  {
+    "code": "159700",
+    "abbr": "KCZETFNF",
+    "name": "科创债ETF南方",
+    "fundType": "指数型-固收",
+    "type": "fund"
+  },
+  {
+    "code": "159701",
+    "abbr": "WLWETFZS",
+    "name": "物联网ETF招商",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159703",
+    "abbr": "XCLETFTH",
+    "name": "新材料ETF天弘",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159706",
+    "abbr": "SZ100ETFHA",
+    "name": "深证100ETF华安",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159707",
+    "abbr": "DCETFHB",
+    "name": "地产ETF华宝",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159708",
+    "abbr": "HLETFXBLD",
+    "name": "红利ETF西部利得",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159709",
+    "abbr": "WLWETFGY",
+    "name": "物联网ETF工银",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159711",
+    "abbr": "GGT50ETFHX",
+    "name": "港股通50ETF华夏",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159712",
+    "abbr": "GGT50ETFGT",
+    "name": "港股通50ETF国泰",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159713",
+    "abbr": "XTETFFG",
+    "name": "稀土ETF富国",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159715",
+    "abbr": "XTETFYFD",
+    "name": "稀土ETF易方达",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159716",
+    "abbr": "SZ100ETFHB",
+    "name": "深证100ETF华宝",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159717",
+    "abbr": "ESGETFPH",
+    "name": "ESGETF鹏华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159718",
+    "abbr": "GGYYETFPA",
+    "name": "港股医药ETF平安",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159719",
+    "abbr": "GQETFPA",
+    "name": "国企ETF平安",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159720",
+    "abbr": "ZNCETFTK",
+    "name": "智能车ETF泰康",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159721",
+    "abbr": "SZ100ETFYY",
+    "name": "深证100ETF永赢",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159723",
+    "abbr": "KJLTETFHTF",
+    "name": "科技龙头ETF汇添富",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159725",
+    "abbr": "XSXFETFGY",
+    "name": "线上消费ETF工银",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159726",
+    "abbr": "GGTGGXETFHX",
+    "name": "港股通高股息ETF华夏",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159728",
+    "abbr": "ZXXFETFNF",
+    "name": "在线消费ETF南方",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159729",
+    "abbr": "HLWETFHTF",
+    "name": "互联网ETF汇添富",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159730",
+    "abbr": "JDETFBS",
+    "name": "家电ETF博时",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159731",
+    "abbr": "SHETFHX",
+    "name": "石化ETF华夏",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159732",
+    "abbr": "XFDZETFHX",
+    "name": "消费电子ETF华夏",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159735",
+    "abbr": "GGXFETFYH",
+    "name": "港股消费ETF银华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159736",
+    "abbr": "SPYLETFTH",
+    "name": "食品饮料ETF天弘",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159738",
+    "abbr": "YJSETFHTBR",
+    "name": "云计算ETF华泰柏瑞",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159739",
+    "abbr": "YJSETFPH",
+    "name": "云计算ETF鹏华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159740",
+    "abbr": "HSKJETFDC",
+    "name": "恒生科技ETF大成",
+    "fundType": "指数型-海外股票",
+    "type": "fund"
+  },
+  {
+    "code": "159741",
+    "abbr": "HSKJETFJS",
+    "name": "恒生科技ETF嘉实",
+    "fundType": "指数型-海外股票",
+    "type": "fund"
+  },
+  {
+    "code": "159742",
+    "abbr": "HSKJETFBS",
+    "name": "恒生科技ETF博时",
+    "fundType": "指数型-海外股票",
+    "type": "fund"
+  },
+  {
+    "code": "159743",
+    "abbr": "HBETFBS",
+    "name": "湖北ETF博时",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159745",
+    "abbr": "JCETFGT",
+    "name": "建材ETF国泰",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159747",
+    "abbr": "XGKJETFNF",
+    "name": "香港科技ETF南方",
+    "fundType": "指数型-海外股票",
+    "type": "fund"
+  },
+  {
+    "code": "159748",
+    "abbr": "CXYETFFG",
+    "name": "创新药ETF富国",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159750",
+    "abbr": "GGKJ50ETFZS",
+    "name": "港股科技50ETF招商",
+    "fundType": "指数型-海外股票",
+    "type": "fund"
+  },
+  {
+    "code": "159751",
+    "abbr": "GGTKJETFPH",
+    "name": "港股通科技ETF鹏华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159752",
+    "abbr": "XNYETFSWLX",
+    "name": "新能源ETF申万菱信",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159755",
+    "abbr": "DCETFGF",
+    "name": "电池ETF广发",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159757",
+    "abbr": "DCETFJS",
+    "name": "电池ETF景顺",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159758",
+    "abbr": "HLZLETFHX",
+    "name": "红利质量ETF华夏",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159760",
+    "abbr": "YLJKETFTK",
+    "name": "医疗健康ETF泰康",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159761",
+    "abbr": "XCLETFGT",
+    "name": "新材料ETF国泰",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159763",
+    "abbr": "XCLETFJX",
+    "name": "新材料ETF建信",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159766",
+    "abbr": "LYETFFG",
+    "name": "旅游ETF富国",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159767",
+    "abbr": "DCLTETFXY",
+    "name": "电池龙头ETF兴银",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159768",
+    "abbr": "FDCETFYH",
+    "name": "房地产ETF银华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159770",
+    "abbr": "JQRETFTH",
+    "name": "机器人ETF天弘",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159773",
+    "abbr": "CYBKJETFHTBR",
+    "name": "创业板科技ETF华泰柏瑞",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159775",
+    "abbr": "DCETFJX",
+    "name": "电池ETF建信",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159776",
+    "abbr": "GGYYETFYH",
+    "name": "港股医药ETF银华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159777",
+    "abbr": "CKJETFGLA",
+    "name": "创科技ETF国联安",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159778",
+    "abbr": "GYHLWETFPH",
+    "name": "工业互联网ETF鹏华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159779",
+    "abbr": "XFDZETFZS",
+    "name": "消费电子ETF招商",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159780",
+    "abbr": "KCCY50ETFNF",
+    "name": "科创创业50ETF南方",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159781",
+    "abbr": "KCCYETFYFD",
+    "name": "科创创业ETF易方达",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159782",
+    "abbr": "SC50ETFYH",
+    "name": "双创50ETF银华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159783",
+    "abbr": "KCCY50ETFHX",
+    "name": "科创创业50ETF华夏",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159786",
+    "abbr": "VRETFYH",
+    "name": "VRETF银华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159787",
+    "abbr": "JCETFYFD",
+    "name": "建材ETF易方达",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159788",
+    "abbr": "GGT100ETFYFD",
+    "name": "港股通100ETF易方达",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159790",
+    "abbr": "TZHETFHX",
+    "name": "碳中和ETF华夏",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159791",
+    "abbr": "300ESGETFHX",
+    "name": "300ESGETF华夏",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159792",
+    "abbr": "GGTHLWETFFG",
+    "name": "港股通互联网ETF富国",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159793",
+    "abbr": "XSXFETFPA",
+    "name": "线上消费ETF平安",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159795",
+    "abbr": "ZNQCETFHTF",
+    "name": "智能汽车ETF汇添富",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159796",
+    "abbr": "DCETFHTF",
+    "name": "电池ETF汇添富",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159797",
+    "abbr": "YLQXETFHTF",
+    "name": "医疗器械ETF汇添富",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159798",
+    "abbr": "XFETFYFD",
+    "name": "消费ETF易方达",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159800",
+    "abbr": "ZZ800ETFPH",
+    "name": "中证800ETF鹏华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159801",
+    "abbr": "XPETFGF",
+    "name": "芯片ETF广发",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159804",
+    "abbr": "CZP88ETFGS",
+    "name": "创中盘88ETF国寿",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159805",
+    "abbr": "CMETFPH",
+    "name": "传媒ETF鹏华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159806",
+    "abbr": "XNYCETFGT",
+    "name": "新能源车ETF国泰",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159807",
+    "abbr": "KJETFYFD",
+    "name": "科技ETF易方达",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159808",
+    "abbr": "C100ETFRT",
+    "name": "创100ETF融通",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159810",
+    "abbr": "CYBETFPY",
+    "name": "创业板ETF浦银",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159811",
+    "abbr": "5GETFBS",
+    "name": "5GETF博时",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159812",
+    "abbr": "HJETFQHKY",
+    "name": "黄金ETF前海开源",
+    "fundType": "指数型-其他",
+    "type": "fund"
+  },
+  {
+    "code": "159813",
+    "abbr": "BDTETFPH",
+    "name": "半导体ETF鹏华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159814",
+    "abbr": "CYDPETFXBLD",
+    "name": "创业大盘ETF西部利得",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159816",
+    "abbr": "04NDFZETFPH",
+    "name": "0-4年地方债ETF鹏华",
+    "fundType": "指数型-固收",
+    "type": "fund"
+  },
+  {
+    "code": "159819",
+    "abbr": "RGZNETFYFD",
+    "name": "人工智能ETF易方达",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159820",
+    "abbr": "ZZ500ETFTH",
+    "name": "中证500ETF天弘",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159821",
+    "abbr": "CYBETFZYZQ",
+    "name": "创业板ETF中银证券",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159822",
+    "abbr": "XJJETFYH",
+    "name": "新经济ETF银华",
+    "fundType": "指数型-海外股票",
+    "type": "fund"
+  },
+  {
+    "code": "159824",
+    "abbr": "XNYCETFBS",
+    "name": "新能源车ETF博时",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159825",
+    "abbr": "NYETFFG",
+    "name": "农业ETF富国",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159827",
+    "abbr": "NYETFYH",
+    "name": "农业ETF银华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159828",
+    "abbr": "YLETFGT",
+    "name": "医疗ETF国泰",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159830",
+    "abbr": "JETFTH",
+    "name": "金ETF天弘",
+    "fundType": "指数型-其他",
+    "type": "fund"
+  },
+  {
+    "code": "159831",
+    "abbr": "JETFJS",
+    "name": "金ETF嘉实",
+    "fundType": "指数型-其他",
+    "type": "fund"
+  },
+  {
+    "code": "159834",
+    "abbr": "JETFNF",
+    "name": "金ETF南方",
+    "fundType": "指数型-其他",
+    "type": "fund"
+  },
+  {
+    "code": "159835",
+    "abbr": "CXYETFJX",
+    "name": "创新药ETF建信",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159836",
+    "abbr": "CYB300ETFTH",
+    "name": "创业板300ETF天弘",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159837",
+    "abbr": "SWKJETFYFD",
+    "name": "生物科技ETF易方达",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159838",
+    "abbr": "YY50ETFBS",
+    "name": "医药50ETF博时",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159839",
+    "abbr": "SWYYETFHTF",
+    "name": "生物医药ETF汇添富",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159840",
+    "abbr": "LDCETFGY",
+    "name": "锂电池ETF工银",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159841",
+    "abbr": "ZQETFTH",
+    "name": "证券ETF天弘",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159842",
+    "abbr": "QSETFYH",
+    "name": "券商ETF银华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159843",
+    "abbr": "SPYLETFZS",
+    "name": "食品饮料ETF招商",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159845",
+    "abbr": "ZZ1000ETFHX",
+    "name": "中证1000ETF华夏",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159847",
+    "abbr": "YLETFYFD",
+    "name": "医疗ETF易方达",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159848",
+    "abbr": "ZQETFGLA",
+    "name": "证券ETF国联安",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159849",
+    "abbr": "SWKJETFZS",
+    "name": "生物科技ETF招商",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159850",
+    "abbr": "HSGQETFHX",
+    "name": "恒生国企ETF华夏",
+    "fundType": "指数型-海外股票",
+    "type": "fund"
+  },
+  {
+    "code": "159851",
+    "abbr": "JRKJETFHB",
+    "name": "金融科技ETF华宝",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159852",
+    "abbr": "RJETFJS",
+    "name": "软件ETF嘉实",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159855",
+    "abbr": "YSETFYH",
+    "name": "影视ETF银华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159856",
+    "abbr": "HLWLTETFGY",
+    "name": "互联网龙头ETF工银",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159857",
+    "abbr": "GFETFTH",
+    "name": "光伏ETF天弘",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159858",
+    "abbr": "CXYETFNF",
+    "name": "创新药ETF南方",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159859",
+    "abbr": "SWYYETFTH",
+    "name": "生物医药ETF天弘",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159861",
+    "abbr": "TZH50ETFGT",
+    "name": "碳中和50ETF国泰",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159862",
+    "abbr": "SPYLETFYH",
+    "name": "食品饮料ETF银华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159863",
+    "abbr": "GFETFPH",
+    "name": "光伏ETF鹏华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159864",
+    "abbr": "GFETFGT",
+    "name": "光伏ETF国泰",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159865",
+    "abbr": "YZETFGT",
+    "name": "养殖ETF国泰",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159866",
+    "abbr": "RJETFGY",
+    "name": "日经ETF工银",
+    "fundType": "指数型-海外股票",
+    "type": "fund"
+  },
+  {
+    "code": "159867",
+    "abbr": "YZETFPH",
+    "name": "养殖ETF鹏华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159869",
+    "abbr": "YXETFHX",
+    "name": "游戏ETF华夏",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159870",
+    "abbr": "HGETFPH",
+    "name": "化工ETF鹏华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159871",
+    "abbr": "YSETFYH",
+    "name": "有色ETF银华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159872",
+    "abbr": "ZNWLQCETFPH",
+    "name": "智能网联汽车ETF鹏华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159873",
+    "abbr": "YLSBETFTH",
+    "name": "医疗设备ETF天弘",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159875",
+    "abbr": "XNYETFJS",
+    "name": "新能源ETF嘉实",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159876",
+    "abbr": "YSETFHB",
+    "name": "有色ETF华宝",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159877",
+    "abbr": "YLETFNF",
+    "name": "医疗ETF南方",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159880",
+    "abbr": "YSETFPH",
+    "name": "有色ETF鹏华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159881",
+    "abbr": "YSJSETFGT",
+    "name": "有色金属ETF国泰",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159883",
+    "abbr": "YLQXETFYY",
+    "name": "医疗器械ETF永赢",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159885",
+    "abbr": "TZHETFPH",
+    "name": "碳中和ETF鹏华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159886",
+    "abbr": "JXETFFG",
+    "name": "机械ETF富国",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159887",
+    "abbr": "YHETFFG",
+    "name": "银行ETF富国",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159888",
+    "abbr": "ZNQCETFHX",
+    "name": "智能汽车ETF华夏",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159889",
+    "abbr": "ZNQCETFGT",
+    "name": "智能汽车ETF国泰",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159890",
+    "abbr": "YJSETFZS",
+    "name": "云计算ETF招商",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159891",
+    "abbr": "YLETFJX",
+    "name": "医疗ETF建信",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159892",
+    "abbr": "HSYYETFHX",
+    "name": "恒生医药ETF华夏",
+    "fundType": "指数型-海外股票",
+    "type": "fund"
+  },
+  {
+    "code": "159895",
+    "abbr": "WLWETFYFD",
+    "name": "物联网ETF易方达",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159896",
+    "abbr": "WLWETFNF",
+    "name": "物联网ETF南方",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159898",
+    "abbr": "YLQXETFZS",
+    "name": "医疗器械ETF招商",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159899",
+    "abbr": "RJETFZS",
+    "name": "软件ETF招商",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159901",
+    "abbr": "SZ100ETFYFD",
+    "name": "深证100ETF易方达",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159902",
+    "abbr": "ZX100ETFHX",
+    "name": "中小100ETF华夏",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159903",
+    "abbr": "SCETFNF",
+    "name": "深成ETF南方",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159905",
+    "abbr": "HLETFGY",
+    "name": "红利ETF工银",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159906",
+    "abbr": "SCZETFDC",
+    "name": "深成长ETF大成",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159907",
+    "abbr": "GZ2000ETFGF",
+    "name": "国证2000ETF广发",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159908",
+    "abbr": "CYBETFBS",
+    "name": "创业板ETF博时",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159909",
+    "abbr": "TMT50ETFZS",
+    "name": "TMT50ETF招商",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159910",
+    "abbr": "JBM120ETFJS",
+    "name": "基本面120ETF嘉实",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159912",
+    "abbr": "S300ETFHTF",
+    "name": "深300ETF汇添富",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159913",
+    "abbr": "SJZETFJY",
+    "name": "深价值ETF交银",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159915",
+    "abbr": "CYBETFYFD",
+    "name": "创业板ETF易方达",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159916",
+    "abbr": "JBMETFJX",
+    "name": "基本面ETF建信",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159918",
+    "abbr": "ZC400ETFJS",
+    "name": "中创400ETF嘉实",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159919",
+    "abbr": "HS300ETFJS",
+    "name": "沪深300ETF嘉实",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159920",
+    "abbr": "HSETFHX",
+    "name": "恒生ETF华夏",
+    "fundType": "指数型-海外股票",
+    "type": "fund"
+  },
+  {
+    "code": "159922",
+    "abbr": "ZZ500ETFJS",
+    "name": "中证500ETF嘉实",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159923",
+    "abbr": "ZZA100ETFDC",
+    "name": "中证A100ETF大成",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159925",
+    "abbr": "HS300ETFNF",
+    "name": "沪深300ETF南方",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159928",
+    "abbr": "XFETFHTF",
+    "name": "消费ETF汇添富",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159929",
+    "abbr": "YYETFHTF",
+    "name": "医药ETF汇添富",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159930",
+    "abbr": "NYETFHTF",
+    "name": "能源ETF汇添富",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159931",
+    "abbr": "JRDCETFHTF",
+    "name": "金融地产ETF汇添富",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159933",
+    "abbr": "JRDCETFGTRY",
+    "name": "金融地产ETF国投瑞银",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159934",
+    "abbr": "HJETFYFD",
+    "name": "黄金ETF易方达",
+    "fundType": "指数型-其他",
+    "type": "fund"
+  },
+  {
+    "code": "159935",
+    "abbr": "ZZ500ETFJS",
+    "name": "中证500ETF景顺",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159936",
+    "abbr": "KXXFETFGF",
+    "name": "可选消费ETF广发",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159937",
+    "abbr": "HJETFBS",
+    "name": "黄金ETF博时",
+    "fundType": "指数型-其他",
+    "type": "fund"
+  },
+  {
+    "code": "159938",
+    "abbr": "YYETFGF",
+    "name": "医药ETF广发",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159939",
+    "abbr": "XXJSETFGF",
+    "name": "信息技术ETF广发",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159940",
+    "abbr": "JRDCETFGF",
+    "name": "金融地产ETF广发",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159941",
+    "abbr": "NZETFGF",
+    "name": "纳指ETF广发",
+    "fundType": "指数型-海外股票",
+    "type": "fund"
+  },
+  {
+    "code": "159943",
+    "abbr": "SZCZETFDC",
+    "name": "深证成指ETF大成",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159944",
+    "abbr": "CLETFGF",
+    "name": "材料ETF广发",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159945",
+    "abbr": "NYETFGF",
+    "name": "能源ETF广发",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159948",
+    "abbr": "CYBETFNF",
+    "name": "创业板ETF南方",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159949",
+    "abbr": "CYB50ETFHA",
+    "name": "创业板50ETF华安",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159952",
+    "abbr": "CYBETFGF",
+    "name": "创业板ETF广发",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159954",
+    "abbr": "HSZGQYETFNF",
+    "name": "恒生中国企业ETF南方",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159956",
+    "abbr": "CYBETFJX",
+    "name": "创业板ETF建信",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159957",
+    "abbr": "CYBETFHX",
+    "name": "创业板ETF华夏",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159958",
+    "abbr": "CYBETFGY",
+    "name": "创业板ETF工银",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159959",
+    "abbr": "YQETFYH",
+    "name": "央企ETF银华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159960",
+    "abbr": "HSZGQYETFPA",
+    "name": "恒生中国企业ETF平安",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159961",
+    "abbr": "S100ETFFZFB",
+    "name": "深100ETF方正富邦",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159964",
+    "abbr": "CYBETFPA",
+    "name": "创业板ETF平安",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159965",
+    "abbr": "YS50ETFGL",
+    "name": "央视50ETF国联",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159966",
+    "abbr": "CYBJZETFHX",
+    "name": "创业板价值ETF华夏",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159967",
+    "abbr": "CYBCZETFHX",
+    "name": "创业板成长ETF华夏",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159968",
+    "abbr": "ZZ500ETFBS",
+    "name": "中证500ETF博时",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159970",
+    "abbr": "S100ETFGY",
+    "name": "深100ETF工银",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159971",
+    "abbr": "CYBETFFG",
+    "name": "创业板ETF富国",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159972",
+    "abbr": "5NDFZETFPH",
+    "name": "5年地方债ETF鹏华",
+    "fundType": "指数型-固收",
+    "type": "fund"
+  },
+  {
+    "code": "159973",
+    "abbr": "MQETFHYYF",
+    "name": "民企ETF弘毅远方",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159974",
+    "abbr": "YQCXETFFG",
+    "name": "央企创新ETF富国",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159975",
+    "abbr": "S100ETFZS",
+    "name": "深100ETF招商",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159976",
+    "abbr": "WCETFGY",
+    "name": "湾创ETF工银",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159977",
+    "abbr": "CYBETFTH",
+    "name": "创业板ETF天弘",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159980",
+    "abbr": "YSETFDC",
+    "name": "有色ETF大成",
+    "fundType": "指数型-其他",
+    "type": "fund"
+  },
+  {
+    "code": "159981",
+    "abbr": "NYHGETFJX",
+    "name": "能源化工ETF建信",
+    "fundType": "指数型-其他",
+    "type": "fund"
+  },
+  {
+    "code": "159982",
+    "abbr": "ZZ500ETFPH",
+    "name": "中证500ETF鹏华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159985",
+    "abbr": "DPETFHX",
+    "name": "豆粕ETF华夏",
+    "fundType": "指数型-其他",
+    "type": "fund"
+  },
+  {
+    "code": "159991",
+    "abbr": "CYBDPETFZS",
+    "name": "创业板大盘ETF招商",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159992",
+    "abbr": "CXYETFYH",
+    "name": "创新药ETF银华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159993",
+    "abbr": "ZQETFPH",
+    "name": "证券ETF鹏华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159994",
+    "abbr": "TXETFYH",
+    "name": "通信ETF银华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159995",
+    "abbr": "XPETFHX",
+    "name": "芯片ETF华夏",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159996",
+    "abbr": "JDETFGT",
+    "name": "家电ETF国泰",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159997",
+    "abbr": "DZETFTH",
+    "name": "电子ETF天弘",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "159998",
+    "abbr": "JSJETFTH",
+    "name": "计算机ETF天弘",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "510010",
+    "abbr": "180ZLETFJY",
+    "name": "180治理ETF交银",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "510020",
+    "abbr": "CDPETFBS",
+    "name": "超大盘ETF博时",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "510030",
+    "abbr": "JZETFHB",
+    "name": "价值ETF华宝",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "510040",
+    "abbr": "SZ180ETFPH",
+    "name": "上证180ETF鹏华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "510050",
+    "abbr": "SZ50ETFHX",
+    "name": "上证50ETF华夏",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "510060",
+    "abbr": "YQETFGY",
+    "name": "央企ETF工银",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "510090",
+    "abbr": "ZRETFJX",
+    "name": "责任ETF建信",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "510100",
+    "abbr": "SZ50ETFYFD",
+    "name": "上证50ETF易方达",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "510130",
+    "abbr": "SZZPETFYFD",
+    "name": "上证中盘ETF易方达",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "510150",
+    "abbr": "XFETFZS",
+    "name": "消费ETF招商",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "510160",
+    "abbr": "CYSJETFNF",
+    "name": "产业升级ETF南方",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "510170",
+    "abbr": "DZSPETFGLA",
+    "name": "大宗商品ETF国联安",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "510180",
+    "abbr": "SZ180ETFHA",
+    "name": "上证180ETF华安",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "510190",
+    "abbr": "SZ50ETFHA",
+    "name": "上证50ETF华安",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "510200",
+    "abbr": "SZQSETFHA",
+    "name": "上证券商ETF汇安",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "510210",
+    "abbr": "SZZSETFFG",
+    "name": "上证指数ETF富国",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "510230",
+    "abbr": "JRETFGT",
+    "name": "金融ETF国泰",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "510270",
+    "abbr": "GQETFZY",
+    "name": "国企ETF中银",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "510290",
+    "abbr": "SZ380ETFNF",
+    "name": "上证380ETF南方",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "510300",
+    "abbr": "HS300ETFHTBR",
+    "name": "沪深300ETF华泰柏瑞",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "510310",
+    "abbr": "HS300ETFYFD",
+    "name": "沪深300ETF易方达",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "510320",
+    "abbr": "HS300ETFZJ",
+    "name": "沪深300ETF中金",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "510330",
+    "abbr": "HS300ETFHX",
+    "name": "沪深300ETF华夏",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "510350",
+    "abbr": "HS300ETFGY",
+    "name": "沪深300ETF工银",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "510360",
+    "abbr": "HS300ETFGF",
+    "name": "沪深300ETF广发",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "510370",
+    "abbr": "HS300ETFXY",
+    "name": "沪深300ETF兴业",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "510380",
+    "abbr": "HS300ETFGS",
+    "name": "沪深300ETF国寿",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "510390",
+    "abbr": "HS300ETFPA",
+    "name": "沪深300ETF平安",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "510410",
+    "abbr": "ZYETFBS",
+    "name": "资源ETF博时",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "510500",
+    "abbr": "ZZ500ETFNF",
+    "name": "中证500ETF南方",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "510510",
+    "abbr": "ZZ500ETFGF",
+    "name": "中证500ETF广发",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "510530",
+    "abbr": "ZZ500ETFGY",
+    "name": "中证500ETF工银",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "510550",
+    "abbr": "ZZ500ETFFZFB",
+    "name": "中证500ETF方正富邦",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "510560",
+    "abbr": "ZZ500ETFGS",
+    "name": "中证500ETF国寿",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "510570",
+    "abbr": "ZZ500ETFXY",
+    "name": "中证500ETF兴业",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "510580",
+    "abbr": "ZZ500ETFYFD",
+    "name": "中证500ETF易方达",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "510590",
+    "abbr": "ZZ500ETFPA",
+    "name": "中证500ETF平安",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "510600",
+    "abbr": "SZ50ETFSWLX",
+    "name": "上证50ETF申万菱信",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "510630",
+    "abbr": "XFETFHX",
+    "name": "消费ETF华夏",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "510650",
+    "abbr": "JRDCETFHX",
+    "name": "金融地产ETF华夏",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "510660",
+    "abbr": "YYETFHX",
+    "name": "医药ETF华夏",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "510670",
+    "abbr": "SZ180ETFHX",
+    "name": "上证180ETF华夏",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "510680",
+    "abbr": "SZ50ETFWJ",
+    "name": "上证50ETF万家",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "510710",
+    "abbr": "SZ50ETFBS",
+    "name": "上证50ETF博时",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "510720",
+    "abbr": "HLGQETFGT",
+    "name": "红利国企ETF国泰",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "510760",
+    "abbr": "SZZSETFGT",
+    "name": "上证指数ETF国泰",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "510770",
+    "abbr": "G60CXETFSWLX",
+    "name": "G60创新ETF申万菱信",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "510800",
+    "abbr": "SZ50ETFJX",
+    "name": "上证50ETF建信",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "510810",
+    "abbr": "SHGQETFHTF",
+    "name": "上海国企ETF汇添富",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "510850",
+    "abbr": "SZ50ETFGY",
+    "name": "上证50ETF工银",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "510880",
+    "abbr": "HLETFHTBR",
+    "name": "红利ETF华泰柏瑞",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "510900",
+    "abbr": "HSZGQYETFYFD",
+    "name": "恒生中国企业ETF易方达",
+    "fundType": "指数型-海外股票",
+    "type": "fund"
+  },
+  {
+    "code": "510910",
+    "abbr": "SZZSETFNF",
+    "name": "上证指数ETF南方",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "510950",
+    "abbr": "SZ50ETFGF",
+    "name": "上证50ETF广发",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "510980",
+    "abbr": "SZZSETFHTF",
+    "name": "上证指数ETF汇添富",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "510990",
+    "abbr": "180ESGETFGY",
+    "name": "180ESGETF工银",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "511010",
+    "abbr": "GZETFGT",
+    "name": "国债ETF国泰",
+    "fundType": "指数型-固收",
+    "type": "fund"
+  },
+  {
+    "code": "511020",
+    "abbr": "GZETFPA",
+    "name": "国债ETF平安",
+    "fundType": "指数型-固收",
+    "type": "fund"
+  },
+  {
+    "code": "511030",
+    "abbr": "GSZETFPA",
+    "name": "公司债ETF平安",
+    "fundType": "指数型-固收",
+    "type": "fund"
+  },
+  {
+    "code": "511060",
+    "abbr": "5NDFZETFHFT",
+    "name": "5年地方债ETF海富通",
+    "fundType": "指数型-固收",
+    "type": "fund"
+  },
+  {
+    "code": "511070",
+    "abbr": "GSZETFNF",
+    "name": "公司债ETF南方",
+    "fundType": "指数型-固收",
+    "type": "fund"
+  },
+  {
+    "code": "511090",
+    "abbr": "30NGZETFPY",
+    "name": "30年国债ETF鹏扬",
+    "fundType": "指数型-固收",
+    "type": "fund"
+  },
+  {
+    "code": "511100",
+    "abbr": "GZETFHX",
+    "name": "国债ETF华夏",
+    "fundType": "指数型-固收",
+    "type": "fund"
+  },
+  {
+    "code": "511110",
+    "abbr": "GSZETFYFD",
+    "name": "公司债ETF易方达",
+    "fundType": "指数型-固收",
+    "type": "fund"
+  },
+  {
+    "code": "511120",
+    "abbr": "KCZETFGF",
+    "name": "科创债ETF广发",
+    "fundType": "指数型-固收",
+    "type": "fund"
+  },
+  {
+    "code": "511130",
+    "abbr": "30NGZETFBS",
+    "name": "30年国债ETF博时",
+    "fundType": "指数型-固收",
+    "type": "fund"
+  },
+  {
+    "code": "511150",
+    "abbr": "KCZETFYY",
+    "name": "科创债ETF永赢",
+    "fundType": "指数型-固收",
+    "type": "fund"
+  },
+  {
+    "code": "511160",
+    "abbr": "GZETFDC",
+    "name": "国债ETF东财",
+    "fundType": "指数型-固收",
+    "type": "fund"
+  },
+  {
+    "code": "511180",
+    "abbr": "KZZETFHFT",
+    "name": "可转债ETF海富通",
+    "fundType": "指数型-固收",
+    "type": "fund"
+  },
+  {
+    "code": "511190",
+    "abbr": "XYZETFHFT",
+    "name": "信用债ETF海富通",
+    "fundType": "指数型-固收",
+    "type": "fund"
+  },
+  {
+    "code": "511200",
+    "abbr": "XYZETFHX",
+    "name": "信用债ETF华夏",
+    "fundType": "指数型-固收",
+    "type": "fund"
+  },
+  {
+    "code": "511220",
+    "abbr": "CTZETFHFT",
+    "name": "城投债ETF海富通",
+    "fundType": "指数型-固收",
+    "type": "fund"
+  },
+  {
+    "code": "511260",
+    "abbr": "SNGZETFGT",
+    "name": "十年国债ETF国泰",
+    "fundType": "指数型-固收",
+    "type": "fund"
+  },
+  {
+    "code": "511270",
+    "abbr": "10NDFZETFHFT",
+    "name": "10年地方债ETF海富通",
+    "fundType": "指数型-固收",
+    "type": "fund"
+  },
+  {
+    "code": "511360",
+    "abbr": "DRETFHFT",
+    "name": "短融ETF海富通",
+    "fundType": "指数型-固收",
+    "type": "fund"
+  },
+  {
+    "code": "511380",
+    "abbr": "KZZETFBS",
+    "name": "可转债ETF博时",
+    "fundType": "指数型-固收",
+    "type": "fund"
+  },
+  {
+    "code": "511520",
+    "abbr": "ZJZETFFG",
+    "name": "政金债ETF富国",
+    "fundType": "指数型-固收",
+    "type": "fund"
+  },
+  {
+    "code": "511580",
+    "abbr": "GZZJZETFZS",
+    "name": "国债政金债ETF招商",
+    "fundType": "指数型-固收",
+    "type": "fund"
+  },
+  {
+    "code": "511600",
+    "abbr": "HARRXETF",
+    "name": "华安日日鑫ETF",
+    "fundType": "货币型-普通货币",
+    "type": "fund"
+  },
+  {
+    "code": "511620",
+    "abbr": "HBETFGT",
+    "name": "货币ETF国泰",
+    "fundType": "货币型-普通货币",
+    "type": "fund"
+  },
+  {
+    "code": "511650",
+    "abbr": "HBETFHX",
+    "name": "货币ETF华夏",
+    "fundType": "货币型-普通货币",
+    "type": "fund"
+  },
+  {
+    "code": "511660",
+    "abbr": "HBETFJX",
+    "name": "货币ETF建信",
+    "fundType": "货币型-普通货币",
+    "type": "fund"
+  },
+  {
+    "code": "511670",
+    "abbr": "HTTTJETF",
+    "name": "华泰天天金ETF",
+    "fundType": "货币型-普通货币",
+    "type": "fund"
+  },
+  {
+    "code": "511690",
+    "abbr": "JYHBETFDC",
+    "name": "交易货币ETF大成",
+    "fundType": "货币型-普通货币",
+    "type": "fund"
+  },
+  {
+    "code": "511700",
+    "abbr": "HBETFPA",
+    "name": "货币ETF平安",
+    "fundType": "货币型-普通货币",
+    "type": "fund"
+  },
+  {
+    "code": "511770",
+    "abbr": "JYZYHBETF",
+    "name": "金鹰增益货币ETF",
+    "fundType": "货币型-普通货币",
+    "type": "fund"
+  },
+  {
+    "code": "511800",
+    "abbr": "YFDHBETF",
+    "name": "易方达货币ETF",
+    "fundType": "货币型-普通货币",
+    "type": "fund"
+  },
+  {
+    "code": "511810",
+    "abbr": "HBETFNF",
+    "name": "货币ETF南方",
+    "fundType": "货币型-普通货币",
+    "type": "fund"
+  },
+  {
+    "code": "511820",
+    "abbr": "PHTLETF",
+    "name": "鹏华添利ETF",
+    "fundType": "货币型-普通货币",
+    "type": "fund"
+  },
+  {
+    "code": "511830",
+    "abbr": "HBETFHTBR",
+    "name": "货币ETF华泰柏瑞",
+    "fundType": "货币型-普通货币",
+    "type": "fund"
+  },
+  {
+    "code": "511850",
+    "abbr": "ZSCFBETF",
+    "name": "招商财富宝ETF",
+    "fundType": "货币型-普通货币",
+    "type": "fund"
+  },
+  {
+    "code": "511860",
+    "abbr": "HBETFBS",
+    "name": "货币ETF博时",
+    "fundType": "货币型-普通货币",
+    "type": "fund"
+  },
+  {
+    "code": "511880",
+    "abbr": "YHRLETF",
+    "name": "银华日利ETF",
+    "fundType": "货币型-普通货币",
+    "type": "fund"
+  },
+  {
+    "code": "511900",
+    "abbr": "FGHBETF",
+    "name": "富国货币ETF",
+    "fundType": "货币型-普通货币",
+    "type": "fund"
+  },
+  {
+    "code": "511910",
+    "abbr": "RTHBETF",
+    "name": "融通货币ETF",
+    "fundType": "货币型-普通货币",
+    "type": "fund"
+  },
+  {
+    "code": "511920",
+    "abbr": "HBETFGF",
+    "name": "货币ETF广发",
+    "fundType": "货币型-普通货币",
+    "type": "fund"
+  },
+  {
+    "code": "511930",
+    "abbr": "HBETFGL",
+    "name": "货币ETF国联",
+    "fundType": "货币型-普通货币",
+    "type": "fund"
+  },
+  {
+    "code": "511950",
+    "abbr": "TLHBETFGF",
+    "name": "添利货币ETF广发",
+    "fundType": "货币型-普通货币",
+    "type": "fund"
+  },
+  {
+    "code": "511960",
+    "abbr": "HBETFJS",
+    "name": "货币ETF嘉实",
+    "fundType": "货币型-普通货币",
+    "type": "fund"
+  },
+  {
+    "code": "511970",
+    "abbr": "GSHBETF",
+    "name": "国寿货币ETF",
+    "fundType": "货币型-普通货币",
+    "type": "fund"
+  },
+  {
+    "code": "511980",
+    "abbr": "HBETFHTF",
+    "name": "货币ETF汇添富",
+    "fundType": "货币型-普通货币",
+    "type": "fund"
+  },
+  {
+    "code": "511990",
+    "abbr": "HBTYETF",
+    "name": "华宝添益ETF",
+    "fundType": "货币型-普通货币",
+    "type": "fund"
+  },
+  {
+    "code": "512000",
+    "abbr": "QSETFHB",
+    "name": "券商ETF华宝",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "512010",
+    "abbr": "YYETFYFD",
+    "name": "医药ETF易方达",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "512020",
+    "abbr": "A500ETFPH",
+    "name": "A500ETF鹏华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "512030",
+    "abbr": "ZZA50ZQETFYFD",
+    "name": "中证A50增强ETF易方达",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "512040",
+    "abbr": "JZ100ETFFG",
+    "name": "价值100ETF富国",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "512050",
+    "abbr": "A500ETFHX",
+    "name": "A500ETF华夏",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "512060",
+    "abbr": "A100ETFTH",
+    "name": "A100ETF天弘",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "512070",
+    "abbr": "ZQBXETFYFD",
+    "name": "证券保险ETF易方达",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "512080",
+    "abbr": "A500ETFZJ",
+    "name": "A500ETF中金",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "512090",
+    "abbr": "MSCIAGETFYFD",
+    "name": "MSCIA股ETF易方达",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "512100",
+    "abbr": "ZZ1000ETFNF",
+    "name": "中证1000ETF南方",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "512120",
+    "abbr": "YYETFHA",
+    "name": "医药ETF华安",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "512130",
+    "abbr": "QZXJLETFPH",
+    "name": "全指现金流ETF鹏华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "512140",
+    "abbr": "DLETFHA",
+    "name": "电力ETF华安",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "512150",
+    "abbr": "FSA50ETFHA",
+    "name": "富时A50ETF汇安",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "512160",
+    "abbr": "MSCIZGAGETFNF",
+    "name": "MSCI中国A股ETF南方",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "512170",
+    "abbr": "YLETFHB",
+    "name": "医疗ETF华宝",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "512180",
+    "abbr": "MSCIAGETFJX",
+    "name": "MSCIA股ETF建信",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "512190",
+    "abbr": "ZSZJFHETF",
+    "name": "浙商之江凤凰ETF",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "512200",
+    "abbr": "FDCETFNF",
+    "name": "房地产ETF南方",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "512220",
+    "abbr": "TMTETFJS",
+    "name": "TMTETF景顺",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "512240",
+    "abbr": "A50ETFPH",
+    "name": "A50ETF鹏华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "512250",
+    "abbr": "A50ETFZS",
+    "name": "A50ETF招商",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "512260",
+    "abbr": "ZZ500DBDETFHA",
+    "name": "中证500低波动ETF华安",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "512290",
+    "abbr": "SWYYETFGT",
+    "name": "生物医药ETF国泰",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "512330",
+    "abbr": "XXKJETFNF",
+    "name": "信息科技ETF南方",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "512360",
+    "abbr": "MSCIAGETFPA",
+    "name": "MSCIA股ETF平安",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "512370",
+    "abbr": "A500ZQETFHX",
+    "name": "A500增强ETF华夏",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "512380",
+    "abbr": "MSCIZGETFYH",
+    "name": "MSCI中国ETF银华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "512390",
+    "abbr": "ZGDBETFPA",
+    "name": "中国低波ETF平安",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "512400",
+    "abbr": "YSJSETFNF",
+    "name": "有色金属ETF南方",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "512430",
+    "abbr": "JJJDETFHTBR",
+    "name": "家居家电ETF华泰柏瑞",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "512450",
+    "abbr": "XMYZETFGF",
+    "name": "畜牧养殖ETF广发",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "512460",
+    "abbr": "DCETFHX",
+    "name": "电池ETF华夏",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "512480",
+    "abbr": "BDTETFGLA",
+    "name": "半导体ETF国联安",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "512500",
+    "abbr": "ZZ500ETFHX",
+    "name": "中证500ETF华夏",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "512510",
+    "abbr": "ZZ500ETFHTBR",
+    "name": "中证500ETF华泰柏瑞",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "512520",
+    "abbr": "MSCIZGETFHTBR",
+    "name": "MSCI中国ETF华泰柏瑞",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "512530",
+    "abbr": "HS300HLETFJX",
+    "name": "沪深300红利ETF建信",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "512550",
+    "abbr": "FSA50ETFJS",
+    "name": "富时A50ETF嘉实",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "512560",
+    "abbr": "JGETFYFD",
+    "name": "军工ETF易方达",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "512570",
+    "abbr": "ZQETFYFD",
+    "name": "证券ETF易方达",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "512580",
+    "abbr": "HBETFGF",
+    "name": "环保ETF广发",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "512600",
+    "abbr": "XFETFJS",
+    "name": "消费ETF嘉实",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "512620",
+    "abbr": "NYETFTH",
+    "name": "农业ETF天弘",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "512630",
+    "abbr": "WXETFGF",
+    "name": "卫星ETF广发",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "512640",
+    "abbr": "JRDCETFJS",
+    "name": "金融地产ETF嘉实",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "512650",
+    "abbr": "CSJETFHTF",
+    "name": "长三角ETF汇添富",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "512660",
+    "abbr": "JGETFGT",
+    "name": "军工ETF国泰",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "512670",
+    "abbr": "GFETFPH",
+    "name": "国防ETF鹏华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "512680",
+    "abbr": "JGETFGF",
+    "name": "军工ETF广发",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "512690",
+    "abbr": "JETFPH",
+    "name": "酒ETF鹏华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "512700",
+    "abbr": "YHETFNF",
+    "name": "银行ETF南方",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "512710",
+    "abbr": "JGLTETFFG",
+    "name": "军工龙头ETF富国",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "512720",
+    "abbr": "JSJETFGT",
+    "name": "计算机ETF国泰",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "512730",
+    "abbr": "YHETFPH",
+    "name": "银行ETF鹏华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "512750",
+    "abbr": "JBM50ETFJS",
+    "name": "基本面50ETF嘉实",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "512760",
+    "abbr": "XPETFGT",
+    "name": "芯片ETF国泰",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "512770",
+    "abbr": "ZLXXETFHX",
+    "name": "战略新兴ETF华夏",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "512800",
+    "abbr": "YHETFHB",
+    "name": "银行ETF华宝",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "512810",
+    "abbr": "JGETFHB",
+    "name": "军工ETF华宝",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "512820",
+    "abbr": "YHETFHTF",
+    "name": "银行ETF汇添富",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "512870",
+    "abbr": "HZWQETFNH",
+    "name": "杭州湾区ETF南华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "512880",
+    "abbr": "ZQETFGT",
+    "name": "证券ETF国泰",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "512890",
+    "abbr": "HLDBETFHTBR",
+    "name": "红利低波ETF华泰柏瑞",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "512900",
+    "abbr": "ZQETFNF",
+    "name": "证券ETF南方",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "512910",
+    "abbr": "A100ETFGF",
+    "name": "A100ETF广发",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "512930",
+    "abbr": "AIRGZNETFPA",
+    "name": "AI人工智能ETF平安",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "512940",
+    "abbr": "YSETFHA",
+    "name": "有色ETF华安",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "512950",
+    "abbr": "YQGGETFHX",
+    "name": "央企改革ETF华夏",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "512960",
+    "abbr": "YQJGTZETFBS",
+    "name": "央企结构调整ETF博时",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "512970",
+    "abbr": "DWQETFPA",
+    "name": "大湾区ETF平安",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "512980",
+    "abbr": "CMETFGF",
+    "name": "传媒ETF广发",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "512990",
+    "abbr": "MSCIAGETFHX",
+    "name": "MSCIA股ETF华夏",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "513000",
+    "abbr": "RJ225ETFYFD",
+    "name": "日经225ETF易方达",
+    "fundType": "指数型-海外股票",
+    "type": "fund"
+  },
+  {
+    "code": "513010",
+    "abbr": "HSKJETFYFD",
+    "name": "恒生科技ETF易方达",
+    "fundType": "指数型-海外股票",
+    "type": "fund"
+  },
+  {
+    "code": "513020",
+    "abbr": "GGKJETFGT",
+    "name": "港股科技ETF国泰",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "513030",
+    "abbr": "DGETFHA",
+    "name": "德国ETF华安",
+    "fundType": "指数型-海外股票",
+    "type": "fund"
+  },
+  {
+    "code": "513040",
+    "abbr": "GGTHLWETFYFD",
+    "name": "港股通互联网ETF易方达",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "513050",
+    "abbr": "ZGHLWETFYFD",
+    "name": "中概互联网ETF易方达",
+    "fundType": "指数型-海外股票",
+    "type": "fund"
+  },
+  {
+    "code": "513060",
+    "abbr": "HSYLETFBS",
+    "name": "恒生医疗ETF博时",
+    "fundType": "指数型-海外股票",
+    "type": "fund"
+  },
+  {
+    "code": "513070",
+    "abbr": "GGTXFETFYFD",
+    "name": "港股通消费ETF易方达",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "513080",
+    "abbr": "FGETFHA",
+    "name": "法国ETF华安",
+    "fundType": "指数型-海外股票",
+    "type": "fund"
+  },
+  {
+    "code": "513090",
+    "abbr": "XGZQETFYFD",
+    "name": "香港证券ETF易方达",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "513100",
+    "abbr": "NZETFGT",
+    "name": "纳指ETF国泰",
+    "fundType": "指数型-海外股票",
+    "type": "fund"
+  },
+  {
+    "code": "513110",
+    "abbr": "NZETFHTBR",
+    "name": "纳指ETF华泰柏瑞",
+    "fundType": "指数型-海外股票",
+    "type": "fund"
+  },
+  {
+    "code": "513120",
+    "abbr": "GGCXYETFGF",
+    "name": "港股创新药ETF广发",
+    "fundType": "指数型-海外股票",
+    "type": "fund"
+  },
+  {
+    "code": "513130",
+    "abbr": "HSKJETFHTBR",
+    "name": "恒生科技ETF华泰柏瑞",
+    "fundType": "指数型-海外股票",
+    "type": "fund"
+  },
+  {
+    "code": "513140",
+    "abbr": "GGTJRETFHTBR",
+    "name": "港股通金融ETF华泰柏瑞",
+    "fundType": "指数型-海外股票",
+    "type": "fund"
+  },
+  {
+    "code": "513150",
+    "abbr": "GGTKJETFHTBR",
+    "name": "港股通科技ETF华泰柏瑞",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "513160",
+    "abbr": "GGKJETFYH",
+    "name": "港股科技ETF银华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "513170",
+    "abbr": "HSYQETFPH",
+    "name": "恒生央企ETF鹏华",
+    "fundType": "指数型-海外股票",
+    "type": "fund"
+  },
+  {
+    "code": "513180",
+    "abbr": "HSKJETFHX",
+    "name": "恒生科技ETF华夏",
+    "fundType": "指数型-海外股票",
+    "type": "fund"
+  },
+  {
+    "code": "513190",
+    "abbr": "GGTJRETFHX",
+    "name": "港股通金融ETF华夏",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "513200",
+    "abbr": "GGTYYETFYFD",
+    "name": "港股通医药ETF易方达",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "513210",
+    "abbr": "HSETFYFD",
+    "name": "恒生ETF易方达",
+    "fundType": "指数型-海外股票",
+    "type": "fund"
+  },
+  {
+    "code": "513220",
+    "abbr": "ZGHLETFZS",
+    "name": "中概互联ETF招商",
+    "fundType": "指数型-海外股票",
+    "type": "fund"
+  },
+  {
+    "code": "513230",
+    "abbr": "GGTXFETFHX",
+    "name": "港股通消费ETF华夏",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "513240",
+    "abbr": "GGTXXJSETFHA",
+    "name": "港股通信息技术ETF华安",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "513260",
+    "abbr": "HSKJETFHTF",
+    "name": "恒生科技ETF汇添富",
+    "fundType": "指数型-海外股票",
+    "type": "fund"
+  },
+  {
+    "code": "513280",
+    "abbr": "HSSWKJETFHTF",
+    "name": "恒生生物科技ETF汇添富",
+    "fundType": "指数型-海外股票",
+    "type": "fund"
+  },
+  {
+    "code": "513290",
+    "abbr": "NZSWKJETFHTF",
+    "name": "纳指生物科技ETF汇添富",
+    "fundType": "指数型-海外股票",
+    "type": "fund"
+  },
+  {
+    "code": "513300",
+    "abbr": "NSDKETFHX",
+    "name": "纳斯达克ETF华夏",
+    "fundType": "指数型-海外股票",
+    "type": "fund"
+  },
+  {
+    "code": "513310",
+    "abbr": "ZHBDTETFHTBR",
+    "name": "中韩半导体ETF华泰柏瑞",
+    "fundType": "指数型-海外股票",
+    "type": "fund"
+  },
+  {
+    "code": "513320",
+    "abbr": "GGTXJJETFYFD",
+    "name": "港股通新经济ETF易方达",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "513330",
+    "abbr": "HSHLWETFHX",
+    "name": "恒生互联网ETF华夏",
+    "fundType": "指数型-海外股票",
+    "type": "fund"
+  },
+  {
+    "code": "513350",
+    "abbr": "BPYQETFFG",
+    "name": "标普油气ETF富国",
+    "fundType": "指数型-海外股票",
+    "type": "fund"
+  },
+  {
+    "code": "513360",
+    "abbr": "JYETFBS",
+    "name": "教育ETF博时",
+    "fundType": "指数型-海外股票",
+    "type": "fund"
+  },
+  {
+    "code": "513380",
+    "abbr": "HSKJETFGF",
+    "name": "恒生科技ETF广发",
+    "fundType": "指数型-海外股票",
+    "type": "fund"
+  },
+  {
+    "code": "513390",
+    "abbr": "NZ100ETFBS",
+    "name": "纳指100ETF博时",
+    "fundType": "指数型-海外股票",
+    "type": "fund"
+  },
+  {
+    "code": "513400",
+    "abbr": "DQSETFPH",
+    "name": "道琼斯ETF鹏华",
+    "fundType": "指数型-海外股票",
+    "type": "fund"
+  },
+  {
+    "code": "513500",
+    "abbr": "BP500ETFBS",
+    "name": "标普500ETF博时",
+    "fundType": "指数型-海外股票",
+    "type": "fund"
+  },
+  {
+    "code": "513520",
+    "abbr": "RJETFHX",
+    "name": "日经ETF华夏",
+    "fundType": "指数型-海外股票",
+    "type": "fund"
+  },
+  {
+    "code": "513530",
+    "abbr": "GGTHLETFHTBR",
+    "name": "港股通红利ETF华泰柏瑞",
+    "fundType": "指数型-海外股票",
+    "type": "fund"
+  },
+  {
+    "code": "513550",
+    "abbr": "GGT50ETFHTBR",
+    "name": "港股通50ETF华泰柏瑞",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "513560",
+    "abbr": "XGKJETFXY",
+    "name": "香港科技ETF兴银",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "513580",
+    "abbr": "HSKJETFHA",
+    "name": "恒生科技ETF华安",
+    "fundType": "指数型-海外股票",
+    "type": "fund"
+  },
+  {
+    "code": "513590",
+    "abbr": "GGTXFETFPH",
+    "name": "港股通消费ETF鹏华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "513600",
+    "abbr": "HSZSETFNF",
+    "name": "恒生指数ETF南方",
+    "fundType": "指数型-海外股票",
+    "type": "fund"
+  },
+  {
+    "code": "513620",
+    "abbr": "GGYLETFYH",
+    "name": "港股医疗ETF银华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "513630",
+    "abbr": "GGDBHLETFMG",
+    "name": "港股低波红利ETF摩根",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "513650",
+    "abbr": "BP500ETFNF",
+    "name": "标普500ETF南方",
+    "fundType": "指数型-海外股票",
+    "type": "fund"
+  },
+  {
+    "code": "513660",
+    "abbr": "HSETFHX",
+    "name": "恒生ETF华夏",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "513690",
+    "abbr": "GGHLETFBS",
+    "name": "港股红利ETF博时",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "513700",
+    "abbr": "GGTYYETFPH",
+    "name": "港股通医药ETF鹏华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "513720",
+    "abbr": "GGHLWETFGT",
+    "name": "港股互联网ETF国泰",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "513730",
+    "abbr": "DNYKJETFHTBR",
+    "name": "东南亚科技ETF华泰柏瑞",
+    "fundType": "指数型-海外股票",
+    "type": "fund"
+  },
+  {
+    "code": "513750",
+    "abbr": "GGTFYETFGF",
+    "name": "港股通非银ETF广发",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "513770",
+    "abbr": "GGHLWETFHB",
+    "name": "港股互联网ETF华宝",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "513780",
+    "abbr": "GGCXYETFJS",
+    "name": "港股创新药ETF景顺",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "513800",
+    "abbr": "RBDZZSETFNF",
+    "name": "日本东证指数ETF南方",
+    "fundType": "指数型-海外股票",
+    "type": "fund"
+  },
+  {
+    "code": "513810",
+    "abbr": "GGGQETFHX",
+    "name": "港股国企ETF华夏",
+    "fundType": "指数型-海外股票",
+    "type": "fund"
+  },
+  {
+    "code": "513820",
+    "abbr": "GGTHLETFHTF",
+    "name": "港股通红利ETF汇添富",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "513830",
+    "abbr": "GGTGGXETFJS",
+    "name": "港股通高股息ETF嘉实",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "513850",
+    "abbr": "MG50ETFYFD",
+    "name": "美国50ETF易方达",
+    "fundType": "指数型-海外股票",
+    "type": "fund"
+  },
+  {
+    "code": "513860",
+    "abbr": "GGTKJETFHFT",
+    "name": "港股通科技ETF海富通",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "513870",
+    "abbr": "NZETFFG",
+    "name": "纳指ETF富国",
+    "fundType": "指数型-海外股票",
+    "type": "fund"
+  },
+  {
+    "code": "513880",
+    "abbr": "RJ225ETFHA",
+    "name": "日经225ETF华安",
+    "fundType": "指数型-海外股票",
+    "type": "fund"
+  },
+  {
+    "code": "513890",
+    "abbr": "HSKJETFMG",
+    "name": "恒生科技ETF摩根",
+    "fundType": "指数型-海外股票",
+    "type": "fund"
+  },
+  {
+    "code": "513900",
+    "abbr": "GGT100ETFHA",
+    "name": "港股通100ETF华安",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "513910",
+    "abbr": "GGTYQHLETFHX",
+    "name": "港股通央企红利ETF华夏",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "513920",
+    "abbr": "GGTYQHLETFHA",
+    "name": "港股通央企红利ETF华安",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "513930",
+    "abbr": "HSSWKJETFHTBR",
+    "name": "恒生生物科技ETF华泰柏瑞",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "513950",
+    "abbr": "HSHLETFFG",
+    "name": "恒生红利ETF富国",
+    "fundType": "指数型-海外股票",
+    "type": "fund"
+  },
+  {
+    "code": "513970",
+    "abbr": "HSXFETFJS",
+    "name": "恒生消费ETF景顺",
+    "fundType": "指数型-海外股票",
+    "type": "fund"
+  },
+  {
+    "code": "513980",
+    "abbr": "GGKJETFJS",
+    "name": "港股科技ETF景顺",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "513990",
+    "abbr": "GGTETFZS",
+    "name": "港股通ETF招商",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "515000",
+    "abbr": "KJETFHB",
+    "name": "科技ETF华宝",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "515010",
+    "abbr": "ZQETFHX",
+    "name": "证券ETF华夏",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "515020",
+    "abbr": "YHETFHX",
+    "name": "银行ETF华夏",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "515030",
+    "abbr": "XNYCETFHX",
+    "name": "新能源车ETF华夏",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "515050",
+    "abbr": "TXETFHX",
+    "name": "通信ETF华夏",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "515060",
+    "abbr": "FDCETFHX",
+    "name": "房地产ETF华夏",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "515070",
+    "abbr": "RGZNETFHX",
+    "name": "人工智能ETF华夏",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "515080",
+    "abbr": "ZZHLETFZS",
+    "name": "中证红利ETF招商",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "515090",
+    "abbr": "KCXFZETFBS",
+    "name": "可持续发展ETF博时",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "515100",
+    "abbr": "HLDB100ETFJS",
+    "name": "红利低波100ETF景顺",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "515110",
+    "abbr": "YDYLETFYFD",
+    "name": "一带一路ETF易方达",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "515120",
+    "abbr": "CXYETFGF",
+    "name": "创新药ETF广发",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "515130",
+    "abbr": "HS300ETFBS",
+    "name": "沪深300ETF博时",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "515150",
+    "abbr": "YDYLETFFG",
+    "name": "一带一路ETF富国",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "515160",
+    "abbr": "MSCIZGETFZS",
+    "name": "MSCI中国ETF招商",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "515170",
+    "abbr": "SPYLETFHX",
+    "name": "食品饮料ETF华夏",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "515180",
+    "abbr": "HLETFYFD",
+    "name": "红利ETF易方达",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "515190",
+    "abbr": "ZZ500ETFZYZQ",
+    "name": "中证500ETF中银证券",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "515200",
+    "abbr": "CX100ETFSWLX",
+    "name": "创新100ETF申万菱信",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "515210",
+    "abbr": "GTETFGT",
+    "name": "钢铁ETF国泰",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "515220",
+    "abbr": "MTETFGT",
+    "name": "煤炭ETF国泰",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "515230",
+    "abbr": "RJETFGT",
+    "name": "软件ETF国泰",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "515250",
+    "abbr": "ZNQCETFFG",
+    "name": "智能汽车ETF富国",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "515260",
+    "abbr": "DZETFHB",
+    "name": "电子ETF华宝",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "515290",
+    "abbr": "YHETFTH",
+    "name": "银行ETF天弘",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "515293",
+    "abbr": "YHETFTH",
+    "name": "银行ETF天弘",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "515300",
+    "abbr": "300HLDBETFJS",
+    "name": "300红利低波ETF嘉实",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "515310",
+    "abbr": "HS300ETFHTF",
+    "name": "沪深300ETF汇添富",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "515320",
+    "abbr": "DZ50ETFHA",
+    "name": "电子50ETF华安",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "515330",
+    "abbr": "HS300ETFTH",
+    "name": "沪深300ETF天弘",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "515350",
+    "abbr": "HS300ETFMSJY",
+    "name": "沪深300ETF民生加银",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "515360",
+    "abbr": "HS300ETFFZFB",
+    "name": "沪深300ETF方正富邦",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "515370",
+    "abbr": "GFETFHX",
+    "name": "光伏ETF华夏",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "515380",
+    "abbr": "HS300ETFTK",
+    "name": "沪深300ETF泰康",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "515390",
+    "abbr": "HS300ETFHA",
+    "name": "沪深300ETF华安",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "515400",
+    "abbr": "DSJETFFG",
+    "name": "大数据ETF富国",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "515450",
+    "abbr": "HLDB50ETFNF",
+    "name": "红利低波50ETF南方",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "515460",
+    "abbr": "HLZLETFNF",
+    "name": "红利质量ETF南方",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "515530",
+    "abbr": "ZZ500ETFTK",
+    "name": "中证500ETF泰康",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "515550",
+    "abbr": "ZZ500ETFGL",
+    "name": "中证500ETF国联",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "515560",
+    "abbr": "ZQETFJX",
+    "name": "证券ETF建信",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "515580",
+    "abbr": "KJ100ETFHTBR",
+    "name": "科技100ETF华泰柏瑞",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "515590",
+    "abbr": "500DQETFQHKY",
+    "name": "500等权ETF前海开源",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "515600",
+    "abbr": "YQCXETFGF",
+    "name": "央企创新ETF广发",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "515630",
+    "abbr": "ZQBXETFPH",
+    "name": "证券保险ETF鹏华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "515640",
+    "abbr": "JDETFHX",
+    "name": "家电ETF华夏",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "515650",
+    "abbr": "XF50ETFFG",
+    "name": "消费50ETF富国",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "515660",
+    "abbr": "HS300ETFGLA",
+    "name": "沪深300ETF国联安",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "515680",
+    "abbr": "YQCXETFJS",
+    "name": "央企创新ETF嘉实",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "515700",
+    "abbr": "XNYCETFPA",
+    "name": "新能源车ETF平安",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "515710",
+    "abbr": "SPYLETFHB",
+    "name": "食品饮料ETF华宝",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "515720",
+    "abbr": "JRKJETFFG",
+    "name": "金融科技ETF富国",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "515730",
+    "abbr": "JJJDETFYY",
+    "name": "家居家电ETF永赢",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "515750",
+    "abbr": "KJ50ETFFG",
+    "name": "科技50ETF富国",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "515760",
+    "abbr": "ZJGZETFHX",
+    "name": "浙江国资ETF华夏",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "515770",
+    "abbr": "MSCIZGAGETFMG",
+    "name": "MSCI中国A股ETF摩根",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "515790",
+    "abbr": "GFETFHTBR",
+    "name": "光伏ETF华泰柏瑞",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "515800",
+    "abbr": "ZZ800ETFHTF",
+    "name": "中证800ETF汇添富",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "515810",
+    "abbr": "ZZ800ETFYFD",
+    "name": "中证800ETF易方达",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "515850",
+    "abbr": "ZQETFFG",
+    "name": "证券ETF富国",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "515860",
+    "abbr": "KJETFJS",
+    "name": "科技ETF嘉实",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "515880",
+    "abbr": "TXETFGT",
+    "name": "通信ETF国泰",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "515890",
+    "abbr": "HLETFBS",
+    "name": "红利ETF博时",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "515900",
+    "abbr": "YQCXETFBS",
+    "name": "央企创新ETF博时",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "515910",
+    "abbr": "ZLETFZJ",
+    "name": "质量ETF中金",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "515920",
+    "abbr": "ZNXFETFBS",
+    "name": "智能消费ETF博时",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "515950",
+    "abbr": "YY50ETFFG",
+    "name": "医药50ETF富国",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "515960",
+    "abbr": "YYETFJS",
+    "name": "医药ETF嘉实",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "515970",
+    "abbr": "GCJXETFHX",
+    "name": "工程机械ETF华夏",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "515980",
+    "abbr": "RGZNETFHF",
+    "name": "人工智能ETF华富",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "515990",
+    "abbr": "YDYLETFHTF",
+    "name": "一带一路ETF汇添富",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "516000",
+    "abbr": "DSJETFHX",
+    "name": "大数据ETF华夏",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "516010",
+    "abbr": "YXETFGT",
+    "name": "游戏ETF国泰",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "516020",
+    "abbr": "HGETFHB",
+    "name": "化工ETF华宝",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "516050",
+    "abbr": "KJLTETFGY",
+    "name": "科技龙头ETF工银",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "516060",
+    "abbr": "CXYETFGY",
+    "name": "创新药ETF工银",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "516070",
+    "abbr": "DTETFYFD",
+    "name": "低碳ETF易方达",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "516080",
+    "abbr": "CXYETFYFD",
+    "name": "创新药ETF易方达",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "516090",
+    "abbr": "XNYETFYFD",
+    "name": "新能源ETF易方达",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "516100",
+    "abbr": "JRKJETFHX",
+    "name": "金融科技ETF华夏",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "516110",
+    "abbr": "QCETFGT",
+    "name": "汽车ETF国泰",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "516120",
+    "abbr": "HGETFFG",
+    "name": "化工ETF富国",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "516130",
+    "abbr": "XFLTETFHB",
+    "name": "消费龙头ETF华宝",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "516150",
+    "abbr": "XTETFJS",
+    "name": "稀土ETF嘉实",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "516160",
+    "abbr": "XNYETFNF",
+    "name": "新能源ETF南方",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "516163",
+    "abbr": "XNYETFNF",
+    "name": "新能源ETF南方",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "516180",
+    "abbr": "GFETFPA",
+    "name": "光伏ETF平安",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "516190",
+    "abbr": "CMETFHX",
+    "name": "传媒ETF华夏",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "516200",
+    "abbr": "ZQETFHA",
+    "name": "证券ETF华安",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "516210",
+    "abbr": "YHETFHA",
+    "name": "银行ETF华安",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "516220",
+    "abbr": "HGETFGT",
+    "name": "化工ETF国泰",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "516230",
+    "abbr": "GFETFZS",
+    "name": "光伏ETF招商",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "516250",
+    "abbr": "GCJXETFFG",
+    "name": "工程机械ETF富国",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "516260",
+    "abbr": "WLWETFHX",
+    "name": "物联网ETF华夏",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "516270",
+    "abbr": "XNYETFHA",
+    "name": "新能源ETF华安",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "516290",
+    "abbr": "GFETFHTF",
+    "name": "光伏ETF汇添富",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "516300",
+    "abbr": "ZZ1000ETFHTBR",
+    "name": "中证1000ETF华泰柏瑞",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "516310",
+    "abbr": "YHETFYFD",
+    "name": "银行ETF易方达",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "516320",
+    "abbr": "GDZBETFHX",
+    "name": "高端装备ETF华夏",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "516330",
+    "abbr": "WLWETFHTBR",
+    "name": "物联网ETF华泰柏瑞",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "516350",
+    "abbr": "XPETFYFD",
+    "name": "芯片ETF易方达",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "516360",
+    "abbr": "XCLETFHB",
+    "name": "新材料ETF华宝",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "516370",
+    "abbr": "DLETFHTF",
+    "name": "电力ETF汇添富",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "516380",
+    "abbr": "ZNDDCETFHB",
+    "name": "智能电动车ETF华宝",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "516390",
+    "abbr": "XNYCETFHTF",
+    "name": "新能源车ETF汇添富",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "516460",
+    "abbr": "XJLETF800PH",
+    "name": "现金流ETF800鹏华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "516500",
+    "abbr": "SWKJETFHX",
+    "name": "生物科技ETF华夏",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "516510",
+    "abbr": "YJSETFYFD",
+    "name": "云计算ETF易方达",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "516520",
+    "abbr": "ZNJSETFHTBR",
+    "name": "智能驾驶ETF华泰柏瑞",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "516530",
+    "abbr": "WLETFYH",
+    "name": "物流ETF银华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "516550",
+    "abbr": "NYETFJS",
+    "name": "农业ETF嘉实",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "516560",
+    "abbr": "YLETFHB",
+    "name": "养老ETF华宝",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "516570",
+    "abbr": "HGHYETFYFD",
+    "name": "化工行业ETF易方达",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "516580",
+    "abbr": "XNYETFBS",
+    "name": "新能源ETF博时",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "516590",
+    "abbr": "ZNQCETFYFD",
+    "name": "智能汽车ETF易方达",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "516600",
+    "abbr": "XFFWETFGY",
+    "name": "消费服务ETF工银",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "516610",
+    "abbr": "YLSBETFDC",
+    "name": "医疗设备ETF大成",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "516620",
+    "abbr": "YSETFGT",
+    "name": "影视ETF国泰",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "516630",
+    "abbr": "YJSETFHX",
+    "name": "云计算ETF华夏",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "516640",
+    "abbr": "XPETFFG",
+    "name": "芯片ETF富国",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "516650",
+    "abbr": "YSJSETFHX",
+    "name": "有色金属ETF华夏",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "516660",
+    "abbr": "XNYCETFHA",
+    "name": "新能源车ETF华安",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "516670",
+    "abbr": "XMYZETFZS",
+    "name": "畜牧养殖ETF招商",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "516700",
+    "abbr": "DSJETFHB",
+    "name": "大数据ETF华宝",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "516710",
+    "abbr": "XCLETFHX",
+    "name": "新材料ETF华夏",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "516720",
+    "abbr": "ESGETFPY",
+    "name": "ESGETF浦银",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "516730",
+    "abbr": "ZQETFPY",
+    "name": "证券ETF浦银",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "516750",
+    "abbr": "JCETFFG",
+    "name": "建材ETF富国",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "516760",
+    "abbr": "YZETFPA",
+    "name": "养殖ETF平安",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "516770",
+    "abbr": "YXETFHTBR",
+    "name": "游戏ETF华泰柏瑞",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "516780",
+    "abbr": "XTETFHTBR",
+    "name": "稀土ETF华泰柏瑞",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "516790",
+    "abbr": "YLETFHTBR",
+    "name": "医疗ETF华泰柏瑞",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "516800",
+    "abbr": "ZNZZETFHB",
+    "name": "智能制造ETF华宝",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "516810",
+    "abbr": "NYETFHX",
+    "name": "农业ETF华夏",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "516820",
+    "abbr": "YLCXETFPA",
+    "name": "医疗创新ETF平安",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "516830",
+    "abbr": "HS300ESGETFFG",
+    "name": "沪深300ESGETF富国",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "516840",
+    "abbr": "QCETFNF",
+    "name": "汽车ETF南方",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "516850",
+    "abbr": "XNYETFHX",
+    "name": "新能源ETF华夏",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "516860",
+    "abbr": "JRKJETFBS",
+    "name": "金融科技ETF博时",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "516880",
+    "abbr": "GFETFYH",
+    "name": "光伏ETF银华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "516890",
+    "abbr": "XCLETFPA",
+    "name": "新材料ETF平安",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "516900",
+    "abbr": "SPYLETFHA",
+    "name": "食品饮料ETF华安",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "516910",
+    "abbr": "WLETFFG",
+    "name": "物流ETF富国",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "516920",
+    "abbr": "XPETFHTF",
+    "name": "芯片ETF汇添富",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "516930",
+    "abbr": "SWKJETFMSJY",
+    "name": "生物科技ETF民生加银",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "516950",
+    "abbr": "JJETFYH",
+    "name": "基建ETF银华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "516960",
+    "abbr": "JXETFGT",
+    "name": "机械ETF国泰",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "516970",
+    "abbr": "JJETFGF",
+    "name": "基建ETF广发",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "516980",
+    "abbr": "ZQXFETFHF",
+    "name": "证券先锋ETF华富",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "517000",
+    "abbr": "HGS500ETFYH",
+    "name": "沪港深500ETF银华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "517010",
+    "abbr": "HGS500ETFYFD",
+    "name": "沪港深500ETF易方达",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "517030",
+    "abbr": "HGS300ETFYFD",
+    "name": "沪港深300ETF易方达",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "517050",
+    "abbr": "HLWETFHTBR",
+    "name": "互联网ETF华泰柏瑞",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "517080",
+    "abbr": "HGS500ETFHTF",
+    "name": "沪港深500ETF汇添富",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "517090",
+    "abbr": "YQGYETFGT",
+    "name": "央企共赢ETF国泰",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "517100",
+    "abbr": "HGS500ETFFG",
+    "name": "沪港深500ETF富国",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "517110",
+    "abbr": "CXYETFGT",
+    "name": "创新药ETF国泰",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "517120",
+    "abbr": "CXYETFHTBR",
+    "name": "创新药ETF华泰柏瑞",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "517130",
+    "abbr": "YJSETFJS",
+    "name": "云计算ETF嘉实",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "517160",
+    "abbr": "CJBHETFNF",
+    "name": "长江保护ETF南方",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "517170",
+    "abbr": "HGS500ETFHX",
+    "name": "沪港深500ETF华夏",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "517180",
+    "abbr": "ZGGQETFNF",
+    "name": "中国国企ETF南方",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "517200",
+    "abbr": "HLWETFJS",
+    "name": "互联网ETF嘉实",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "517300",
+    "abbr": "HGS300ETFGS",
+    "name": "沪港深300ETF国寿",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "517330",
+    "abbr": "CJBHETFYFD",
+    "name": "长江保护ETF易方达",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "517350",
+    "abbr": "HGSKJETFGF",
+    "name": "沪港深科技ETF广发",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "517360",
+    "abbr": "HGSKJETFHA",
+    "name": "沪港深科技ETF华安",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "517380",
+    "abbr": "CXYETFTH",
+    "name": "创新药ETF天弘",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "517390",
+    "abbr": "YJSETFTH",
+    "name": "云计算ETF天弘",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "517400",
+    "abbr": "HJGETFGT",
+    "name": "黄金股ETF国泰",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "517520",
+    "abbr": "HJGETFYY",
+    "name": "黄金股ETF永赢",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "517550",
+    "abbr": "HGSXFLTETFZS",
+    "name": "沪港深消费龙头ETF招商",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "517660",
+    "abbr": "WLWETFTH",
+    "name": "物联网ETF天弘",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "517770",
+    "abbr": "YXCMETFPY",
+    "name": "游戏传媒ETF浦银",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "517800",
+    "abbr": "RGZN50ETFFZFB",
+    "name": "人工智能50ETF方正富邦",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "517850",
+    "abbr": "ZJETFHTF",
+    "name": "张江ETF汇添富",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "517880",
+    "abbr": "PPXFETFHTBR",
+    "name": "品牌消费ETF华泰柏瑞",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "517900",
+    "abbr": "YHAHYXETFZS",
+    "name": "银行AH优选ETF招商",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "517950",
+    "abbr": "HSGKJ50ETFJY",
+    "name": "沪深港科技50ETF交银",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "517990",
+    "abbr": "HGSYYETFZS",
+    "name": "沪港深医药ETF招商",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "518600",
+    "abbr": "JETFGF",
+    "name": "金ETF广发",
+    "fundType": "指数型-其他",
+    "type": "fund"
+  },
+  {
+    "code": "518660",
+    "abbr": "HJETFGY",
+    "name": "黄金ETF工银",
+    "fundType": "指数型-其他",
+    "type": "fund"
+  },
+  {
+    "code": "518680",
+    "abbr": "JETFFG",
+    "name": "金ETF富国",
+    "fundType": "指数型-其他",
+    "type": "fund"
+  },
+  {
+    "code": "518800",
+    "abbr": "HJETFGT",
+    "name": "黄金ETF国泰",
+    "fundType": "指数型-其他",
+    "type": "fund"
+  },
+  {
+    "code": "518850",
+    "abbr": "HJETFHX",
+    "name": "黄金ETF华夏",
+    "fundType": "指数型-其他",
+    "type": "fund"
+  },
+  {
+    "code": "518860",
+    "abbr": "SHJETFJX",
+    "name": "上海金ETF建信",
+    "fundType": "指数型-其他",
+    "type": "fund"
+  },
+  {
+    "code": "518880",
+    "abbr": "HJETFHA",
+    "name": "黄金ETF华安",
+    "fundType": "指数型-其他",
+    "type": "fund"
+  },
+  {
+    "code": "518890",
+    "abbr": "SHJETFZY",
+    "name": "上海金ETF中银",
+    "fundType": "指数型-其他",
+    "type": "fund"
+  },
+  {
+    "code": "519706",
+    "abbr": "JYSZ300JZETFLJ",
+    "name": "交银深证300价值ETF联接",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "519707",
+    "abbr": "JYSZ300JZETFLJ",
+    "name": "交银深证300价值ETF联接(后端)",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "560000",
+    "abbr": "ZNDCETFPY",
+    "name": "智能电车ETF浦银",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "560010",
+    "abbr": "ZZ1000ETFGF",
+    "name": "中证1000ETF广发",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "560020",
+    "abbr": "HLETFHTF",
+    "name": "红利ETF汇添富",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "560030",
+    "abbr": "800JZETFHTF",
+    "name": "800价值ETF汇添富",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "560050",
+    "abbr": "ZGA50ETFHTF",
+    "name": "中国A50ETF汇添富",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "560060",
+    "abbr": "TZHETFHTF",
+    "name": "碳中和ETF汇添富",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "560070",
+    "abbr": "YQHLETFHTF",
+    "name": "央企红利ETF汇添富",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "560080",
+    "abbr": "ZYETFHTF",
+    "name": "中药ETF汇添富",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "560090",
+    "abbr": "ZQETFHTF",
+    "name": "证券ETF汇添富",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "560100",
+    "abbr": "ZZ500ZQETFNF",
+    "name": "中证500增强ETF南方",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "560110",
+    "abbr": "ZZ1000ETFHTF",
+    "name": "中证1000ETF汇添富",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "560120",
+    "abbr": "ZZ500XJLETFHX",
+    "name": "中证500现金流ETF华夏",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "560130",
+    "abbr": "SPETFPH",
+    "name": "食品ETF鹏华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "560150",
+    "abbr": "HLDBETFTK",
+    "name": "红利低波ETF泰康",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "560160",
+    "abbr": "SPETFYFD",
+    "name": "食品ETF易方达",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "560170",
+    "abbr": "YQKJETFNF",
+    "name": "央企科技ETF南方",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "560180",
+    "abbr": "HS300ESGETFNF",
+    "name": "沪深300ESGETF南方",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "560190",
+    "abbr": "GYSYETFPH",
+    "name": "公用事业ETF鹏华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "560210",
+    "abbr": "NMYETFJS",
+    "name": "农牧渔ETF景顺",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "560220",
+    "abbr": "ZZ2000ETFGF",
+    "name": "中证2000ETF广发",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "560230",
+    "abbr": "GFETFFG",
+    "name": "光伏ETF富国",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "560250",
+    "abbr": "HLZLETFFG",
+    "name": "红利质量ETF富国",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "560260",
+    "abbr": "YLETFGF",
+    "name": "医疗ETF广发",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "560270",
+    "abbr": "DLETFGY",
+    "name": "电力ETF工银",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "560280",
+    "abbr": "GCJXETFGF",
+    "name": "工程机械ETF广发",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "560290",
+    "abbr": "YSETFJS",
+    "name": "有色ETF景顺",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "560300",
+    "abbr": "DXETFHTF",
+    "name": "电信ETF汇添富",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "560310",
+    "abbr": "GFETFBS",
+    "name": "光伏ETF博时",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "560320",
+    "abbr": "SPETFFG",
+    "name": "食品ETF富国",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "560330",
+    "abbr": "HS300JZETFSWLX",
+    "name": "沪深300价值ETF申万菱信",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "560350",
+    "abbr": "ZZA50ETFMG",
+    "name": "中证A50ETF摩根",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "560360",
+    "abbr": "RJETFWJ",
+    "name": "软件ETF万家",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "560370",
+    "abbr": "HLZLETFYFD",
+    "name": "红利质量ETF易方达",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "560380",
+    "abbr": "A100ETFNF",
+    "name": "A100ETF南方",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "560390",
+    "abbr": "DWSBETFYFD",
+    "name": "电网设备ETF易方达",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "560400",
+    "abbr": "ZQETFHTBR",
+    "name": "证券ETF华泰柏瑞",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "560410",
+    "abbr": "DCETFPH",
+    "name": "电池ETF鹏华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "560420",
+    "abbr": "SPETFQHKY",
+    "name": "食品ETF前海开源",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "560450",
+    "abbr": "DLETFTH",
+    "name": "电力ETF天弘",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "560460",
+    "abbr": "DLETFPA",
+    "name": "电力ETF平安",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "560470",
+    "abbr": "YSETFYFD",
+    "name": "有色ETF易方达",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "560480",
+    "abbr": "DLETFZS",
+    "name": "电力ETF招商",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "560490",
+    "abbr": "GYYSETFHTBR",
+    "name": "工业有色ETF华泰柏瑞",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "560500",
+    "abbr": "500ZLCZETFPY",
+    "name": "500质量成长ETF鹏扬",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "560510",
+    "abbr": "ZZA500ETFTK",
+    "name": "中证A500ETF泰康",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "560520",
+    "abbr": "HLDB100ETFDC",
+    "name": "红利低波100ETF大成",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "560530",
+    "abbr": "ZZA500ETFMG",
+    "name": "中证A500ETF摩根",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "560550",
+    "abbr": "TZHETFGF",
+    "name": "碳中和ETF广发",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "560560",
+    "abbr": "TZHETFTK",
+    "name": "碳中和ETF泰康",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "560570",
+    "abbr": "A500HLETFGLA",
+    "name": "A500红利ETF国联安",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "560580",
+    "abbr": "DLETFNF",
+    "name": "电力ETF南方",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "560590",
+    "abbr": "ZZ1000ZQETFPH",
+    "name": "中证1000增强ETF鹏华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "560610",
+    "abbr": "A500ETFZS",
+    "name": "A500ETF招商",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "560620",
+    "abbr": "GYSYETFWJ",
+    "name": "公用事业ETF万家",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "560630",
+    "abbr": "JQRETFWJ",
+    "name": "机器人ETF万家",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "560650",
+    "abbr": "HX50ETFMSJY",
+    "name": "核心50ETF民生加银",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "560660",
+    "abbr": "YJS50ETFXH",
+    "name": "云计算50ETF新华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "560670",
+    "abbr": "YHETFHTBR",
+    "name": "银行ETF华泰柏瑞",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "560680",
+    "abbr": "XFETFGF",
+    "name": "消费ETF广发",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "560690",
+    "abbr": "DXETFPH",
+    "name": "电信ETF鹏华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "560700",
+    "abbr": "YQHLETFGF",
+    "name": "央企红利ETF广发",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "560710",
+    "abbr": "CBETFFG",
+    "name": "船舶ETF富国",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "560720",
+    "abbr": "HLDB100ETFGY",
+    "name": "红利低波100ETF工银",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "560750",
+    "abbr": "A500ETFSWLX",
+    "name": "A500ETF申万菱信",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "560770",
+    "abbr": "JQRETFZS",
+    "name": "机器人ETF招商",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "560780",
+    "abbr": "BDTSBETFGF",
+    "name": "半导体设备ETF广发",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "560790",
+    "abbr": "RJETFPH",
+    "name": "软件ETF鹏华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "560800",
+    "abbr": "SZJJETFPY",
+    "name": "数字经济ETF鹏扬",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "560810",
+    "abbr": "YQESGETFRT",
+    "name": "央企ESGETF融通",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "560820",
+    "abbr": "ZZA50ETFXH",
+    "name": "中证A50ETF新华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "560830",
+    "abbr": "DLETFHX",
+    "name": "电力ETF华夏",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "560850",
+    "abbr": "XCETFHTF",
+    "name": "信创ETF汇添富",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "560860",
+    "abbr": "GYYSETFWJ",
+    "name": "工业有色ETF万家",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "560870",
+    "abbr": "GYYSETFZY",
+    "name": "工业有色ETF中银",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "560880",
+    "abbr": "JDETFGF",
+    "name": "家电ETF广发",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "560900",
+    "abbr": "CXYETFMG",
+    "name": "创新药ETF摩根",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "560910",
+    "abbr": "DCETFHTBR",
+    "name": "电池ETF华泰柏瑞",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "560930",
+    "abbr": "DLETFYFD",
+    "name": "电力ETF易方达",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "560950",
+    "abbr": "ZZ500ZQETFHTF",
+    "name": "中证500增强ETF汇添富",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "560970",
+    "abbr": "GYYSETFPA",
+    "name": "工业有色ETF平安",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "560980",
+    "abbr": "GFLTETFGF",
+    "name": "光伏龙头ETF广发",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "560990",
+    "abbr": "KJXFETFZJ",
+    "name": "科技先锋ETF中金",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "561000",
+    "abbr": "HS300ZQETFHA",
+    "name": "沪深300增强ETF华安",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "561010",
+    "abbr": "RJETFHA",
+    "name": "软件ETF华安",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "561030",
+    "abbr": "GCJXETFHTBR",
+    "name": "工程机械ETF华泰柏瑞",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "561050",
+    "abbr": "XYJSETFYFD",
+    "name": "稀有金属ETF易方达",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "561060",
+    "abbr": "GQHLETFHA",
+    "name": "国企红利ETF华安",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "561080",
+    "abbr": "QZXJLETFHA",
+    "name": "全指现金流ETF华安",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "561090",
+    "abbr": "A500ZQETFHA",
+    "name": "A500增强ETF华安",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "561100",
+    "abbr": "XFDZETFFG",
+    "name": "消费电子ETF富国",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "561120",
+    "abbr": "JDETFFG",
+    "name": "家电ETF富国",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "561130",
+    "abbr": "GHETFFG",
+    "name": "国货ETF富国",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "561160",
+    "abbr": "DCETFFG",
+    "name": "电池ETF富国",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "561170",
+    "abbr": "LSDLETFFG",
+    "name": "绿色电力ETF富国",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "561180",
+    "abbr": "A100ETFFG",
+    "name": "A100ETF富国",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "561190",
+    "abbr": "TZHETFFG",
+    "name": "碳中和ETF富国",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "561200",
+    "abbr": "ZZA100ETFGY",
+    "name": "中证A100ETF工银",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "561220",
+    "abbr": "SZJJETFGY",
+    "name": "数字经济ETF工银",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "561230",
+    "abbr": "ZZA50ETFGY",
+    "name": "中证A50ETF工银",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "561260",
+    "abbr": "NYETFGY",
+    "name": "能源ETF工银",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "561280",
+    "abbr": "ZZ1000ZQETFGY",
+    "name": "中证1000增强ETF工银",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "561300",
+    "abbr": "HS300ZQETFGT",
+    "name": "沪深300增强ETF国泰",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "561310",
+    "abbr": "XDETFGT",
+    "name": "消电ETF国泰",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "561320",
+    "abbr": "JYETFGT",
+    "name": "交运ETF国泰",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "561330",
+    "abbr": "KYETFGT",
+    "name": "矿业ETF国泰",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "561350",
+    "abbr": "ZZ500ETFGT",
+    "name": "中证500ETF国泰",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "561360",
+    "abbr": "SYETFGT",
+    "name": "石油ETF国泰",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "561370",
+    "abbr": "ZZ2000ETFGT",
+    "name": "中证2000ETF国泰",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "561380",
+    "abbr": "DWSBETFGT",
+    "name": "电网设备ETF国泰",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "561500",
+    "abbr": "PL50ETFHTBR",
+    "name": "漂亮50ETF华泰柏瑞",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "561510",
+    "abbr": "ZYETFHTBR",
+    "name": "中药ETF华泰柏瑞",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "561550",
+    "abbr": "ZZ500ZQETFHTBR",
+    "name": "中证500增强ETF华泰柏瑞",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "561560",
+    "abbr": "DLETFHTBR",
+    "name": "电力ETF华泰柏瑞",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "561570",
+    "abbr": "YQETFHTBR",
+    "name": "油气ETF华泰柏瑞",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "561580",
+    "abbr": "YQHLETFHTBR",
+    "name": "央企红利ETF华泰柏瑞",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "561590",
+    "abbr": "ZZ1000ZQETFHTBR",
+    "name": "中证1000增强ETF华泰柏瑞",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "561600",
+    "abbr": "XFDZETFPA",
+    "name": "消费电子ETF平安",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "561660",
+    "abbr": "TYHKETFPA",
+    "name": "通用航空ETF平安",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "561680",
+    "abbr": "A500HLDBETFPA",
+    "name": "A500红利低波ETF平安",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "561700",
+    "abbr": "DLETFBS",
+    "name": "电力ETF博时",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "561750",
+    "abbr": "A50ETFBS",
+    "name": "A50ETF博时",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "561760",
+    "abbr": "YQETFBS",
+    "name": "油气ETF博时",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "561770",
+    "abbr": "A100ETFBS",
+    "name": "A100ETF博时",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "561780",
+    "abbr": "1000ZQETFBS",
+    "name": "1000增强ETF博时",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "561790",
+    "abbr": "YQNYETFBS",
+    "name": "央企能源ETF博时",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "561800",
+    "abbr": "XYJSETFHF",
+    "name": "稀有金属ETF华富",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "561870",
+    "abbr": "XJLQZETFHF",
+    "name": "现金流全指ETF华富",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "561880",
+    "abbr": "A100ETFHF",
+    "name": "A100ETF华富",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "561900",
+    "abbr": "HS300ESGETFZS",
+    "name": "沪深300ESGETF招商",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "561910",
+    "abbr": "DCETFZS",
+    "name": "电池ETF招商",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "561920",
+    "abbr": "YMETFZS",
+    "name": "疫苗ETF招商",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "561930",
+    "abbr": "HS300ETFZS",
+    "name": "沪深300ETF招商",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "561950",
+    "abbr": "ZZ500ZQETFZS",
+    "name": "中证500增强ETF招商",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "561960",
+    "abbr": "YQHBETFZS",
+    "name": "央企回报ETF招商",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "561980",
+    "abbr": "BDTSBETFZS",
+    "name": "半导体设备ETF招商",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "561990",
+    "abbr": "HS300ZQETFZS",
+    "name": "沪深300增强ETF招商",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "562000",
+    "abbr": "A100ETFHB",
+    "name": "A100ETF华宝",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "562010",
+    "abbr": "LSNYETFHB",
+    "name": "绿色能源ETF华宝",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "562030",
+    "abbr": "XCETFHB",
+    "name": "信创ETF华宝",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "562050",
+    "abbr": "YETFHB",
+    "name": "药ETF华宝",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "562060",
+    "abbr": "BPAGHLETFHB",
+    "name": "标普A股红利ETF华宝",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "562070",
+    "abbr": "HS300ZZETFHB",
+    "name": "沪深300指增ETF华宝",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "562080",
+    "abbr": "300XJLETFHB",
+    "name": "300现金流ETF华宝",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "562300",
+    "abbr": "TZHETFYH",
+    "name": "碳中和ETF银华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "562310",
+    "abbr": "HS300CZETFYH",
+    "name": "沪深300成长ETF银华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "562320",
+    "abbr": "HS300JZETFYH",
+    "name": "沪深300价值ETF银华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "562330",
+    "abbr": "ZZ500JZETFYH",
+    "name": "中证500价值ETF银华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "562340",
+    "abbr": "ZZ500CZETFYH",
+    "name": "中证500成长ETF银华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "562350",
+    "abbr": "DLETFYH",
+    "name": "电力ETF银华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "562360",
+    "abbr": "JQRETFYH",
+    "name": "机器人ETF银华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "562380",
+    "abbr": "YQKJETFYH",
+    "name": "央企科技ETF银华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "562390",
+    "abbr": "ZYETFYH",
+    "name": "中药ETF银华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "562500",
+    "abbr": "JQRETFHX",
+    "name": "机器人ETF华夏",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "562510",
+    "abbr": "LYETFHX",
+    "name": "旅游ETF华夏",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "562520",
+    "abbr": "ZZ1000CZETFHX",
+    "name": "中证1000成长ETF华夏",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "562530",
+    "abbr": "ZZ1000JZETFHX",
+    "name": "中证1000价值ETF华夏",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "562550",
+    "abbr": "LDETFHX",
+    "name": "绿电ETF华夏",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "562560",
+    "abbr": "XXJSETFHX",
+    "name": "信息技术ETF华夏",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "562570",
+    "abbr": "XCETFHX",
+    "name": "信创ETF华夏",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "562580",
+    "abbr": "KXXFETFHX",
+    "name": "可选消费ETF华夏",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "562590",
+    "abbr": "BDTSBETFHX",
+    "name": "半导体设备ETF华夏",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "562600",
+    "abbr": "YLQXETFHX",
+    "name": "医疗器械ETF华夏",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "562660",
+    "abbr": "ZZ2000ETFHX",
+    "name": "中证2000ETF华夏",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "562700",
+    "abbr": "QCLBJETFHX",
+    "name": "汽车零部件ETF华夏",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "562800",
+    "abbr": "XYJSETFJS",
+    "name": "稀有金属ETF嘉实",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "562810",
+    "abbr": "SZZSZQETFJS",
+    "name": "上证指数增强ETF嘉实",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "562820",
+    "abbr": "JCDLETFJS",
+    "name": "集成电路ETF嘉实",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "562850",
+    "abbr": "YQNYETFJS",
+    "name": "央企能源ETF嘉实",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "562860",
+    "abbr": "YMETFJS",
+    "name": "疫苗ETF嘉实",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "562870",
+    "abbr": "ZQETFJS",
+    "name": "证券ETF嘉实",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "562880",
+    "abbr": "DCETFJS",
+    "name": "电池ETF嘉实",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "562890",
+    "abbr": "A50ETFJS",
+    "name": "A50ETF嘉实",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "562900",
+    "abbr": "NYETFYFD",
+    "name": "农业ETF易方达",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "562910",
+    "abbr": "GDZZETFYFD",
+    "name": "高端制造ETF易方达",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "562920",
+    "abbr": "XXAQETFYFD",
+    "name": "信息安全ETF易方达",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "562930",
+    "abbr": "RJETFYFD",
+    "name": "软件ETF易方达",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "562950",
+    "abbr": "XFDZETFYFD",
+    "name": "消费电子ETF易方达",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "562960",
+    "abbr": "LSDLETFYFD",
+    "name": "绿色电力ETF易方达",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "562970",
+    "abbr": "GFETFYFD",
+    "name": "光伏ETF易方达",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "562990",
+    "abbr": "TZHETFYFD",
+    "name": "碳中和ETF易方达",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "563000",
+    "abbr": "ZGA50ETFYFD",
+    "name": "中国A50ETF易方达",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "563010",
+    "abbr": "DXETFYFD",
+    "name": "电信ETF易方达",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "563020",
+    "abbr": "HLDBETFYFD",
+    "name": "红利低波ETF易方达",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "563030",
+    "abbr": "ZZ500ZQETFYFD",
+    "name": "中证500增强ETF易方达",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "563050",
+    "abbr": "YQKJETFYFD",
+    "name": "央企科技ETF易方达",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "563060",
+    "abbr": "YQ50ETFYFD",
+    "name": "央企50ETF易方达",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "563080",
+    "abbr": "ZZA50ETFYFD",
+    "name": "中证A50ETF易方达",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "563090",
+    "abbr": "SZ50ZQETFYFD",
+    "name": "上证50增强ETF易方达",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "563150",
+    "abbr": "YQETFYH",
+    "name": "油气ETF银华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "563180",
+    "abbr": "GGXETFYH",
+    "name": "高股息ETF银华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "563200",
+    "abbr": "ZZ2000ETFFG",
+    "name": "中证2000ETF富国",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "563210",
+    "abbr": "ZJTXETFFG",
+    "name": "专精特新ETF富国",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "563220",
+    "abbr": "A500ETFFG",
+    "name": "A500ETF富国",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "563230",
+    "abbr": "WXETFFG",
+    "name": "卫星ETF富国",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "563280",
+    "abbr": "A50ZQETFFG",
+    "name": "A50增强ETF富国",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "563300",
+    "abbr": "ZZ2000ETFHTBR",
+    "name": "中证2000ETF华泰柏瑞",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "563320",
+    "abbr": "TYHKETFHTBR",
+    "name": "通用航空ETF华泰柏瑞",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "563330",
+    "abbr": "AGETFHTBR",
+    "name": "A股ETF华泰柏瑞",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "563350",
+    "abbr": "A50ETFHTBR",
+    "name": "A50ETF华泰柏瑞",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "563360",
+    "abbr": "A500ETFHTBR",
+    "name": "A500ETF华泰柏瑞",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "563380",
+    "abbr": "HKHTETFHTBR",
+    "name": "航空航天ETF华泰柏瑞",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "563390",
+    "abbr": "QZXJLETFHTBR",
+    "name": "全指现金流ETF华泰柏瑞",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "563500",
+    "abbr": "A500ETFHB",
+    "name": "A500ETF华宝",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "563510",
+    "abbr": "A500HLDBETFYFD",
+    "name": "A500红利低波ETF易方达",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "563520",
+    "abbr": "HS300ETFYY",
+    "name": "沪深300ETF永赢",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "563530",
+    "abbr": "WXETFYFD",
+    "name": "卫星ETF易方达",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "563550",
+    "abbr": "A500ZQETFMG",
+    "name": "A500增强ETF摩根",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "563560",
+    "abbr": "KJCZETFXY",
+    "name": "科技成长ETF兴业",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "563570",
+    "abbr": "JRKJETFXY",
+    "name": "金融科技ETF兴业",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "563580",
+    "abbr": "ZYXJL800ETFWJ",
+    "name": "自由现金流800ETF万家",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "563590",
+    "abbr": "A500HLDBDETFGS",
+    "name": "A500红利低波动ETF国寿",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "563600",
+    "abbr": "A500ZQETFYFD",
+    "name": "A500增强ETF易方达",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "563620",
+    "abbr": "QZXJLETFXY",
+    "name": "全指现金流ETF兴业",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "563630",
+    "abbr": "A500ZQETFGLA",
+    "name": "A500增强ETF国联安",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "563650",
+    "abbr": "ZZA500ETFXY",
+    "name": "中证A500ETF兴业",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "563660",
+    "abbr": "A500ETFYH",
+    "name": "A500ETF银河",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "563670",
+    "abbr": "JRKJETFPH",
+    "name": "金融科技ETF鹏华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "563680",
+    "abbr": "800XJLETFHTF",
+    "name": "800现金流ETF汇添富",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "563690",
+    "abbr": "HLDBETFYY",
+    "name": "红利低波ETF永赢",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "563700",
+    "abbr": "HLJZETFYFD",
+    "name": "红利价值ETF易方达",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "563750",
+    "abbr": "ZZ500ETFHTF",
+    "name": "中证500ETF汇添富",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "563760",
+    "abbr": "QZXJLETFZY",
+    "name": "全指现金流ETF中银",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "563770",
+    "abbr": "QZXJLETFZS",
+    "name": "全指现金流ETF招商",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "563780",
+    "abbr": "XJLQZETFFZFB",
+    "name": "现金流全指ETF方正富邦",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "563790",
+    "abbr": "WXETFPH",
+    "name": "卫星ETF鹏华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "563800",
+    "abbr": "A500ETFGF",
+    "name": "A500ETF广发",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "563830",
+    "abbr": "QZXJLETFBS",
+    "name": "全指现金流ETF博时",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "563850",
+    "abbr": "SPETFGF",
+    "name": "食品ETF广发",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "563860",
+    "abbr": "ZZA500ETFHFT",
+    "name": "中证A500ETF海富通",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "563870",
+    "abbr": "TYHKETFPH",
+    "name": "通用航空ETF鹏华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "563880",
+    "abbr": "A500ETFHTF",
+    "name": "A500ETF汇添富",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "563890",
+    "abbr": "GQHLETFCJHX",
+    "name": "国企红利ETF创金合信",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "563900",
+    "abbr": "300ZYXJLETFMG",
+    "name": "300自由现金流ETF摩根",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "563930",
+    "abbr": "SZZQETFZS",
+    "name": "上证增强ETF招商",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "563960",
+    "abbr": "300ZLETFXQ",
+    "name": "300质量ETF兴全",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "563980",
+    "abbr": "800HLDBETFXY",
+    "name": "800红利低波ETF鑫元",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "563990",
+    "abbr": "800XJLETFFG",
+    "name": "800现金流ETF富国",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "588000",
+    "abbr": "KC50ETFHX",
+    "name": "科创50ETF华夏",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "588010",
+    "abbr": "KCXCLETFBS",
+    "name": "科创新材料ETF博时",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "588020",
+    "abbr": "KCCZETFYFD",
+    "name": "科创成长ETF易方达",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "588030",
+    "abbr": "KC100ETFBS",
+    "name": "科创100ETF博时",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "588040",
+    "abbr": "KC50ETFPH",
+    "name": "科创50ETF鹏华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "588050",
+    "abbr": "KC50ETFGY",
+    "name": "科创50ETF工银",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "588060",
+    "abbr": "KC50ETFGF",
+    "name": "科创50ETF广发",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "588070",
+    "abbr": "KCCZETFWJ",
+    "name": "科创成长ETF万家",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "588080",
+    "abbr": "KC50ETFYFD",
+    "name": "科创50ETF易方达",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "588090",
+    "abbr": "KC50ETFHTBR",
+    "name": "科创50ETF华泰柏瑞",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "588100",
+    "abbr": "KCXXETFJS",
+    "name": "科创信息ETF嘉实",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "588110",
+    "abbr": "KCCZETFGF",
+    "name": "科创成长ETF广发",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "588120",
+    "abbr": "KC100ETFGT",
+    "name": "科创100ETF国泰",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "588130",
+    "abbr": "KCYYETFHX",
+    "name": "科创医药ETF华夏",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "588140",
+    "abbr": "KC200ETFGF",
+    "name": "科创200ETF广发",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "588150",
+    "abbr": "KC50ETFNF",
+    "name": "科创50ETF南方",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "588160",
+    "abbr": "KCXCLETFNF",
+    "name": "科创新材料ETF南方",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "588170",
+    "abbr": "KCBDTETFHX",
+    "name": "科创半导体ETF华夏",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "588180",
+    "abbr": "KC50ETFGLA",
+    "name": "科创50ETF国联安",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "588190",
+    "abbr": "KC100ETFYH",
+    "name": "科创100ETF银华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "588200",
+    "abbr": "KCXPETFJS",
+    "name": "科创芯片ETF嘉实",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "588210",
+    "abbr": "KC100ETFYFD",
+    "name": "科创100ETF易方达",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "588220",
+    "abbr": "KC100ETFPH",
+    "name": "科创100ETF鹏华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "588230",
+    "abbr": "KC200ETFHTBR",
+    "name": "科创200ETF华泰柏瑞",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "588240",
+    "abbr": "KC200ETFPH",
+    "name": "科创200ETF鹏华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "588250",
+    "abbr": "KCYYETFPH",
+    "name": "科创医药ETF鹏华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "588260",
+    "abbr": "KCXXETFHA",
+    "name": "科创信息ETF华安",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "588270",
+    "abbr": "KC200ETFYFD",
+    "name": "科创200ETF易方达",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "588280",
+    "abbr": "KC50ETFHA",
+    "name": "科创50ETF华安",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "588290",
+    "abbr": "KCXPETFHA",
+    "name": "科创芯片ETF华安",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "588300",
+    "abbr": "KCCY50ETFZS",
+    "name": "科创创业50ETF招商",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "588310",
+    "abbr": "KCCYETFFZFB",
+    "name": "科创创业ETF方正富邦",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "588320",
+    "abbr": "SC50ZQETFGF",
+    "name": "双创50增强ETF广发",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "588330",
+    "abbr": "SC50ETFHB",
+    "name": "双创50ETF华宝",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "588350",
+    "abbr": "KCCY50ETFPY",
+    "name": "科创创业50ETF鹏扬",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "588360",
+    "abbr": "KCCYETFGT",
+    "name": "科创创业ETF国泰",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "588370",
+    "abbr": "KC50ZQETFNF",
+    "name": "科创50增强ETF南方",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "588380",
+    "abbr": "KCCYETFFG",
+    "name": "科创创业ETF富国",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "588390",
+    "abbr": "KCCYETFBS",
+    "name": "科创创业ETF博时",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "588400",
+    "abbr": "KCCYETFJS",
+    "name": "科创创业ETF嘉实",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "588410",
+    "abbr": "KCCYRGZNETFPH",
+    "name": "科创创业人工智能ETF鹏华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "588420",
+    "abbr": "KCCYRGZNETFMG",
+    "name": "科创创业人工智能ETF摩根",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "588430",
+    "abbr": "KCCYRGZNETFGY",
+    "name": "科创创业人工智能ETF工银",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "588450",
+    "abbr": "KC50ZQETFZS",
+    "name": "科创50增强ETF招商",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "588460",
+    "abbr": "KC50ZQETFPH",
+    "name": "科创50增强ETF鹏华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "588470",
+    "abbr": "KCCYRGZNETFHA",
+    "name": "科创创业人工智能ETF华安",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "588480",
+    "abbr": "KCCYRGZNETFZJ",
+    "name": "科创创业人工智能ETF中金",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "588500",
+    "abbr": "KC100ZQETFYFD",
+    "name": "科创100增强ETF易方达",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "588510",
+    "abbr": "KCCYRGZNETFHX",
+    "name": "科创创业人工智能ETF华夏",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "588520",
+    "abbr": "KCZQETFYY",
+    "name": "科创增强ETF永赢",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "588550",
+    "abbr": "KCZZZQETFYFD",
+    "name": "科创综指增强ETF易方达",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "588660",
+    "abbr": "KCCY50ETFXY",
+    "name": "科创创业50ETF兴银",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "588670",
+    "abbr": "KCZZZQETFJS",
+    "name": "科创综指增强ETF嘉实",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "588680",
+    "abbr": "KC100ZQETFGF",
+    "name": "科创100增强ETF广发",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "588690",
+    "abbr": "KCZQETFYH",
+    "name": "科创增强ETF银华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "588700",
+    "abbr": "KCYYETFJS",
+    "name": "科创医药ETF嘉实",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "588710",
+    "abbr": "KCBDTSBETFHTBR",
+    "name": "科创半导体设备ETF华泰柏瑞",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "588720",
+    "abbr": "KC50ETFZY",
+    "name": "科创50ETF中银",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "588730",
+    "abbr": "KCRGZNETFYFD",
+    "name": "科创人工智能ETF易方达",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "588750",
+    "abbr": "KCXPETFHTF",
+    "name": "科创芯片ETF汇添富",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "588760",
+    "abbr": "KCRGZNETFGF",
+    "name": "科创人工智能ETF广发",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "588770",
+    "abbr": "KCXXETFMG",
+    "name": "科创信息ETF摩根",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "588780",
+    "abbr": "KCXPSJETFGLA",
+    "name": "科创芯片设计ETF国联安",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "588790",
+    "abbr": "KCAIETFBS",
+    "name": "科创AIETF博时",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "588800",
+    "abbr": "KC100ETFHX",
+    "name": "科创100ETF华夏",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "588810",
+    "abbr": "KCXPETFFG",
+    "name": "科创芯片ETF富国",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "588820",
+    "abbr": "KC200ETFHX",
+    "name": "科创200ETF华夏",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "588830",
+    "abbr": "KCXNYETFPH",
+    "name": "科创新能源ETF鹏华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "588840",
+    "abbr": "KC50ETFWJ",
+    "name": "科创50ETF万家",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "588850",
+    "abbr": "KCJXETFJS",
+    "name": "科创机械ETF嘉实",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "588860",
+    "abbr": "KCYYETFGY",
+    "name": "科创医药ETF工银",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "588870",
+    "abbr": "KC50ETFHTF",
+    "name": "科创50ETF汇添富",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "588880",
+    "abbr": "KC100ETFHTBR",
+    "name": "科创100ETF华泰柏瑞",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "588890",
+    "abbr": "KCXPETFNF",
+    "name": "科创芯片ETF南方",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "588900",
+    "abbr": "KC100ETFNF",
+    "name": "科创100ETF南方",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "588910",
+    "abbr": "KCJZETFJX",
+    "name": "科创价值ETF建信",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "588920",
+    "abbr": "KCXPETFPH",
+    "name": "科创芯片ETF鹏华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "588930",
+    "abbr": "KCRGZNETFYH",
+    "name": "科创人工智能ETF银华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "588940",
+    "abbr": "KC50ETFFG",
+    "name": "科创50ETF富国",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "588950",
+    "abbr": "KC50ETFJS",
+    "name": "科创50ETF景顺",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "588960",
+    "abbr": "KCXNYETFFG",
+    "name": "科创新能源ETF富国",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "588980",
+    "abbr": "KC100ETFGF",
+    "name": "科创100ETF广发",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "588990",
+    "abbr": "KCXPETFBS",
+    "name": "科创芯片ETF博时",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "589000",
+    "abbr": "KCZZETFHX",
+    "name": "科创综指ETF华夏",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "589010",
+    "abbr": "KCRGZNETFHX",
+    "name": "科创人工智能ETF华夏",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "589020",
+    "abbr": "KCBDTSBETFPH",
+    "name": "科创半导体设备ETF鹏华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "589030",
+    "abbr": "KCXPSJETFYFD",
+    "name": "科创芯片设计ETF易方达",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "589050",
+    "abbr": "KCZZETFXY",
+    "name": "科创综指ETF兴业",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "589060",
+    "abbr": "KCZZETFDC",
+    "name": "科创综指ETF东财",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "589070",
+    "abbr": "KCXPSJETFTH",
+    "name": "科创芯片设计ETF天弘",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "589080",
+    "abbr": "KCZZETFHTF",
+    "name": "科创综指ETF汇添富",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "589090",
+    "abbr": "KCAIETFPH",
+    "name": "科创AIETF鹏华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "589100",
+    "abbr": "KCXPETFGT",
+    "name": "科创芯片ETF国泰",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "589110",
+    "abbr": "KCRGZNETFGT",
+    "name": "科创人工智能ETF国泰",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "589120",
+    "abbr": "KCCXYETFHTF",
+    "name": "科创创新药ETF汇添富",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "589130",
+    "abbr": "KCXPETFYFD",
+    "name": "科创芯片ETF易方达",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "589150",
+    "abbr": "KC50ETFPA",
+    "name": "科创50ETF平安",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "589160",
+    "abbr": "KCXPETFGF",
+    "name": "科创芯片ETF广发",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "589170",
+    "abbr": "KCXPSJETFPH",
+    "name": "科创芯片设计ETF鹏华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "589180",
+    "abbr": "KCXCLETFHTF",
+    "name": "科创新材料ETF汇添富",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "589190",
+    "abbr": "KCXPETFHB",
+    "name": "科创芯片ETF华宝",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "589200",
+    "abbr": "KC200ETFGY",
+    "name": "科创200ETF工银",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "589210",
+    "abbr": "KCXPSJETFGF",
+    "name": "科创芯片设计ETF广发",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "589220",
+    "abbr": "KC200ETFGT",
+    "name": "科创200ETF国泰",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "589230",
+    "abbr": "KCRGZNETFNF",
+    "name": "科创人工智能ETF南方",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "589250",
+    "abbr": "KCXPSJETFPY",
+    "name": "科创芯片设计ETF浦银",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "589260",
+    "abbr": "KCXPSJETFGT",
+    "name": "科创芯片设计ETF国泰",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "589270",
+    "abbr": "KC100ETFQHKY",
+    "name": "科创100ETF前海开源",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "589280",
+    "abbr": "KCZQETFHB",
+    "name": "科创增强ETF华宝",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "589300",
+    "abbr": "KCZZETFJS",
+    "name": "科创综指ETF嘉实",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "589320",
+    "abbr": "KC200ETFJS",
+    "name": "科创200ETF嘉实",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "589330",
+    "abbr": "KC200ETFDC",
+    "name": "科创200ETF东财",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "589380",
+    "abbr": "KCAIETFFG",
+    "name": "科创AIETF富国",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "589500",
+    "abbr": "KCZZETFGY",
+    "name": "科创综指ETF工银",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "589520",
+    "abbr": "KCRGZNETFHB",
+    "name": "科创人工智能ETF华宝",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "589550",
+    "abbr": "KCJZETFHX",
+    "name": "科创价值ETF华夏",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "589560",
+    "abbr": "KCRGZNETFHTF",
+    "name": "科创人工智能ETF汇添富",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "589580",
+    "abbr": "KCZZETFXY",
+    "name": "科创综指ETF兴银",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "589600",
+    "abbr": "KCZZETFFG",
+    "name": "科创综指ETF富国",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "589630",
+    "abbr": "KCZZETFGT",
+    "name": "科创综指ETF国泰",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "589660",
+    "abbr": "KCZZETFNF",
+    "name": "科创综指ETF南方",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "589680",
+    "abbr": "KCZZETFPH",
+    "name": "科创综指ETF鹏华",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "589700",
+    "abbr": "KCCZETFNF",
+    "name": "科创成长ETF南方",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "589720",
+    "abbr": "KCCXYETFGT",
+    "name": "科创创新药ETF国泰",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "589770",
+    "abbr": "KCZZETFZS",
+    "name": "科创综指ETF招商",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "589780",
+    "abbr": "KC200ETFFG",
+    "name": "科创200ETF富国",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "589800",
+    "abbr": "KCZZETFYFD",
+    "name": "科创综指ETF易方达",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "589820",
+    "abbr": "KC200ETFJX",
+    "name": "科创200ETF建信",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "589850",
+    "abbr": "KC50ETFDC",
+    "name": "科创50ETF东财",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "589860",
+    "abbr": "KCZZETFTH",
+    "name": "科创综指ETF天弘",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "589880",
+    "abbr": "KCZZETFJX",
+    "name": "科创综指ETF建信",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "589890",
+    "abbr": "KCZZETFJS",
+    "name": "科创综指ETF景顺",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "589900",
+    "abbr": "KCZZETFBS",
+    "name": "科创综指ETF博时",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "589950",
+    "abbr": "KC100ETFFG",
+    "name": "科创100ETF富国",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "589960",
+    "abbr": "KCXNYETFYFD",
+    "name": "科创新能源ETF易方达",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "589980",
+    "abbr": "KC100ETFHTF",
+    "name": "科创100ETF汇添富",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  },
+  {
+    "code": "589990",
+    "abbr": "KCZZETFHTBR",
+    "name": "科创综指ETF华泰柏瑞",
+    "fundType": "指数型-股票",
+    "type": "fund"
+  }
+]

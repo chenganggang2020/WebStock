@@ -1,0 +1,13 @@
+{
+  "schema": "research-runs-contract/v1",
+  "scope": "D19 historical local import and reader only",
+  "inputs": ["old backup researchRuns array", "raw ai_research_runs array", "native-business-v1 reports", "Windows read-only SQLite ai_research_runs"],
+  "status": ["pending", "completed", "failed"],
+  "id": "legacy-research:<original id>",
+  "legacySource": "ai_research_runs",
+  "preserve": ["legacyOriginal", "runType", "modelId", "status", "title", "question", "prompt", "result", "evidence", "request", "metrics", "createdAt", "updatedAt"],
+  "limits": {"fileBytes": 33554432, "records": 10000, "promptChars": 250000, "resultChars": 250000, "pageSize": 50},
+  "merge": "preview without writes; entire batch validate; stale report baseline abort; equal IDs and content skip; conflicting IDs retain existing; transaction for all inserts",
+  "security": "plain selectable text; no HTML execution; no model calls; no securities inferred from name or bare code",
+  "acceptance": "both native hosts, cancel, stale baseline, reopen, full original, state boundaries, JSON cross-platform roundtrip"
+}

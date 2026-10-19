@@ -1,0 +1,65 @@
+#pragma once
+#include "dark_observation.hpp"
+#include "dark_rotation.hpp"
+#include <algorithm>
+#include <cmath>
+#include <stdexcept>
+namespace darkLegacy {
+constexpr int Limit=32*1024*1024;
+inline void need(bool yes,QString why){if(!yes)throw std::runtime_error(why.toUtf8().constData());}
+inline void active(const darkObservation::Cancel& c){need(!c||!c(),"旧暗盘观察操作已取消；未提交");}
+inline QString sha(QByteArray bytes){return QString::fromLatin1(QCryptographicHash::hash(bytes,QCryptographicHash::Sha256).toHex());}
+inline QString fingerprint(QJsonObject value){return sha(QJsonDocument(value).toJson(QJsonDocument::Compact));}
+inline qint64 stamp(QString value){auto t=QDateTime::fromString(value,Qt::ISODateWithMs);need(QRegularExpression("(Z|[+-][0-9]{2}:[0-9]{2})$").match(value).hasMatch()&&t.isValid(),"旧观察原时刻无效，未补当前时间");return t.toMSecsSinceEpoch();}
+inline void date(QString value){need(QDate::fromString(value,Qt::ISODate).isValid()&&QDate::fromString(value,Qt::ISODate).toString(Qt::ISODate)==value,"旧观察原日期无效");}
+inline QByteArray readFile(QString file,int limit=Limit,const darkObservation::Cancel& c={}){active(c);QFileInfo info(file);need(info.isFile()&&!info.isSymLink()&&!info.isJunction()&&info.size()<=limit,"旧观察源/目标不存在、是外来链接或超限");QFile f(file);need(f.open(QIODevice::ReadOnly),"旧观察文件不可只读打开");QByteArray bytes;while(!f.atEnd()){active(c);auto part=f.read(65536);need(!part.isEmpty()||f.atEnd(),"旧观察读取失败");bytes+=part;need(bytes.size()<=limit,"旧观察文件超过限额，未截断");}need(QString::fromUtf8(bytes).toUtf8()==bytes,"旧观察不是完整UTF-8");return bytes;}
+inline QJsonObject parse(QByteArray bytes){need(bytes.size()<=Limit&&QString::fromUtf8(bytes).toUtf8()==bytes,"旧观察JSON超限或编码损坏");QJsonParseError error;auto doc=QJsonDocument::fromJson(bytes,&error);need(error.error==QJsonParseError::NoError&&doc.isObject(),"旧观察JSON无效，未忽略坏行");return doc.object();}
+inline QJsonObject rawRow(QJsonObject row){
+ need(row.keys()==QStringList({"code","combinedNetCents","darkNetCents","key","name","receivedAt","sourceObservedAt","visibleNetCents"}),"旧证券行须完整保留8字段");auto key=row["key"].toString();need(QRegularExpression("^(sh6[0-9]{5}|sz[03][0-9]{5}|bj[489][0-9]{5})$").match(key).hasMatch()&&row["code"]==key.mid(2)&&row["name"].isString()&&!row["name"].toString().isEmpty()&&row["name"].toString().size()<=120&&row["sourceObservedAt"].isNull(),"旧证券身份、名称或未知源时刻不符");stamp(row["receivedAt"].toString());
+ for(auto field:{"darkNetCents","visibleNetCents","combinedNetCents"}){auto v=row[field];need(v.isString()&&QRegularExpression("^-?[0-9]{1,22}$").match(v.toString()).hasMatch(),"旧模型金额不是原精确整数分字符串，未补0");}
+ need(darkRotation::add(row["darkNetCents"].toString(),row["visibleNetCents"].toString())==darkRotation::add(row["combinedNetCents"].toString(),"0"),"旧模型金额加和不符，未重算估值");return row;
+}
+inline QJsonObject record(QJsonObject value,QString filename){need(value.keys()==QStringList({"receivedAt","rows","schema","source","tradingDay"})&&value["schema"]=="webstock.dark-stock-observations/v1"&&value["source"].isObject(),"不是旧个股观察原批次");auto day=value["tradingDay"].toString();date(day);need(filename==day+".jsonl","旧文件名与原交易日不符");stamp(value["receivedAt"].toString());auto source=value["source"].toObject();need(source["id"]=="eastmoney-darktrade-rank"&&source["provider"]=="Eastmoney"&&source["classification"]=="provider-model-estimate"&&!source["fieldMapping"].toString().isEmpty(),"旧观察模型来源不符，不能冒充真实暗盘成交");need(value["rows"].isArray()&&!value["rows"].toArray().isEmpty()&&value["rows"].toArray().size()<=200,"旧观察批次行数无效");QSet<QString> keys;for(auto v:value["rows"].toArray()){need(v.isObject(),"旧观察行不是对象");auto row=rawRow(v.toObject());need(!keys.contains(row["key"].toString()),"旧批次证券身份重复");keys.insert(row["key"].toString());}return value;}
+inline QString pointId(QJsonObject record,QJsonObject row){return fingerprint({{"tradingDay",record["tradingDay"]},{"source",record["source"]},{"key",row["key"]},{"receivedAt",row["receivedAt"]}});}
+inline QJsonObject originalRow(QJsonObject native){QJsonObject out;for(auto field:{"code","combinedNetCents","darkNetCents","key","name","receivedAt","sourceObservedAt","visibleNetCents"})out[field]=native.value(field);return out;}
+struct Decoded {QMap<QString,QJsonObject> records;QJsonObject points,origins;int batches=0,rows=0,duplicates=0,conflicts=0;};
+inline QJsonObject reference(QString file,int line,int row){return {{"fileSha256",file},{"line",line},{"row",row}};}
+inline QPair<QJsonObject,QJsonObject> resolve(const Decoded& decoded,QJsonObject ref){
+ need(ref.keys()==QStringList({"fileSha256","line","row"}),"旧观察原件引用字段无效");auto line=ref["line"].toDouble(-1),row=ref["row"].toDouble(-1);need(ref["line"].isDouble()&&ref["row"].isDouble()&&line>=1&&line<=4096&&std::floor(line)==line&&row>=0&&row<200&&std::floor(row)==row,"旧观察行号无效");auto record=decoded.records.value(ref["fileSha256"].toString()+":"+QString::number(int(line)));auto rows=record["rows"].toArray();need(!record.isEmpty()&&row<rows.size(),"旧观察原件引用缺失");return {record,rows[int(row)].toObject()};
+}
+inline Decoded decode(QJsonObject files,const darkObservation::Cancel& c={},bool rejectConflicts=false){
+ need(files.size()<=64,"旧来源文件数量超限");Decoded result;QHash<QString,QJsonObject> seen;int totalBytes=0;
+ for(auto fileSha:files.keys()){active(c);auto f=files[fileSha].toObject();auto bytes=f["utf8"].toString().toUtf8();totalBytes+=bytes.size();need(totalBytes<=Limit&&f["sha256"]==fileSha&&sha(bytes)==fileSha&&QRegularExpression("^[0-9]{4}-[0-9]{2}-[0-9]{2}\\.jsonl$").match(f["name"].toString()).hasMatch()&&bytes.endsWith('\n'),"旧来源原字节/摘要/完整末尾不符");auto lines=bytes.split('\n');for(int line=0;line<lines.size();++line){if(lines[line].trimmed().isEmpty())continue;active(c);need(++result.batches<=4096,"旧批次数超限");auto rec=record(parse(lines[line]),f["name"].toString());result.records.insert(fileSha+":"+QString::number(line+1),rec);auto rows=rec["rows"].toArray();for(int i=0;i<rows.size();++i){need(++result.rows<=20000,"旧观察行数超限");auto row=rows[i].toObject();auto id=pointId(rec,row);auto origins=result.origins.value(id).toArray();origins.append(reference(fileSha,line+1,i));result.origins.insert(id,origins);if(seen.contains(id)){need(!rejectConflicts||seen[id]==row,"同原证券/交易日/行接收时刻/来源出现冲突，未静默选择");if(seen[id]==row)++result.duplicates;else ++result.conflicts;}else{seen.insert(id,row);result.points.insert(id,reference(fileSha,line+1,i));}}}}
+ return result;
+}
+inline QJsonObject sourceFiles(QString directory,QJsonArray manifest,const darkObservation::Cancel& c={}){
+ need(manifest.size()==7,"本轮必须显式核对7个来源文件，不静默遗漏");QJsonObject files;QSet<QString> names;
+ for(auto value:manifest){active(c);auto m=value.toObject();auto name=m["name"].toString();need(QRegularExpression("^[0-9]{4}-[0-9]{2}-[0-9]{2}\\.jsonl$").match(name).hasMatch()&&!names.contains(name),"来源文件名不是明确日期或重复");names.insert(name);auto path=QDir(directory).absoluteFilePath(name);auto raw=readFile(path,Limit,c);auto digest=sha(raw);need(digest==m["sha256"]&&m["bytes"].toDouble(-1)==raw.size(),"来源文件已变化或与保全摘要不符");files.insert(digest,QJsonObject{{"name",name},{"sourcePath",path},{"sha256",digest},{"utf8",QString::fromUtf8(raw)}});}
+ decode(files,c,true);return files;
+}
+inline QJsonObject empty(){return {{"schema","native-dark-observation-legacy/v1"},{"revision",0},{"files",QJsonObject{}},{"points",QJsonObject{}},{"handled",QJsonObject{}}};}
+inline Decoded validate(QJsonObject state,const darkObservation::Cancel& c={}){
+ need(state.keys()==empty().keys()&&state["schema"]=="native-dark-observation-legacy/v1"&&state["files"].isObject()&&state["points"].isObject()&&state["handled"].isObject(),"不是专用旧个股观察旁证档案");auto rev=state["revision"].toDouble(-1);need(state["revision"].isDouble()&&rev>=0&&rev<1e9&&std::floor(rev)==rev&&state["handled"].toObject().size()<=20000,"旧观察版本或凭据数量无效");auto decoded=decode(state["files"].toObject(),c);auto points=state["points"].toObject(),handled=state["handled"].toObject();for(auto id:handled.keys())need(QRegularExpression("^[a-f0-9]{64}$").match(id).hasMatch()&&QRegularExpression("^[a-f0-9]{64}$").match(handled[id].toString()).hasMatch(),"旧逐点处理凭据无效");for(auto id:points.keys()){active(c);auto raw=resolve(decoded,points[id].toObject());need(pointId(raw.first,raw.second)==id&&handled.contains(id),"旧观察身份或来源引用不符");}need(QJsonDocument(state).toJson(QJsonDocument::Compact).size()<=Limit,"旧观察旁证超过32MiB，不裁剪");return decoded;
+}
+inline QString path(QString directory){return directory+".legacy.json";}
+inline QJsonObject read(QString directory,const darkObservation::Cancel& c={}){active(c);auto file=path(directory);if(!QFileInfo::exists(file))return empty();auto state=parse(readFile(file,Limit,c));validate(state,c);return state;}
+inline QJsonObject preview(QString directory,QString sourceDirectory,QJsonArray manifest,QJsonObject native,const darkObservation::Cancel& c={}){
+ auto before=read(directory,c);auto files=sourceFiles(sourceDirectory,manifest,c);auto decoded=decode(files,c,true);auto allFiles=before["files"].toObject(),points=before["points"].toObject(),handled=before["handled"].toObject(),nativeRows=native["points"].toObject();int added=0,duplicates=0,deleted=0,nativeSame=0;QJsonArray conflicts;
+ for(auto digest:files.keys()){if(allFiles.contains(digest)){auto kept=allFiles[digest].toObject(),incoming=files[digest].toObject();need(kept["name"]==incoming["name"]&&kept["utf8"]==incoming["utf8"],"同SHA原件元数据冲突，保留旧档案");}else allFiles[digest]=files[digest];}
+ auto old=validate(before,c);
+ for(auto id:decoded.points.keys()){active(c);auto incoming=resolve(decoded,decoded.points[id].toObject());auto row=incoming.second;
+  if(points.contains(id)){auto kept=resolve(old,points[id].toObject());if(kept.second==row)++duplicates;else conflicts.append(QJsonObject{{"id",id},{"kept","existing-legacy"}});}
+  else if(nativeRows.contains(id)){bool same=true;for(auto value:nativeRows[id].toArray())same&=value.toObject()==row;if(same)++nativeSame;else conflicts.append(QJsonObject{{"id",id},{"kept","existing-native"}});}
+  else if(handled.contains(id))++deleted;
+  else{points[id]=decoded.points[id];++added;}
+  if(!handled.contains(id))handled[id]=fingerprint(row);
+ }
+ auto next=before;next["files"]=allFiles;next["points"]=points;next["handled"]=handled;if(next!=before)next["revision"]=before["revision"].toDouble()+1;validate(next,c);active(c);
+ return {{"schema","native-dark-observation-legacy-preview/v1"},{"sourceDirectory",QDir(sourceDirectory).absolutePath()},{"sourceFiles",manifest},{"expectedLegacyRevision",fingerprint(before)},{"expectedNativeRevision",native["revision"]},{"state",next},{"rawBatches",decoded.batches},{"rawRows",decoded.rows},{"sourceUniquePoints",decoded.points.size()},{"identicalSourceDuplicates",decoded.duplicates},{"added",added},{"unchanged",duplicates},{"nativeDuplicates",nativeSame},{"conflicts",conflicts},{"deletedKept",deleted}};
+}
+inline void write(QString directory,QJsonObject state,const darkObservation::Cancel& c,const std::function<void()>& beforeCommit={}){validate(state,c);auto file=path(directory);need(!QFileInfo(file).isSymLink()&&!QFileInfo(file).isJunction(),"旧观察旁证不能是外来链接");auto bytes=QJsonDocument(state).toJson(QJsonDocument::Compact);QSaveFile out(file);out.setDirectWriteFallback(false);need(out.open(QIODevice::WriteOnly)&&out.write(bytes)==bytes.size(),"旧观察旁证暂存失败，旧数据保留");active(c);if(beforeCommit)beforeCommit();active(c);need(out.commit(),"旧观察旁证原子提交失败");need(read(directory)==state,"旧观察旁证写后重读不符");}
+inline QJsonObject point(QString id,QJsonObject ref,const Decoded& decoded){auto raw=resolve(decoded,ref);auto row=raw.second;auto key=row["key"].toString();row["providerMarket"]=key.startsWith("sh")?QJsonValue(1):key.startsWith("sz")?QJsonValue(0):QJsonValue(QJsonValue::Null);row["venue"]=key.startsWith("sh")?"SH":key.startsWith("sz")?"SZ":"BJ";row["reconciled"]=true;
+ return {{"id",id},{"tradingDay",raw.first["tradingDay"]},{"savedAt",QJsonValue::Null},{"source",raw.first["source"]},{"sourceKey",darkObservation::hash(raw.first["source"])},{"scanStartedAt",QJsonValue::Null},{"batchReceivedAt",raw.first["receivedAt"]},{"paginationSnapshotConsistent",false},{"row",row},{"legacyOriginalRow",raw.second},{"legacyOriginalRecord",raw.first},{"legacyReference",ref},{"legacyOrigins",decoded.origins.value(id).toArray()},{"provenance","legacy-local-observation"},{"automaticTrading",false}};
+}
+inline QJsonObject catalog(QString directory,const darkObservation::Cancel& c={}){auto state=read(directory,c);auto decoded=validate(state,c);auto points=state["points"].toObject();QMap<QString,QJsonObject> stocks;QMap<QString,QSet<QString>> days;for(auto id:points.keys()){active(c);auto raw=resolve(decoded,points[id].toObject());auto key=raw.second["key"].toString();stocks[key]={{"key",key},{"name",raw.second["name"]}};days[key].insert(raw.first["tradingDay"].toString());}QJsonArray out;for(auto key:stocks.keys()){auto row=stocks[key];auto dates=days[key].values();dates.sort();std::reverse(dates.begin(),dates.end());row["dates"]=QJsonArray::fromStringList(dates);out.append(row);}return {{"schema","native-dark-observation-legacy-catalog/v1"},{"stocks",out},{"pointCount",points.size()},{"revision",fingerprint(state)}};}
+}

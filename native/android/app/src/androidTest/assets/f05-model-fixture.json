@@ -1,0 +1,117 @@
+{
+  "id": "SH:stock:600000",
+  "at": "2026-10-14T10:00:00+08:00",
+  "input": {
+    "schema": "native-paper-monitor-input/v1",
+    "source": "F05-constructed-contract-fixture",
+    "capturedAt": "2026-10-14T10:00:00+08:00",
+    "account": {
+      "id": "paper-1",
+      "name": "构造纸面账户",
+      "type": "paper",
+      "status": "active",
+      "cashBalance": 100000,
+      "cashSource": "manual",
+      "cashVerification": "unverified"
+    },
+    "ledger": {
+      "accountId": "paper-1",
+      "complete": true,
+      "revision": "fixture-opening-ledger-1",
+      "source": "F05-constructed-contract-fixture",
+      "asOf": "2026-10-14T10:00:00+08:00",
+      "transactions": [
+        {
+          "id": "opening-1",
+          "accountId": "paper-1",
+          "instrumentId": "SH:stock:600000",
+          "name": "构造示例股票",
+          "side": "buy",
+          "date": "2026-10-13",
+          "quantity": 1000,
+          "price": 10,
+          "fee": 5,
+          "tax": 0
+        }
+      ]
+    },
+    "quotes": {
+      "SH:stock:600000": {
+        "instrumentId": "SH:stock:600000",
+        "name": "构造示例股票",
+        "availability": "available",
+        "price": 10,
+        "observedAt": "2026-10-14T10:00:00+08:00",
+        "source": "F05-constructed-contract-fixture"
+      }
+    },
+    "constraints": {
+      "maxSingleWeight": 0.4
+    },
+    "session": {
+      "verified": true,
+      "open": true,
+      "continuous": true,
+      "date": "2026-10-14",
+      "source": "F05-constructed-calendar-fixture",
+      "checkedAt": "2026-10-14T10:00:00+08:00"
+    },
+    "hostEvidence": {
+      "policy": {
+        "revision": "fixture-explicit-policy-1"
+      }
+    }
+  },
+  "settings": {
+    "enabled": false,
+    "simulationEnabled": false,
+    "startMode": "today",
+    "activatedAt": "2026-10-14T10:00:00+08:00",
+    "schedule": [
+      "09:35",
+      "10:30",
+      "14:50"
+    ],
+    "maxPositions": 8,
+    "cashReserve": 0.2,
+    "candidateIds": []
+  },
+  "decision": {
+    "asOf": "2026-10-14T10:00:00+08:00",
+    "marketView": "neutral",
+    "cashTargetPercent": 20,
+    "orders": [
+      {
+        "code": "600000",
+        "action": "buy",
+        "targetPositionPercent": 30,
+        "confidence": 70,
+        "reason": "构造合同检查；不作投资判断",
+        "invalidation": "构造材料变化"
+      }
+    ],
+    "portfolioRisk": [
+      "受控输入，不是真实行情或模型判断"
+    ],
+    "nextReviewAt": "2026-10-14T10:30:00+08:00"
+  },
+  "markets": {
+    "SH:stock:600000": {
+      "instrumentId": "SH:stock:600000",
+      "origin": "fixture-constructed",
+      "meta": {
+        "source": "F05-constructed-one-minute",
+        "stale": false,
+        "previousClose": 10,
+        "checkedAt": "2026-10-14T10:01:10+08:00"
+      },
+      "rows": [
+        {
+          "time": "2026-10-14T10:01:00+08:00",
+          "price": 10,
+          "volume": 1000
+        }
+      ]
+    }
+  }
+}

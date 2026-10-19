@@ -1,0 +1,8 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <application>
+    <!-- Test APK only: synthetic JSON provider, no device files or credentials. -->
+    <provider android:name="org.marketreview.nativeapp.DelayedPlansProvider"
+      android:authorities="org.marketreview.nativeapp.test.source-plans"
+      android:exported="true" />
+  </application>
+</manifest>

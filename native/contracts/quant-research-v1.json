@@ -1,0 +1,42 @@
+{
+  "schema": "quant-research-contract/v1",
+  "entry": "P021",
+  "localEngine": "native-controlled-strategy-baseline/v1",
+  "families": ["moving-average-crossover","macd-crossover","rsi-rebound","volume-breakout","low-position-volume-stagnation"],
+  "dataset": {
+    "schema": "quant-native-dataset/v1",
+    "required": ["datasetId","source","adjustmentMode","membershipMode","asOf","bars"],
+    "barFields": ["date","code","name","open","high","low","close","volume"],
+    "identity": "six-digit code required; market/full instrument identity never guessed",
+    "duplicatePolicy": "reject code/date duplicates, never deduplicate silently",
+    "bounds": {"bars":100000,"symbols":1200,"fileBytes":33554432},
+    "legacyBridge": "native/tests/quant_research_legacy_bridge.py explicitly reads verified existing manifest/parquet, outputs a new package outside source directory; no runtime install/network/production writes",
+    "conversionLimitation": "embedded old file hashes are verified; parquet-to-bars conversion is not independently parsed on native device"
+  },
+  "config": {
+    "parameters": "1-64 explicit unique-ID combinations; settings retain legacy family parameter names",
+    "windows": "trainDays 63-2520, validationDays 21-504, testDays/stepDays 21-252, step >= test; maxFolds 3-12; minimumHistoryDays 20-504",
+    "selection": "retain last maxFolds; purge=1; validation-only parameter selection by return, drawdown, trade count, ID; non-overlapping test windows",
+    "liquidity": "first retained fold training history coverage descending, median volume descending, code ascending",
+    "simulation": "close signal, next available row open; T+1; 100-share lot; 10% rounded price limits; zero-volume suspension; pending exit retained across blocked days",
+    "valuation": "window-end estimate includes hypothetical exit fee/tax/slippage; unclosed holdings retained; max drawdown matches legacy per-symbol minimum, not aggregate equity curve",
+    "claim": "always exploratory, automaticTrading=false; no trained LightGBM/MASTER or online AI claim"
+  },
+  "archive": {
+    "schemas": ["webstock.quant.result.v1","webstock.quant.factor-lab.v1","webstock.quant.strategy-lab.v1","webstock.quant.signal-scan.v1"],
+    "preservation": "exact original UTF-8 text and actual-byte SHA256, all unknown fields retained",
+    "claim": "archived-original-only-no-artifact-verification; reading a validated field does not validate attachments, reproduce model or establish scientific validity"
+  },
+  "store": {
+    "schema": "quant-native-workspace/v1",
+    "writes": "independent atomic JSON + lock; dataset/archive immutable; job updates use full baseline CAS, frozen config/dataset/materials",
+    "draft": "independent view file, full baseline CAS; corrupt view does not auto-overwrite; explicit reread restores readable state",
+    "jobs": ["queued","running","completed","failed","cancelled","interrupted"],
+    "restart": "never auto-resume/retrain; pending old jobs can be explicitly marked interrupted",
+    "backup": "preview then atomic merge, stale preview rejects, same ID different content rejects; full original datasets/runs/evidence/material snapshots included"
+  },
+  "materials": "immutable namespace/kind/id/fingerprint/originalRecord descriptors verified by existing PersonMethod pure contract; source callback receives exact frozen version",
+  "reader": "24000-character/codepoint pages with complete underlying text and full export",
+  "exclusions": ["shared BusinessStore changes","paper-account trades","watchlist changes","THS automatic extraction","runtime install","provider collection","paid AI","uploads","automatic orders"],
+  "acceptance": "dedicated Qt/Java/actual legacy Python checks separate from root hosted UI/device checks; 5564 is emulator, no ARM acceptance inferred"
+}

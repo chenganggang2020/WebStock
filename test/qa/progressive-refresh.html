@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><title>行情刷新隔离回归</title><link rel="icon" href="data:,">
+<link rel="stylesheet" href="/css/styles.css"><link rel="stylesheet" href="/css/compact-terminal.css">
+<style>body{display:block;overflow:auto;padding:16px}main{max-width:1200px;margin:auto}#dashboardGlobalDetailChart{height:380px}#results{white-space:pre-wrap}#dashboardGlobalDetailOverlay{display:none}button{margin:4px}</style>
+</head><body class="compact-terminal"><main>
+<h2>行情刷新隔离回归</h2><p>仅合成测试数据，不连接业务服务、不写数据库；图表使用项目内真实 ECharts。</p>
+<button id="runChecks">运行刷新回归</button><pre id="results">尚未运行</pre>
+<div id="dashboardMarketSources"></div><div id="dashboardSentimentPanel"></div>
+<div id="dashboardGlobalSignals" class="dashboard-global-signals"></div>
+<section id="dashboardGlobalDetailOverlay"><h3 id="dashboardGlobalDetailTitle"></h3>
+<div id="dashboardGlobalDetailMeta"></div><div id="dashboardGlobalDetailSource"></div>
+<a id="dashboardGlobalDetailLink" hidden>原始来源</a><div id="marketBoardPeriods" class="market-board-periods">
+<button data-board-period="intraday">分时</button><button data-board-period="daily">日 K</button></div>
+<div id="dashboardGlobalDetailChart"></div></section>
+</main><script src="/vendor/echarts.min.js"></script><script src="/js/modules/chartTheme.js"></script>
+<script src="/js/modules/marketComparison.js"></script><script src="/js/modules/marketOverview.js"></script>
+<script src="/js/modules/dashboard.js"></script><script src="/js/modules/marketBoardPreferences.js"></script>
+<script src="/js/modules/marketBoard.js"></script><script src="/test/qa/progressive-refresh.js"></script>
+</body></html>

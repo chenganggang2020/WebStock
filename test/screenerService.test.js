@@ -1,0 +1,166 @@
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const os = require('node:os');
+const path = require('node:path');
+
+const testDbPath = path.join(os.tmpdir(), 'webstock-screener-service-' + process.pid + '.db');
+for (const suffix of ['', '-wal', '-shm']) {
+  try { fs.rmSync(testDbPath + suffix, { force: true }); } catch (error) {}
+}
+process.env.WEBSTOCK_DB_PATH = testDbPath;
+process.env.NODE_ENV = 'test';
+
+const db = require('../db');
+const screener = require('../services/screenerService');
+
+function risingKline(start, step) {
+  return Array.from({ length: 80 }, (_, index) => ({
+    close: start + index * step,
+    volume: index < 70 ? 10000 : 16000
+  }));
+}
+
+test('smart screener parses demand and promotes matching theme business candidates', () => {
+  db.prepare('DELETE FROM stock_profiles WHERE code IN (?, ?)').run('688362', '600584');
+  db.prepare(`
+    INSERT INTO stock_profiles (code, source, payload_json, fetched_at, updated_at)
+    VALUES (?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+  `).run('688362', 'test', JSON.stringify({
+    code: '688362',
+    name: '甬矽电子',
+    industry: '半导体',
+    boards: ['先进封装', '芯片封测'],
+    businessSummary: '主营集成电路封装测试服务，先进封装占比较高',
+    mainBusinessItems: [
+      { name: '集成电路封装测试服务', ratio: 82.1, reportDate: '2025-12-31' }
+    ],
+    tags: ['科创板', '先进封装', '半导体']
+  }));
+
+  const result = screener.runScreener({
+    strategy: 'sector-leader',
+    scope: 'all',
+    demand: '先进封装和半导体方向，只看科创板或创业板，不要已经涨太高，优先主营业务真实相关',
+    limit: 50,
+    marketSnapshot: [
+      { code: '688362', price: 25.2, change: 2.1, amount: 900000000 },
+      { code: '600584', price: 58.3, change: 9.8, amount: 2400000000 }
+    ],
+    klineSnapshot: [
+      { code: '688362', data: risingKline(20, 0.04) },
+      { code: '600584', data: risingKline(45, 0.22) }
+    ]
+  });
+
+  assert.ok(result.parsedDemand.themes.some(item => item.name === '先进封装'));
+  assert.deepEqual(result.parsedDemand.markets.sort(), ['创业板', '科创板']);
+  assert.equal(result.parsedDemand.avoidOverheated, true);
+
+  const preferred = result.candidates.find(item => item.code === '688362');
+  assert.ok(preferred, 'expected matched theme leader to be in candidates');
+  assert.equal(preferred.marketLabel, '科创板');
+  assert.ok(preferred.factorTags.includes('先进封装'));
+  assert.ok(preferred.factorTags.includes('主营匹配'));
+  assert.ok(preferred.reasons.some(reason => /主营|需求/.test(reason)));
+
+  const overheated = result.candidates.find(item => item.code === '600584');
+  assert.ok(overheated, 'expected overheated theme leader to remain visible for comparison');
+  assert.ok(overheated.risks.some(risk => /过热|涨幅/.test(risk)));
+  assert.ok(preferred.score > overheated.score);
+});
+
+test('smart screener all scope scans full stock list and excludes ST names', () => {
+  const result = screener.runScreener({
+    strategy: 'short-strong',
+    scope: 'all',
+    demand: '全市场短线强势',
+    limit: 50,
+    marketSnapshot: [
+      { code: '001356', price: 28.8, change: 8.8, amount: 2800000000 },
+      { code: '000004', price: 9.9, change: 9.9, amount: 3000000000 }
+    ],
+    klineSnapshot: [
+      { code: '001356', data: risingKline(20, 0.12) },
+      { code: '000004', data: risingKline(5, 0.1) }
+    ]
+  });
+
+  assert.ok(result.candidates.some(item => item.code === '001356'), 'expected non-ST stock beyond previous first-500 slice to be scanned');
+  assert.ok(!result.candidates.some(item => item.code === '000004'), 'expected ST stock to be excluded from screener universe');
+});
+
+test('smart screener reports data coverage and never treats missing quotes as zero percent moves', () => {
+  const result = screener.runScreener({
+    strategy: 'sector-leader',
+    scope: 'all',
+    demand: '先进封装主营业务相关',
+    limit: 50,
+    marketSnapshot: [
+      { code: '688362', price: null, change: null, amount: null }
+    ],
+    klineSnapshot: []
+  });
+
+  const candidate = result.candidates.find(item => item.code === '688362');
+  assert.ok(candidate);
+  assert.equal(candidate.dataCoverage.quote, false);
+  assert.equal(candidate.dataCoverage.technical, false);
+  assert.equal(candidate.factorTags.includes('涨跌幅'), false);
+  assert.equal(candidate.reasons.some(reason => /0\.00%/.test(reason)), false);
+  assert.ok(candidate.risks.some(risk => /行情.*缺失|缺少.*行情/.test(risk)));
+  assert.ok(result.coverage.universeCount > 5000);
+  assert.equal(result.coverage.quoteCount, 0);
+  assert.equal(result.coverage.technicalCount, 0);
+});
+
+test('technical strategies exclude stocks without technical data and report code quote technical coverage separately', () => {
+  const result = screener.runScreener({
+    strategy: 'breakout',
+    scope: 'all',
+    demand: '先进封装趋势观察',
+    limit: 50,
+    marketSnapshot: [
+      { code: '688362', price: 25.2, change: 2.1, amount: 900000000 },
+      { code: '600584', price: 58.3, change: 1.8, amount: 2400000000 }
+    ],
+    technicalSnapshotLimit: 50,
+    technicalSnapshotStoredCount: 81,
+    technicalSnapshotSentCount: 1,
+    klineSnapshot: [
+      { code: '688362', data: risingKline(20, 0.04) }
+    ]
+  });
+
+  assert.equal(result.coverage.technicalRequired, true);
+  assert.equal(result.coverage.codeCount, result.coverage.universeCount);
+  assert.equal(result.coverage.codeRate, 100);
+  assert.equal(result.coverage.quoteCount, 2);
+  assert.equal(result.coverage.technicalCount, 1);
+  assert.equal(result.coverage.candidatePoolCount, 1);
+  assert.equal(result.coverage.technicalSnapshotLimit, 50);
+  assert.equal(result.coverage.technicalSnapshotStoredCount, 81);
+  assert.match(result.coverage.limitations.join(' '), /单次最多 50 只/);
+  assert.equal(result.coverage.excludedForMissingTechnicalCount, result.coverage.universeCount - 1);
+  assert.deepEqual(result.candidates.map(item => item.code), ['688362']);
+  assert.equal(result.candidates[0].dataCoverage.code, true);
+});
+
+test('non-technical strategies keep candidates with missing technical data visible for manual review', () => {
+  const result = screener.runScreener({
+    strategy: 'sector-leader',
+    scope: 'leaders',
+    demand: '先进封装观察',
+    limit: 50,
+    marketSnapshot: [],
+    klineSnapshot: []
+  });
+
+  assert.equal(result.coverage.technicalRequired, false);
+  assert.equal(result.coverage.candidatePoolCount, result.coverage.universeCount);
+  assert.ok(result.candidates.length > 0);
+  assert.equal(result.candidates.every(item => item.dataCoverage.technical === false), true);
+  assert.equal(result.candidates.every(item => item.leaderCandidate && item.leaderCandidate.isConfirmedLeader === false), true);
+  assert.equal(result.candidates.some(item => item.factorTags.includes('板块龙头')), false);
+  assert.equal(result.candidates.some(item => item.factorTags.includes('人工观察名单')), true);
+});

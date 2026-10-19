@@ -1,0 +1,164 @@
+{
+  "schema": "native-candidate-background-sources/v1",
+  "mode": "current-observation",
+  "capturedAt": "2026-10-13T08:00:00.000Z",
+  "observedAt": "2026-10-13T08:00:00.000Z",
+  "selectedIds": [
+    "SH:stock:600001",
+    "SZ:stock:000001"
+  ],
+  "accountScope": {
+    "kind": "explicit-ledger-accounts",
+    "accountIds": [
+      "account-A"
+    ]
+  },
+  "sources": {
+    "holdings": {
+      "status": "available",
+      "source": "BusinessStore:fixture-current",
+      "complete": true,
+      "observedAt": "2026-10-13T08:00:00.000Z",
+      "data": {
+        "accounts": [
+          {
+            "id": "account-A",
+            "name": "账本字段样例",
+            "type": "ledger",
+            "updatedAt": "2026-10-12T03:00:00.000Z"
+          },
+          {
+            "id": "paper",
+            "name": "纸面账户字段样例",
+            "type": "paper"
+          }
+        ],
+        "ledgers": [
+          {
+            "accountId": "account-A",
+            "positions": [
+              {
+                "instrumentId": "SH:stock:600001",
+                "name": "字段样例",
+                "quantity": 100,
+                "cost": 1000,
+                "averageCost": 10,
+                "realized": 0,
+                "price": null,
+                "marketValue": null,
+                "unrealized": null,
+                "quoteDate": null,
+                "quoteTime": null
+              }
+            ],
+            "positionsComplete": true,
+            "asOf": "2026-10-12",
+            "basis": "all-local-recorded-transactions",
+            "sourceLabel": "完整本机已记录流水；不证明券商全部持仓",
+            "cashBalance": null,
+            "cashAsOf": ""
+          }
+        ],
+        "trades": [
+          {
+            "id": "trade-A",
+            "accountId": "account-A",
+            "instrumentId": "SH:stock:600001",
+            "name": "字段样例",
+            "side": "buy",
+            "date": "2026-10-12",
+            "price": 10,
+            "quantity": 100,
+            "fee": 0,
+            "tax": 0,
+            "updatedAt": "2026-10-12T03:00:00.000Z"
+          }
+        ]
+      },
+      "beforeHash": "f6f9a438393e98bed5a40c0ab7f4a8e20e11d19dbd0f1787df1e334a75862a38",
+      "afterHash": "f6f9a438393e98bed5a40c0ab7f4a8e20e11d19dbd0f1787df1e334a75862a38"
+    },
+    "recent": {
+      "status": "available",
+      "source": "RecentStore:fixture-current",
+      "complete": true,
+      "observedAt": "2026-10-13T08:00:00.000Z",
+      "data": {
+        "query": "",
+        "sort": "last_viewed",
+        "limit": 10000,
+        "rows": [
+          {
+            "id": "SH:stock:600001",
+            "code": "600001",
+            "name": "合成字段样例",
+            "symbol": "sh600001",
+            "viewCount": 2,
+            "lastViewedAt": "2026-10-13T07:00:00.000Z",
+            "createdAt": "2026-10-11T02:00:00.000Z",
+            "quote": {
+              "price": 10,
+              "checkedAt": "2026-10-13T08:00:00.000Z",
+              "source": "cached-fixture"
+            },
+            "origin": "native-active-view",
+            "canOpen": true
+          },
+          {
+            "id": "SZ:stock:000002",
+            "code": "000002",
+            "name": "合成字段样例",
+            "symbol": "sz000002",
+            "viewCount": 2,
+            "lastViewedAt": "2026-10-13T06:00:00.000Z",
+            "createdAt": "2026-10-11T02:00:00.000Z",
+            "quote": {
+              "price": 10,
+              "checkedAt": "2026-10-13T08:00:00.000Z",
+              "source": "cached-fixture"
+            },
+            "origin": "native-active-view",
+            "canOpen": true
+          }
+        ]
+      },
+      "beforeHash": "1b33ebdc1200d4e89cc073b4318407fe5a82b3701c3a850d5f3fea2959118811",
+      "afterHash": "1b33ebdc1200d4e89cc073b4318407fe5a82b3701c3a850d5f3fea2959118811"
+    },
+    "leaders": {
+      "status": "available",
+      "source": "SectorLeaderStore:fixture-current",
+      "complete": true,
+      "observedAt": "2026-10-13T08:00:00.000Z",
+      "data": {
+        "schema": "native-sector-leaders/v1",
+        "revision": 2,
+        "updatedAt": "2026-10-12T04:00:00.000Z",
+        "sectors": [
+          {
+            "id": "board-A",
+            "name": "人工板块字段样例",
+            "description": "非已核验商业龙头",
+            "sortOrder": 0,
+            "leaders": [
+              {
+                "id": "label-A",
+                "sectorId": "board-A",
+                "code": "600001",
+                "name": "字段样例",
+                "fullId": "SH:stock:600001",
+                "identityState": "confirmed-user",
+                "role": "总龙头",
+                "reason": "人工记录",
+                "note": "",
+                "weight": 1
+              }
+            ]
+          }
+        ]
+      },
+      "beforeHash": "0598403d51ee7654fdb3b9e15d9f91ee2ff533b576ca24700c681c2c826fec0d",
+      "afterHash": "0598403d51ee7654fdb3b9e15d9f91ee2ff533b576ca24700c681c2c826fec0d"
+    }
+  }
+}

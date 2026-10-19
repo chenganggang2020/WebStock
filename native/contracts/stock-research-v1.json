@@ -1,0 +1,41 @@
+{
+  "schema": "stock-research-contract/v1",
+  "scope": "P004 explicit-security local research and manual public company-profile consumer",
+  "storeSchema": "stock-research/v1",
+  "viewSchema": "stock-research-view/v1",
+  "identity": "explicit SH|SZ|BJ:stock|etf|index:six-digit-code with market/type consistency",
+  "clock": "source timestamps separate; capturedAt is local UTC capture only",
+  "notes": "explicit manual save with original baseline compare; per-security drafts survive reload/switch/reopen; explicit discard",
+  "snapshots": "immutable bundle plus manual snapshot text, independent of later quotes/docs",
+  "sourceLocation": "exact frozen doc expected record; host checks current-record equality and unsaved target draft before opening",
+  "import": "validate whole file; preview no write; cancel no write; stale entire store abort; duplicates skip; conflicts retain; atomic inserts",
+  "limits": {
+    "inputBytes": 33554432,
+    "bundleBytes": 16777216,
+    "viewBytes": 67108864,
+    "noteChars": 100000,
+    "rowsPerKind": 10000
+  },
+  "unavailable": "no zero/future fill, bare-code inference, automatic polling, credential/model/purchase/trade call; only explicit manual three-source public GET is enabled outside testing",
+  "remainingLegacy": "news/AI and manual tape calculation remain independent gaps unless existing verified native data/routes supplied; public F10 availability is separately unverified",
+  "companyProfile": {
+    "optionalBundleField": "companyProfile",
+    "schema": "native-stock-company-profile/v1",
+    "identity": "same full bundle id; stock only",
+    "sources": [
+      "CompanySurvey",
+      "CoreConception",
+      "BusinessAnalysis"
+    ],
+    "raw": "whole per-source JSON, original timestamps and report dates; overview excerpts plus paged original reader",
+    "fetch": "explicit manual update/cancel only;8s source transfer,12s action deadline; no redirect/retry",
+    "limits": {
+      "sourceBytes": 1048576,
+      "packetBytes": 8388608,
+      "readerPageChars": 32768
+    },
+    "cache": "30days; failure retains payload/fetchedAt; checked whole-file baseline and atomic replace, process-wide cooperative writer lock; external TOCTOU remains",
+    "timestampComparison": "exact seconds plus nanoseconds; original strings retained",
+    "history": "immutable research snapshots; no implicit source refresh"
+  }
+}

@@ -1,0 +1,206 @@
+# 📈 WebStock - A 股实时行情看板
+
+一套 Windows 优先的 A 股个人投研工作台，支持行情、持仓与交易核算、全市场筛选、专家知识库、可追溯量化研究、ChatGPT 交接、纸面组合跟踪和 Android 伴侣。
+
+[![GitHub Repo](https://img.shields.io/badge/GitHub-WebStock-blue?logo=github)](https://github.com/chenganggang2020/WebStock)
+![License](https://img.shields.io/badge/license-MIT-blue.svg)
+![Node.js](https://img.shields.io/badge/node.js-v18+-green.svg)
+![Version](https://img.shields.io/badge/version-1.0.0-orange.svg)
+
+---
+
+## ✨ 功能特性
+
+### 📊 实时行情
+- 实时股票价格和涨跌幅展示
+- 分时走势图和成交量图表
+- 五档买卖盘信息
+- 开盘价、收盘价、最高价、最低价
+- 价格涨跌颜色标注（红涨绿跌）
+
+### 🕯️ K 线分析
+- 日 K 线、周 K 线、月 K 线
+- 蜡烛图展示
+- 支持多种技术指标：
+  - 📈 均线（MA）- 自定义周期
+  - 🔴🔵 MACD
+  - 📊 KDJ
+  - 📉 RSI
+  - 📈 CCI
+  - 📊 OBV
+  - 📉 VWAP
+  - 📈 ATR
+
+### 🤖 AI 智能分析
+- 集成 OpenAI Chat Completions API
+- 自动生成个股分析报告
+- 流式输出，实时展示
+- AI 模拟模式（无 API Key 时可用）
+- 一键复制提示词功能
+
+### 🔍 智能搜索
+- 支持股票代码搜索
+- 支持中文名称搜索
+- 支持拼音首字母搜索
+- 支持全拼搜索
+
+### 🎨 界面特性
+- 浅色/深色主题切换
+- 响应式设计
+- 平滑动画效果
+- 清晰的信息层级
+
+---
+
+## 🚀 快速开始
+
+### 环境要求
+- Node.js 18.0 或更高版本
+
+### 安装步骤
+
+1. **克隆项目**
+   ```bash
+   git clone https://github.com/chenganggang2020/WebStock.git
+   cd WebStock
+   ```
+
+2. **安装依赖**
+   ```bash
+   npm install
+   ```
+
+3. **配置 AI（可选）**
+   
+   复制环境变量模板并填写 OpenAI API Key。不要把真实 key 写入仓库。
+
+   ```bash
+   cp .env.example .env
+   # 编辑 .env，填写 OPENAI_API_KEY
+   ```
+
+4. **启动服务**
+   ```bash
+   npm test
+   npm start
+   ```
+
+5. **访问应用**
+   
+   打开浏览器访问：`http://localhost:3000`
+
+### 桌面与安卓发行
+
+```powershell
+# Windows 安装版和便携版
+npm run dist:win:all
+
+# Android 原生伴侣 APK；首次构建会安装独立工具链
+npm run dist:android
+
+# 仅供源码调试：启动局域网配对服务
+npm run start:android
+```
+
+正式产物分别位于 `dist/installer`、`dist/portable` 和 `dist/android`。安装或打开 Windows 版后，在“设置 -> 手机连接（安卓）”中开启连接并复制完整配对地址，不需要 Node.js 或源码命令。Android 伴侣复用 Windows 上的同一份持仓和研究数据库，要求手机与电脑位于同一可信局域网；完整说明见 `docs/android-companion.md`。
+
+AI 研究平台的已实现能力、未部署外部框架和正式数据验收边界见 `docs/ai-research/AI_PLATFORM_DESIGN.md`。当前不连接券商，也不提交真实订单。
+
+---
+
+## 📖 使用说明
+
+### 股票搜索
+在左侧搜索框输入以下内容进行搜索：
+- 股票代码：`000001`
+- 中文名称：`平安银行`
+- 拼音首字母：`payh`
+- 全拼：`pinganyinhang`
+
+### 切换视图
+点击右上角按钮在「实时行情」和「历史 K 线」间切换。
+
+### 技术指标
+在 K 线视图中，从下拉菜单选择要显示的技术指标。
+
+### AI 分析
+点击「🤖 AI 分析」按钮，自动生成个股分析报告。
+
+---
+
+## 📁 项目结构
+
+```
+WebStock/
+├── server.js                    # 服务器入口
+├── index.html                   # 前端页面
+├── package.json                 # 项目配置
+├── ai-config.json               # AI 默认配置（不保存真实 key）
+├── .env.example                 # 环境变量模板
+├── Dockerfile                   # Docker 部署
+├── docker-compose.example.yml   # Docker Compose 示例
+├── docs/                        # 开发与部署文档
+├── stocks.json                  # 股票列表数据
+├── css/
+│   └── styles.css               # 样式文件
+├── js/
+│   ├── app.js                   # 前端入口
+│   └── modules/
+│       ├── state.js             # 状态管理
+│       ├── search.js            # 搜索模块
+│       ├── stockList.js         # 股票列表
+│       ├── indicators.js        # 技术指标计算
+│       ├── klineChart.js        # K 线图表
+│       ├── realtimeChart.js     # 实时行情
+│       └── analysis.js          # AI 分析
+└── routes/
+    ├── index.js                 # 路由汇总
+    ├── ai.js                    # AI 路由
+    ├── stocks.js                # 股票路由
+    ├── market.js                # 行情路由
+    ├── analysis.js              # 分析路由
+    └── cache.js                 # 缓存模块
+```
+
+---
+
+## 🛠️ 技术栈
+
+| 类别 | 技术 |
+|------|------|
+| 后端 | Node.js + Express |
+| 前端 | 原生 JavaScript + ECharts |
+| 数据来源 | 新浪财经 API |
+| AI | OpenAI Chat Completions |
+| 拼音 | tiny-pinyin |
+| 编码 | iconv-lite |
+
+---
+
+## 🚢 部署
+
+本地、PM2、Docker 与 Nginx 反向代理说明见 [docs/deployment.md](docs/deployment.md)。
+
+---
+
+## 📄 许可证
+
+MIT License - 详见 [LICENSE](LICENSE) 文件
+
+---
+
+## 🙏 致谢
+
+- [ECharts](https://echarts.apache.org/) - 强大的图表库
+- [OpenAI](https://platform.openai.com/) - AI API
+- [新浪财经](https://finance.sina.com.cn/) - 数据源
+
+---
+
+## 📞 支持
+
+如果有问题或建议，欢迎提交 Issue！
+
+---
+
+**注意**: 本项目仅供学习和研究使用，不构成任何投资建议。投资有风险，入市需谨慎。

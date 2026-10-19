@@ -1,0 +1,220 @@
+{
+  "topics": [
+    {
+      "id": "old-topic",
+      "name": "旧产业完整名称",
+      "aliases": [
+        "旧别名"
+      ],
+      "sourceUrls": [
+        "https://example.org/a"
+      ],
+      "enabled": true,
+      "intervalMinutes": 1440,
+      "lastAttemptAt": "2026-10-13T03:00:00.000Z",
+      "lastSuccessAt": "2026-10-13T03:00:00.000Z",
+      "nextDueAt": "2026-10-14T03:00:00.000Z",
+      "currentVersionId": "v1",
+      "config": {
+        "notes": "保留原配置"
+      }
+    }
+  ],
+  "evidence": [
+    {
+      "id": "e1",
+      "canonicalUrl": "https://example.org/a",
+      "contentSha256": "eb770e86c6137c06eec8c91d8b12d68bfa1e7946178bda65e03e56a229d7b071",
+      "createdAt": "2026-10-13T01:00:00.000Z",
+      "payload": {
+        "id": "e1",
+        "status": "fetched",
+        "requestedUrl": "https://example.org/a",
+        "finalUrl": "https://example.org/a",
+        "text": "原始中文来源。产品甲具有完整公开出处。",
+        "contentSha256": "eb770e86c6137c06eec8c91d8b12d68bfa1e7946178bda65e03e56a229d7b071",
+        "fetchedAt": "2026-10-13T01:00:00.000Z",
+        "publishedAt": "2026-10-12T02:00:00.000Z",
+        "createdAt": "2026-10-13T01:00:00.000Z"
+      }
+    },
+    {
+      "id": "e2",
+      "canonicalUrl": "https://example.org/b",
+      "contentSha256": "48464a688adbb42562d33044cf6016871a0eadd87a6eae6c4c00c8bb0f60aa9c",
+      "createdAt": "2026-10-13T01:00:00.000Z",
+      "payload": {
+        "id": "e2",
+        "status": "fetched",
+        "requestedUrl": "https://example.org/b",
+        "finalUrl": "https://example.org/b",
+        "text": "这是第二份独立留存的产业证据正文。",
+        "contentSha256": "48464a688adbb42562d33044cf6016871a0eadd87a6eae6c4c00c8bb0f60aa9c",
+        "fetchedAt": "2026-10-13T01:00:00.000Z",
+        "publishedAt": "2026-10-12T02:00:00.000Z",
+        "createdAt": "2026-10-13T01:00:00.000Z"
+      }
+    }
+  ],
+  "versions": [
+    {
+      "id": "v1",
+      "topicId": "old-topic",
+      "sequence": 1,
+      "previousVersionId": null,
+      "contentHash": "36c77fdcac6370a3f251728739601f8c5d7c92733c35678c99c90e001231f72d",
+      "createdAt": "2026-10-13T02:00:00.000Z",
+      "payload": {
+        "id": "v1",
+        "topicId": "old-topic",
+        "sequence": 1,
+        "previousVersionId": null,
+        "createdAt": "2026-10-13T02:00:00.000Z",
+        "knowledgeCutoffAt": "2026-10-13T00:00:00.000Z",
+        "evidenceIds": [
+          "e1"
+        ],
+        "relations": [
+          {
+            "id": "r1",
+            "topicId": "old-topic",
+            "stage": "components",
+            "product": "产品甲",
+            "company": {
+              "name": "档案公司",
+              "stockCode": null,
+              "identityEvidenceIds": []
+            },
+            "claim": "旧原判断",
+            "polarity": "supports",
+            "status": "candidate",
+            "evidenceIds": [
+              "e1"
+            ],
+            "evidenceRefs": [
+              {
+                "evidenceId": "e1",
+                "quote": "原始中文来源。产品甲具有完整公开出处。",
+                "url": "https://example.org/a"
+              }
+            ],
+            "metrics": []
+          }
+        ],
+        "gaps": [],
+        "analysis": {
+          "status": "recorded",
+          "evidenceIds": [
+            "e1"
+          ]
+        },
+        "run": {
+          "id": "run1",
+          "status": "completed"
+        },
+        "contentHash": "36c77fdcac6370a3f251728739601f8c5d7c92733c35678c99c90e001231f72d"
+      }
+    },
+    {
+      "id": "v2",
+      "topicId": "old-topic",
+      "sequence": 2,
+      "previousVersionId": "v1",
+      "contentHash": "c533f0902a1a46487d7b874970f1491d9c6d4def99dcdf495de907475be77681",
+      "createdAt": "2026-10-13T03:00:00.000Z",
+      "payload": {
+        "id": "v2",
+        "topicId": "old-topic",
+        "sequence": 2,
+        "previousVersionId": "v1",
+        "createdAt": "2026-10-13T03:00:00.000Z",
+        "knowledgeCutoffAt": "2026-10-13T00:00:00.000Z",
+        "evidenceIds": [
+          "e1",
+          "e2"
+        ],
+        "relations": [
+          {
+            "id": "r1",
+            "topicId": "old-topic",
+            "stage": "components",
+            "product": "产品甲",
+            "company": {
+              "name": "档案公司",
+              "stockCode": null,
+              "identityEvidenceIds": []
+            },
+            "claim": "新原判断",
+            "polarity": "supports",
+            "status": "verified",
+            "evidenceIds": [
+              "e1",
+              "e2"
+            ],
+            "evidenceRefs": [
+              {
+                "evidenceId": "e1",
+                "quote": "原始中文来源。产品甲具有完整公开出处。",
+                "url": "https://example.org/a"
+              },
+              {
+                "evidenceId": "e2",
+                "quote": "此引文并未出现在第二份原文",
+                "url": "https://example.org/b"
+              }
+            ],
+            "metrics": []
+          }
+        ],
+        "gaps": [],
+        "analysis": {
+          "status": "recorded",
+          "evidenceIds": [
+            "e1"
+          ]
+        },
+        "run": {
+          "id": "run2",
+          "status": "completed"
+        },
+        "contentHash": "c533f0902a1a46487d7b874970f1491d9c6d4def99dcdf495de907475be77681"
+      }
+    }
+  ],
+  "runs": [
+    {
+      "id": "run1",
+      "topicId": "old-topic",
+      "status": "completed",
+      "startedAt": "2026-10-13T02:00:00.000Z",
+      "completedAt": "2026-10-13T02:00:00.000Z",
+      "payload": {
+        "versionId": "v1",
+        "noChange": false,
+        "sourceResults": [
+          {
+            "url": "https://example.org/a",
+            "status": "fetched"
+          }
+        ]
+      }
+    },
+    {
+      "id": "run2",
+      "topicId": "old-topic",
+      "status": "completed",
+      "startedAt": "2026-10-13T03:00:00.000Z",
+      "completedAt": "2026-10-13T03:00:00.000Z",
+      "payload": {
+        "versionId": "v2",
+        "noChange": false,
+        "sourceResults": [
+          {
+            "url": "https://example.org/a",
+            "status": "fetched"
+          }
+        ]
+      }
+    }
+  ]
+}
