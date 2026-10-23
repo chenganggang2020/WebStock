@@ -58,8 +58,8 @@ protected:
     void paintEvent(QPaintEvent*) override {
         QPainter p(this);p.fillRect(rect(),palette().base());p.setRenderHint(QPainter::Antialiasing);
         QRectF area(95,18,std::max(10,width()-120),std::max(10,height()-55));
-        double low=std::numeric_limits<double>::infinity(),high=-low;
-        for(auto row:rows_) {auto v=row.toArray().at(column_);if(v.isDouble()){low=std::min(low,v.toDouble());high=std::max(high,v.toDouble());}}
+        double low=std::numeric_limits<double>::infinity(),high=-low;int first=-1,last=-1;
+        for(int i=0;i<rows_.size();++i) {auto v=rows_[i].toArray().at(column_);if(v.isDouble()){if(first<0)first=i;last=i;low=std::min(low,v.toDouble());high=std::max(high,v.toDouble());}}
         p.setPen(palette().text().color());
         if(!std::isfinite(low)){p.drawText(area,Qt::AlignCenter,"此列没有有效数值（可能预热不足）");return;}
         if(high==low){high+=std::max(1.,std::abs(high)*.01);low-=std::max(1.,std::abs(low)*.01);}
@@ -69,25 +69,27 @@ protected:
         p.setPen(palette().mid().color());p.drawRect(area);p.setPen(palette().text().color());
         p.drawText(QRectF(0,10,labelWidth,25),Qt::AlignRight,highText);
         p.drawText(QRectF(0,area.bottom()-15,labelWidth,25),Qt::AlignRight,lowText);
-        QPainterPath path;bool gap=true;
-        // Preserve gaps and extrema in pixel buckets rather than selecting every Nth bar.
-        int count=rows_.size();int bucket=std::max(1,count/std::max(1,int(area.width())));
-        for(int start=0;start<count;start+=bucket) {
-            int end=std::min(count,start+bucket),minIndex=start,maxIndex=start;double a=INFINITY,b=-INFINITY;bool missing=false;
-            for(int i=start;i<end;++i){auto value=rows_[i].toArray().at(column_);if(!value.isDouble()){missing=true;continue;}
-                if(value.toDouble()<a){a=value.toDouble();minIndex=i;}if(value.toDouble()>b){b=value.toDouble();maxIndex=i;}}
-            if(missing)gap=true;if(!std::isfinite(a))continue;
-            QList<int> indices{minIndex,maxIndex};std::sort(indices.begin(),indices.end());
-            for(int i:indices){double value=rows_[i].toArray()[column_].toDouble();QPointF point(area.left()+area.width()*i/std::max(1,count-1),area.bottom()-area.height()*(value-low)/(high-low));
-                if(gap){path.moveTo(point);gap=false;}else path.lineTo(point);}
+        QPainterPath path;QList<QPointF> isolated;
+        // Fit the visible axis to this column's observed interval. Process each
+        // contiguous segment separately so pixel buckets cannot bridge a gap.
+        int count=last-first+1;int bucket=std::max(1,count/std::max(1,int(area.width())));
+        auto pointAt=[&](int i){return QPointF(area.left()+area.width()*(i-first)/std::max(1,count-1),area.bottom()-area.height()*(rows_[i].toArray()[column_].toDouble()-low)/(high-low));};
+        for(int segment=first;segment<=last;){
+            if(!rows_[segment].toArray().at(column_).isDouble()){++segment;continue;}
+            int stop=segment+1;while(stop<=last&&rows_[stop].toArray().at(column_).isDouble())++stop;
+            path.moveTo(pointAt(segment));if(stop==segment+1)isolated.append(pointAt(segment));
+            for(int start=segment;start<stop;start+=bucket){
+                int end=std::min(stop,start+bucket),minIndex=start,maxIndex=start;double a=INFINITY,b=-INFINITY;
+                for(int i=start;i<end;++i){const double value=rows_[i].toArray().at(column_).toDouble();if(value<a){a=value;minIndex=i;}if(value>b){b=value;maxIndex=i;}}
+                QList<int> indices{start,minIndex,maxIndex,end-1};std::sort(indices.begin(),indices.end());
+                for(int i:indices)path.lineTo(pointAt(i));
+            }
+            segment=stop;
         }
         p.setPen(QPen(QColor("#28a5db"),1.7));p.drawPath(path);
-        if(count==1&&rows_[0].toArray().at(column_).isDouble()){
-            const auto value=rows_[0].toArray().at(column_).toDouble();
-            p.drawEllipse(QPointF(area.left(),area.bottom()-area.height()*(value-low)/(high-low)),3,3);
-        }
-        if(!rows_.isEmpty()){p.setPen(palette().text().color());p.drawText(QRectF(area.left(),area.bottom()+5,area.width()/2,25),rows_.first().toArray().first().toVariant().toString());
-            p.drawText(QRectF(area.center().x(),area.bottom()+5,area.width()/2,25),Qt::AlignRight,rows_.last().toArray().first().toVariant().toString());}
+        for(auto point:isolated)p.drawEllipse(point,3,3);
+        p.setPen(palette().text().color());p.drawText(QRectF(area.left(),area.bottom()+5,area.width()/2,25),rows_[first].toArray().first().toVariant().toString());
+        p.drawText(QRectF(area.center().x(),area.bottom()+5,area.width()/2,25),Qt::AlignRight,rows_[last].toArray().first().toVariant().toString());
     }
 };
 class VolumeProfilePlot : public QWidget {

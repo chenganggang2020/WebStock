@@ -110,10 +110,13 @@ class PluginTests(unittest.TestCase):
             for operation in manifest["operations"]:
                 with self.subTest(plugin=manifest["id"],operation=operation["id"]):
                     params=validate_parameters(operation,{})
-                    full=compute(manifest,operation,self.bars,params)["tables"][0]["rows"]
-                    prefix=compute(manifest,operation,self.bars.iloc[:350].copy(),params)["tables"][0]["rows"]
-                    np.testing.assert_allclose(np.array([r[1:] for r in full[:350]],dtype=float),
-                        np.array([r[1:] for r in prefix],dtype=float),rtol=1e-10,atol=1e-10,equal_nan=True)
+                    bars=self.bars
+                    if operation['id']=='rvol-at-time':
+                        from test_execution_indicators import session_fixture
+                        bars=session_fixture()
+                    full=compute(manifest,operation,bars,params)["tables"][0]["rows"]
+                    prefix=compute(manifest,operation,bars.iloc[:350].copy(),params)["tables"][0]["rows"]
+                    pd.testing.assert_frame_equal(pd.DataFrame(full[:350]),pd.DataFrame(prefix),check_dtype=False,rtol=1e-10,atol=1e-10)
 
     def test_prior_boundaries_and_zero_volume(self):
         bars=fixture(6);bars["high"]=[1,2,3,4,100,6];bars["low"]=[0,1,2,3,4,5];bars["volume"]=[10,20,30,40,1000,60]

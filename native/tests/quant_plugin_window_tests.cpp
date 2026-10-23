@@ -32,7 +32,9 @@ private slots:
             QVERIFY(entry);QTest::mouseClick(entry,Qt::LeftButton);
             auto widget=dynamic_cast<QuantPluginWidget*>(window.findChild<QWidget*>("quantPluginWidget"));QVERIFY(widget&&widget->isVisible());
             auto operations=widget->findChild<QComboBox*>("pluginOperation");QVERIFY(operations);
-            for(int i=0;i<operations->count();++i)if(operations->itemData(i).toJsonObject().value("id")=="rsi")operations->setCurrentIndex(i);
+            const auto requested=qEnvironmentVariable("WEBSTOCK_TEST_OPERATION");bool selected=false;
+            for(int i=0;i<operations->count();++i)if(operations->itemData(i).toJsonObject().value("id")== (requested.isEmpty()?QString("rsi"):requested)){operations->setCurrentIndex(i);selected=true;}
+            if(!requested.isEmpty())QVERIFY2(selected,"Requested operation is absent from installed package");
             widget->findChild<QLineEdit*>("pluginInput")->setText(csv);widget->findChild<QCheckBox*>("pluginClosedBars")->setChecked(true);
             QTest::mouseClick(widget->findChild<QPushButton*>("pluginRun"),Qt::LeftButton);
             auto tabs=widget->findChild<QTabWidget*>("pluginResults");QTRY_VERIFY_WITH_TIMEOUT(tabs->count()>=2,15000);

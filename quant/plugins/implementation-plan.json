@@ -9,8 +9,8 @@
     "indicatorFamilies": 110,
     "source": "indicator-scope.json",
     "indicatorReadiness": {
-      "formula_implemented_and_tested": 94,
-      "partial": 4,
+      "formula_implemented_and_tested": 96,
+      "partial": 2,
       "pending": 12
     },
     "installedPackages": 26
@@ -299,7 +299,7 @@
     },
     {
       "id": "indicator-coverage",
-      "status": "201_talib_47_core_20_panel_5_event_6_learning_9_statistical_3_deep_3_portfolio_risk_operations_verified",
+      "status": "201_talib_49_core_20_panel_5_event_6_learning_9_statistical_3_deep_3_portfolio_risk_operations_verified",
       "note": "Function counts are not catalogue-family completion counts."
     },
     {
@@ -380,7 +380,19 @@
         "native input acknowledgement and archive roundtrip"
       ],
       "limits": "Positive-capital segments only; fractional virtual securities; no complete A-share execution, funding or provider certification."
+    },
+    {
+      "id": "position-exits-and-session-volume",
+      "status": "two_operations_verified_in_cpp_host",
+      "checks": [
+        "prior ATR entry and next-bar ratchet activation",
+        "gap versus existing-stop touch",
+        "position reset and fees",
+        "exact prior-session matching and cumulative gap propagation",
+        "all 201 TA-Lib and 49 core operations prefix invariant"
+      ],
+      "limits": "Fixed scheduled entries are research inputs; no full market execution or externally certified session calendar."
     }
   ],
-  "latestPackageVersion": "0.17.0"
+  "latestPackageVersion": "0.18.0"
 }

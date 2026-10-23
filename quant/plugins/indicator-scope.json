@@ -736,11 +736,12 @@
       "overlap": "与 ATR、SAR、Supertrend 部分重叠。",
       "evidence": "公式/实现；未验证收益",
       "refs": "https://th.tradingview.com/support/solutions/43000773013/",
-      "status": "partial",
+      "status": "formula_implemented_and_tested",
       "implementations": [
-        "core-indicators:chandelier"
+        "core-indicators:chandelier",
+        "core-indicators:atr-position-exit"
       ],
-      "implementationNote": "已实现滚动参考线，持仓内只收紧/重置执行规则待实现"
+      "implementationNote": "滚动Chandelier参考与持仓内ATR只收紧退出分开；事先安排入场、前ATR初始线、次根生效、跳空按开盘、同根旧线触及和新头寸重置均已验证。不含完整A股撮合及融资/借券。"
     },
     {
       "id": 41,
@@ -828,11 +829,12 @@
       "overlap": "与传统量比近似，但统计时段未必一致。",
       "evidence": "公式/实现；未验证收益",
       "refs": "https://www.tradingview.com/support/solutions/43000635874-how-do-we-calculate-relative-volume-and-relative-volume-at-time/\nhttps://www.tradingview.com/support/solutions/43000705489-relative-volume-at-time/",
-      "status": "partial",
+      "status": "formula_implemented_and_tested",
       "implementations": [
-        "core-indicators:rvol"
+        "core-indicators:rvol",
+        "core-indicators:rvol-at-time"
       ],
-      "implementationNote": "同交易时刻相对量待实现"
+      "implementationNote": "尾随RVOL与显式会话锚点/交易slot/发布时点的同时刻相对量均实现。regular/cumulative只比此前完整会话，严格同偏移匹配；缺失不替代，不从日线推断，不认证外部交易日历。"
     },
     {
       "id": 46,

@@ -11,7 +11,8 @@ param(
     [string]$EventCsv,
     [string]$StatisticalCsv,
     [string]$EconometricCsv,
-    [string]$PortfolioCsv
+    [string]$PortfolioCsv,
+    [string]$IntradayCsv
 )
 $ErrorActionPreference = 'Stop'
 if (Test-Path -LiteralPath $Destination) { throw 'Destination exists; use a new preview directory.' }
@@ -37,6 +38,7 @@ if ($EventCsv) { Copy-Item -LiteralPath $EventCsv -Destination (Join-Path $taskR
 if ($StatisticalCsv) { Copy-Item -LiteralPath $StatisticalCsv -Destination (Join-Path $taskRelease 'historical-first1000-statistical.csv') }
 if ($EconometricCsv) { Copy-Item -LiteralPath $EconometricCsv -Destination (Join-Path $taskRelease 'synthetic-econometric-panel.csv') }
 if ($PortfolioCsv) { Copy-Item -LiteralPath $PortfolioCsv -Destination (Join-Path $taskRelease 'synthetic-portfolio-equity.csv') }
+if ($IntradayCsv) { Copy-Item -LiteralPath $IntradayCsv -Destination (Join-Path $taskRelease 'synthetic-intraday-sessions.csv') }
 if ($FundamentalExamples) {
     $taskExamples = Join-Path $taskRelease 'synthetic-fundamental-tests'
     New-Item -ItemType Directory -Path $taskExamples | Out-Null
@@ -60,6 +62,7 @@ WebStock 量化插件本机预览版
 统计单证券模型可先选 historical-first1000-statistical.csv；ARX/VAR/协整选择 synthetic-econometric-panel.csv（合成验算数据）。
 深度学习中的LSTM/Transformer也可先用这份1000根历史样本；GCN选择synthetic-econometric-panel.csv，并明确研究证券代码。
 组合权益风险选择synthetic-portfolio-equity.csv（合成费用/出入金账本）；风险预算组合选择synthetic-econometric-panel.csv。
+补充指标中的盘中同时刻相对量选择synthetic-intraday-sessions.csv（合成会话分钟线），字段见SESSION_EXECUTION.txt。
 
 本预览使用本目录内独立data，不修改原安装版的账户与数据库。
 移动整个目录后，需要把stock-data-root.json的directory更新到移动后的data绝对路径。
@@ -82,6 +85,7 @@ Copy-Item -LiteralPath (Join-Path $taskRepo 'quant\plugins\LEARNING_MODELS.txt')
 Copy-Item -LiteralPath (Join-Path $taskRepo 'quant\plugins\STATISTICAL_MODELS.txt') -Destination $taskRelease
 Copy-Item -LiteralPath (Join-Path $taskRepo 'quant\plugins\DEEP_MODELS.txt') -Destination $taskRelease
 Copy-Item -LiteralPath (Join-Path $taskRepo 'quant\plugins\PORTFOLIO_RISK.txt') -Destination $taskRelease
+Copy-Item -LiteralPath (Join-Path $taskRepo 'quant\plugins\SESSION_EXECUTION.txt') -Destination $taskRelease
 $taskSetup = Join-Path $taskRelease 'runtime-setup'
 New-Item -ItemType Directory -Path $taskSetup | Out-Null
 Copy-Item -LiteralPath (Join-Path $taskRepo 'quant\plugins\setup_runtime.py') -Destination $taskSetup

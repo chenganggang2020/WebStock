@@ -20,7 +20,7 @@ def number(key, default, minimum=2, maximum=10000, title=None, kind=None):
 def save_package(output, manifest, sources):
     content = {name: (HERE/source).read_bytes() for name, source in sources.items()}
     manifest.update(schema="webstock.plugin.manifest.v1", protocolVersion=1,
-                    entrypoint="worker.py", runtime="python", version="0.17.0",
+                    entrypoint="worker.py", runtime="python", version="0.18.0",
                     files={name: hashlib.sha256(raw).hexdigest() for name,raw in content.items()})
     package = {"schema": "webstock.plugin.package.v1", "manifest": manifest,
                "files": {name: base64.b64encode(raw).decode("ascii") for name,raw in content.items()}}
@@ -71,7 +71,8 @@ def main():
         "fibonacci-confirmed":"Fibonacci（已确认双锚点）","structure-events":"BOS / CHoCH / FVG / Order Block（明确规则）",
         "renko-close":"Renko（固定砖尺寸，收盘确认）","kalman-filter":"Kalman（只向前过滤）",
         "hurst-rs":"Hurst R/S（尾随收益窗口）","higuchi-dimension":"Higuchi 分维（尾随窗口）",
-        "permutation-entropy":"排列熵（严格序列）","fft-trailing":"FFT 周期摘要（尾随窗口）"}
+        "permutation-entropy":"排列熵（严格序列）","fft-trailing":"FFT 周期摘要（尾随窗口）",
+        "atr-position-exit":"持仓内ATR跟踪退出（次根生效）","rvol-at-time":"盘中同时刻相对量（严格会话匹配）"}
     core=[]
     for key,title in names.items():
         fields=[] if key in ("bbi","ao-ac","vpt","anchored-vwap-proxy","heikin-ashi") else [number("period",20,title="计算周期")]
@@ -103,11 +104,18 @@ def main():
         if key=="higuchi-dimension":fields=[number("period",128,17,2048,title="价格窗口"),number("maximumScale",8,2,64,title="最大尺度")]
         if key=="permutation-entropy":fields=[number("period",120,8,2048,title="价格窗口"),number("order",3,2,6,title="嵌入维度"),number("delay",1,1,100,title="嵌入延迟")]
         if key=="fft-trailing":fields=[number("period",64,8,2048,title="频谱窗口")]
+        if key=="atr-position-exit":fields=[number("period",14,2,1000,title="Wilder ATR周期"),number("multiple",3.,.1,20.,title="ATR倍数"),
+            {"id":"entryBars","title":"事先安排的入场根索引（逗号分隔）","type":"text","format":"text","minLength":1,"maxLength":512,"default":"30"},
+            {"id":"side","title":"持仓方向","type":"choice","default":"long","choices":["long","short"]},
+            number("quantity",100.,.001,1e6,title="固定数量"),number("feeBps",5.,0.,100.,title="单边费用基点")]
+        if key=="rvol-at-time":fields=[number("sessions",10,1,252,title="此前交易会话数"),number("barSeconds",60,1,3600,title="每根持续秒数"),
+            {"id":"mode","title":"成交量口径","type":"choice","default":"cumulative","choices":["cumulative","regular"]}]
         core.append({"id":key,"title":title,"formulaVersion":"webstock-"+key+"-v1","parameters":fields,
-                     "inputKind":"ohlcv-single-csv","outputKind":"indicator","description":"仅使用已完成K线的有版本公式。"})
+                     "inputKind":"ohlcv-single-csv","outputKind":"indicator","description":"额外会话字段或显式入场规则见SESSION_EXECUTION.txt。" if key in ("atr-position-exit","rvol-at-time") else "仅使用已完成K线的有版本公式。"})
     records.append(save_package(args.output,{"id":"org.webstock.core-indicators","name":"WebStock 补充指标","license":"Project source terms",
         "source":"https://github.com/chenganggang2020/WebStock","distributions":["numpy","pandas"],"operations":core},
-        {"worker.py":"worker.py","core_indicators.py":"core_indicators.py","temporal_indicators.py":"temporal_indicators.py","THIRD_PARTY_NOTICES.txt":"THIRD_PARTY_NOTICES.txt"}))
+        {"worker.py":"worker.py","core_indicators.py":"core_indicators.py","temporal_indicators.py":"temporal_indicators.py","execution_indicators.py":"execution_indicators.py",
+         "panel_contract.py":"panel_contract.py","SESSION_EXECUTION.txt":"SESSION_EXECUTION.txt","THIRD_PARTY_NOTICES.txt":"THIRD_PARTY_NOTICES.txt"}))
     records.append(save_package(args.output,{"id":"org.webstock.hikyuu","name":"Hikyuu 回测引擎","license":"Apache-2.0 / MIT component notices",
         "source":"https://github.com/fasiondog/hikyuu","distributions":["hikyuu","pandas"],"operations":[{
             "id":"sma-cross","title":"均线交叉 · 下一根开盘执行","formulaVersion":"hikyuu-sma-cross-next-open-v1",

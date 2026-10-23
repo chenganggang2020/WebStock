@@ -30,6 +30,9 @@ def wilder(s, n):
 
 
 def calculate(name, b, p):
+    from execution_indicators import OPERATIONS as execution_operations, calculate as execution_calculate
+    if name in execution_operations:
+        return execution_calculate(name,b,p)
     from temporal_indicators import OPERATIONS, calculate as temporal_calculate
     if name in OPERATIONS:
         return temporal_calculate(name, b, p)

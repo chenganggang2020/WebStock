@@ -4,7 +4,7 @@
     "python": {
       "tests": 12,
       "talibFunctions": 201,
-      "customOperations": 47,
+      "customOperations": 49,
       "checks": [
         "each function runs declared defaults",
         "prefix invariance on 350/400 bars",
@@ -134,6 +134,11 @@
       "passed": 9,
       "failed": 0,
       "operations": 3
+    },
+    "executionIndicators": {
+      "passed": 6,
+      "failed": 0,
+      "operations": 2
     }
   },
   "integrationRuns": [
@@ -269,14 +274,14 @@
     "built": true,
     "qt": "6.9.1",
     "compiler": "MinGW13.1.0",
-    "programSha256": "87893200d2ea920591e4976bca355deb083c6bee08988e55ffe77d6b619841b4",
+    "programSha256": "db79b618fc332e502e708814930af05e693160ea0f9571da038f0c004042c161",
     "domainTests": "passed",
     "legacyIndicators": "passed",
     "pluginPlatform": "passed, 15 QtTest cases, 0 skipped",
     "nativeWindow": "passed, quotes/classic and legacy focus redirect, real installed TA-Lib workflow",
-    "visualReview": "dark native portfolio window inspected; wrapping form retains input labels and file chooser"
+    "visualReview": "Position stop and intraday RVOL full native windows; selected-column finite interval, internal gaps remain disconnected"
   },
-  "latestPackageVersion": "0.17.0",
+  "latestPackageVersion": "0.18.0",
   "additionalEvidence": [
     "native-acceptance-0.8.1.json",
     "native-akshare-0.7.0.json",
@@ -316,7 +321,7 @@
     "leanDotnetRebuild": "fresh pinned checkout, 20 content-hash dependency locks, locked offline restore, original engine run and equity parity verified"
   },
   "nativeCoreExpansion010": "native-core-expansion-0.10.0.json",
-  "programSha256": "87893200d2ea920591e4976bca355deb083c6bee08988e55ffe77d6b619841b4",
+  "programSha256": "db79b618fc332e502e708814930af05e693160ea0f9571da038f0c004042c161",
   "nativePanelAcceptance": [
     "native-panel-0.11.0.json",
     "native-panel-0.11.1.json"
@@ -353,5 +358,18 @@
     "failed": 0,
     "skipped": 0,
     "scope": "actual full native entry, portfolio equity risk run and archive reopening"
+  },
+  "nativeExecutionAcceptance": "native-execution-0.18.0.json",
+  "nativeExecutionWindows": {
+    "atr-position-exit": {
+      "passed": 3,
+      "failed": 0,
+      "skipped": 0
+    },
+    "rvol-at-time": {
+      "passed": 3,
+      "failed": 0,
+      "skipped": 0
+    }
   }
 }
