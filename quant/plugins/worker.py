@@ -143,6 +143,9 @@ def validate_parameters(operation, supplied):
 
 
 def compute(manifest, operation, frame, parameters):
+    if manifest["id"] == "org.webstock.portfolio-risk":
+        from portfolio_risk import calculate
+        return calculate(operation["id"],frame,parameters)
     if manifest["id"] == "org.webstock.deep-models":
         from deep_models import calculate
         return calculate(operation["id"],frame,parameters)
@@ -254,6 +257,9 @@ def main():
     if query:
         if read_json(source)!={"schema":"webstock.plugin.query.v1","operationId":operation["id"],"parameters":parameters}:
             raise ValueError("Frozen query differs from parameters")
+    elif operation["inputKind"]=="portfolio-equity-csv":
+        if request["input"].get("knownValuationsOnly") is not True or request["input"].get("kind")!="portfolio-equity-csv":
+            raise ValueError("Known valuation acknowledgement and input kind required")
     elif operation["inputKind"]=="market-events-csv":
         if request["input"].get("knownEventsOnly") is not True or request["input"].get("kind")!="market-events-csv":
             raise ValueError("Known-event acknowledgement and input kind required")
@@ -265,6 +271,9 @@ def main():
     elif operation["inputKind"]=="market-panel-csv":
         from panel_contract import load_panel
         frame=load_panel(source)
+    elif operation["inputKind"]=="portfolio-equity-csv":
+        from portfolio_contract import load_portfolio
+        frame=load_portfolio(source)
     elif operation["inputKind"]=="market-events-csv":
         from event_contract import load_events
         frame=load_events(source)

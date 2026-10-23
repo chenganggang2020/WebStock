@@ -9,11 +9,11 @@
     "indicatorFamilies": 110,
     "source": "indicator-scope.json",
     "indicatorReadiness": {
-      "formula_implemented_and_tested": 92,
-      "partial": 5,
-      "pending": 13
+      "formula_implemented_and_tested": 94,
+      "partial": 4,
+      "pending": 12
     },
-    "installedPackages": 25
+    "installedPackages": 26
   },
   "completionDefinition": [
     "All 19 projects have runnable installed adapters with declared capabilities, inputs, versions and actual results.",
@@ -299,7 +299,7 @@
     },
     {
       "id": "indicator-coverage",
-      "status": "201_talib_47_core_20_panel_5_event_6_learning_9_statistical_3_deep_operations_verified",
+      "status": "201_talib_47_core_20_panel_5_event_6_learning_9_statistical_3_deep_3_portfolio_risk_operations_verified",
       "note": "Function counts are not catalogue-family completion counts."
     },
     {
@@ -367,7 +367,20 @@
         "explicit CPU wheel URL and SHA256, fresh runtime rebuild"
       ],
       "limits": "Fixed small architectures; not exhaustive neural models, trading performance, or point-in-time provider certification."
+    },
+    {
+      "id": "portfolio-risk-and-budget",
+      "status": "equity_contract_and_three_operations_verified_in_cpp_host",
+      "checks": [
+        "explicit net equity and end cashflows",
+        "independent downside and volatility math",
+        "diagonal and correlated risk-budget solution",
+        "next-input-close signals and delayed-availability rejection",
+        "fees/cash/positions reconcile without borrowing",
+        "native input acknowledgement and archive roundtrip"
+      ],
+      "limits": "Positive-capital segments only; fractional virtual securities; no complete A-share execution, funding or provider certification."
     }
   ],
-  "latestPackageVersion": "0.16.0"
+  "latestPackageVersion": "0.17.0"
 }

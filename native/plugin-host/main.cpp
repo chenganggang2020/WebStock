@@ -22,7 +22,7 @@ int main(int argc,char** argv){
             auto parts=parser.value("run").split('/');quantPlugin::require(parts.size()==2,"格式需要 pluginId/operationId");
             quantPlugin::Job job(root);job.changed=[&]{if(!job.active()){auto r=job.current();QTextStream(stdout)<<QJsonDocument(r).toJson(QJsonDocument::Compact)<<"\n";app.exit(r.value("status")=="completed"?0:1);}};
             auto parameters=parser.isSet("parameters")?quantPlugin::object(quantPlugin::read(parser.value("parameters"))):QJsonObject{};
-            job.start(parts[0],parts[1],parser.value("input"),parameters,{{"closedBarsOnly",true},{"knownEventsOnly",true},{"adjustment","unknown"},{"timezone","unspecified"},{"volumeUnit","unspecified"},{"source","explicit local CLI input"}},parser.value("timeout").toInt());return app.exec();
+            job.start(parts[0],parts[1],parser.value("input"),parameters,{{"closedBarsOnly",true},{"knownEventsOnly",true},{"knownValuationsOnly",true},{"adjustment","unknown"},{"timezone","unspecified"},{"volumeUnit","unspecified"},{"source","explicit local CLI input"}},parser.value("timeout").toInt());return app.exec();
         }
         QuantPluginWidget widget(root);widget.setWindowTitle("WebStock 量化插件 · 独立验收宿主");widget.resize(1280,850);widget.show();
         if(parser.isSet("screenshot"))QTimer::singleShot(500,&app,[&]{widget.grab().save(parser.value("screenshot"));app.quit();});

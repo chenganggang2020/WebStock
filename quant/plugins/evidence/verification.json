@@ -16,7 +16,7 @@
       ]
     },
     "qt": {
-      "passed": 14,
+      "passed": 15,
       "failed": 0,
       "skipped": 0,
       "checks": [
@@ -39,7 +39,8 @@
         "multi-security native form, source metadata and archive without replay",
         "event-specific acknowledgement and frozen input policy",
         "numeric plot fields exclude timestamps and sequence",
-        "native selected-range volume profile chart"
+        "native selected-range volume profile chart",
+        "portfolio-specific acknowledgement and frozen flow/fee input archive"
       ]
     },
     "temporal": {
@@ -128,6 +129,11 @@
       "failed": 0,
       "operations": 3,
       "repeatedInFreshRuntime": true
+    },
+    "portfolioRisk": {
+      "passed": 9,
+      "failed": 0,
+      "operations": 3
     }
   },
   "integrationRuns": [
@@ -263,14 +269,14 @@
     "built": true,
     "qt": "6.9.1",
     "compiler": "MinGW13.1.0",
-    "programSha256": "ff4d9224a3f69386aa72448ebaa0465607b7121f817e5c587305044f3e7bc61c",
+    "programSha256": "87893200d2ea920591e4976bca355deb083c6bee08988e55ffe77d6b619841b4",
     "domainTests": "passed",
     "legacyIndicators": "passed",
-    "pluginPlatform": "passed, 14 QtTest cases, 0 skipped",
+    "pluginPlatform": "passed, 15 QtTest cases, 0 skipped",
     "nativeWindow": "passed, quotes/classic and legacy focus redirect, real installed TA-Lib workflow",
-    "visualReview": "dark native model window inspected; plot axis width follows full signed labels"
+    "visualReview": "dark native portfolio window inspected; wrapping form retains input labels and file chooser"
   },
-  "latestPackageVersion": "0.16.0",
+  "latestPackageVersion": "0.17.0",
   "additionalEvidence": [
     "native-acceptance-0.8.1.json",
     "native-akshare-0.7.0.json",
@@ -310,7 +316,7 @@
     "leanDotnetRebuild": "fresh pinned checkout, 20 content-hash dependency locks, locked offline restore, original engine run and equity parity verified"
   },
   "nativeCoreExpansion010": "native-core-expansion-0.10.0.json",
-  "programSha256": "ff4d9224a3f69386aa72448ebaa0465607b7121f817e5c587305044f3e7bc61c",
+  "programSha256": "87893200d2ea920591e4976bca355deb083c6bee08988e55ffe77d6b619841b4",
   "nativePanelAcceptance": [
     "native-panel-0.11.0.json",
     "native-panel-0.11.1.json"
@@ -340,5 +346,12 @@
     "failed": 0,
     "skipped": 0,
     "scope": "quotes/classic/focus entry, actual LSTM training/prediction and frozen history reopening"
+  },
+  "nativeRiskAcceptance": "native-risk-0.17.0.json",
+  "nativeRiskWindow": {
+    "passed": 3,
+    "failed": 0,
+    "skipped": 0,
+    "scope": "actual full native entry, portfolio equity risk run and archive reopening"
   }
 }

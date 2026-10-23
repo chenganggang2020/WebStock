@@ -1,0 +1,66 @@
+WebStock 组合风险与分配 v1
+========================
+
+策略权益输入（portfolio-equity-csv）
+----------------------------------
+UTF-8 CSV，2至100000行，最多32列。必需字段：
+time,valuationat,availableat,equity,externalflow,flowtiming,feesincluded,currency,source
+time为决策可知时点；valuationat为估值时点；availableat为该估值实际可用时间。
+三者都必须带Z或显式时区偏移，valuationat<=availableat<=time，估值和决策分别严格递增。
+equity为已计交易费用的总权益，externalflow为本次估值末发生的外部净流入（流出为负）。
+flowtiming必须为end，feesincluded必须为true/1，currency单一CNY/USD/HKD，source非空。
+第一行是起始资本，externalflow须为0；权益和扣除末尾流量后的权益均须大于0。
+非正资本、清盘或再注资须明确分段；本接口不将这种资本重启接成普通收益。
+可选datasetkind=synthetic-test表明合成验算输入。不同币种不得隐式汇总。
+以上是对提供方声明的内部核验，不认证账本真实性、费用完整性或GIPS合规。
+
+权益风险
+--------
+r_t=(equity_t-externalflow_t)/equity_(t-1)-1；单位净值首根1，后续连乘(1+r)。
+drawdown=单位净值/截至当前的历史最高单位净值-1；最大回撤为截至当前最小drawdown。
+underwaterValuations记录低于历史峰值的连续估值次数（1e-12浮点容差）。
+年化波动为尾随period根收益样本标准差(ddof=1)*sqrt(annualBars)。
+下行偏差为sqrt(annualBars*mean(min(r-minimumReturnPerBar,0)^2))；窗口分母含全部观察。
+这不是“只取负收益再算标准差”。预热保留空值；annualBars由用户按真实估值频率指定。
+
+目标波动
+--------
+proposedExposure=min(maxExposure,targetVolatility/历史年化波动)，只用当时已知权益。
+零波动估计不自动加满仓，保留不可用状态。总敞口最大为1，不增加融资假设。
+这是下一时点的敞口建议，不是自动下单或已按新敞口执行的收益曲线。
+已经含费用的策略净收益不能机械缩放后冒充另一个可实现的策略。
+
+风险预算组合
+------------
+输入为PANEL_INPUT.txt的历史多证券面板。用户事先明确2至16个研究证券及对应正风险预算，
+预算按总和归一化。需要全部研究证券每个时点的同步价格，包括已退出成员但仍有仓位的证券。
+历史member决定当次目标成员，预算在当前成员间重新归一；无成员时目标为现金。
+研究集合由用户事先指定，不能视为自动消除幸存者偏差或代表全市场。
+
+每period根简单收益估计样本协方差(ddof=1)，乘annualBars。
+Sigma=(1-shrinkage)*sample+shrinkage*diag(sample)，再加mean(diag)*1e-6的对角脊。
+任何当前成员零方差、数据缺失、非正定或优化未收敛均保留不可用，不虚构零风险资产。
+CCD求min .5*x' Sigma x-sum(b_i log(x_i))，x>0，最后w=x/sum(x)。
+坐标取二次方程正根；最多1000轮，绝对一阶风险预算残差<1e-10才接受。
+记录每个成员的目标风险份额和 w_i*(Sigma*w)_i/(w' Sigma w)，可直接对照。
+再统一缩放所有风险资产权重：
+  exposure=min(maxExposure,targetVolatility/sqrt(w'Sigma w),maxSecurityWeight/max(w))
+剩余资金留现金，保留相对风险预算。不是复杂约束下的最优组合或自动杠杆策略。
+权重上限是调仓目标，之后价格变化可导致实际权重漂移；不会假装持续保持上限。
+
+执行与费用账本
+--------------
+当前收盘数据产生目标，下一输入根收盘按该根实际价格成交，绝不按信号根价格回填。
+下一根barend必须严格晚于信号可知time；延迟发布导致下根收盘已经过去时，任务拒绝这种成交回填。
+每rebalanceEvery根估计一次；估计失败继续持有原仓，下次计划时点再估计。
+支持小数份额；无融资、卖空、现金利息。费用=单边基点*实际成交名义金额。
+调仓后资本P用二分法求解：P=调仓前权益-feeRate*sum(abs(P*目标权重-旧持仓市值))。
+如此100%投资目标也会预留费用，不产生隐性借款。现金、持仓、每笔成交和累计费用均输出。
+末根信号不强行成交，不强制末仓清算；最后权益按市值计算。
+不包含A股T+1、整手、涨跌停/停牌、税费阶梯、冲击成本、券源或公司行动。
+该虚拟证券模型用来核对风险分配与账本；上线交易还需市场专用执行模块。
+
+参考
+----
+https://arxiv.org/abs/1311.4057
+https://www.gipsstandards.org/standards/gips-standards-for-firms/gips-standards-handbook-for-firms/

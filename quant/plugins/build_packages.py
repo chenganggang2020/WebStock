@@ -20,7 +20,7 @@ def number(key, default, minimum=2, maximum=10000, title=None, kind=None):
 def save_package(output, manifest, sources):
     content = {name: (HERE/source).read_bytes() for name, source in sources.items()}
     manifest.update(schema="webstock.plugin.manifest.v1", protocolVersion=1,
-                    entrypoint="worker.py", runtime="python", version="0.16.0",
+                    entrypoint="worker.py", runtime="python", version="0.17.0",
                     files={name: hashlib.sha256(raw).hexdigest() for name,raw in content.items()})
     package = {"schema": "webstock.plugin.package.v1", "manifest": manifest,
                "files": {name: base64.b64encode(raw).decode("ascii") for name,raw in content.items()}}
@@ -315,6 +315,23 @@ def main():
         "source":"https://github.com/chenganggang2020/WebStock","distributions":["numpy","pandas","torch"],"operations":deep},
         {"worker.py":"worker.py","deep_models.py":"deep_models.py","learning_models.py":"learning_models.py","panel_contract.py":"panel_contract.py",
          "DEEP_MODELS.txt":"DEEP_MODELS.txt","PANEL_INPUT.txt":"PANEL_INPUT.txt","THIRD_PARTY_NOTICES.txt":"THIRD_PARTY_NOTICES.txt"}))
+    risk=[]
+    for key,title in {"equity-drawdown":"策略净值回撤 / 下行风险", "target-volatility":"策略权益 · 目标波动敞口建议", "risk-budget":"风险预算组合 · 下一输入收盘调仓"}.items():
+        fields=[number("period",60,20,1000,title="风险估计窗口"),number("annualBars",252,1,100000,title="每年观察次数")]
+        if key!='risk-budget':fields.append(number("minimumReturnPerBar",0.,-.5,.5,title="每次观察最低目标收益"))
+        if key!='equity-drawdown':fields.extend([number("targetVolatility",.15,.001,2.,title="目标年化波动"),number("maxExposure",1.,.01,1.,title="总敞口上限")])
+        if key=='risk-budget':fields.extend([
+            {"id":"symbols","title":"事先指定研究证券（英文逗号）","type":"text","format":"text","minLength":3,"maxLength":512,"default":"000001,000002"},
+            {"id":"riskBudgets","title":"对应正风险预算（英文逗号）","type":"text","format":"text","minLength":3,"maxLength":512,"default":"1,1"},
+            number("rebalanceEvery",20,1,1000,title="每隔多少根评估调仓"),number("shrinkage",.1,0.,1.,title="协方差向对角收缩比例"),
+            number("maxSecurityWeight",.6,.01,1.,title="单证券权重上限"),number("capital",100000.,1.,1e10,title="初始虚拟资金"),number("feeBps",5.,0.,100.,title="单边费用基点")])
+        risk.append({"id":key,"title":title,"formulaVersion":"webstock-risk-"+key+"-v1","parameters":fields,
+            "inputKind":"market-panel-csv" if key=='risk-budget' else "portfolio-equity-csv","outputKind":"backtest" if key=='risk-budget' else 'indicator',
+            "description":"策略权益需显式费用与期末出入金；组合使用历史多证券面板，输出下一输入收盘成交和现金账本。见PORTFOLIO_RISK.txt。"})
+    records.append(save_package(args.output,{"id":"org.webstock.portfolio-risk","name":"WebStock 组合风险与分配","license":"Project source terms",
+        "source":"https://github.com/chenganggang2020/WebStock","distributions":["numpy","pandas"],"operations":risk},
+        {"worker.py":"worker.py","portfolio_contract.py":"portfolio_contract.py","portfolio_risk.py":"portfolio_risk.py","panel_contract.py":"panel_contract.py",
+         "PORTFOLIO_RISK.txt":"PORTFOLIO_RISK.txt","PANEL_INPUT.txt":"PANEL_INPUT.txt","THIRD_PARTY_NOTICES.txt":"THIRD_PARTY_NOTICES.txt"}))
     (args.output/"index.json").write_text(json.dumps(records,ensure_ascii=False,indent=2),encoding="utf-8")
     print(json.dumps(records,ensure_ascii=False))
 

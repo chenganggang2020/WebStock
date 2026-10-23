@@ -754,11 +754,12 @@
       "overlap": "风险评价指标，不是直接买入信号。",
       "evidence": "数学定义；应用为本次判断",
       "refs": "https://www.davidhbailey.com/dhbpapers/backtest-prob.pdf",
-      "status": "partial",
+      "status": "formula_implemented_and_tested",
       "implementations": [
-        "core-indicators:drawdown-downside"
+        "core-indicators:drawdown-downside",
+        "portfolio-risk:equity-drawdown"
       ],
-      "implementationNote": "已实现价格回撤与下行波动；策略净值输入和风险联动待实现"
+      "implementationNote": "价格与真实/回测策略权益口径分开；显式已含费用及期末外部出入金，单位净值、回撤和下行偏差已实现，现金流及独立手算测试通过。非正资本须分段；不认证外部账本真实性。"
     },
     {
       "id": 42,
@@ -808,9 +809,12 @@
       "overlap": "组合规则，不是新技术指标。",
       "evidence": "研究方向；未优化仓位",
       "refs": "https://fairmodel.econ.yale.edu/ec439/mosk.pdf",
-      "status": "pending",
-      "implementations": [],
-      "implementationNote": "未完成；不以目录条目或近似名称充当实现。"
+      "status": "formula_implemented_and_tested",
+      "implementations": [
+        "portfolio-risk:target-volatility",
+        "portfolio-risk:risk-budget"
+      ],
+      "implementationNote": "权益目标敞口建议与风险预算虚拟组合分开。训练期协方差、CCD正风险预算、敞口/单证券上限、下一输入收盘调仓及费用现金持仓对账已验证；延迟可知数据不得回填过去成交。不声称完整A股执行或收益优势。"
     },
     {
       "id": 45,
