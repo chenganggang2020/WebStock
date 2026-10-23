@@ -7,7 +7,8 @@ param(
     [Parameter(Mandatory=$true)][string]$PythonBase,
     [Parameter(Mandatory=$true)][string]$SampleCsv,
     [string]$PanelCsv,
-    [string]$FundamentalExamples
+    [string]$FundamentalExamples,
+    [string]$EventCsv
 )
 $ErrorActionPreference = 'Stop'
 if (Test-Path -LiteralPath $Destination) { throw 'Destination exists; use a new preview directory.' }
@@ -29,6 +30,7 @@ Copy-Item -LiteralPath $ExistingPluginRoot -Destination (Join-Path $taskData 'qu
 Copy-Item -LiteralPath $PluginPackages -Destination (Join-Path $taskRelease 'plugin-packages') -Recurse
 Copy-Item -LiteralPath $SampleCsv -Destination (Join-Path $taskRelease 'historical-fixture.csv')
 if ($PanelCsv) { Copy-Item -LiteralPath $PanelCsv -Destination (Join-Path $taskRelease 'synthetic-panel-test.csv') }
+if ($EventCsv) { Copy-Item -LiteralPath $EventCsv -Destination (Join-Path $taskRelease 'synthetic-events-test.csv') }
 if ($FundamentalExamples) {
     $taskExamples = Join-Path $taskRelease 'synthetic-fundamental-tests'
     New-Item -ItemType Directory -Path $taskExamples | Out-Null
@@ -48,6 +50,7 @@ WebStock 量化插件本机预览版
 可选择 historical-fixture.csv 运行；这是公开仓库的旧股票样本，不是实时行情或收益有效性证据。
 多证券插件可选择另附的 synthetic-panel-test.csv；这是合成测试数据，仅用于查看功能和核对计算。
 财务/事件功能的对应合成样本见 synthetic-fundamental-tests；每个文件仅包含同名功能需要的字段。
+逐笔与盘口插件选择 synthetic-events-test.csv；合成成交和盘口只用于公式验算，不是实际行情。
 
 本预览使用本目录内独立data，不修改原安装版的账户与数据库。
 移动整个目录后，需要把stock-data-root.json的directory更新到移动后的data绝对路径。
@@ -65,9 +68,11 @@ Copy-Item -LiteralPath (Join-Path $taskRepo 'quant\plugins\README.txt') -Destina
 Copy-Item -LiteralPath (Join-Path $taskRepo 'quant\plugins\TEMPORAL_FORMULAS.txt') -Destination $taskRelease
 Copy-Item -LiteralPath (Join-Path $taskRepo 'quant\plugins\PANEL_INPUT.txt') -Destination $taskRelease
 Copy-Item -LiteralPath (Join-Path $taskRepo 'quant\plugins\FUNDAMENTAL_INPUT.txt') -Destination $taskRelease
+Copy-Item -LiteralPath (Join-Path $taskRepo 'quant\plugins\EVENT_INPUT.txt') -Destination $taskRelease
 $taskSetup = Join-Path $taskRelease 'runtime-setup'
 New-Item -ItemType Directory -Path $taskSetup | Out-Null
 Copy-Item -LiteralPath (Join-Path $taskRepo 'quant\plugins\setup_runtime.py') -Destination $taskSetup
+Copy-Item -LiteralPath (Join-Path $taskRepo 'quant\plugins\setup_lean_runtime.py') -Destination $taskSetup
 Copy-Item -LiteralPath (Join-Path $taskRepo 'quant\plugins\runtime') -Destination (Join-Path $taskSetup 'runtime') -Recurse
 $taskMetadata = @{schema='webstock.plugin.preview.v1';programSha256=(Get-FileHash -LiteralPath $taskProgram -Algorithm SHA256).Hash;
     createdAt=[DateTime]::UtcNow.ToString('o');dataRoot=$taskData;runtimeScope='current-machine configured external environments';

@@ -16,7 +16,7 @@
       ]
     },
     "qt": {
-      "passed": 13,
+      "passed": 14,
       "failed": 0,
       "skipped": 0,
       "checks": [
@@ -36,7 +36,10 @@
         "query snapshots and result archives roundtrip without execution",
         "per-operation parameters restored without running a job",
         "tiny numeric defaults and restored values survive the native form down to 1e-12",
-        "multi-security native form, source metadata and archive without replay"
+        "multi-security native form, source metadata and archive without replay",
+        "event-specific acknowledgement and frozen input policy",
+        "numeric plot fields exclude timestamps and sequence",
+        "native selected-range volume profile chart"
       ]
     },
     "temporal": {
@@ -94,6 +97,13 @@
         "separate signed and absolute Beta",
         "five annual observations and historical size ranks"
       ]
+    },
+    "events": {
+      "passed": 7,
+      "failed": 0,
+      "operations": 5,
+      "syntheticEvents": 240,
+      "prefixEvents": 120
     }
   },
   "integrationRuns": [
@@ -229,14 +239,14 @@
     "built": true,
     "qt": "6.9.1",
     "compiler": "MinGW13.1.0",
-    "programSha256": "01afcc6cd223bfe84c5d67897865c1a9b25664051e243a19654af563c1e4d1a7",
+    "programSha256": "36870ca810f58a2da6541548c1ecd70230ca1fcd52e615643bf93ad7201fd15a",
     "domainTests": "passed",
     "legacyIndicators": "passed",
-    "pluginPlatform": "passed, 11 QtTest cases, 0 skipped",
+    "pluginPlatform": "passed, 14 QtTest cases, 0 skipped",
     "nativeWindow": "passed, quotes/classic and legacy focus redirect, real installed TA-Lib workflow",
     "visualReview": "native dark theme inspected and table row contrast repaired"
   },
-  "latestPackageVersion": "0.9.0",
+  "latestPackageVersion": "0.13.1",
   "additionalEvidence": [
     "native-acceptance-0.8.1.json",
     "native-akshare-0.7.0.json",
@@ -244,7 +254,10 @@
     "native-core-expansion-0.9.0.json",
     "runtime-rebuild-0.8.1.json",
     "runtime-parity-0.8.1.json",
-    "runtime-installations-0.9.0.json"
+    "runtime-installations-0.9.0.json",
+    "native-lean-locked-0.13.1.json",
+    "lean-locked-parity-0.13.1.json",
+    "lean-runtime-installation-0.13.1.json"
   ],
   "onlineDataChecks": {
     "dataContractTests": 3,
@@ -269,13 +282,17 @@
     "numericalParity": "matched baseline primary metric tables",
     "wheelHashesLocked": false,
     "secondMachineAcceptance": false,
-    "leanDotnetRebuild": "pending"
+    "leanDotnetRebuild": "fresh pinned checkout, 20 content-hash dependency locks, locked offline restore, original engine run and equity parity verified"
   },
   "nativeCoreExpansion010": "native-core-expansion-0.10.0.json",
-  "programSha256": "7b24d4ded4d570d8f740a529b2149eaf77784644ba2c5cf655ddce74c1bf8d7d",
+  "programSha256": "36870ca810f58a2da6541548c1ecd70230ca1fcd52e615643bf93ad7201fd15a",
   "nativePanelAcceptance": [
     "native-panel-0.11.0.json",
     "native-panel-0.11.1.json"
   ],
-  "nativeFundamentalAcceptance": "native-fundamentals-0.12.0.json"
+  "nativeFundamentalAcceptance": "native-fundamentals-0.12.0.json",
+  "nativeEventAcceptance": [
+    "native-events-0.13.0.json",
+    "native-events-0.13.1.json"
+  ]
 }

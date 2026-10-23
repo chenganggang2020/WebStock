@@ -1028,9 +1028,11 @@
       "overlap": "不是当前持仓成本，也不能识别持有人。",
       "evidence": "厂商说明；非独立效果证据",
       "refs": "https://www.tradingview.com/support/solutions/43000502040-volume-profile-indicators-basic-concepts/",
-      "status": "pending",
-      "implementations": [],
-      "implementationNote": "未完成；不以目录条目或近似名称充当实现。"
+      "status": "formula_implemented_and_tested",
+      "implementations": [
+        "event-research:volume-profile"
+      ],
+      "implementationNote": "真实成交价格箱、POC与明确扩展规则的价值区间；仅末次可知时点的选定区间快照，不回填历史；非筹码持仓成本。 合成手算、前缀/边界及C++宿主验证通过，真实来源完整性未认证。"
     },
     {
       "id": 57,
@@ -1044,9 +1046,11 @@
       "overlap": "不能从日线 OHLCV 精确恢复。",
       "evidence": "有实证文献；需本地复验",
       "refs": "https://arxiv.org/abs/1011.6402",
-      "status": "pending",
-      "implementations": [],
-      "implementationNote": "未完成；不以目录条目或近似名称充当实现。"
+      "status": "formula_implemented_and_tested",
+      "implementations": [
+        "event-research:quote-liquidity"
+      ],
+      "implementationNote": "完整显示盘口的价差、基点价差及1至10档股数/名义金额；没有把显示深度当作保证可成交量。 合成手算、前缀/边界及C++宿主验证通过，真实来源完整性未认证。"
     },
     {
       "id": 58,
@@ -1060,9 +1064,11 @@
       "overlap": "与盘口 OFI 不同；每笔成交本身总有买卖双方。",
       "evidence": "厂商估算定义；真实逐笔版需另验",
       "refs": "https://www.tradingview.com/support/solutions/43000725057-volume-delta/",
-      "status": "pending",
-      "implementations": [],
-      "implementationNote": "未完成；不以目录条目或近似名称充当实现。"
+      "status": "formula_implemented_and_tested",
+      "implementations": [
+        "event-research:trade-delta"
+      ],
+      "implementationNote": "输入主动成交方向及分类来源；未知方向单列，完整CVD遇未知保持空值，已分类CVD另列，会话重置。 合成手算、前缀/边界及C++宿主验证通过，真实来源完整性未认证。"
     },
     {
       "id": 59,
@@ -1076,9 +1082,11 @@
       "overlap": "不是 OBV、MFI 或整日资金流。",
       "evidence": "有实证文献；需本地复验",
       "refs": "https://arxiv.org/abs/1011.6402",
-      "status": "pending",
-      "implementations": [],
-      "implementationNote": "未完成；不以目录条目或近似名称充当实现。"
+      "status": "formula_implemented_and_tested",
+      "implementations": [
+        "event-research:order-flow-imbalance"
+      ],
+      "implementationNote": "Cont一档OFI公式，只有声明完整且序号连续的事件流；首快照初始化，尾随及累计按可知时点计算。 合成手算、前缀/边界及C++宿主验证通过，真实来源完整性未认证。"
     },
     {
       "id": 60,
@@ -1092,9 +1100,11 @@
       "overlap": "与 OFI 相关，但一个是状态，一个是变化。",
       "evidence": "定义与研究背景；预测性未验",
       "refs": "https://arxiv.org/abs/1011.6402",
-      "status": "pending",
-      "implementations": [],
-      "implementationNote": "未完成；不以目录条目或近似名称充当实现。"
+      "status": "formula_implemented_and_tested",
+      "implementations": [
+        "event-research:queue-imbalance"
+      ],
+      "implementationNote": "一档与指定深度数量差比总量、明确的一档数量加权价格；非已校准微观价格模型。 合成手算、前缀/边界及C++宿主验证通过，真实来源完整性未认证。"
     },
     {
       "id": 61,

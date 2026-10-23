@@ -143,6 +143,9 @@ def validate_parameters(operation, supplied):
 
 
 def compute(manifest, operation, frame, parameters):
+    if manifest["id"] == "org.webstock.event-research":
+        from event_research import calculate
+        return calculate(operation["id"],frame,parameters)
     if manifest["id"] == "org.webstock.panel-research":
         from panel_research import calculate
         return calculate(operation["id"],frame,parameters)
@@ -239,6 +242,9 @@ def main():
     if query:
         if read_json(source)!={"schema":"webstock.plugin.query.v1","operationId":operation["id"],"parameters":parameters}:
             raise ValueError("Frozen query differs from parameters")
+    elif operation["inputKind"]=="market-events-csv":
+        if request["input"].get("knownEventsOnly") is not True or request["input"].get("kind")!="market-events-csv":
+            raise ValueError("Known-event acknowledgement and input kind required")
     elif request["input"]["closedBarsOnly"] is not True:
         raise ValueError("Closed-bar acknowledgement required")
     print(json.dumps({"event": "progress", "message": "核验完成，正在计算", "percent": 15}), flush=True)
@@ -247,6 +253,9 @@ def main():
     elif operation["inputKind"]=="market-panel-csv":
         from panel_contract import load_panel
         frame=load_panel(source)
+    elif operation["inputKind"]=="market-events-csv":
+        from event_contract import load_events
+        frame=load_events(source)
     else:
         frame=load_bars(source)
     computed = compute(manifest, operation, frame, parameters)

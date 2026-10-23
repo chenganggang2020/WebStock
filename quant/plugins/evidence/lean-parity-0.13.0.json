@@ -1,0 +1,16 @@
+{
+  "schema": "webstock.plugin.runtime-parity.v1",
+  "absoluteTolerance": 1e-08,
+  "relativeTolerance": 1e-10,
+  "runs": [
+    {
+      "pluginId": "org.webstock.lean",
+      "baselineRunId": "plugin-3d17d095-6f09-4bfe-a300-1ff71b2a23c3",
+      "rebuiltRunId": "plugin-76e55320-66ea-4ff2-897a-a2ff85d61600",
+      "comparedTables": [
+        "equity"
+      ],
+      "status": "matched"
+    }
+  ]
+}

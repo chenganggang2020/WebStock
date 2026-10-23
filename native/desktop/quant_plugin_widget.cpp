@@ -79,8 +79,39 @@ protected:
                 if(gap){path.moveTo(point);gap=false;}else path.lineTo(point);}
         }
         p.setPen(QPen(QColor("#28a5db"),1.7));p.drawPath(path);
+        if(count==1&&rows_[0].toArray().at(column_).isDouble()){
+            const auto value=rows_[0].toArray().at(column_).toDouble();
+            p.drawEllipse(QPointF(area.left(),area.bottom()-area.height()*(value-low)/(high-low)),3,3);
+        }
         if(!rows_.isEmpty()){p.setPen(palette().text().color());p.drawText(QRectF(area.left(),area.bottom()+5,area.width()/2,25),rows_.first().toArray().first().toVariant().toString());
             p.drawText(QRectF(area.center().x(),area.bottom()+5,area.width()/2,25),Qt::AlignRight,rows_.last().toArray().first().toVariant().toString());}
+    }
+};
+class VolumeProfilePlot : public QWidget {
+    QJsonArray rows_;
+    int lower_,upper_,volume_,valueArea_;
+public:
+    explicit VolumeProfilePlot(const QJsonObject& table,QWidget* parent):QWidget(parent),rows_(table.value("rows").toArray()){
+        auto columns=table.value("columns").toArray();
+        lower_=columns.toVariantList().indexOf("priceLower");upper_=columns.toVariantList().indexOf("priceUpper");
+        volume_=columns.toVariantList().indexOf("volumeShares");valueArea_=columns.toVariantList().indexOf("inValueArea");setMinimumHeight(250);
+    }
+protected:
+    void paintEvent(QPaintEvent*) override {
+        QPainter p(this);p.fillRect(rect(),palette().base());
+        if(rows_.isEmpty()||lower_<0||upper_<0||volume_<0||valueArea_<0)return;
+        QRectF area(95,25,std::max(10,width()-120),std::max(10,height()-65));
+        double maximum=0;for(auto row:rows_)maximum=std::max(maximum,row.toArray().at(volume_).toDouble());
+        if(maximum<=0)return;
+        p.setPen(palette().mid().color());p.drawRect(area);p.setPen(palette().text().color());
+        p.drawText(QRectF(0,area.top()-12,90,25),Qt::AlignRight,QString::number(rows_.last().toArray().at(upper_).toDouble(),'g',10));
+        p.drawText(QRectF(0,area.bottom()-12,90,25),Qt::AlignRight,QString::number(rows_.first().toArray().at(lower_).toDouble(),'g',10));
+        p.drawText(QRectF(area.left(),area.bottom()+7,area.width(),25),QString("成交股数（逐价格箱）；蓝色为价值区间 · 最大箱 %1 股").arg(QString::number(maximum,'g',10)));
+        double height=area.height()/rows_.size();
+        for(int i=0;i<rows_.size();++i){auto row=rows_[i].toArray();
+            p.fillRect(QRectF(area.left(),area.bottom()-(i+1)*height,area.width()*row.at(volume_).toDouble()/maximum,std::max(.25,height*.9)),
+                row.at(valueArea_).toBool()?QColor("#28a5db"):palette().mid().color());
+        }
     }
 };
 }
@@ -107,7 +138,9 @@ QuantPluginWidget::QuantPluginWidget(QString root,QWidget* parent):QWidget(paren
     pathRow("历史K线 CSV",input_,"CSV (*.csv)");input_->setObjectName("pluginInput");
     adjustment_=new QComboBox;for(auto pair:QList<QPair<QString,QString>>{{"尚未核实","unknown"},{"不复权","unadjusted"},{"前复权","forward"},{"后复权","backward"}})adjustment_->addItem(pair.first,pair.second);form->addRow("价格口径",adjustment_);
     closed_=new QCheckBox("确认输入仅包含已完成的K线");closed_->setObjectName("pluginClosedBars");form->addRow(closed_);
-    connect(closed_,&QCheckBox::toggled,this,[this](bool checked){closed_->setText(checked?"已确认：仅包含已完成K线":"确认输入仅包含已完成的K线");});
+    connect(closed_,&QCheckBox::toggled,this,[this](bool checked){
+        const bool events=operation_.value("inputKind")=="market-events-csv";
+        closed_->setText(events?(checked?"已确认：事件已发生且当时可知":"确认输入事件已发生且当时可知"):(checked?"已确认：仅包含已完成K线":"确认输入仅包含已完成的K线"));});
     timeout_=new QSpinBox;timeout_->setRange(5,3600);timeout_->setValue(600);form->addRow("最长运行秒数",timeout_);
     auto parameterPanel=new QWidget;parameters_=new QFormLayout(parameterPanel);parameters_->setContentsMargins(0,0,0,0);form->addRow(parameterPanel);
     auto right=new QWidget;auto rightLayout=new QVBoxLayout(right);history_=new QListWidget;history_->setObjectName("pluginHistory");history_->setMaximumHeight(140);rightLayout->addWidget(history_);
@@ -148,9 +181,12 @@ void QuantPluginWidget::selectOperation(){
     fields_.clear();while(parameters_->rowCount())parameters_->removeRow(0);
     operation_=operations_->currentData().toJsonObject();description_->setText(operation_.value("description").toString());
     const bool query=operation_.value("inputKind")=="parameters-only";
-    form_->setRowVisible(input_->parentWidget(),!query);form_->setRowVisible(adjustment_,!query&&operation_.value("inputKind")!="market-panel-csv");form_->setRowVisible(closed_,!query);
+    const bool events=operation_.value("inputKind")=="market-events-csv";
+    form_->setRowVisible(input_->parentWidget(),!query);form_->setRowVisible(adjustment_,operation_.value("inputKind")=="ohlcv-single-csv");form_->setRowVisible(closed_,!query);
+    closed_->setChecked(false);
+    closed_->setText(events?"确认输入事件已发生且当时可知":"确认输入仅包含已完成的K线");
     if(auto label=qobject_cast<QLabel*>(form_->labelForField(input_->parentWidget())))
-        label->setText(operation_.value("inputKind")=="market-panel-csv"?"历史多证券 CSV":"历史K线 CSV");
+        label->setText(events?"逐笔成交 / 盘口 CSV":operation_.value("inputKind")=="market-panel-csv"?"历史多证券 CSV":"历史K线 CSV");
     QJsonObject saved;
     if(!operation_.isEmpty()){
         auto p=repository_.plugin(plugins_->currentData().toString());
@@ -180,7 +216,7 @@ void QuantPluginWidget::start(){
     repository_.configure(plugins_->currentData().toString(),runtime_->text(),enabled_->isChecked());QJsonObject parameters;
     for(auto i=fields_.begin();i!=fields_.end();++i){if(auto s=qobject_cast<QDoubleSpinBox*>(i.value()))parameters[i.key()]=s->value();else if(auto edit=qobject_cast<QLineEdit*>(i.value()))parameters[i.key()]=edit->text();else parameters[i.key()]=QJsonValue::fromVariant(qobject_cast<QComboBox*>(i.value())->currentData());}
     job_.start(plugins_->currentData().toString(),operation_.value("id").toString(),input_->text(),parameters,
-               {{"closedBarsOnly",closed_->isChecked()},{"adjustment",adjustment_->currentData().toString()},
+               {{"closedBarsOnly",closed_->isChecked()},{"knownEventsOnly",closed_->isChecked()},{"adjustment",adjustment_->currentData().toString()},
                 {"timezone","unspecified"},{"volumeUnit","unspecified"},{"source","user-selected local CSV"}},timeout_->value());
 }
 void QuantPluginWidget::showResult(const QString& id){
@@ -190,11 +226,19 @@ void QuantPluginWidget::showResult(const QString& id){
         auto saveTable=new QPushButton("导出此表 CSV");layout->addWidget(saveTable,0,Qt::AlignLeft);
         connect(saveTable,&QPushButton::clicked,this,[this,table]{guard([this,table]{auto path=QFileDialog::getSaveFileName(this,"导出当前结果表",table.value("id").toString()+".csv","CSV (*.csv)");if(!path.isEmpty())quantPlugin::write(path,quantPlugin::tableCsv(table));});});
         if(QStringList{"indicators","equity","weight-index","native-dsb-bars","market-data"}.contains(table.value("id").toString())||table.value("id").toString().startsWith("features-")){
-            auto select=new QComboBox;auto columns=table.value("columns").toArray();for(int i=1;i<columns.size();++i)select->addItem(columns[i].toString(),i);layout->addWidget(select);
-            auto plot=new SeriesPlot(table.value("rows").toArray(),panel);layout->addWidget(plot);connect(select,&QComboBox::currentIndexChanged,plot,[plot,select]{plot->setColumn(select->currentData().toInt());});
-            for(int i=1;i<columns.size();++i)if(columns[i].toString()=="equity")select->setCurrentIndex(select->findData(i));
-            plot->setColumn(select->currentData().toInt());
+            auto select=new QComboBox;select->setObjectName("pluginPlotColumn");auto columns=table.value("columns").toArray();auto rows=table.value("rows").toArray();
+            for(int i=1;i<columns.size();++i){
+                if(QStringList{"sequence","symbol","session","eventtime","eventTime","reportEnd","rangeStart","rangeEnd"}.contains(columns[i].toString()))continue;
+                for(auto row:rows)if(row.toArray().at(i).isDouble()){select->addItem(columns[i].toString(),i);break;}
+            }
+            if(select->count()){
+                layout->addWidget(select);auto plot=new SeriesPlot(rows,panel);layout->addWidget(plot);
+                connect(select,&QComboBox::currentIndexChanged,plot,[plot,select]{plot->setColumn(select->currentData().toInt());});
+                for(int i=1;i<columns.size();++i)if(columns[i].toString()=="equity")select->setCurrentIndex(select->findData(i));
+                plot->setColumn(select->currentData().toInt());
+            }else delete select;
         }
+        if(table.value("id")=="selected-range-profile")layout->addWidget(new VolumeProfilePlot(table,panel));
         auto view=new QTableView;view->setModel(new ResultModel(table,view));view->horizontalHeader()->setSectionResizeMode(QHeaderView::Interactive);view->horizontalHeader()->setDefaultSectionSize(150);view->setAlternatingRowColors(false);view->setSelectionBehavior(QAbstractItemView::SelectRows);layout->addWidget(view,1);
         auto id=table.value("id").toString();
         results_->addTab(panel,id=="indicators"?"指标曲线与明细":id=="equity"?"权益曲线":id=="weight-index"?"权重单利指数":id=="daily-attribution"?"每日收益归因":id);

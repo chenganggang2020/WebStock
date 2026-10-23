@@ -20,6 +20,7 @@ def main():
     p.add_argument("--lean-directory",type=Path,help="Local LEAN source tree with Release build and Data")
     p.add_argument("--runtime-map",type=Path,help="Optional JSON map from runtime name to exact Python executable")
     p.add_argument("--panel-data",type=Path,help="Explicit historical multi-security CSV; panel package skipped if absent")
+    p.add_argument("--event-data",type=Path,help="Explicit actual-trade/quote event CSV; event package skipped if absent")
     p.add_argument("--operation-inputs",type=Path,help="Optional JSON operation-id to input-CSV path map")
     args=p.parse_args()
     mapping={"talib":("data-tools","rsi"),"core-indicators":("data-tools","donchian-prior"),
@@ -30,7 +31,7 @@ def main():
         "vnpy":("vnpy","rsi"),"vnpy-ctastrategy":("vnpy","sma-limit"),"qlib":("qlib","alpha158"),
         "zipline-reloaded":("zipline-reloaded","sma-close"),"rqalpha":("rqalpha","sma-close"),
         "wtpy":("wtpy310","daily-dsb"),"wondertrader":("wtpy310","sma-native"),"akshare":("data-tools","daily-eastmoney"),"lean":("data-tools","sma-close"),
-        "panel-research":("data-tools","market-breadth")}
+        "panel-research":("data-tools","market-breadth"),"event-research":("data-tools","quote-liquidity")}
     environment=dict(os.environ,QT_QPA_PLATFORM="offscreen",PYTHONUTF8="1")
     runtime_map=json.loads(args.runtime_map.read_text(encoding="utf-8")) if args.runtime_map else {}
     operation_inputs=json.loads(args.operation_inputs.read_text(encoding="utf-8")) if args.operation_inputs else {}
@@ -41,6 +42,8 @@ def main():
         if args.only and engine not in args.only.split(","):continue
         if engine=="panel-research" and not args.panel_data:
             print("Skipped panel research; pass --panel-data to include it",flush=True);continue
+        if engine=="event-research" and not args.event_data:
+            print("Skipped event research; pass --event-data to include it",flush=True);continue
         if engine=="akshare" and not args.allow_network:
             print("Skipped AKShare online request; pass --allow-network to include it",flush=True);continue
         if engine=="lean" and not args.lean_directory:
@@ -57,6 +60,7 @@ def main():
                 settings=args.state/"lean-test-parameters.json";settings.write_text(json.dumps({"engineDirectory":str(args.lean_directory.resolve())}),encoding="utf-8")
                 extra=["--parameters",str(settings)]
             data=args.panel_data if engine=="panel-research" else args.data
+            if engine=="event-research":data=args.event_data
             if operation in operation_inputs:data=Path(operation_inputs[operation])
             ran=subprocess.run(base+["--run",manifest["id"]+"/"+operation,"--input",str(data)]+extra,env=environment,
                                capture_output=True,text=True,encoding="utf-8",timeout=240)

@@ -1,0 +1,58 @@
+逐笔成交 / 完整盘口快照输入（WebStock v1）
+
+UTF-8 CSV，2～100000行，最多64列，宿主输入上限16MiB。每次一只证券。
+所有行必需：
+time,eventtime,sequence,session,symbol,eventtype,source,coverage,currency,volumeunit,pricebasis
+
+time 是这条事件在研究系统中可用的时点；eventtime 是事件发生时点。
+必须有 Z 或 +08:00 等明确时区，eventtime <= time，两列均按时间非递减。
+同一时间可有多事件，由 sequence 排序，不凭文件重复行去重。
+sequence 是每交易会话内严格递增的非负整数（最多15位）。
+session 是明确的交易会话日期 YYYY-MM-DD，按日期非递减；不从UTC自然日推断。
+symbol 保留前导零；source 指明数据来源；各行统一 currency=CNY/USD/HKD，
+volumeunit=share，pricebasis=raw。事件价格不能用前后复权价。
+coverage=events-complete：声明该选定区间内所有相关事件完整，sequence 连续；
+coverage=sampled：承认抽样，不能运行完整 OFI。首行可为任意序号。
+序号只是接口序列，来源必须保证能检测缺包；软件不能凭连续编号认证交易所完整性。
+不支持乱序、修订/撤销成交或交叉盘口；需上游按当时可知规则显式规范化。
+任何规范化不得使用未来的撤销信息修改旧时点输入。
+
+eventtype=trade 行另需 price,size,aggressor,sidebasis：
+price和size为不超过1e15的正数；size单位股。aggressor=buy/sell/unknown。
+sidebasis=exchange-provided/upstream-classified/unknown。
+unknown方向必须与unknown来源匹配；上游分类也不是交易所认证。
+本插件不依据价格涨跌、K线颜色或未来报价填补未知方向。
+
+eventtype=quote 行另需 bidprice1,bidsize1,askprice1,asksize1。
+可增加连续的第2～10档相同字段。每行必须是该时点完整显示快照，不能只给变动量。
+所有提供档位的价格和数量为不超过1e15的正数，买价随档位严格下降、卖价上升；买一<=卖一。
+无一侧报价、集合竞价及停牌状态需使用相应专用数据接口，不能伪造正价格。
+同一文件可含两类事件，不适用列留空。逐笔成交和随后盘口变动是独立事件。
+datasetkind=synthetic-test 会在结果显著标记为合成验算数据。
+
+公式与边界
+1. quote-liquidity：mid=(ask+bid)/2；spread=ask-bid；spreadBps=10000*spread/mid。
+   指定档数逐档相加显示股数和价格*股数金额。无隐藏流动性推断。
+2. queue-imbalance：(bidSize-askSize)/(bidSize+askSize)，分别列一档和指定深度。
+   sizeWeightedMidPrice=(ask*bidSize+bid*askSize)/(bidSize+askSize)。
+   这是简单数量加权价格，不是已校准微观价格预测模型。
+3. trade-delta：主动买为+size，主动卖为-size，未知为空。
+   每会话重置。完整CVD遇未知后持续为空；classifiedCvd只累计已分类量，
+   另列累计未知股数与已分类成交量比例，避免把未知当作中性交易。
+4. order-flow-imbalance：只在盘口事件时输出，连续会话内比较前后完整一档：
+   e=1[bid>=prevBid]*bidSize -1[bid<=prevBid]*prevBidSize
+     -1[ask<=prevAsk]*askSize +1[ask>=prevAsk]*prevAskSize。
+   首个快照e为空，累计OFI从0开始；尾随N个有效盘口变动才输出滚动和。
+   只接受events-complete；这不证明来源确已交付所有报价事件。
+   OFI包括显示供需变化，不能将撤单与成交分开，也不是“主力净流入”。
+   原始公式：Cont/Kukanov/Stoikov，https://arxiv.org/pdf/1011.6402 第4页。
+5. volume-profile：限一个明确会话，选定输入成交区间。固定零原点箱宽，
+   箱k=[k*binSize,(k+1)*binSize)，Decimal定位，最多4096箱（含空箱）。
+   真实成交股数归箱，未知方向另列。POC并列取较低价格箱。
+   VA从POC开始，比较上下相邻箱，选较大量；并列选更近POC，再并列选上侧。
+   连续扩展直到覆盖至少目标比例，可超过目标。输出实际覆盖比例。
+   这是公开定义的WebStock版本，与某些平台的“不超目标就停止”不同。
+   只有选定区间末次可知时点的一份分布和摘要，不向早期K线回填最终POC/VA。
+   POC/VA一般概念参考：https://www.tradingview.com/support/solutions/43000502040-volume-profile-indicators-basic-concepts/
+
+所有结果只描述输入数据，不是买卖建议或未经验证的收益证明。

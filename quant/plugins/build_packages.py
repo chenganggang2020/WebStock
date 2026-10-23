@@ -20,7 +20,7 @@ def number(key, default, minimum=2, maximum=10000, title=None, kind=None):
 def save_package(output, manifest, sources):
     content = {name: (HERE/source).read_bytes() for name, source in sources.items()}
     manifest.update(schema="webstock.plugin.manifest.v1", protocolVersion=1,
-                    entrypoint="worker.py", runtime="python", version="0.12.0",
+                    entrypoint="worker.py", runtime="python", version="0.13.1",
                     files={name: hashlib.sha256(raw).hexdigest() for name,raw in content.items()})
     package = {"schema": "webstock.plugin.package.v1", "manifest": manifest,
                "files": {name: base64.b64encode(raw).decode("ascii") for name,raw in content.items()}}
@@ -244,6 +244,20 @@ def main():
         "source":"https://github.com/chenganggang2020/WebStock","distributions":["numpy","pandas"],"operations":panel},
         {"worker.py":"worker.py","panel_contract.py":"panel_contract.py","panel_research.py":"panel_research.py","fundamental_research.py":"fundamental_research.py",
          "PANEL_INPUT.txt":"PANEL_INPUT.txt","FUNDAMENTAL_INPUT.txt":"FUNDAMENTAL_INPUT.txt","THIRD_PARTY_NOTICES.txt":"THIRD_PARTY_NOTICES.txt"}))
+    events=[]
+    for key,title in {"quote-liquidity":"盘口价差 / 显示深度", "queue-imbalance":"队列不平衡 / 数量加权价格",
+        "trade-delta":"主动成交 Delta / CVD（保留未知方向）", "order-flow-imbalance":"逐盘口事件 OFI",
+        "volume-profile":"真实成交量分布 / POC / Value Area"}.items():
+        fields=[]
+        if key in ("quote-liquidity","queue-imbalance"):fields=[number("depth",1,1,10,title="显示盘口档数")]
+        if key=="order-flow-imbalance":fields=[number("period",20,2,10000,title="尾随盘口事件数")]
+        if key=="volume-profile":fields=[number("binSize",.01,1e-8,1e8,title="固定价格箱宽"),number("valueAreaFraction",.7,.1,1.,title="目标成交量比例")]
+        events.append({"id":key,"title":title,"formulaVersion":"webstock-events-"+key+"-v1","parameters":fields,
+            "inputKind":"market-events-csv","outputKind":"indicator","description":"需真实成交或完整盘口快照、事件顺序及可知时点。不会从日线推断；字段见随包EVENT_INPUT.txt。"})
+    records.append(save_package(args.output,{"id":"org.webstock.event-research","name":"WebStock 逐笔与盘口研究","license":"Project source terms",
+        "source":"https://github.com/chenganggang2020/WebStock","distributions":["numpy","pandas"],"operations":events},
+        {"worker.py":"worker.py","panel_contract.py":"panel_contract.py","event_contract.py":"event_contract.py","event_research.py":"event_research.py",
+         "EVENT_INPUT.txt":"EVENT_INPUT.txt","THIRD_PARTY_NOTICES.txt":"THIRD_PARTY_NOTICES.txt"}))
     (args.output/"index.json").write_text(json.dumps(records,ensure_ascii=False,indent=2),encoding="utf-8")
     print(json.dumps(records,ensure_ascii=False))
 

@@ -9,11 +9,11 @@
     "indicatorFamilies": 110,
     "source": "indicator-scope.json",
     "indicatorReadiness": {
-      "formula_implemented_and_tested": 80,
+      "formula_implemented_and_tested": 85,
       "partial": 5,
-      "pending": 25
+      "pending": 20
     },
-    "installedPackages": 21
+    "installedPackages": 22
   },
   "completionDefinition": [
     "All 19 projects have runnable installed adapters with declared capabilities, inputs, versions and actual results.",
@@ -278,8 +278,12 @@
       "status": "native_platform_and_fresh_python_runtime_rebuilds_verified",
       "pending": [
         "wheel_hash_locks",
-        "self_contained_lean_runtime_build",
         "clean_second_machine_acceptance"
+      ],
+      "checks": [
+        "14 fresh Python environments",
+        "pinned LEAN source fresh checkout + 20 NuGet locks + locked offline restore",
+        "native LEAN accounting curve matches baseline"
       ]
     },
     {
@@ -295,7 +299,7 @@
     },
     {
       "id": "indicator-coverage",
-      "status": "201_talib_functions_47_core_and_20_panel_operations_verified",
+      "status": "201_talib_functions_47_core_20_panel_and_5_event_operations_verified",
       "note": "Function counts are not catalogue-family completion counts."
     },
     {
@@ -314,7 +318,19 @@
         "native install/run/archive"
       ],
       "limits": "Synthetic four-security fixture verifies mathematics and lifecycle; provider PIT provenance and real full-market history not certified."
+    },
+    {
+      "id": "actual-market-event-input",
+      "status": "typed_trade_quote_input_and_5_operations_verified_in_cpp_host",
+      "checks": [
+        "availability and sequence gaps",
+        "unclassified trades do not become neutral CVD",
+        "OFI quote changes and session reset",
+        "exact price bins and explicit value-area rule",
+        "native install/run/plot/archive"
+      ],
+      "limits": "Synthetic events validate math and lifecycle; no exchange completeness certification or broker historical feed connection."
     }
   ],
-  "latestPackageVersion": "0.12.0"
+  "latestPackageVersion": "0.13.1"
 }

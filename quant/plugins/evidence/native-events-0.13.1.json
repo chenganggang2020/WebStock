@@ -1,0 +1,94 @@
+{
+  "schema": "webstock.plugin.native-acceptance.v1",
+  "runs": [
+    {
+      "pluginId": "org.webstock.event-research",
+      "operationId": "quote-liquidity",
+      "version": "0.13.1",
+      "status": "verified",
+      "runId": "plugin-52432561-e420-4660-938f-279b571f3942",
+      "resultSha256": "eb23b39987c6bec0cae26b7c57bdabed1ab1bfa85d9da77abeb4b558606b3158",
+      "bars": 240,
+      "inputSha256": "b1171180618524fb8f81e99885c29b6b41b81838f064d0f9e01ac1605a0630cf",
+      "inputName": "synthetic-events-test.csv",
+      "tables": [
+        {
+          "id": "indicators",
+          "rows": 120
+        }
+      ]
+    },
+    {
+      "pluginId": "org.webstock.event-research",
+      "operationId": "queue-imbalance",
+      "version": "0.13.1",
+      "status": "verified",
+      "runId": "plugin-ce424599-6e4b-439c-a77c-1fea6aa8aa2e",
+      "resultSha256": "279abed9084571258c9d6a3303ee732e9aea0b57e9ccecec403e05178669c0ea",
+      "bars": 240,
+      "inputSha256": "b1171180618524fb8f81e99885c29b6b41b81838f064d0f9e01ac1605a0630cf",
+      "inputName": "synthetic-events-test.csv",
+      "tables": [
+        {
+          "id": "indicators",
+          "rows": 120
+        }
+      ]
+    },
+    {
+      "pluginId": "org.webstock.event-research",
+      "operationId": "trade-delta",
+      "version": "0.13.1",
+      "status": "verified",
+      "runId": "plugin-8ab997cd-52bc-461d-9f71-b7160f0ac149",
+      "resultSha256": "821c73771b34df27c0aa6c778b5279954bc233db886ee8d3a5a2f5041bd26e99",
+      "bars": 240,
+      "inputSha256": "b1171180618524fb8f81e99885c29b6b41b81838f064d0f9e01ac1605a0630cf",
+      "inputName": "synthetic-events-test.csv",
+      "tables": [
+        {
+          "id": "indicators",
+          "rows": 120
+        }
+      ]
+    },
+    {
+      "pluginId": "org.webstock.event-research",
+      "operationId": "order-flow-imbalance",
+      "version": "0.13.1",
+      "status": "verified",
+      "runId": "plugin-6560f89f-1234-4cfe-ad5e-2d580e669fea",
+      "resultSha256": "9a6c9d742114e290a660e5a4a7d77c2fd1db53d3e2b21d52695c498dcf32bdab",
+      "bars": 240,
+      "inputSha256": "b1171180618524fb8f81e99885c29b6b41b81838f064d0f9e01ac1605a0630cf",
+      "inputName": "synthetic-events-test.csv",
+      "tables": [
+        {
+          "id": "indicators",
+          "rows": 120
+        }
+      ]
+    },
+    {
+      "pluginId": "org.webstock.event-research",
+      "operationId": "volume-profile",
+      "version": "0.13.1",
+      "status": "verified",
+      "runId": "plugin-d9615a81-cb69-49eb-85e3-3928673aa453",
+      "resultSha256": "49128866384b8a47352b617d4cd85ed78a3b4e410791bcf531b201cbdec1b9c4",
+      "bars": 240,
+      "inputSha256": "b1171180618524fb8f81e99885c29b6b41b81838f064d0f9e01ac1605a0630cf",
+      "inputName": "synthetic-events-test.csv",
+      "tables": [
+        {
+          "id": "indicators",
+          "rows": 1
+        },
+        {
+          "id": "selected-range-profile",
+          "rows": 17
+        }
+      ]
+    }
+  ]
+}

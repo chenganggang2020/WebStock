@@ -1,0 +1,221 @@
+{
+  "version": 1,
+  "dependencies": {
+    "net10.0": {
+      "Accord": {
+        "type": "Direct",
+        "requested": "[3.6.0, )",
+        "resolved": "3.6.0",
+        "contentHash": "xJyL8zhWcfb7eYp4EiXamEkUo3dAvAriOQTWTgulP31wH7BCZqp/rI62+mPn29xcCH8a0iCKRxjEh6p0NsIG1w=="
+      },
+      "Accord.Math": {
+        "type": "Direct",
+        "requested": "[3.6.0, )",
+        "resolved": "3.6.0",
+        "contentHash": "mGhAp+ItUEFI/HUb8krKEwo2tB4SpVpTvZI5U9X+a5WKm8OSSW4Ern1fGq1jm6PXFbhFfhvLWC1WANc3fjrg0Q==",
+        "dependencies": {
+          "Accord": "3.6.0"
+        }
+      },
+      "Accord.Statistics": {
+        "type": "Direct",
+        "requested": "[3.6.0, )",
+        "resolved": "3.6.0",
+        "contentHash": "x5ZlX4bkC+OBPGG1cWt7lAWh5YeNadJ3vkfEgNv39EptsBr9Jj3ddRbfSce3oO5vQ6Q2RrtQyekNAL5d7pOkzA==",
+        "dependencies": {
+          "Accord": "3.6.0",
+          "Accord.Math": "3.6.0"
+        }
+      },
+      "MathNet.Numerics": {
+        "type": "Direct",
+        "requested": "[5.0.0, )",
+        "resolved": "5.0.0",
+        "contentHash": "pg1W2VwaEQMAiTpGK840hZgzavnqjlCMTVSbtVCXVyT+7AX4mc1o89SPv4TBlAjhgCOo9c1Y+jZ5m3ti2YgGgA=="
+      },
+      "NodaTime": {
+        "type": "Direct",
+        "requested": "[3.0.5, )",
+        "resolved": "3.0.5",
+        "contentHash": "ctgx76GTZ3hcE0lV/XepXskkZ2m3F/XSftwb/a3vK+vSorbT3QhGgWp/ZNb13oyKQhBdFIPiISilvx49LQggtw=="
+      },
+      "QuantConnect.pythonnet": {
+        "type": "Direct",
+        "requested": "[2.0.66, )",
+        "resolved": "2.0.66",
+        "contentHash": "JCuBtZ9EnUrniPNPQLnopVeJ9OfsUk/oN8ptuJMuv4iM8TAlu0jLogX6ni6joL97i8n8lIpZvjXklxVeTibALw==",
+        "dependencies": {
+          "fasterflect": "3.0.0"
+        }
+      },
+      "CloneExtensions": {
+        "type": "Transitive",
+        "resolved": "1.3.0",
+        "contentHash": "4YL85qfQuWplSQCIML3qAYb4dOHtujD2hCP0JVvai+jQGiM4HLZ8qFipoMwNOA8k16lTX/MaRVULb0kKAbfoOA=="
+      },
+      "DotNetZip": {
+        "type": "Transitive",
+        "resolved": "1.16.0",
+        "contentHash": "CS9sjjXF23FLIbwlLT5k/jXBYxVnLMn01lyAvN/hxFM+UDvSicjTPB9ZMA+Wp/QlvBPbD2pzkAXUp1O50gP/Lw==",
+        "dependencies": {
+          "System.Security.Permissions": "4.7.0"
+        }
+      },
+      "fasterflect": {
+        "type": "Transitive",
+        "resolved": "3.0.0",
+        "contentHash": "nXucxx84mYH+fS9U92a4Ak/MfWP0H204c8D2I64zsOQynnihhavO6HOCUcpp8HfKZMn3aNn01iv1bINnxH7Kow=="
+      },
+      "McMaster.Extensions.CommandLineUtils": {
+        "type": "Transitive",
+        "resolved": "2.6.0",
+        "contentHash": "paiRzqvqdSFdcWVTXn6SzphajrpjFM5ERiGlgccL5J2lgHbty068D63Maqmj0VTG0G9ciP2m/NSIgGnNv8WOLw==",
+        "dependencies": {
+          "System.ComponentModel.Annotations": "4.7.0"
+        }
+      },
+      "Microsoft.IO.RecyclableMemoryStream": {
+        "type": "Transitive",
+        "resolved": "3.0.1",
+        "contentHash": "s/s20YTVY9r9TPfTrN5g8zPF1YhwxyqO6PxUkrYTGI2B+OGPe9AdajWZrLhFqXIvqIW23fnUE4+ztrUWNU1+9g=="
+      },
+      "Microsoft.NETCore.Platforms": {
+        "type": "Transitive",
+        "resolved": "3.1.0",
+        "contentHash": "z7aeg8oHln2CuNulfhiLYxCVMPEwBl3rzicjvIX+4sUuCwvXw5oXQEtbiU2c0z4qYL5L3Kmx0mMA/+t/SbY67w=="
+      },
+      "Microsoft.Win32.SystemEvents": {
+        "type": "Transitive",
+        "resolved": "4.7.0",
+        "contentHash": "mtVirZr++rq+XCDITMUdnETD59XoeMxSpLRIII7JRI6Yj0LEDiO1pPn0ktlnIj12Ix8bfvQqQDMMIF9wC98oCA==",
+        "dependencies": {
+          "Microsoft.NETCore.Platforms": "3.1.0"
+        }
+      },
+      "Newtonsoft.Json": {
+        "type": "Transitive",
+        "resolved": "13.0.2",
+        "contentHash": "R2pZ3B0UjeyHShm9vG+Tu0EBb2lC8b0dFzV9gVn50ofHXh9Smjk6kTn7A/FdAsC8B5cKib1OnGYOXxRBz5XQDg=="
+      },
+      "protobuf-net": {
+        "type": "Transitive",
+        "resolved": "3.1.33",
+        "contentHash": "tv6wc8QvCjGOY/grQ/irxUWqRtHpVzOLY87+jvINxYOD5n0o4TX9RukJ/FRkVyMeQtLLhf/0okQFb4rQgoWt8A==",
+        "dependencies": {
+          "protobuf-net.Core": "3.1.33"
+        }
+      },
+      "protobuf-net.Core": {
+        "type": "Transitive",
+        "resolved": "3.1.33",
+        "contentHash": "uq+KLED4Mwx1BnTE5TTtawQgaCRpajcbRKaYsEbY5biWWK1O5+rCBTd6+9EpK6CYxd2POUHkpwTslPs4SCoHOw=="
+      },
+      "QLNet": {
+        "type": "Transitive",
+        "resolved": "1.13.1",
+        "contentHash": "lJrP6Dmr8bqeiqbIce/4RQPOAePFCPzOt2+Wmrqbu5q1egotXx80Flv9rCsZfb443Fi8znM65Lay/PfvJuDfRw=="
+      },
+      "SharpZipLib": {
+        "type": "Transitive",
+        "resolved": "1.3.3",
+        "contentHash": "N8+hwhsKZm25tDJfWpBSW7EGhH/R7EMuiX+KJ4C4u+fCWVc1lJ5zg1u3S1RPPVYgTqhx/C3hxrqUpi6RwK5+Tg=="
+      },
+      "System.ComponentModel.Annotations": {
+        "type": "Transitive",
+        "resolved": "4.7.0",
+        "contentHash": "0YFqjhp/mYkDGpU0Ye1GjE53HMp9UVfGN7seGpAMttAC0C40v5gw598jCgpbBLMmCo0E5YRLBv5Z2doypO49ZQ=="
+      },
+      "System.ComponentModel.Composition": {
+        "type": "Transitive",
+        "resolved": "6.0.0",
+        "contentHash": "60Qv+F7oxomOjJeTDA5Z4iCyFbQ0B/2Mi5HT+13pxxq0lVnu2ipbWMzFB+RWKr3wWKA8BSncXr9PH/fECwMX5Q=="
+      },
+      "System.Drawing.Common": {
+        "type": "Transitive",
+        "resolved": "4.7.0",
+        "contentHash": "v+XbyYHaZjDfn0ENmJEV1VYLgGgCTx1gnfOBcppowbpOAriglYgGCvFCPr2EEZyBvXlpxbEsTwkOlInl107ahA==",
+        "dependencies": {
+          "Microsoft.NETCore.Platforms": "3.1.0",
+          "Microsoft.Win32.SystemEvents": "4.7.0"
+        }
+      },
+      "System.Security.Permissions": {
+        "type": "Transitive",
+        "resolved": "4.7.0",
+        "contentHash": "dkOV6YYVBnYRa15/yv004eCGRBVADXw8qRbbNiCn/XpdJSUXkkUeIvdvFHkvnko4CdKMqG8yRHC4ox83LSlMsQ==",
+        "dependencies": {
+          "System.Windows.Extensions": "4.7.0"
+        }
+      },
+      "System.Windows.Extensions": {
+        "type": "Transitive",
+        "resolved": "4.7.0",
+        "contentHash": "CeWTdRNfRaSh0pm2gDTJFwVaXfTq6Xwv/sA887iwPTneW7oMtMlpvDIO+U60+3GWTB7Aom6oQwv5VZVUhQRdPQ==",
+        "dependencies": {
+          "System.Drawing.Common": "4.7.0"
+        }
+      },
+      "quantconnect.algorithm": {
+        "type": "Project",
+        "dependencies": {
+          "MathNet.Numerics": "[5.0.0, )",
+          "Newtonsoft.Json": "[13.0.2, )",
+          "NodaTime": "[3.0.5, )",
+          "QuantConnect.Common": "[1.0.0, )",
+          "QuantConnect.Configuration": "[1.0.0, )",
+          "QuantConnect.Indicators": "[1.0.0, )",
+          "QuantConnect.Logging": "[1.0.0, )",
+          "QuantConnect.pythonnet": "[2.0.66, )"
+        }
+      },
+      "QuantConnect.Common": {
+        "type": "Project",
+        "dependencies": {
+          "CloneExtensions": "[1.3.0, )",
+          "MathNet.Numerics": "[5.0.0, )",
+          "Microsoft.IO.RecyclableMemoryStream": "[3.0.1, )",
+          "Newtonsoft.Json": "[13.0.2, )",
+          "NodaTime": "[3.0.5, )",
+          "QLNet": "[1.13.1, )",
+          "QuantConnect.Compression": "[1.0.0, )",
+          "QuantConnect.Configuration": "[1.0.0, )",
+          "QuantConnect.Logging": "[1.0.0, )",
+          "QuantConnect.pythonnet": "[2.0.66, )",
+          "fasterflect": "[3.0.0, )",
+          "protobuf-net": "[3.1.33, )"
+        }
+      },
+      "quantconnect.compression": {
+        "type": "Project",
+        "dependencies": {
+          "DotNetZip": "[1.16.0, )",
+          "QuantConnect.Logging": "[1.0.0, )",
+          "SharpZipLib": "[1.3.3, )"
+        }
+      },
+      "quantconnect.configuration": {
+        "type": "Project",
+        "dependencies": {
+          "McMaster.Extensions.CommandLineUtils": "[2.6.0, )",
+          "Newtonsoft.Json": "[13.0.2, )",
+          "QuantConnect.Logging": "[1.0.0, )"
+        }
+      },
+      "quantconnect.indicators": {
+        "type": "Project",
+        "dependencies": {
+          "MathNet.Numerics": "[5.0.0, )",
+          "QuantConnect.Common": "[1.0.0, )",
+          "QuantConnect.Logging": "[1.0.0, )",
+          "QuantConnect.pythonnet": "[2.0.66, )"
+        }
+      },
+      "quantconnect.logging": {
+        "type": "Project",
+        "dependencies": {
+          "System.ComponentModel.Composition": "[6.0.0, )"
+        }
+      }
+    }
+  }
+}
