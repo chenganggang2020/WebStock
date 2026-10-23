@@ -56,6 +56,7 @@ WebStock 量化插件本机预览版
 财务/事件功能的对应合成样本见 synthetic-fundamental-tests；每个文件仅包含同名功能需要的字段。
 逐笔与盘口插件选择 synthetic-events-test.csv；合成成交和盘口只用于公式验算，不是实际行情。
 统计单证券模型可先选 historical-first1000-statistical.csv；ARX/VAR/协整选择 synthetic-econometric-panel.csv（合成验算数据）。
+深度学习中的LSTM/Transformer也可先用这份1000根历史样本；GCN选择synthetic-econometric-panel.csv，并明确研究证券代码。
 
 本预览使用本目录内独立data，不修改原安装版的账户与数据库。
 移动整个目录后，需要把stock-data-root.json的directory更新到移动后的data绝对路径。
@@ -76,6 +77,7 @@ Copy-Item -LiteralPath (Join-Path $taskRepo 'quant\plugins\FUNDAMENTAL_INPUT.txt
 Copy-Item -LiteralPath (Join-Path $taskRepo 'quant\plugins\EVENT_INPUT.txt') -Destination $taskRelease
 Copy-Item -LiteralPath (Join-Path $taskRepo 'quant\plugins\LEARNING_MODELS.txt') -Destination $taskRelease
 Copy-Item -LiteralPath (Join-Path $taskRepo 'quant\plugins\STATISTICAL_MODELS.txt') -Destination $taskRelease
+Copy-Item -LiteralPath (Join-Path $taskRepo 'quant\plugins\DEEP_MODELS.txt') -Destination $taskRelease
 $taskSetup = Join-Path $taskRelease 'runtime-setup'
 New-Item -ItemType Directory -Path $taskSetup | Out-Null
 Copy-Item -LiteralPath (Join-Path $taskRepo 'quant\plugins\setup_runtime.py') -Destination $taskSetup

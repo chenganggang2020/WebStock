@@ -1,7 +1,7 @@
 独立环境依赖快照（安装验证进行中）
 ================================
 
-这些文件来自本次已验证的15组本机环境，记录每个Python包的精确版本。
+这些文件记录16组本机环境的精确Python包版本，实际重建与适配器验收记录分开保存。
 原先从源码安装的项目改为GitHub完整提交号，没有本机绝对路径或可编辑目录依赖。
 它们尚不是包含所有wheel哈希的跨平台锁文件，也不能仅凭文件存在就认定可在新机器使用。
 
@@ -29,6 +29,9 @@ wtpy310：WonderTrader与wtpy，Python3.10。
 quantaxis311：QUANTAXIS，Python3.11。
 qlib环境还可运行逐时点学习插件（scikit-learn及LightGBM）。
 statistical-models：hmmlearn、arch、statsmodels，供统计与时序插件使用。
+deep-models：PyTorch CPU、NumPy、pandas，供LSTM/Transformer/GCN使用。
+deep-models当前仅针对Windows x64 / Python3.12；PyTorch wheel使用官方索引给出的固定URL和SHA256，
+其余依赖仍为精确版本快照，不能视为整套依赖的哈希锁。无需GPU或CUDA。
 
 LEAN额外需要.NET10 SDK、原版LEAN Release构建与Data基础文件；Python依赖安装不替代该构建。
 可运行setup_lean_runtime.py --destination <新目录> --source-mirror <本地LEAN源码> --offline。

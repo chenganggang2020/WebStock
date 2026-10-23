@@ -200,6 +200,15 @@
       "sourceRepositories": [],
       "freshInstallationVerified": true,
       "verificationScope": "New environment rebuilt offline from exact 20-version snapshot; 10 tests and nine native operations verified"
+    },
+    "deep-models": {
+      "python": "3.12",
+      "observedPython": "3.12.14",
+      "requirements": "deep-models.requirements.txt",
+      "packageCount": 15,
+      "sourceRepositories": [],
+      "freshInstallationVerified": true,
+      "verificationScope": "New independent Windows x64 Python 3.12 CPU environment rebuilt from 15 pinned dependencies, official torch wheel URL/hash. Six tests, three native operations and full native window passed."
     }
   },
   "limitations": [

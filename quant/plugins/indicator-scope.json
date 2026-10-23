@@ -1933,9 +1933,13 @@
       "overlap": "不能绕过数据、标签、执行和多重检验问题。",
       "evidence": "机器学习文献背景；具体模型未验证",
       "refs": "https://www.nber.org/papers/w25398\nhttps://www.davidhbailey.com/dhbpapers/backtest-prob.pdf",
-      "status": "pending",
-      "implementations": [],
-      "implementationNote": "未完成；不以目录条目或近似名称充当实现。"
+      "status": "formula_implemented_and_tested",
+      "implementations": [
+        "deep-models:lstm",
+        "deep-models:transformer",
+        "deep-models:gcn"
+      ],
+      "implementationNote": "原版PyTorch CPU的固定小型LSTM/Transformer及明确两层GCN收益回归；成熟标签、训练集标准化、固定种子与轮数，6项独立/时序测试及3项原生运行通过。不是所有模型变种或收益优势验证。"
     },
     {
       "id": 107,

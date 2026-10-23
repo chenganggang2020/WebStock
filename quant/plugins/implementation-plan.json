@@ -9,11 +9,11 @@
     "indicatorFamilies": 110,
     "source": "indicator-scope.json",
     "indicatorReadiness": {
-      "formula_implemented_and_tested": 91,
+      "formula_implemented_and_tested": 92,
       "partial": 5,
-      "pending": 14
+      "pending": 13
     },
-    "installedPackages": 24
+    "installedPackages": 25
   },
   "completionDefinition": [
     "All 19 projects have runnable installed adapters with declared capabilities, inputs, versions and actual results.",
@@ -281,7 +281,7 @@
         "clean_second_machine_acceptance"
       ],
       "checks": [
-        "14 fresh Python environments",
+        "16 fresh Python environments",
         "pinned LEAN source fresh checkout + 20 NuGet locks + locked offline restore",
         "native LEAN accounting curve matches baseline"
       ]
@@ -299,7 +299,7 @@
     },
     {
       "id": "indicator-coverage",
-      "status": "201_talib_47_core_20_panel_5_event_6_learning_9_statistical_operations_verified",
+      "status": "201_talib_47_core_20_panel_5_event_6_learning_9_statistical_3_deep_operations_verified",
       "note": "Function counts are not catalogue-family completion counts."
     },
     {
@@ -354,7 +354,20 @@
         "failed optimizations remain unavailable"
       ],
       "limits": "Historical fixture and synthetic panels are not profitability validation; explicit fixed configurations, no exhaustive model search."
+    },
+    {
+      "id": "chronological-deep-models",
+      "status": "three_pytorch_baselines_verified_in_cpp_host_and_full_window",
+      "checks": [
+        "matured-label training gap",
+        "train-only sequence scaling and correlation graph",
+        "independent NumPy LSTM gates and GCN propagation",
+        "prefix invariance and future perturbation",
+        "JSON state recovery without pickle",
+        "explicit CPU wheel URL and SHA256, fresh runtime rebuild"
+      ],
+      "limits": "Fixed small architectures; not exhaustive neural models, trading performance, or point-in-time provider certification."
     }
   ],
-  "latestPackageVersion": "0.15.0"
+  "latestPackageVersion": "0.16.0"
 }

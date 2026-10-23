@@ -122,6 +122,12 @@
       "passed": 4,
       "failed": 0,
       "operations": 3
+    },
+    "deepModels": {
+      "passed": 6,
+      "failed": 0,
+      "operations": 3,
+      "repeatedInFreshRuntime": true
     }
   },
   "integrationRuns": [
@@ -264,7 +270,7 @@
     "nativeWindow": "passed, quotes/classic and legacy focus redirect, real installed TA-Lib workflow",
     "visualReview": "dark native model window inspected; plot axis width follows full signed labels"
   },
-  "latestPackageVersion": "0.15.0",
+  "latestPackageVersion": "0.16.0",
   "additionalEvidence": [
     "native-acceptance-0.8.1.json",
     "native-akshare-0.7.0.json",
@@ -275,7 +281,8 @@
     "runtime-installations-0.9.0.json",
     "native-lean-locked-0.13.1.json",
     "lean-locked-parity-0.13.1.json",
-    "lean-runtime-installation-0.13.1.json"
+    "lean-runtime-installation-0.13.1.json",
+    "deep-runtime-installation-0.16.0.json"
   ],
   "onlineDataChecks": {
     "dataContractTests": 3,
@@ -294,7 +301,7 @@
     "testSource": "tests/test_lean_adapter.py"
   },
   "runtimeRebuild": {
-    "freshEnvironments": 15,
+    "freshEnvironments": 16,
     "dependencyChecks": "passed",
     "nativeOfflineAdapterRuns": 19,
     "numericalParity": "matched baseline primary metric tables",
@@ -326,5 +333,12 @@
     "failed": 0,
     "skipped": 0,
     "scope": "actual quotes/classic/focus entry, HMM run and history reopening"
+  },
+  "nativeDeepAcceptance": "native-deep-0.16.0.json",
+  "nativeDeepWindow": {
+    "passed": 3,
+    "failed": 0,
+    "skipped": 0,
+    "scope": "quotes/classic/focus entry, actual LSTM training/prediction and frozen history reopening"
   }
 }

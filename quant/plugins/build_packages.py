@@ -20,7 +20,7 @@ def number(key, default, minimum=2, maximum=10000, title=None, kind=None):
 def save_package(output, manifest, sources):
     content = {name: (HERE/source).read_bytes() for name, source in sources.items()}
     manifest.update(schema="webstock.plugin.manifest.v1", protocolVersion=1,
-                    entrypoint="worker.py", runtime="python", version="0.15.0",
+                    entrypoint="worker.py", runtime="python", version="0.16.0",
                     files={name: hashlib.sha256(raw).hexdigest() for name,raw in content.items()})
     package = {"schema": "webstock.plugin.package.v1", "manifest": manifest,
                "files": {name: base64.b64encode(raw).decode("ascii") for name,raw in content.items()}}
@@ -298,6 +298,23 @@ def main():
         "source":"https://github.com/chenganggang2020/WebStock","distributions":["numpy","pandas","scipy","statsmodels","hmmlearn","arch"],"operations":statistical},
         {"worker.py":"worker.py","statistical_models.py":"statistical_models.py","econometric_panel.py":"econometric_panel.py","panel_contract.py":"panel_contract.py",
          "STATISTICAL_MODELS.txt":"STATISTICAL_MODELS.txt","PANEL_INPUT.txt":"PANEL_INPUT.txt","THIRD_PARTY_NOTICES.txt":"THIRD_PARTY_NOTICES.txt"}))
+    deep=[]
+    for key,title in {"lstm":"LSTM · 已成熟标签逐时点训练", "transformer":"Transformer · 尾随序列预测", "gcn":"GCN · 训练期相关图预测"}.items():
+        fields=[number("trainingRows",128,40,1000,title="每次训练有效样本数"),number("horizon",5,1,252,title="预测未来根数"),
+            number("purgeBars",1,1,252,title="标签成熟后隔离根数"),number("retrainEvery",63,1,5000,title="每隔多少根重训"),
+            number("epochs",20,1,200,title="固定训练轮数"),number("learningRate",.01,.00001,.1,title="Adam学习率"),
+            number("seed",2026,0,2147483647,title="随机种子")]
+        if key=="gcn":fields.extend([
+            {"id":"symbols","title":"事先指定研究证券（英文逗号分隔）","type":"text","format":"text","minLength":3,"maxLength":512,"default":"000001,000002"},
+            number("edgeThreshold",.3,0.,1.,title="正相关边的最低相关系数")])
+        else:fields.append(number("sequenceRows",12,2,64,title="尾随序列根数"))
+        deep.append({"id":key,"title":title,"formulaVersion":"webstock-deep-"+key+"-v1","parameters":fields,
+            "inputKind":"market-panel-csv" if key=="gcn" else "ohlcv-single-csv","outputKind":"indicator",
+            "description":"原版PyTorch CPU小模型；输出预测、成熟后评价、训练审计、损失及JSON权重，不含交易收益。见DEEP_MODELS.txt。"})
+    records.append(save_package(args.output,{"id":"org.webstock.deep-models","name":"WebStock 深度学习模型","license":"Project source terms; PyTorch BSD-3-Clause",
+        "source":"https://github.com/chenganggang2020/WebStock","distributions":["numpy","pandas","torch"],"operations":deep},
+        {"worker.py":"worker.py","deep_models.py":"deep_models.py","learning_models.py":"learning_models.py","panel_contract.py":"panel_contract.py",
+         "DEEP_MODELS.txt":"DEEP_MODELS.txt","PANEL_INPUT.txt":"PANEL_INPUT.txt","THIRD_PARTY_NOTICES.txt":"THIRD_PARTY_NOTICES.txt"}))
     (args.output/"index.json").write_text(json.dumps(records,ensure_ascii=False,indent=2),encoding="utf-8")
     print(json.dumps(records,ensure_ascii=False))
 

@@ -31,5 +31,6 @@ wtpy: https://github.com/wondertrader/wtpy (MIT; includes separately installed n
 
 No exchange data license, vendor proprietary formula, or commercial redistribution
 permission is implied by installation. Packages make no return guarantees.
+PyTorch https://github.com/pytorch/pytorch — BSD-3-Clause plus separately attributed bundled components; inspect the installed torch distribution's LICENSE and notices. CPU runtime remains outside .wspkg. LSTM and Transformer use original torch.nn; GCN is a WebStock continuous-return adaptation of Kipf/Welling's published propagation rule (https://arxiv.org/abs/1609.02907), not its classification experiment or a pretrained financial model.
 AKShare https://github.com/akfamily/akshare — MIT. Adapter calls the original stock_zh_a_hist API. Eastmoney is the declared external data provider; no data redistribution license is inferred from AKShare's software license. Downloaded results retain acquisition metadata and source-returned values.
 LEAN https://github.com/QuantConnect/Lean — Apache-2.0. Uses the user's original local .NET Release build, with a WebStock custom daily-data algorithm and proportional-fee model. No LEAN DLLs or upstream Data assets are bundled in .wspkg. Result records original engine assembly hashes. Runtime dependencies retain their respective upstream notices.
