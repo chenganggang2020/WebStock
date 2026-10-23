@@ -1,0 +1,176 @@
+{
+  "schema": "webstock.plugin.verification.v1",
+  "tests": {
+    "python": {
+      "tests": 6,
+      "talibFunctions": 201,
+      "customOperations": 24,
+      "checks": [
+        "each function runs declared defaults",
+        "prefix invariance on 250/400 bars",
+        "prior-only breakout and RVOL denominators",
+        "zero volume remains unavailable",
+        "different RSI definitions remain different",
+        "invalid input rejected",
+        "actual amount required for Amihud"
+      ]
+    },
+    "qt": {
+      "passed": 9,
+      "failed": 0,
+      "skipped": 0,
+      "checks": [
+        "package integrity and duplicate paths",
+        "JSON duplicate keys",
+        "parameter bounds",
+        "no task replay",
+        "cancel and timeout terminate descendant processes",
+        "real QWidget click runs TA-Lib",
+        "archived result reopens",
+        "tampering rejected",
+        "result export/import without execution",
+        "uninstall preserves verifiable history"
+      ]
+    }
+  },
+  "integrationRuns": [
+    {
+      "createdAt": "2026-10-23T20:08:54.717Z",
+      "finishedAt": "2026-10-23T20:09:12.355Z",
+      "operationId": "sma-cross",
+      "pluginId": "org.webstock.vectorbt",
+      "requestSha256": "b40d55bb725ea65e0afa75a422cde7d068c87f382e9a11920d85012d8d667012",
+      "resultSha256": "3a05cdc14083a91a2a0aa4d2713d7421fe7865ffdd6ac1503ea63f4e7180a9f9",
+      "runId": "plugin-03bc0bff-dcaf-43d0-96a9-37f5a4980fb3",
+      "status": "completed",
+      "bars": 4937,
+      "tables": [
+        {
+          "id": "equity",
+          "rows": 4937
+        },
+        {
+          "id": "orders",
+          "rows": 174
+        },
+        {
+          "id": "execution-log",
+          "rows": 174
+        }
+      ]
+    },
+    {
+      "createdAt": "2026-10-23T20:05:00.675Z",
+      "finishedAt": "2026-10-23T20:05:01.886Z",
+      "operationId": "donchian-prior",
+      "pluginId": "org.webstock.core-indicators",
+      "requestSha256": "2ac373030fb7ecfd0fc59c889436295de6c1589c1fb15e7955a1afd4e309d9ce",
+      "resultSha256": "9a12d4c90a43ab10f7f2fef45996d4fad2175339ae52e7c2ea9335197b834d93",
+      "runId": "plugin-5b46a818-00d0-468e-917f-797bac971203",
+      "status": "completed",
+      "bars": 4937,
+      "tables": [
+        {
+          "id": "indicators",
+          "rows": 4937
+        }
+      ]
+    },
+    {
+      "createdAt": "2026-10-23T20:04:19.782Z",
+      "finishedAt": "2026-10-23T20:04:20.692Z",
+      "operationId": "rsi",
+      "pluginId": "org.webstock.talib",
+      "requestSha256": "dbe3216ea4df82c34b3aa033d75ec241812a595e137ed34edf969f1de309dd07",
+      "resultSha256": "92a40e88df47b5624a8f1767a622364e88778061c4f7bb44e81db650f405df14",
+      "runId": "plugin-6fd6d589-a2ed-4822-bd28-43a2a40c906a",
+      "status": "completed",
+      "bars": 4937,
+      "tables": [
+        {
+          "id": "indicators",
+          "rows": 4937
+        }
+      ]
+    },
+    {
+      "createdAt": "2026-10-23T20:05:02.043Z",
+      "finishedAt": "2026-10-23T20:05:04.985Z",
+      "operationId": "sma-cross",
+      "pluginId": "org.webstock.hikyuu",
+      "requestSha256": "8be45b39dd93e2de2c839fd711e4ed2b3d25a9335171ff91caa429274ce29482",
+      "resultSha256": "a45397cd55f12e20148df866fd82f0eb78c719371ba4a21c9079a7b50a507a3e",
+      "runId": "plugin-76aa8db6-7ce3-47fa-a216-69ea5d823a14",
+      "status": "completed",
+      "bars": 4937,
+      "tables": [
+        {
+          "id": "equity",
+          "rows": 4937
+        },
+        {
+          "id": "trades",
+          "rows": 174
+        }
+      ]
+    },
+    {
+      "createdAt": "2026-10-23T20:08:50.677Z",
+      "finishedAt": "2026-10-23T20:08:52.372Z",
+      "operationId": "sma-cross",
+      "pluginId": "org.webstock.backtesting-py",
+      "requestSha256": "fa0acd949d77a1015c24e218adc865f79e4d81b79522a7f65c22f8a3d4ad4c3f",
+      "resultSha256": "97466b231ff2f19d463047463c221870c2abbdf20d377e110043b72821ce655e",
+      "runId": "plugin-e2064bab-93a4-4d7a-8873-c0126d664767",
+      "status": "completed",
+      "bars": 4937,
+      "tables": [
+        {
+          "id": "equity",
+          "rows": 4937
+        },
+        {
+          "id": "closed-trades",
+          "rows": 87
+        }
+      ]
+    },
+    {
+      "createdAt": "2026-10-23T20:08:52.542Z",
+      "finishedAt": "2026-10-23T20:08:54.551Z",
+      "operationId": "sma-cross",
+      "pluginId": "org.webstock.backtrader",
+      "requestSha256": "a078ead33d519d18041717a588da5cc7008ddd02d93f4ba5f290df9fb3652020",
+      "resultSha256": "c0ebda51f2944cc63b0bb4068823644f1587828892f8f81077f828e9a5e7caeb",
+      "runId": "plugin-f1a4725a-9b5a-4cce-9440-28e9a77caf14",
+      "status": "completed",
+      "bars": 4937,
+      "tables": [
+        {
+          "id": "equity",
+          "rows": 4937
+        },
+        {
+          "id": "orders",
+          "rows": 522
+        }
+      ]
+    }
+  ],
+  "limitations": [
+    "Full native binary built; focused plugin controls tested offscreen. Production install and unrelated app pages are not certified.",
+    "No return advantage claims. Historical repository fixture has no verified corporate-action history.",
+    "Engine-specific execution policies differ; not a cross-engine performance ranking."
+  ],
+  "nativeProgram": {
+    "built": true,
+    "qt": "6.9.1",
+    "compiler": "MinGW13.1.0",
+    "programSha256": "2672c727e1938bafb2729d91426219e1f8bdb987502297291fde4ff782181503",
+    "domainTests": "passed",
+    "legacyIndicators": "passed",
+    "pluginPlatform": "passed, 9 QtTest cases, 0 skipped",
+    "nativeWindow": "passed, quotes/classic and legacy focus redirect, real installed TA-Lib workflow",
+    "visualReview": "native dark theme inspected and table row contrast repaired"
+  }
+}

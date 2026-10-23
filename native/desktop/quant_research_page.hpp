@@ -11,6 +11,8 @@
 #include <QLineEdit>
 #include <QStackedWidget>
 #include <QTimer>
+#include <QPointer>
+class QDialog;
 #include <memory>
 #include <atomic>
 #include <mutex>
@@ -26,6 +28,7 @@ class QuantResearchPage:public QWidget {
  QStackedWidget *views;
  QWidget *form;
  QuantModelWidget *models=nullptr;
+ QPointer<QDialog> pluginsDialog;
  QuantParquetWidget *parquet=nullptr;
  PageSnapshotReader* snapshotReader=nullptr;
  QWidget* toolbar=nullptr;

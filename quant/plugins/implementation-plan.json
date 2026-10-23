@@ -1,0 +1,324 @@
+{
+  "schema": "webstock.plugin.implementation-plan.v1",
+  "goalStatus": "active",
+  "baseBranch": "codex/runtime-lifecycle-cleanup-20260926",
+  "baseCommit": "d7be7fe9ecb88d534fe9bb520c8891c365c7db3d",
+  "workBranch": "codex/quant-plugin-platform",
+  "scope": {
+    "repositoryCount": 19,
+    "indicatorFamilies": 110,
+    "source": "indicator-scope.json",
+    "indicatorReadiness": {
+      "formula_implemented_and_tested": 36,
+      "partial": 13,
+      "pending": 61
+    }
+  },
+  "completionDefinition": [
+    "All 19 projects have runnable installed adapters with declared capabilities, inputs, versions and actual results.",
+    "All 110 catalogue families are mapped to explicit implemented formulas/models or documented source-dependent interfaces; a missing proprietary formula is not a reproduced implementation.",
+    "Native C++ application compiles and hosts package install/enable/configure/start/cancel/timeout/history/result/export flows.",
+    "Data semantics, point-in-time input checks, no-future-information tests, fees and execution assumptions are versioned.",
+    "Independent runtimes, dependency installation/lockfiles, licenses, migration and installation documentation are delivered."
+  ],
+  "projects": [
+    {
+      "name": "hikyuu",
+      "repo": "fasiondog/hikyuu",
+      "role": "primary",
+      "url": "https://github.com/fasiondog/hikyuu.git",
+      "status": "adapter_verified_in_cpp_host",
+      "pluginId": "org.webstock.hikyuu",
+      "remaining": [
+        "portable_runtime_setup",
+        "expanded_capabilities_and_tests",
+        "full_program_per_engine_validation"
+      ]
+    },
+    {
+      "name": "rqalpha",
+      "repo": "ricequant/rqalpha",
+      "role": "primary",
+      "url": "https://github.com/ricequant/rqalpha.git",
+      "status": "pending_plugin_adapter",
+      "pluginId": null,
+      "remaining": [
+        "adapter",
+        "package",
+        "runtime",
+        "native_host_tests",
+        "full_program_validation"
+      ]
+    },
+    {
+      "name": "vnpy",
+      "repo": "vnpy/vnpy",
+      "role": "primary",
+      "url": "https://github.com/vnpy/vnpy.git",
+      "status": "pending_plugin_adapter",
+      "pluginId": null,
+      "remaining": [
+        "adapter",
+        "package",
+        "runtime",
+        "native_host_tests",
+        "full_program_validation"
+      ]
+    },
+    {
+      "name": "qlib",
+      "repo": "microsoft/qlib",
+      "role": "primary",
+      "url": "https://github.com/microsoft/qlib.git",
+      "status": "pending_plugin_adapter",
+      "pluginId": null,
+      "remaining": [
+        "adapter",
+        "package",
+        "runtime",
+        "native_host_tests",
+        "full_program_validation"
+      ]
+    },
+    {
+      "name": "lean",
+      "repo": "QuantConnect/Lean",
+      "role": "primary",
+      "url": "https://github.com/QuantConnect/Lean.git",
+      "status": "pending_plugin_adapter",
+      "pluginId": null,
+      "remaining": [
+        "adapter",
+        "package",
+        "runtime",
+        "native_host_tests",
+        "full_program_validation"
+      ]
+    },
+    {
+      "name": "backtrader",
+      "repo": "mementum/backtrader",
+      "role": "primary",
+      "url": "https://github.com/mementum/backtrader.git",
+      "status": "adapter_verified_in_cpp_host",
+      "pluginId": "org.webstock.backtrader",
+      "remaining": [
+        "portable_runtime_setup",
+        "expanded_capabilities_and_tests",
+        "full_program_per_engine_validation"
+      ]
+    },
+    {
+      "name": "backtesting-py",
+      "repo": "kernc/backtesting.py",
+      "role": "primary",
+      "url": "https://github.com/kernc/backtesting.py.git",
+      "status": "adapter_verified_in_cpp_host",
+      "pluginId": "org.webstock.backtesting-py",
+      "remaining": [
+        "portable_runtime_setup",
+        "expanded_capabilities_and_tests",
+        "full_program_per_engine_validation"
+      ]
+    },
+    {
+      "name": "vectorbt",
+      "repo": "polakowo/vectorbt",
+      "role": "primary",
+      "url": "https://github.com/polakowo/vectorbt.git",
+      "status": "adapter_verified_in_cpp_host",
+      "pluginId": "org.webstock.vectorbt",
+      "remaining": [
+        "portable_runtime_setup",
+        "expanded_capabilities_and_tests",
+        "full_program_per_engine_validation"
+      ]
+    },
+    {
+      "name": "bt",
+      "repo": "pmorissette/bt",
+      "role": "primary",
+      "url": "https://github.com/pmorissette/bt.git",
+      "status": "adapter_verified_in_cpp_host",
+      "pluginId": "org.webstock.bt",
+      "remaining": [
+        "portable_runtime_setup",
+        "expanded_capabilities_and_tests",
+        "full_program_per_engine_validation"
+      ]
+    },
+    {
+      "name": "zipline-reloaded",
+      "repo": "stefan-jansen/zipline-reloaded",
+      "role": "primary",
+      "url": "https://github.com/stefan-jansen/zipline-reloaded.git",
+      "status": "pending_plugin_adapter",
+      "pluginId": null,
+      "remaining": [
+        "adapter",
+        "package",
+        "runtime",
+        "native_host_tests",
+        "full_program_validation"
+      ]
+    },
+    {
+      "name": "ml4t-backtest",
+      "repo": "ml4t/backtest",
+      "role": "primary",
+      "url": "https://github.com/ml4t/backtest.git",
+      "status": "pending_plugin_adapter",
+      "pluginId": null,
+      "remaining": [
+        "adapter",
+        "package",
+        "runtime",
+        "native_host_tests",
+        "full_program_validation"
+      ]
+    },
+    {
+      "name": "wondertrader",
+      "repo": "wondertrader/wondertrader",
+      "role": "primary",
+      "url": "https://github.com/wondertrader/wondertrader.git",
+      "status": "pending_plugin_adapter",
+      "pluginId": null,
+      "remaining": [
+        "adapter",
+        "package",
+        "runtime",
+        "native_host_tests",
+        "full_program_validation"
+      ]
+    },
+    {
+      "name": "quantaxis",
+      "repo": "yutiansut/QUANTAXIS",
+      "role": "primary",
+      "url": "https://github.com/yutiansut/QUANTAXIS.git",
+      "status": "pending_plugin_adapter",
+      "pluginId": null,
+      "remaining": [
+        "adapter",
+        "package",
+        "runtime",
+        "native_host_tests",
+        "full_program_validation"
+      ]
+    },
+    {
+      "name": "czsc",
+      "repo": "waditu/czsc",
+      "role": "primary",
+      "url": "https://github.com/waditu/czsc.git",
+      "status": "adapter_verified_in_cpp_host",
+      "pluginId": "org.webstock.czsc",
+      "remaining": [
+        "portable_runtime_setup",
+        "expanded_capabilities_and_tests",
+        "full_program_per_engine_validation"
+      ]
+    },
+    {
+      "name": "vnpy-ctastrategy",
+      "repo": "vnpy/vnpy_ctastrategy",
+      "role": "companion",
+      "url": "https://github.com/vnpy/vnpy_ctastrategy.git",
+      "status": "pending_plugin_adapter",
+      "pluginId": null,
+      "remaining": [
+        "adapter",
+        "package",
+        "runtime",
+        "native_host_tests",
+        "full_program_validation"
+      ]
+    },
+    {
+      "name": "wtpy",
+      "repo": "wondertrader/wtpy",
+      "role": "companion",
+      "url": "https://github.com/wondertrader/wtpy.git",
+      "status": "pending_plugin_adapter",
+      "pluginId": null,
+      "remaining": [
+        "adapter",
+        "package",
+        "runtime",
+        "native_host_tests",
+        "full_program_validation"
+      ]
+    },
+    {
+      "name": "wbt",
+      "repo": "zengbin93/wbt",
+      "role": "companion",
+      "url": "https://github.com/zengbin93/wbt.git",
+      "status": "adapter_verified_in_cpp_host",
+      "pluginId": "org.webstock.wbt",
+      "remaining": [
+        "portable_runtime_setup",
+        "expanded_capabilities_and_tests",
+        "full_program_per_engine_validation"
+      ]
+    },
+    {
+      "name": "ta-lib",
+      "repo": "TA-Lib/ta-lib",
+      "role": "helper",
+      "url": "https://github.com/TA-Lib/ta-lib.git",
+      "status": "adapter_verified_in_cpp_host",
+      "pluginId": "org.webstock.talib",
+      "remaining": [
+        "portable_runtime_setup",
+        "expanded_capabilities_and_tests",
+        "full_program_per_engine_validation"
+      ]
+    },
+    {
+      "name": "akshare",
+      "repo": "akfamily/akshare",
+      "role": "helper",
+      "url": "https://github.com/akfamily/akshare.git",
+      "status": "pending_plugin_adapter",
+      "pluginId": null,
+      "remaining": [
+        "adapter",
+        "package",
+        "runtime",
+        "native_host_tests",
+        "full_program_validation"
+      ]
+    }
+  ],
+  "milestones": [
+    {
+      "id": "plugin-platform",
+      "status": "implemented_and_tested_in_isolated_cpp_host",
+      "pending": [
+        "portable_runtime_installation"
+      ]
+    },
+    {
+      "id": "full-native-program",
+      "status": "full_program_built_and_native_window_plugin_flow_tested",
+      "checks": [
+        "quotes and classic layouts plus legacy focus alias",
+        "open plugin through actual research workspace",
+        "run installed TA-Lib from Qt input form",
+        "close and reopen validated history without replay"
+      ],
+      "limits": "Not a full application-page audit or production-installed desktop acceptance."
+    },
+    {
+      "id": "indicator-coverage",
+      "status": "201_talib_functions_and_24_custom_operations_verified",
+      "note": "Function counts are not catalogue-family completion counts."
+    },
+    {
+      "id": "all-engine-coverage",
+      "status": "8_of_19_have_verified_initial_adapters"
+    }
+  ]
+}

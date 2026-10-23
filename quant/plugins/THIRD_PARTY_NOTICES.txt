@@ -1,0 +1,19 @@
+WebStock plugin adapters execute separately installed engines. A plugin package
+contains WebStock adapter source, not the third-party engine binaries or data.
+Retain the installed distributions' notices and licenses when distributing them.
+Process separation does not remove license obligations.
+
+TA-Lib: https://github.com/TA-Lib/ta-lib (BSD-3-Clause)
+TA-Lib Python: https://github.com/TA-Lib/ta-lib-python (BSD-2-Clause)
+Hikyuu: https://github.com/fasiondog/hikyuu (Apache-2.0 root, MIT components)
+NumPy: https://numpy.org/doc/stable/license.html (BSD-3-Clause)
+pandas: https://github.com/pandas-dev/pandas/blob/main/LICENSE (BSD-3-Clause)
+Backtesting.py: https://github.com/kernc/backtesting.py (AGPL-3.0)
+Backtrader: https://github.com/mementum/backtrader (GPL-3.0)
+vectorbt: https://github.com/polakowo/vectorbt (Apache-2.0 + Commons Clause)
+bt: https://github.com/pmorissette/bt (MIT)
+WBT: https://github.com/zengbin93/wbt (MIT)
+CZSC: https://github.com/waditu/czsc (Apache-2.0)
+
+No exchange data license, vendor proprietary formula, or commercial redistribution
+permission is implied by installation. Packages make no return guarantees.

@@ -1,0 +1,159 @@
+{
+  "schema": "webstock.plugin.native-acceptance.v1",
+  "runs": [
+    {
+      "pluginId": "org.webstock.backtesting-py",
+      "version": "0.3.0",
+      "status": "verified",
+      "runId": "plugin-ceee21a1-84f5-47d9-853b-b7fdd6bb6e0d",
+      "resultSha256": "691223739c34fce31b0441f95f552df6e94e632ffb1a3bb672c1a7f56c8d3b62",
+      "bars": 4937,
+      "tables": [
+        {
+          "id": "equity",
+          "rows": 4937
+        },
+        {
+          "id": "closed-trades",
+          "rows": 87
+        }
+      ]
+    },
+    {
+      "pluginId": "org.webstock.backtrader",
+      "version": "0.3.0",
+      "status": "verified",
+      "runId": "plugin-5371038e-e500-48ea-bc00-aaeacf8cc865",
+      "resultSha256": "cfce0f826fdf8e31b8fd7da0e0c42e686afd19822ab320b639a7fa4216fea90b",
+      "bars": 4937,
+      "tables": [
+        {
+          "id": "equity",
+          "rows": 4937
+        },
+        {
+          "id": "orders",
+          "rows": 522
+        }
+      ]
+    },
+    {
+      "pluginId": "org.webstock.bt",
+      "version": "0.3.0",
+      "status": "verified",
+      "runId": "plugin-196cc010-d132-44b5-8808-ea4dcc3e513c",
+      "resultSha256": "735b4dcf1c7f8ccab536e586fec06ea0795610ab367c306f1b68c5ddcbd20cb3",
+      "bars": 4937,
+      "tables": [
+        {
+          "id": "equity",
+          "rows": 4937
+        },
+        {
+          "id": "rebalance-transactions",
+          "rows": 2133
+        }
+      ]
+    },
+    {
+      "pluginId": "org.webstock.core-indicators",
+      "version": "0.3.0",
+      "status": "verified",
+      "runId": "plugin-6bc8f5f2-ac24-44e4-b2e9-5d6548157e38",
+      "resultSha256": "28bc0a747daa7455fa9a6d95dd8b4fb16fc099fe55bd25f759b7c332c36caf42",
+      "bars": 4937,
+      "tables": [
+        {
+          "id": "indicators",
+          "rows": 4937
+        }
+      ]
+    },
+    {
+      "pluginId": "org.webstock.czsc",
+      "version": "0.3.0",
+      "status": "verified",
+      "runId": "plugin-d57d2609-2921-4d3a-8fa6-a289ee7df676",
+      "resultSha256": "c903ce76b96abe2b0ea0fe695ef598698b815fdb2f6e65f9182dcd6dfa0cd36d",
+      "bars": 4937,
+      "tables": [
+        {
+          "id": "indicators",
+          "rows": 4937
+        }
+      ]
+    },
+    {
+      "pluginId": "org.webstock.hikyuu",
+      "version": "0.3.0",
+      "status": "verified",
+      "runId": "plugin-3d12ee4d-4342-46c6-bf48-ac1a00174490",
+      "resultSha256": "0ba4db7ee4a521e5e1b9ce5219e624fc5b91b2739629e6a1c744c603afff1b9e",
+      "bars": 4937,
+      "tables": [
+        {
+          "id": "equity",
+          "rows": 4937
+        },
+        {
+          "id": "trades",
+          "rows": 174
+        }
+      ]
+    },
+    {
+      "pluginId": "org.webstock.talib",
+      "version": "0.3.0",
+      "status": "verified",
+      "runId": "plugin-67506b10-aae7-41f0-ba94-4aac117825ed",
+      "resultSha256": "412f3891d53d47d9adf0e98e3f5f45ef55f9ba4bc21047504b48544f54999712",
+      "bars": 4937,
+      "tables": [
+        {
+          "id": "indicators",
+          "rows": 4937
+        }
+      ]
+    },
+    {
+      "pluginId": "org.webstock.vectorbt",
+      "version": "0.3.0",
+      "status": "verified",
+      "runId": "plugin-774b6a95-a018-4a21-9f18-eac170654656",
+      "resultSha256": "77584637482d39cc89a13a3f8bd857141afbfd1a3fbb3d235c501bea1760524c",
+      "bars": 4937,
+      "tables": [
+        {
+          "id": "equity",
+          "rows": 4937
+        },
+        {
+          "id": "orders",
+          "rows": 174
+        },
+        {
+          "id": "execution-log",
+          "rows": 174
+        }
+      ]
+    },
+    {
+      "pluginId": "org.webstock.wbt",
+      "version": "0.3.0",
+      "status": "verified",
+      "runId": "plugin-f3a01190-669d-4556-b625-95e5c4d7ae66",
+      "resultSha256": "644bd56287cd4635b70cc6c16c3a0bbb33c6d0559fe05f719e6184d399e90e4a",
+      "bars": 4937,
+      "tables": [
+        {
+          "id": "weight-index",
+          "rows": 4936
+        },
+        {
+          "id": "daily-attribution",
+          "rows": 4936
+        }
+      ]
+    }
+  ]
+}
