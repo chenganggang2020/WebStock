@@ -20,7 +20,7 @@ def number(key, default, minimum=2, maximum=10000, title=None, kind=None):
 def save_package(output, manifest, sources):
     content = {name: (HERE/source).read_bytes() for name, source in sources.items()}
     manifest.update(schema="webstock.plugin.manifest.v1", protocolVersion=1,
-                    entrypoint="worker.py", runtime="python", version="0.3.0",
+                    entrypoint="worker.py", runtime="python", version="0.4.0",
                     files={name: hashlib.sha256(raw).hexdigest() for name,raw in content.items()})
     package = {"schema": "webstock.plugin.package.v1", "manifest": manifest,
                "files": {name: base64.b64encode(raw).decode("ascii") for name,raw in content.items()}}
@@ -87,7 +87,8 @@ def main():
     for engine,title,license,source,distribution in [
         ("backtesting-py","Backtesting.py 回测引擎","AGPL-3.0","kernc/backtesting.py","backtesting"),
         ("backtrader","Backtrader 回测引擎","GPL-3.0","mementum/backtrader","backtrader"),
-        ("vectorbt","vectorbt 向量回测","Apache-2.0 + Commons Clause","polakowo/vectorbt","vectorbt")]:
+        ("vectorbt","vectorbt 向量回测","Apache-2.0 + Commons Clause","polakowo/vectorbt","vectorbt"),
+        ("ml4t-backtest","ML4T 回测引擎","MIT","ml4t/backtest","ml4t-backtest")]:
         records.append(save_package(args.output,{"id":"org.webstock."+engine,"name":title,"license":license,
             "source":"https://github.com/"+source,"distributions":[distribution,"numpy","pandas"],"operations":[{
                 "id":"sma-cross","title":"均线交叉 · 下一根开盘执行","formulaVersion":engine+"-sma-cross-next-open-v1",
@@ -108,6 +109,42 @@ def main():
                 "inputKind":"ohlcv-single-csv","outputKind":"indicator" if engine=="czsc" else "backtest",
                 "description":"按当时可见数据逐根运行；查看结果诊断中的模型边界。","parameters":fields}]},
             {"worker.py":"worker.py","research_adapters.py":"research_adapters.py","THIRD_PARTY_NOTICES.txt":"THIRD_PARTY_NOTICES.txt"}))
+    qa_operations=[]
+    for name,title,fields in [
+        ("ma","原版均线",[number("period",20,title="计算周期")]),
+        ("macd","原版 MACD",[number("fast",12,title="快速周期"),number("slow",26,title="慢速周期"),number("signal",9,title="信号周期")]),
+        ("rsi","原版三周期 RSI",[number("period1",6,title="第一周期"),number("period2",12,title="第二周期"),number("period3",24,title="第三周期")]),
+        ("kdj","原版 KDJ",[number("period",9,title="计算周期"),number("smoothK",3,title="K平滑"),number("smoothD",3,title="D平滑")]),
+        ("boll","原版布林带",[number("period",20,title="计算周期"),number("multiple",2.,.1,10,title="波动倍数")])]:
+        qa_operations.append({"id":name,"title":title,"formulaVersion":"quantaxis-available-"+name+"-v1","inputKind":"ohlcv-single-csv",
+            "outputKind":"indicator","description":"仅加载QUANTAXIS原版离线指标模块；不启动数据库或在线采集。","parameters":fields})
+    records.append(save_package(args.output,{"id":"org.webstock.quantaxis","name":"QUANTAXIS 离线指标","license":"MIT",
+        "source":"https://github.com/yutiansut/QUANTAXIS","distributions":["quantaxis","pandas","numpy"],"operations":qa_operations},
+        {"worker.py":"worker.py","quantaxis_adapter.py":"quantaxis_adapter.py","THIRD_PARTY_NOTICES.txt":"THIRD_PARTY_NOTICES.txt"}))
+    vn_operations=[]
+    for name in ("sma","ema","rsi","atr","adx","macd","boll"):
+        fields=[number("period",14,title="计算周期")]
+        if name=="macd":fields=[number("fast",12,title="快速周期"),number("slow",26,title="慢速周期"),number("signal",9,title="信号周期")]
+        if name=="boll":fields.append(number("multiple",2.,.1,10,title="波动倍数"))
+        vn_operations.append({"id":name,"title":"VeighNa "+name.upper(),"formulaVersion":"vnpy-array-manager-"+name+"-v1",
+            "inputKind":"ohlcv-single-csv","outputKind":"indicator","description":"原版ArrayManager指标API（底层使用TA-Lib）。","parameters":fields})
+    records.append(save_package(args.output,{"id":"org.webstock.vnpy","name":"VeighNa 指标接口","license":"MIT",
+        "source":"https://github.com/vnpy/vnpy","distributions":["vnpy","TA-Lib","pandas","numpy"],"operations":vn_operations},
+        {"worker.py":"worker.py","vnpy_adapters.py":"vnpy_adapters.py","THIRD_PARTY_NOTICES.txt":"THIRD_PARTY_NOTICES.txt"}))
+    records.append(save_package(args.output,{"id":"org.webstock.vnpy-ctastrategy","name":"VeighNa CTA 限价回测","license":"MIT",
+        "source":"https://github.com/vnpy/vnpy_ctastrategy","distributions":["vnpy","vnpy_ctastrategy","pandas"],"operations":[{
+            "id":"sma-limit","title":"均线交叉 · 下一根限价撮合","formulaVersion":"vnpy-cta-sma-cross-next-bar-limit-v1",
+            "inputKind":"ohlcv-single-csv","outputKind":"backtest","description":"原版合约逐日盯市；未实现股票现金约束。",
+            "parameters":[number("fast",10,title="快速周期"),number("slow",30,title="慢速周期"),
+                number("capital",100000.,1,1e10,title="初始参考资金"),number("quantity",100,1,1000000,title="合约数量"),
+                number("feeBps",5.,0,1000,title="单边费率（基点）"),number("priceTick",.01,.000001,100,title="最小价格单位")]}]},
+        {"worker.py":"worker.py","vnpy_adapters.py":"vnpy_adapters.py","THIRD_PARTY_NOTICES.txt":"THIRD_PARTY_NOTICES.txt"}))
+    records.append(save_package(args.output,{"id":"org.webstock.qlib","name":"Qlib Alpha158 特征","license":"MIT",
+        "source":"https://github.com/microsoft/qlib","distributions":["pyqlib","pandas","numpy"],"operations":[{
+            "id":"alpha158","title":"Alpha158 原始特征及公式","formulaVersion":"qlib-alpha158-raw-no-label-v1",
+            "inputKind":"ohlcv-single-csv","outputKind":"indicator","parameters":[],
+            "description":"原版表达式计算；缺失VWAP保持空白，无训练、标签或缺失填补。"}]},
+        {"worker.py":"worker.py","qlib_adapter.py":"qlib_adapter.py","THIRD_PARTY_NOTICES.txt":"THIRD_PARTY_NOTICES.txt"}))
     (args.output/"index.json").write_text(json.dumps(records,ensure_ascii=False,indent=2),encoding="utf-8")
     print(json.dumps(records,ensure_ascii=False))
 

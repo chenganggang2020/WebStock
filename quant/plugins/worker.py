@@ -163,9 +163,21 @@ def compute(manifest, operation, frame, parameters):
     if manifest["id"] == "org.webstock.hikyuu":
         from hikyuu_adapter import calculate
         return calculate(frame, parameters)
-    if manifest["id"] in ("org.webstock.backtesting-py", "org.webstock.backtrader", "org.webstock.vectorbt"):
+    if manifest["id"] in ("org.webstock.backtesting-py", "org.webstock.backtrader", "org.webstock.vectorbt", "org.webstock.ml4t-backtest"):
         from backtest_adapters import calculate
         return calculate(manifest["id"].split(".")[-1], frame, parameters)
+    if manifest["id"] == "org.webstock.quantaxis":
+        from quantaxis_adapter import calculate
+        return calculate(operation["id"], frame, parameters)
+    if manifest["id"] == "org.webstock.vnpy":
+        from vnpy_adapters import indicators
+        return indicators(operation["id"],frame,parameters)
+    if manifest["id"] == "org.webstock.vnpy-ctastrategy":
+        from vnpy_adapters import cta_backtest
+        return cta_backtest(frame,parameters)
+    if manifest["id"] == "org.webstock.qlib":
+        from qlib_adapter import calculate
+        return calculate(frame)
     if manifest["id"] in ("org.webstock.bt", "org.webstock.wbt", "org.webstock.czsc"):
         from research_adapters import calculate
         return calculate(manifest["id"].split(".")[-1], frame, parameters)

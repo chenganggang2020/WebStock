@@ -14,6 +14,11 @@ vectorbt: https://github.com/polakowo/vectorbt (Apache-2.0 + Commons Clause)
 bt: https://github.com/pmorissette/bt (MIT)
 WBT: https://github.com/zengbin93/wbt (MIT)
 CZSC: https://github.com/waditu/czsc (Apache-2.0)
+QUANTAXIS: https://github.com/yutiansut/QUANTAXIS (MIT)
+ML4T Backtest: https://github.com/ml4t/backtest (MIT)
+VeighNa: https://github.com/vnpy/vnpy (MIT)
+VeighNa CTA: https://github.com/vnpy/vnpy_ctastrategy (MIT)
+Qlib: https://github.com/microsoft/qlib (MIT)
 
 No exchange data license, vendor proprietary formula, or commercial redistribution
 permission is implied by installation. Packages make no return guarantees.

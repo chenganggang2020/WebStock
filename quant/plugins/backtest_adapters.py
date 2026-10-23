@@ -70,6 +70,31 @@ def calculate(engine, frame, p):
         equity=pd.DataFrame({"time":frame.time.to_numpy(),"equity":portfolio.value().to_numpy()})
         tables=[table("equity",equity),table("orders",portfolio.orders.records_readable),table("execution-log",portfolio.logs.records_readable)]
         distribution="vectorbt";warnings.append("vectorbt 附 Commons Clause 许可限制；当前包只含适配代码，不分发引擎。")
+    elif engine=="ml4t-backtest":
+        import polars as pl
+        from ml4t.backtest import Engine,Strategy,BacktestConfig,DataFeed
+        from ml4t.backtest.config import ExecutionPrice,CommissionType
+        from ml4t.backtest.types import ExecutionMode
+        fast=data.close.rolling(p["fast"]).mean();slow=data.close.rolling(p["slow"]).mean()
+        signals=pd.DataFrame({"timestamp":data.index,"asset":"INPUT",
+            "prediction":((fast>slow)&(fast.shift()<=slow.shift())).astype(float).to_numpy()-
+                         ((fast<slow)&(fast.shift()>=slow.shift())).astype(float).to_numpy()})
+        prices=data.reset_index().rename(columns={data.index.name or "index":"timestamp"});prices["asset"]="INPUT"
+        class Cross(Strategy):
+            def on_data(self,timestamp,data,context,broker):
+                for asset,bar in data.items():
+                    signal=bar.get("signals",{}).get("prediction",0)
+                    position=broker.get_position(asset)
+                    if position is None and signal>0:broker.submit_order(asset,p["quantity"])
+                    elif position is not None and signal<0:broker.close_position(asset)
+        config=BacktestConfig(initial_cash=p["capital"],execution_mode=ExecutionMode.NEXT_BAR,
+            execution_price=ExecutionPrice.OPEN,next_bar_execution_price=ExecutionPrice.OPEN,
+            commission_type=CommissionType.PERCENTAGE,commission_rate=fee)
+        result=Engine(DataFeed(prices_df=pl.from_pandas(prices),signals_df=pl.from_pandas(signals)),Cross(),config).run()
+        equity=result.to_equity_dataframe().to_pandas().rename(columns={"timestamp":"time"})
+        fills=result.to_fills_dataframe().to_pandas();rejected=result.to_rejected_orders_dataframe().to_pandas()
+        tables=[table("equity",equity),table("fills",fills),table("rejected-orders",rejected)]
+        distribution="ml4t-backtest"
     else:
         raise ValueError("Unknown backtest engine")
     return {"kind":"backtest","engineVersion":importlib.metadata.version(distribution),

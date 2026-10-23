@@ -18,7 +18,9 @@ def main():
     mapping={"talib":("data-tools","rsi"),"core-indicators":("data-tools","donchian-prior"),
         "hikyuu":("hikyuu","sma-cross"),"backtesting-py":("backtesting-py","sma-cross"),
         "backtrader":("backtrader","sma-cross"),"vectorbt":("vectorbt","sma-cross"),
-        "bt":("bt","sma-weight"),"wbt":("czsc","sma-weight"),"czsc":("czsc","online-bi")}
+        "bt":("bt","sma-weight"),"wbt":("czsc","sma-weight"),"czsc":("czsc","online-bi"),
+        "ml4t-backtest":("ml4t-backtest","sma-cross"),"quantaxis":("quantaxis311","kdj"),
+        "vnpy":("vnpy","rsi"),"vnpy-ctastrategy":("vnpy","sma-limit"),"qlib":("qlib","alpha158")}
     environment=dict(os.environ,QT_QPA_PLATFORM="offscreen",PYTHONUTF8="1")
     rows=[]
     for package in sorted(args.packages.glob("*.wspkg")):

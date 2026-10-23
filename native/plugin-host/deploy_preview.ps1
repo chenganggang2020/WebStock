@@ -33,7 +33,7 @@ $taskReadme = @'
 WebStock 量化插件本机预览版
 
 双击 Start-Stock.cmd。进入“研究 → 量化研究 → 量化插件”。
-9个插件包已安装，包含8个上游项目及WebStock补充指标。
+插件包已安装；具体数量与功能见plugin-packages/index.json及implementation-plan.json。
 运行环境使用本机此前准备好的隔离环境；本目录尚不是可在另一台机器直接运行的完整安装器。
 可选择 historical-fixture.csv 运行；这是公开仓库的旧股票样本，不是实时行情或收益有效性证据。
 

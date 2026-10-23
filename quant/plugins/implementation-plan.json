@@ -55,14 +55,12 @@
       "repo": "vnpy/vnpy",
       "role": "primary",
       "url": "https://github.com/vnpy/vnpy.git",
-      "status": "pending_plugin_adapter",
-      "pluginId": null,
+      "status": "adapter_verified_in_cpp_host",
+      "pluginId": "org.webstock.vnpy",
       "remaining": [
-        "adapter",
-        "package",
-        "runtime",
-        "native_host_tests",
-        "full_program_validation"
+        "portable_runtime_setup",
+        "expanded_capabilities_and_tests",
+        "full_program_per_engine_validation"
       ]
     },
     {
@@ -70,14 +68,12 @@
       "repo": "microsoft/qlib",
       "role": "primary",
       "url": "https://github.com/microsoft/qlib.git",
-      "status": "pending_plugin_adapter",
-      "pluginId": null,
+      "status": "adapter_verified_in_cpp_host",
+      "pluginId": "org.webstock.qlib",
       "remaining": [
-        "adapter",
-        "package",
-        "runtime",
-        "native_host_tests",
-        "full_program_validation"
+        "portable_runtime_setup",
+        "expanded_capabilities_and_tests",
+        "full_program_per_engine_validation"
       ]
     },
     {
@@ -167,14 +163,12 @@
       "repo": "ml4t/backtest",
       "role": "primary",
       "url": "https://github.com/ml4t/backtest.git",
-      "status": "pending_plugin_adapter",
-      "pluginId": null,
+      "status": "adapter_verified_in_cpp_host",
+      "pluginId": "org.webstock.ml4t-backtest",
       "remaining": [
-        "adapter",
-        "package",
-        "runtime",
-        "native_host_tests",
-        "full_program_validation"
+        "portable_runtime_setup",
+        "expanded_capabilities_and_tests",
+        "full_program_per_engine_validation"
       ]
     },
     {
@@ -197,14 +191,12 @@
       "repo": "yutiansut/QUANTAXIS",
       "role": "primary",
       "url": "https://github.com/yutiansut/QUANTAXIS.git",
-      "status": "pending_plugin_adapter",
-      "pluginId": null,
+      "status": "adapter_verified_in_cpp_host",
+      "pluginId": "org.webstock.quantaxis",
       "remaining": [
-        "adapter",
-        "package",
-        "runtime",
-        "native_host_tests",
-        "full_program_validation"
+        "portable_runtime_setup",
+        "expanded_capabilities_and_tests",
+        "full_program_per_engine_validation"
       ]
     },
     {
@@ -225,14 +217,12 @@
       "repo": "vnpy/vnpy_ctastrategy",
       "role": "companion",
       "url": "https://github.com/vnpy/vnpy_ctastrategy.git",
-      "status": "pending_plugin_adapter",
-      "pluginId": null,
+      "status": "adapter_verified_in_cpp_host",
+      "pluginId": "org.webstock.vnpy-ctastrategy",
       "remaining": [
-        "adapter",
-        "package",
-        "runtime",
-        "native_host_tests",
-        "full_program_validation"
+        "portable_runtime_setup",
+        "expanded_capabilities_and_tests",
+        "full_program_per_engine_validation"
       ]
     },
     {
@@ -318,7 +308,8 @@
     },
     {
       "id": "all-engine-coverage",
-      "status": "8_of_19_have_verified_initial_adapters"
+      "status": "13_of_19_have_verified_initial_adapters"
     }
-  ]
+  ],
+  "latestPackageVersion": "0.4.0"
 }
