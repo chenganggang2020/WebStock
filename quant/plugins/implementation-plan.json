@@ -9,9 +9,9 @@
     "indicatorFamilies": 110,
     "source": "indicator-scope.json",
     "indicatorReadiness": {
-      "formula_implemented_and_tested": 36,
-      "partial": 13,
-      "pending": 61
+      "formula_implemented_and_tested": 45,
+      "partial": 10,
+      "pending": 55
     }
   },
   "completionDefinition": [
@@ -40,14 +40,12 @@
       "repo": "ricequant/rqalpha",
       "role": "primary",
       "url": "https://github.com/ricequant/rqalpha.git",
-      "status": "pending_plugin_adapter",
-      "pluginId": null,
+      "status": "adapter_verified_in_cpp_host",
+      "pluginId": "org.webstock.rqalpha",
       "remaining": [
-        "adapter",
-        "package",
-        "runtime",
-        "native_host_tests",
-        "full_program_validation"
+        "portable_runtime_setup",
+        "expanded_capabilities_and_tests",
+        "full_program_per_engine_validation"
       ]
     },
     {
@@ -148,14 +146,12 @@
       "repo": "stefan-jansen/zipline-reloaded",
       "role": "primary",
       "url": "https://github.com/stefan-jansen/zipline-reloaded.git",
-      "status": "pending_plugin_adapter",
-      "pluginId": null,
+      "status": "adapter_verified_in_cpp_host",
+      "pluginId": "org.webstock.zipline-reloaded",
       "remaining": [
-        "adapter",
-        "package",
-        "runtime",
-        "native_host_tests",
-        "full_program_validation"
+        "portable_runtime_setup",
+        "expanded_capabilities_and_tests",
+        "full_program_per_engine_validation"
       ]
     },
     {
@@ -303,13 +299,13 @@
     },
     {
       "id": "indicator-coverage",
-      "status": "201_talib_functions_and_24_custom_operations_verified",
+      "status": "201_talib_functions_and_34_custom_operations_verified",
       "note": "Function counts are not catalogue-family completion counts."
     },
     {
       "id": "all-engine-coverage",
-      "status": "13_of_19_have_verified_initial_adapters"
+      "status": "15_of_19_have_verified_initial_adapters"
     }
   ],
-  "latestPackageVersion": "0.4.0"
+  "latestPackageVersion": "0.5.0"
 }

@@ -1,0 +1,155 @@
+{
+  "schema": "webstock.plugin.native-acceptance.v1",
+  "runs": [
+    {
+      "pluginId": "org.webstock.core-indicators",
+      "operationId": "supertrend",
+      "version": "0.5.0",
+      "status": "verified",
+      "runId": "plugin-29e9d8bf-83e2-4852-8f69-4660f6383373",
+      "resultSha256": "8992fc3f67ad438ae67876a449240577b4195b817b17f4b192e4bfa976f6a083",
+      "bars": 4937,
+      "tables": [
+        {
+          "id": "indicators",
+          "rows": 4937
+        }
+      ]
+    },
+    {
+      "pluginId": "org.webstock.core-indicators",
+      "operationId": "ichimoku",
+      "version": "0.5.0",
+      "status": "verified",
+      "runId": "plugin-55981293-c3f9-47e7-8d1b-d62847f421d8",
+      "resultSha256": "c273acff9d7b492d1c036b056e65ef92e616848f7f8764aa0130bd1c1480ec8e",
+      "bars": 4937,
+      "tables": [
+        {
+          "id": "indicators",
+          "rows": 4937
+        }
+      ]
+    },
+    {
+      "pluginId": "org.webstock.core-indicators",
+      "operationId": "dpo",
+      "version": "0.5.0",
+      "status": "verified",
+      "runId": "plugin-3e597fed-8458-47ab-bfc2-3441c8408b0d",
+      "resultSha256": "799944f8ea763df38264a823cfc1953aeaeff734796d44b9d6fd94af118badf2",
+      "bars": 4937,
+      "tables": [
+        {
+          "id": "indicators",
+          "rows": 4937
+        }
+      ]
+    },
+    {
+      "pluginId": "org.webstock.core-indicators",
+      "operationId": "pbx",
+      "version": "0.5.0",
+      "status": "verified",
+      "runId": "plugin-43f5ce9a-afe5-4ff0-9c0b-d7fcc165034a",
+      "resultSha256": "eaf83f295e6f6c3b8e487f7793bc54b2b286bf3b9d055496244b4de9afdcffa1",
+      "bars": 4937,
+      "tables": [
+        {
+          "id": "indicators",
+          "rows": 4937
+        }
+      ]
+    },
+    {
+      "pluginId": "org.webstock.core-indicators",
+      "operationId": "dma",
+      "version": "0.5.0",
+      "status": "verified",
+      "runId": "plugin-069114c6-40b2-4333-9375-fc29f7d7a375",
+      "resultSha256": "de9f9eac6bb869e2724a2879438c3cc0814a3372fa54648e7f75619c3dde2dab",
+      "bars": 4937,
+      "tables": [
+        {
+          "id": "indicators",
+          "rows": 4937
+        }
+      ]
+    },
+    {
+      "pluginId": "org.webstock.core-indicators",
+      "operationId": "lwr",
+      "version": "0.5.0",
+      "status": "verified",
+      "runId": "plugin-b85ef958-5518-4971-b3cf-65615536341d",
+      "resultSha256": "9adfe37dc761c3f364368fbbe16709182190ef89066bee606314b83e0f5f3697",
+      "bars": 4937,
+      "tables": [
+        {
+          "id": "indicators",
+          "rows": 4937
+        }
+      ]
+    },
+    {
+      "pluginId": "org.webstock.core-indicators",
+      "operationId": "brar-cr-vr-psy",
+      "version": "0.5.0",
+      "status": "verified",
+      "runId": "plugin-abc3a0de-20c1-4485-b7d5-5781181b9580",
+      "resultSha256": "647f176beb195dc325b27350b93813f0eb7affabea885c0d1c244e5e0ddbd280",
+      "bars": 4937,
+      "tables": [
+        {
+          "id": "indicators",
+          "rows": 4937
+        }
+      ]
+    },
+    {
+      "pluginId": "org.webstock.core-indicators",
+      "operationId": "emv",
+      "version": "0.5.0",
+      "status": "verified",
+      "runId": "plugin-b33aefcf-3cae-46ae-9a76-80e01cb501c5",
+      "resultSha256": "5d967a98e146e157f6f88e4b7775c605f1d25dad74283088a96ac85e8abc2d7b",
+      "bars": 4937,
+      "tables": [
+        {
+          "id": "indicators",
+          "rows": 4937
+        }
+      ]
+    },
+    {
+      "pluginId": "org.webstock.core-indicators",
+      "operationId": "bb-kc-squeeze",
+      "version": "0.5.0",
+      "status": "verified",
+      "runId": "plugin-97141b1f-9e6f-4bcc-9099-64a9b7514281",
+      "resultSha256": "1fe37fe043e304c4a0d175e92b3f542d626d3e2b0606efedf586d9487f91a2a5",
+      "bars": 4937,
+      "tables": [
+        {
+          "id": "indicators",
+          "rows": 4937
+        }
+      ]
+    },
+    {
+      "pluginId": "org.webstock.core-indicators",
+      "operationId": "amount-adv",
+      "version": "0.5.0",
+      "status": "verified",
+      "runId": "plugin-163f7864-8154-48ae-b17c-4e53750d4ecc",
+      "resultSha256": "132abbdb143176e09e5082697174ae0ef68426f26720e6b3f199c07f11842990",
+      "bars": 4937,
+      "tables": [
+        {
+          "id": "indicators",
+          "rows": 4937
+        }
+      ]
+    }
+  ]
+}

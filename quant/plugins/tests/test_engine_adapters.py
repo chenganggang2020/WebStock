@@ -54,33 +54,50 @@ def test_backtest(manifest,bars):
     fills=tables["fills"]
     assert len(fills)>4,"Fixture must exercise fills"
     cta=manifest["id"].endswith("ctastrategy")
-    timecol="time" if cta else "timestamp"
+    daily_close=manifest["id"].endswith(("zipline-reloaded","rqalpha"))
+    timecol="time" if cta or daily_close else "timestamp"
     times=pd.to_datetime(bars.time)
     indices={t:i for i,t in enumerate(times)}
     fast=bars.close.rolling(params["fast"]).mean();slow=bars.close.rolling(params["slow"]).mean()
     signals=((fast>slow)&(fast.shift()<=slow.shift())).astype(int)-((fast<slow)&(fast.shift()>=slow.shift())).astype(int)
     for row in fills.itertuples(index=False):
-        index=indices[pd.Timestamp(getattr(row,timecol))]
+        stamp=pd.Timestamp(getattr(row,timecol))
+        if daily_close:stamp=stamp.tz_localize(None).normalize()
+        index=indices[stamp]
         assert index>0 and signals.iloc[index-1]!=0,"Execution must follow an earlier closed-bar signal"
-        if not cta:
+        if daily_close:
+            assert abs(row.price-bars.close.iloc[index])<.00101,"Expected next daily close (Zipline stores mill precision)"
+        elif not cta:
             assert abs(row.price-bars.open.iloc[index])<1e-8,"Expected next-open execution"
             assert abs(row.commission-abs(row.quantity)*row.price*params["feeBps"]/10000)<1e-8
         else:
             assert bars.low.iloc[index]-1e-8<=row.price<=bars.high.iloc[index]+1e-8
-    if cta:
+    if cta or daily_close:
         # Independent cash+inventory reconstruction of the engine's daily PnL.
         ledger={};cash=params["capital"];position=0
         for row in fills.itertuples(index=False):
-            direction=1 if row.side=="多" else -1
-            assert row.side in ("多","空")
-            ledger.setdefault(pd.Timestamp(row.time),[]).append((direction,row.quantity,row.price))
+            if manifest["id"].endswith("zipline-reloaded"):
+                direction=1 if row.quantity>0 else -1
+            else:direction=1 if row.side in ("多","SIDE.BUY") else -1
+            quantity=abs(row.quantity)
+            stamp=pd.Timestamp(row.time).tz_localize(None).normalize()
+            ledger.setdefault(stamp,[]).append((direction,quantity,row.price))
         equity=[]
         for index,timestamp in enumerate(times):
             for direction,quantity,price in ledger.get(timestamp,[]):
                 cash-=direction*quantity*price+quantity*price*params["feeBps"]/10000
                 position+=direction*quantity
             equity.append(cash+position*bars.close.iloc[index])
-        np.testing.assert_allclose(tables["equity"].equity,equity,atol=1e-7,rtol=1e-10)
+        # Zipline's original daily store rounds prices to 0.001; use the same
+        # documented storage precision only for the independent closing mark.
+        if manifest["id"].endswith("zipline-reloaded"):
+            cash=params["capital"];position=0;equity=[]
+            for index,timestamp in enumerate(times):
+                for direction,quantity,price in ledger.get(timestamp,[]):
+                    cash-=direction*quantity*price+quantity*price*params["feeBps"]/10000
+                    position+=direction*quantity
+                equity.append(cash+position*round(bars.close.iloc[index],3))
+        np.testing.assert_allclose(tables["equity"].equity,equity,atol=1e-6,rtol=1e-10)
     print("Execution timing and accounting checks passed:",manifest["id"],flush=True)
 
 

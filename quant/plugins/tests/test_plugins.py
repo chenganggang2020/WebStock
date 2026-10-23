@@ -40,6 +40,38 @@ class PluginTests(unittest.TestCase):
                 self.assertEqual(result["formulaVersion"],operation["formulaVersion"])
                 self.assertTrue(result["kernelVersion"].startswith("TA-Lib/"))
 
+    def test_supertrend_hand_calculated_state_changes(self):
+        bars=fixture(6);bars["close"]=[10,10,13,12,7,8];bars["open"]=bars.close
+        bars["high"]=bars.close+1;bars["low"]=bars.close-1
+        out,_=calculate("supertrend",bars,{"period":2,"multiple":1.})
+        np.testing.assert_allclose(out.supertrend,[np.nan,12,10,10,11.25,11.125],equal_nan=True)
+        np.testing.assert_allclose(out.direction,[np.nan,-1,1,1,-1,-1],equal_nan=True)
+
+    def test_displaced_indicators_use_information_time(self):
+        bars=fixture(12)
+        out,_=calculate("ichimoku",bars,{"conversion":2,"base":3,"span":4,"displacement":2})
+        np.testing.assert_allclose(out.cloudAAtCurrentBar,out.senkouAComputedNow.shift(2),equal_nan=True)
+        np.testing.assert_allclose(out.chikouValueKnownNow,bars.close)
+        dpo,_=calculate("dpo",bars,{"period":4})
+        self.assertAlmostEqual(dpo.dpoKnownNow.iloc[5],bars.close.iloc[2]-bars.close.iloc[2:6].mean())
+
+    def test_flat_volume_conventions_and_actual_adv(self):
+        bars=fixture(12);bars[["open","close"]]=100.;bars["high"]=101.;bars["low"]=99.;bars["volume"]=100.
+        out,_=calculate("brar-cr-vr-psy",bars,{"period":3})
+        for key in ("ar","br","cr","vr"):self.assertAlmostEqual(out[key].iloc[-1],100.)
+        self.assertEqual(out.psy.iloc[-1],0.)
+        amount,_=calculate("amount-adv",bars,{"period":3})
+        self.assertAlmostEqual(amount.priorAmountADV.iloc[4],bars.amount.iloc[1:4].mean())
+        with self.assertRaises(ValueError):calculate("amount-adv",bars.drop(columns="amount"),{"period":3})
+
+    def test_emv_volume_scale_and_zero_volume(self):
+        bars=fixture(12)
+        a,_=calculate("emv",bars,{"period":3,"volumeScale":100.})
+        b,_=calculate("emv",bars.assign(volume=bars.volume*10),{"period":3,"volumeScale":100.})
+        np.testing.assert_allclose(a.emv/10,b.emv,equal_nan=True)
+        z,_=calculate("emv",bars.assign(volume=0.),{"period":3,"volumeScale":100.})
+        self.assertTrue(z.emv.isna().all())
+
     def test_every_formula_is_prefix_invariant(self):
         # Future data cannot change already-computed historical indicator values.
         for manifest in self.manifests:

@@ -127,6 +127,76 @@ def calculate(name, b, p):
         out["high"]=pd.concat([h,out.open,out.close],axis=1).max(axis=1)
         out["low"]=pd.concat([l,out.open,out.close],axis=1).min(axis=1)
         warning.append("合成图价格不能作为真实成交价格。")
+    elif name == "supertrend":
+        local_tr=tr.copy();local_tr.iloc[0]=h.iloc[0]-l.iloc[0]
+        local_atr=wilder(local_tr,n)
+        basic_up=(h+l)/2+p["multiple"]*local_atr;basic_down=(h+l)/2-p["multiple"]*local_atr
+        upper=np.full(len(b),np.nan);lower=upper.copy();line=upper.copy();direction=upper.copy()
+        for i in range(len(b)):
+            if not np.isfinite(local_atr.iloc[i]):continue
+            if i==0 or not np.isfinite(upper[i-1]):
+                upper[i]=basic_up.iloc[i];lower[i]=basic_down.iloc[i];direction[i]=-1
+            else:
+                upper[i]=basic_up.iloc[i] if basic_up.iloc[i]<upper[i-1] or c.iloc[i-1]>upper[i-1] else upper[i-1]
+                lower[i]=basic_down.iloc[i] if basic_down.iloc[i]>lower[i-1] or c.iloc[i-1]<lower[i-1] else lower[i-1]
+                direction[i]=(1 if c.iloc[i]>upper[i] else -1) if direction[i-1]==-1 else (-1 if c.iloc[i]<lower[i] else 1)
+            line[i]=lower[i] if direction[i]==1 else upper[i]
+        out["supertrend"]=line;out["direction"]=direction;out["upper"]=upper;out["lower"]=lower
+        warning.append("ATR以首根高低差起始、前n根均值为种子，方向初始为下行；方向+1为上行，-1为下行。")
+    elif name == "ichimoku":
+        mid=lambda k:(h.rolling(k).max()+l.rolling(k).min())/2
+        out["conversion"]=mid(int(p["conversion"]));out["base"]=mid(int(p["base"]))
+        out["senkouAComputedNow"]=(out.conversion+out.base)/2
+        out["senkouBComputedNow"]=mid(int(p["span"]))
+        out["cloudAAtCurrentBar"]=out.senkouAComputedNow.shift(int(p["displacement"]))
+        out["cloudBAtCurrentBar"]=out.senkouBComputedNow.shift(int(p["displacement"]))
+        out["chikouValueKnownNow"]=c
+        warning.append("当前计算的先行线仅代表已知值，图形可前移；迟行线的当前收盘价不向过去回填，避免回测使用未来信息。")
+    elif name == "dpo":
+        out["dpoKnownNow"]=c.shift(n//2+1)-c.rolling(n).mean()
+        warning.append("结果记在实际可知的当前根；未作居中或向历史移动的显示。")
+    elif name == "pbx":
+        for k in (3,5,8,13,18,24):
+            out["pbx"+str(k)]=(c.ewm(span=k,adjust=False,min_periods=k).mean()+c.rolling(2*k).mean()+c.rolling(4*k).mean())/3
+        warning.append("本版本为(EMA(N)+SMA(2N)+SMA(4N))/3，区别于部分库使用三条EMA的PBX。")
+    elif name == "dma":
+        if p["fast"]>=p["slow"]:raise ValueError("DMA fast must be less than slow")
+        out["dma"]=c.rolling(int(p["fast"])).mean()-c.rolling(int(p["slow"])).mean()
+        out["ama"]=out.dma.rolling(int(p["signal"])).mean()
+    elif name == "lwr":
+        reverse_rsv=100*ratio(h.rolling(n).max()-c,h.rolling(n).max()-l.rolling(n).min())
+        out["lwr1"]=wilder(reverse_rsv,int(p["smooth"]))
+        out["lwr2"]=wilder(out.lwr1,int(p["smooth"]))
+        warning.append("0到100的正值反向RSV，两次Wilder均值种子平滑；不同软件的负值刻度和SMA种子不可混用。")
+    elif name == "brar-cr-vr-psy":
+        previous=c.shift();middle=((h+l)/2).shift()
+        out["ar"]=100*ratio((h-o).rolling(n).sum(),(o-l).rolling(n).sum())
+        out["br"]=100*ratio((h-previous).clip(lower=0).rolling(n).sum(),(previous-l).clip(lower=0).rolling(n).sum())
+        out["cr"]=100*ratio((h-middle).clip(lower=0).rolling(n).sum(),(middle-l).clip(lower=0).rolling(n).sum())
+        up=v.where(c>previous,0.);down=v.where(c<previous,0.);flat=v.where(c==previous,0.)
+        up.iloc[0]=np.nan;down.iloc[0]=np.nan;flat.iloc[0]=np.nan
+        out["vr"]=100*ratio((up+.5*flat).rolling(n).sum(),(down+.5*flat).rolling(n).sum())
+        advances=(c>previous).astype(float);advances.iloc[0]=np.nan
+        out["psy"]=100*advances.rolling(n).mean()
+        warning.append("CR参考前根高低价中点；VR将平盘量各分一半；PSY严格上涨，平盘不算上涨。")
+    elif name == "emv":
+        out["rawEmv"]=ratio(((h+l)/2).diff()*(h-l),v/p["volumeScale"])
+        out["emv"]=out.rawEmv.rolling(n).mean()
+        warning.append("成交量单位直接影响EMV数值，缩放系数随参数保存；零成交量留空。")
+    elif name == "bb-kc-squeeze":
+        mean=c.rolling(n).mean();std=c.rolling(n).std(ddof=0)
+        kc=c.ewm(span=n,adjust=False,min_periods=n).mean()
+        out["bbUpper"]=mean+p["bbMultiple"]*std;out["bbLower"]=mean-p["bbMultiple"]*std
+        out["kcUpper"]=kc+p["kcMultiple"]*atr;out["kcLower"]=kc-p["kcMultiple"]*atr
+        out["squeezeOn"]=((out.bbUpper<out.kcUpper)&(out.bbLower>out.kcLower)).astype(float).where(atr.notna()&mean.notna())
+        out["widthRatio"]=ratio(p["bbMultiple"]*std,p["kcMultiple"]*atr)
+        warning.append("仅实现明确公式的BB-KC通道包含关系；不宣称复制TTM专有动量柱或其交易提示。")
+    elif name == "amount-adv":
+        if "amount" not in b:raise ValueError("Actual amount is required")
+        amount=pd.to_numeric(b.amount,errors="raise")
+        if not np.isfinite(amount).all() or (amount<0).any():raise ValueError("Invalid actual amount")
+        out["amount"]=amount;out["priorAmountADV"]=amount.shift().rolling(n).mean();out["priorVolumeADV"]=v.shift().rolling(n).mean()
+        warning.append("ADV分母截止前一根，保留原币种与量单位；参与率还需要实际委托/成交量，未由行情凭空估计。")
     else:
         raise ValueError("Unknown formula")
     return out, warning

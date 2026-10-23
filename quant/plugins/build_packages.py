@@ -20,7 +20,7 @@ def number(key, default, minimum=2, maximum=10000, title=None, kind=None):
 def save_package(output, manifest, sources):
     content = {name: (HERE/source).read_bytes() for name, source in sources.items()}
     manifest.update(schema="webstock.plugin.manifest.v1", protocolVersion=1,
-                    entrypoint="worker.py", runtime="python", version="0.4.0",
+                    entrypoint="worker.py", runtime="python", version="0.5.0",
                     files={name: hashlib.sha256(raw).hexdigest() for name,raw in content.items()})
     package = {"schema": "webstock.plugin.package.v1", "manifest": manifest,
                "files": {name: base64.b64encode(raw).decode("ascii") for name,raw in content.items()}}
@@ -61,7 +61,11 @@ def main():
         "ewma-volatility":"EWMA 波动率","bollinger-derived":"布林 %b / 带宽 / 历史分位","keltner":"Keltner 通道",
         "chandelier":"Chandelier 退出参考","drawdown-downside":"价格回撤 / 下行波动","historical-var-es":"历史 VaR / ES",
         "rvol":"RVOL（分母排除当前根）","vpt":"VPT / PVT","cmf":"Chaikin Money Flow","force-index":"Force Index",
-        "vwma":"滚动 VWMA","anchored-vwap-proxy":"首根锚定的 VWAP 近似","amihud":"Amihud 非流动性","heikin-ashi":"Heikin Ashi 合成图"}
+        "vwma":"滚动 VWMA","anchored-vwap-proxy":"首根锚定的 VWAP 近似","amihud":"Amihud 非流动性","heikin-ashi":"Heikin Ashi 合成图",
+        "supertrend":"Supertrend（ATR方向线）","ichimoku":"Ichimoku（按可知时间）","dpo":"DPO（不向过去回填）",
+        "pbx":"PBX（EMA+两条SMA版本）","dma":"DMA / AMA","lwr":"LWR（正向超买刻度）",
+        "brar-cr-vr-psy":"BR / AR / CR / VR / PSY","emv":"Ease of Movement","bb-kc-squeeze":"BB-KC收缩状态",
+        "amount-adv":"成交额 / ADV / 成交量ADV"}
     core=[]
     for key,title in names.items():
         fields=[] if key in ("bbi","ao-ac","vpt","anchored-vwap-proxy","heikin-ashi") else [number("period",20,title="计算周期")]
@@ -72,6 +76,13 @@ def main():
         if key=="bollinger-derived":fields.append(number("rankWindow",120,title="分位历史窗口"))
         if key in ("keltner","chandelier"):fields.append(number("multiple",3.,0.1,20,title="ATR 倍数"))
         if key=="historical-var-es":fields.append(number("confidence",0.95,0.5,0.999,title="置信水平"))
+        if key=="supertrend":fields=[number("period",10,title="ATR周期"),number("multiple",3.,.1,20,title="ATR倍数")]
+        if key=="ichimoku":fields=[number("conversion",9,title="转换线周期"),number("base",26,title="基准线周期"),number("span",52,title="先行B周期"),number("displacement",26,1,10000,title="显示位移根数")]
+        if key=="pbx":fields=[]
+        if key=="dma":fields=[number("fast",10,title="短期均线"),number("slow",50,title="长期均线"),number("signal",10,title="差值平滑周期")]
+        if key=="lwr":fields=[number("period",9,title="区间周期"),number("smooth",3,title="平滑周期")]
+        if key=="emv":fields.append(number("volumeScale",1000000.,1,1e12,title="成交量缩放系数"))
+        if key=="bb-kc-squeeze":fields.extend([number("bbMultiple",2.,.1,10,title="布林倍数"),number("kcMultiple",1.5,.1,10,title="Keltner倍数")])
         core.append({"id":key,"title":title,"formulaVersion":"webstock-"+key+"-v1","parameters":fields,
                      "inputKind":"ohlcv-single-csv","outputKind":"indicator","description":"仅使用已完成K线的有版本公式。"})
     records.append(save_package(args.output,{"id":"org.webstock.core-indicators","name":"WebStock 补充指标","license":"Project source terms",
@@ -145,6 +156,17 @@ def main():
             "inputKind":"ohlcv-single-csv","outputKind":"indicator","parameters":[],
             "description":"原版表达式计算；缺失VWAP保持空白，无训练、标签或缺失填补。"}]},
         {"worker.py":"worker.py","qlib_adapter.py":"qlib_adapter.py","THIRD_PARTY_NOTICES.txt":"THIRD_PARTY_NOTICES.txt"}))
+    for engine,title,formula,source,license,adapter in [
+        ("zipline-reloaded","Zipline 日线回测","zipline-sma-cross-next-daily-bar-v1","stefan-jansen/zipline-reloaded","Apache-2.0","zipline_adapter.py"),
+        ("rqalpha","RQAlpha 冻结数据回测","rqalpha-lagged-sma-cross-close-v1","ricequant/rqalpha","Apache-2.0 with additional commercial-use restrictions","rqalpha_adapter.py")]:
+        records.append(save_package(args.output,{"id":"org.webstock."+engine,"name":title,"license":license,
+            "source":"https://github.com/"+source,"distributions":[engine,"pandas","numpy"],"operations":[{
+                "id":"sma-close","title":"均线交叉 · 下一交易根收盘撮合","formulaVersion":formula,
+                "inputKind":"ohlcv-single-csv","outputKind":"backtest","description":"原版日线执行模型；冻结输入，明确信号延迟。",
+                "parameters":[number("fast",10,title="快速均线"),number("slow",30,title="慢速均线"),
+                    number("capital",100000.,1,1e10,title="初始资金"),number("quantity",100,1,1000000,title="每次买入数量"),
+                    number("feeBps",5.,0,1000,title="单边费率（基点）")]}]},
+            {"worker.py":"worker.py",adapter:adapter,"THIRD_PARTY_NOTICES.txt":"THIRD_PARTY_NOTICES.txt"}))
     (args.output/"index.json").write_text(json.dumps(records,ensure_ascii=False,indent=2),encoding="utf-8")
     print(json.dumps(records,ensure_ascii=False))
 

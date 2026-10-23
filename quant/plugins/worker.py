@@ -178,6 +178,12 @@ def compute(manifest, operation, frame, parameters):
     if manifest["id"] == "org.webstock.qlib":
         from qlib_adapter import calculate
         return calculate(frame)
+    if manifest["id"] == "org.webstock.zipline-reloaded":
+        from zipline_adapter import calculate
+        return calculate(frame,parameters)
+    if manifest["id"] == "org.webstock.rqalpha":
+        from rqalpha_adapter import calculate
+        return calculate(frame,parameters)
     if manifest["id"] in ("org.webstock.bt", "org.webstock.wbt", "org.webstock.czsc"):
         from research_adapters import calculate
         return calculate(manifest["id"].split(".")[-1], frame, parameters)

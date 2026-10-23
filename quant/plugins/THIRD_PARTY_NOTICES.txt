@@ -19,6 +19,8 @@ ML4T Backtest: https://github.com/ml4t/backtest (MIT)
 VeighNa: https://github.com/vnpy/vnpy (MIT)
 VeighNa CTA: https://github.com/vnpy/vnpy_ctastrategy (MIT)
 Qlib: https://github.com/microsoft/qlib (MIT)
+Zipline Reloaded: https://github.com/stefan-jansen/zipline-reloaded (Apache-2.0)
+RQAlpha: https://github.com/ricequant/rqalpha (Apache-2.0 with additional commercial-use restrictions; inspect installed LICENSE)
 
 No exchange data license, vendor proprietary formula, or commercial redistribution
 permission is implied by installation. Packages make no return guarantees.

@@ -61,7 +61,7 @@ WEBVIEW2_SDK 指向原分支要求的官方Microsoft.Web.WebView2 1.0.4258.31提
 验证
 ----
 Python：tests/test_plugins.py <插件包目录>
-逐项执行201个TA-Lib函数，并检查201+24个指标在追加未来K线后历史值不变化。
+逐项执行201个TA-Lib函数，并检查201+34个指标在追加未来K线后历史值不变化。
 另外检查历史边界、零成交量、RSI版本区分、不合法输入和真实成交额要求。
 Qt：quant_plugin_tests，设置 WEBSTOCK_TEST_PYTHON、WEBSTOCK_TEST_PACKAGE（TA-Lib包）、
 WEBSTOCK_TEST_CSV 可执行真实插件及进程树取消测试；未设置时这些测试明确skip。
@@ -70,8 +70,8 @@ WEBSTOCK_TEST_SCREENSHOT 可保存原生控件结果页截图。
 
 尚待完成
 --------
-已有13个项目首个适配功能经C++宿主验证：TA-Lib、Hikyuu、Backtesting.py、Backtrader、vectorbt、bt、WBT、CZSC、ML4T、QUANTAXIS、VeighNa、VeighNa CTA、Qlib。
-其余6个项目的原生插件适配仍待完成。110类目录当前36类有已测试公式，13类部分实现，61类未实现。
+已有15个项目首个适配功能经C++宿主验证：TA-Lib、Hikyuu、Backtesting.py、Backtrader、vectorbt、bt、WBT、CZSC、ML4T、QUANTAXIS、VeighNa、VeighNa CTA、Qlib、RQAlpha、Zipline。
+其余4个项目的原生插件适配仍待完成。110类目录当前45类有已测试公式，10类部分实现，55类未实现。
 完整主程序已编译，主窗口的插件入口/运行/重开经Qt控件测试；用户安装版的全页面验收不在本次证据中。
 跨机器环境安装仍需完成；结果包导出/导入、可视卸载及版本安装已实现。
 统一成交/持仓口径、数据快照v2（多证券/点时财务/事件/逐笔盘口）、费用和制度历史。
@@ -93,3 +93,10 @@ Qlib以原版Alpha158表达式生成158列特征，分4张结果表；另附逐�
 THIRD_PARTY_NOTICES.txt记录第三方来源。进程隔离不免除许可义务。
 RQAlpha与vectorbt有额外商业限制，Backtesting.py为AGPL，Backtrader为GPL。
 安装个人本机适配器与公开再发行整个引擎是不同动作，正式发行需保留实际版本许可和通知。
+
+0.5.0 增量验证
+--------------
+16包均通过C++宿主运行；新增10个补充功能逐一原生运行4937根K线。Python共10项测试通过。
+新增RQAlpha和Zipline基于同一冻结CSV，日线撮合明确为信号之后一根收盘；原生库仍可能因账户/执行差异产生不同交易。
+两者均用独立现金+持仓账本复核权益，验证信号时序及价格；Zipline按其原版存储的0.001价格精度核对。
+新增指标公式与边界见core_indicators.py及indicator-scope.json。BB-KC收缩不宣称复刻TTM动量柱，ADV不冒充实际成交参与率。

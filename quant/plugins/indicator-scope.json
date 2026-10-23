@@ -163,12 +163,13 @@
       "overlap": "与 SMA/EMA 大量重叠。",
       "evidence": "厂商说明；非独立效果证据",
       "refs": "https://www.10jqka.com.cn/ad_mar/man/f4-2.htm",
-      "status": "partial",
+      "status": "formula_implemented_and_tested",
       "implementations": [
         "core-indicators:bbi",
-        "talib:ema"
+        "talib:ema",
+        "core-indicators:pbx"
       ],
-      "implementationNote": "PBX及国内特定平滑版本待实现"
+      "implementationNote": "PBX使用明确声明的EMA(N)+SMA(2N)+SMA(4N)版本；BBI和EMA已在前版实现。 原生宿主已运行验证，不代表收益优势或所有厂商同口径。"
     },
     {
       "id": 10,
@@ -240,9 +241,11 @@
       "overlap": "ATR 与趋势组合；与止损线共享信息。",
       "evidence": "公式/实现；未验证收益",
       "refs": "https://www.tradingview.com/support/solutions/43000634738-supertrend/",
-      "status": "pending",
-      "implementations": [],
-      "implementationNote": "未完成；不以目录条目或近似名称充当实现。"
+      "status": "formula_implemented_and_tested",
+      "implementations": [
+        "core-indicators:supertrend"
+      ],
+      "implementationNote": "ATR首根HL起始，均值种子；状态变化手算测试及前缀不变性已通过。 原生宿主已运行验证，不代表收益优势或所有厂商同口径。"
     },
     {
       "id": 14,
@@ -274,9 +277,11 @@
       "overlap": "与通道、趋势线重叠。",
       "evidence": "公式/实现；未验证收益",
       "refs": "https://www.tradingview.com/support/solutions/43000589152-ichimoku-cloud/\nhttps://tradingview.com/pine-script-docs/concepts/repainting/",
-      "status": "pending",
-      "implementations": [],
-      "implementationNote": "未完成；不以目录条目或近似名称充当实现。"
+      "status": "formula_implemented_and_tested",
+      "implementations": [
+        "core-indicators:ichimoku"
+      ],
+      "implementationNote": "按实际可知时间输出；先行计算值与当前云图分列，迟行收盘不回填历史。 原生宿主已运行验证，不代表收益优势或所有厂商同口径。"
     },
     {
       "id": 16,
@@ -308,12 +313,13 @@
       "overlap": "与 MACD 密切相关。",
       "evidence": "公式/实现；未验证收益",
       "refs": "https://ta-lib.org/functions/ppo.html\nhttps://www.10jqka.com.cn/ad_mar/man/f4-2.htm",
-      "status": "partial",
+      "status": "formula_implemented_and_tested",
       "implementations": [
         "talib:ppo",
-        "talib:apo"
+        "talib:apo",
+        "core-indicators:dma"
       ],
-      "implementationNote": "DMA特定平台公式待实现"
+      "implementationNote": "已补SMA差值DMA及其SMA平滑AMA。 原生宿主已运行验证，不代表收益优势或所有厂商同口径。"
     },
     {
       "id": 18,
@@ -365,12 +371,13 @@
       "overlap": "与 Williams %R、LWR 信息高度重复。",
       "evidence": "公式/实现；未验证收益",
       "refs": "https://ta-lib.org/functions/stoch.html\nhttps://www.10jqka.com.cn/ad_mar/man/f4-1.htm",
-      "status": "partial",
+      "status": "formula_implemented_and_tested",
       "implementations": [
         "talib:stoch",
-        "talib:stochf"
+        "talib:stochf",
+        "quantaxis:kdj"
       ],
-      "implementationNote": "国内KDJ递推版本待实现"
+      "implementationNote": "KD和TA随机指标之外，已接入QUANTAXIS KDJ并屏蔽原版种子提前出现的索引。 原生宿主已运行验证，不代表收益优势或所有厂商同口径。"
     },
     {
       "id": 21,
@@ -384,11 +391,12 @@
       "overlap": "同窗口原始 %R = Fast %K − 100；LWR 为平滑变体。",
       "evidence": "公式/实现；未验证收益",
       "refs": "https://ta-lib.org/functions/willr.html\nhttps://ta-lib.org/functions/stoch.html\nhttps://www.10jqka.com.cn/ad_mar/man/f4-2.htm",
-      "status": "partial",
+      "status": "formula_implemented_and_tested",
       "implementations": [
-        "talib:willr"
+        "talib:willr",
+        "core-indicators:lwr"
       ],
-      "implementationNote": "LWR平滑版本待实现"
+      "implementationNote": "LWR使用正值反向RSV和两次Wilder种子平滑，明确区别负值刻度版本。 原生宿主已运行验证，不代表收益优势或所有厂商同口径。"
     },
     {
       "id": 22,
@@ -528,9 +536,11 @@
       "overlap": "与均线偏离、周期过滤相关。",
       "evidence": "公式/实现；未验证收益",
       "refs": "https://www.tradingview.com/support/solutions/43000502246-detrended-price-oscillator-dpo/\nhttps://tradingview.com/pine-script-docs/concepts/repainting/",
-      "status": "pending",
-      "implementations": [],
-      "implementationNote": "未完成；不以目录条目或近似名称充当实现。"
+      "status": "formula_implemented_and_tested",
+      "implementations": [
+        "core-indicators:dpo"
+      ],
+      "implementationNote": "使用C[t-floor(N/2)-1]-SMA(N)[t]，保留在当前可知时间，不居中回填。 原生宿主已运行验证，不代表收益优势或所有厂商同口径。"
     },
     {
       "id": 30,
@@ -562,9 +572,11 @@
       "overlap": "多为既有价量的再组合；整组不算独立证据。",
       "evidence": "名称目录；未逐一复现",
       "refs": "https://www.10jqka.com.cn/ad_mar/man/f4.htm",
-      "status": "pending",
-      "implementations": [],
-      "implementationNote": "未完成；不以目录条目或近似名称充当实现。"
+      "status": "formula_implemented_and_tested",
+      "implementations": [
+        "core-indicators:brar-cr-vr-psy"
+      ],
+      "implementationNote": "BRAR/CR/VR/PSY具明确窗口、前收/前中点与平盘量处理，零分母留空。 原生宿主已运行验证，不代表收益优势或所有厂商同口径。"
     },
     {
       "id": 32,
@@ -704,9 +716,11 @@
       "overlap": "不能把 Squeeze、带宽、ATR 当三份独立证据。",
       "evidence": "厂商说明；非独立效果证据",
       "refs": "https://toslc.thinkorswim.com/center/reference/Tech-Indicators/studies-library/T-U/TTM-Squeeze.html",
-      "status": "pending",
-      "implementations": [],
-      "implementationNote": "未完成；不以目录条目或近似名称充当实现。"
+      "status": "partial",
+      "implementations": [
+        "core-indicators:bb-kc-squeeze"
+      ],
+      "implementationNote": "已实现明确口径的BB/KC包含关系，未复制TTM专有动量柱。"
     },
     {
       "id": 40,
@@ -840,9 +854,11 @@
       "overlap": "流动性约束，不应被包装为上涨预测。",
       "evidence": "数学定义；约束为本次判断",
       "refs": "https://vlab.stern.nyu.edu/docs/liquidity/ILLIQ-HIST",
-      "status": "pending",
-      "implementations": [],
-      "implementationNote": "未完成；不以目录条目或近似名称充当实现。"
+      "status": "partial",
+      "implementations": [
+        "core-indicators:amount-adv"
+      ],
+      "implementationNote": "实际成交额与截止前根的量/额ADV已实现；参与率需要成交执行数据，仍待接入。"
     },
     {
       "id": 48,
@@ -948,11 +964,12 @@
       "overlap": "常与 VPT、OBV 重叠。",
       "evidence": "EFI 已核；EMV 具体实现待核",
       "refs": "https://in.tradingview.com/support/solutions/43000502259-elder-s-force-index-efi/\nhttps://www.10jqka.com.cn/ad_mar/man/f4.htm",
-      "status": "partial",
+      "status": "formula_implemented_and_tested",
       "implementations": [
-        "core-indicators:force-index"
+        "core-indicators:force-index",
+        "core-indicators:emv"
       ],
-      "implementationNote": "EMV待实现"
+      "implementationNote": "EMV已补；使用高低价中点变化与区间/成交量，量缩放系数明确。 原生宿主已运行验证，不代表收益优势或所有厂商同口径。"
     },
     {
       "id": 54,
