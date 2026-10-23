@@ -20,7 +20,7 @@ def number(key, default, minimum=2, maximum=10000, title=None, kind=None):
 def save_package(output, manifest, sources):
     content = {name: (HERE/source).read_bytes() for name, source in sources.items()}
     manifest.update(schema="webstock.plugin.manifest.v1", protocolVersion=1,
-                    entrypoint="worker.py", runtime="python", version="0.10.0",
+                    entrypoint="worker.py", runtime="python", version="0.11.1",
                     files={name: hashlib.sha256(raw).hexdigest() for name,raw in content.items()})
     package = {"schema": "webstock.plugin.package.v1", "manifest": manifest,
                "files": {name: base64.b64encode(raw).decode("ascii") for name,raw in content.items()}}
@@ -218,6 +218,21 @@ def main():
                 number("fast",10,title="快速均线"),number("slow",30,title="慢速均线"),number("capital",100000.,1,1e10,title="初始虚拟资金"),
                 number("quantity",100,1,1000000,title="每次数量"),number("feeBps",5.,0,1000,title="单边费率（基点）")]}]},
         {"worker.py":"worker.py","lean_adapter.py":"lean_adapter.py","lean/WebStockFrozenAlgorithm.cs":"lean/WebStockFrozenAlgorithm.cs","THIRD_PARTY_NOTICES.txt":"THIRD_PARTY_NOTICES.txt"}))
+    panel=[]
+    for key,title in {"market-breadth":"市场宽度 / AD线 / 新高低 / McClellan", "beta-correlation":"基准Beta / 相关矩阵",
+        "cross-sectional-momentum":"截面动量 / 排名", "cross-sectional-reversal":"截面反转 / 排名",
+        "industry-relative-strength":"行业动量 / 相对强度", "equal-cap-weight-indices":"等权与市值加权指数",
+        "cross-sectional-dispersion":"截面收益离散度", "free-float-turnover":"历史流通股换手率",
+        "actual-participation":"真实成交参与率"}.items():
+        fields=[] if key in ("equal-cap-weight-indices","free-float-turnover","actual-participation") else [number("period",20,2,1000,title="观察窗口")]
+        if key=="cross-sectional-momentum":fields.append(number("skip",1,0,252,title="跳过最近根数"))
+        if key in ("beta-correlation","industry-relative-strength"):
+            fields.append({"id":"benchmark","title":"基准证券代码","type":"text","format":"text","minLength":1,"maxLength":64,"default":"BENCH"})
+        panel.append({"id":key,"title":title,"formulaVersion":"webstock-panel-"+key+"-v1","parameters":fields,
+            "inputKind":"market-panel-csv","outputKind":"indicator","description":"需多证券CSV：决策时间、行情可用时间、历史成分及已知时间；字段见随包PANEL_INPUT.txt。"})
+    records.append(save_package(args.output,{"id":"org.webstock.panel-research","name":"WebStock 多证券研究","license":"Project source terms",
+        "source":"https://github.com/chenganggang2020/WebStock","distributions":["numpy","pandas"],"operations":panel},
+        {"worker.py":"worker.py","panel_contract.py":"panel_contract.py","panel_research.py":"panel_research.py","PANEL_INPUT.txt":"PANEL_INPUT.txt","THIRD_PARTY_NOTICES.txt":"THIRD_PARTY_NOTICES.txt"}))
     (args.output/"index.json").write_text(json.dumps(records,ensure_ascii=False,indent=2),encoding="utf-8")
     print(json.dumps(records,ensure_ascii=False))
 

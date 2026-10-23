@@ -5,7 +5,8 @@ param(
     [Parameter(Mandatory=$true)][string]$PluginPackages,
     [Parameter(Mandatory=$true)][string]$ExistingPluginRoot,
     [Parameter(Mandatory=$true)][string]$PythonBase,
-    [Parameter(Mandatory=$true)][string]$SampleCsv
+    [Parameter(Mandatory=$true)][string]$SampleCsv,
+    [string]$PanelCsv
 )
 $ErrorActionPreference = 'Stop'
 if (Test-Path -LiteralPath $Destination) { throw 'Destination exists; use a new preview directory.' }
@@ -26,6 +27,7 @@ if ($LASTEXITCODE -ne 0) { throw 'Could not create the isolated preview database
 Copy-Item -LiteralPath $ExistingPluginRoot -Destination (Join-Path $taskData 'quant-plugins') -Recurse
 Copy-Item -LiteralPath $PluginPackages -Destination (Join-Path $taskRelease 'plugin-packages') -Recurse
 Copy-Item -LiteralPath $SampleCsv -Destination (Join-Path $taskRelease 'historical-fixture.csv')
+if ($PanelCsv) { Copy-Item -LiteralPath $PanelCsv -Destination (Join-Path $taskRelease 'synthetic-panel-test.csv') }
 $taskConfig = @{schema='stock-local-data-root/v1';directory=$taskData} | ConvertTo-Json
 [IO.File]::WriteAllText((Join-Path $taskRelease 'stock-data-root.json'),$taskConfig,[Text.UTF8Encoding]::new($false))
 [IO.File]::WriteAllText((Join-Path $taskRelease 'Start-Stock.cmd'),"@echo off`r`nstart `"`" `"%~dp0Stock.exe`"`r`n",[Text.Encoding]::ASCII)
@@ -36,6 +38,7 @@ WebStock 量化插件本机预览版
 插件包已安装；具体数量与功能见plugin-packages/index.json及implementation-plan.json。
 运行环境使用本机此前准备好的隔离环境；本目录尚不是可在另一台机器直接运行的完整安装器。
 可选择 historical-fixture.csv 运行；这是公开仓库的旧股票样本，不是实时行情或收益有效性证据。
+多证券插件可选择另附的 synthetic-panel-test.csv；这是合成测试数据，仅用于查看功能和核对计算。
 
 本预览使用本目录内独立data，不修改原安装版的账户与数据库。
 移动整个目录后，需要把stock-data-root.json的directory更新到移动后的data绝对路径。
@@ -51,6 +54,7 @@ Copy-Item -LiteralPath (Join-Path $taskRepo 'quant\plugins\THIRD_PARTY_NOTICES.t
 Copy-Item -LiteralPath (Join-Path $taskRepo 'quant\plugins\implementation-plan.json') -Destination $taskRelease
 Copy-Item -LiteralPath (Join-Path $taskRepo 'quant\plugins\README.txt') -Destination (Join-Path $taskRelease 'plugin-readme.txt')
 Copy-Item -LiteralPath (Join-Path $taskRepo 'quant\plugins\TEMPORAL_FORMULAS.txt') -Destination $taskRelease
+Copy-Item -LiteralPath (Join-Path $taskRepo 'quant\plugins\PANEL_INPUT.txt') -Destination $taskRelease
 $taskSetup = Join-Path $taskRelease 'runtime-setup'
 New-Item -ItemType Directory -Path $taskSetup | Out-Null
 Copy-Item -LiteralPath (Join-Path $taskRepo 'quant\plugins\setup_runtime.py') -Destination $taskSetup

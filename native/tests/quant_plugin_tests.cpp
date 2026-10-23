@@ -122,6 +122,21 @@ out=dict(schema='webstock.plugin.result.v1',status='completed',automaticTrading=
         write(folder+"/record.json",QJsonObject{{"runId",id},{"status","running"}});QLockFile lock(folder+"/run.lock");QVERIFY(lock.tryLock());
         Job second(dir.path());QCOMPARE(second.records()[0].toObject().value("status").toString(),QString("running"));
     }
+    void multiSecurityNativeRunAndArchive(){
+        auto python=qEnvironmentVariable("WEBSTOCK_TEST_PYTHON"),packageFile=qEnvironmentVariable("WEBSTOCK_TEST_PANEL_PACKAGE"),csv=qEnvironmentVariable("WEBSTOCK_TEST_PANEL_CSV");
+        if(python.isEmpty()||packageFile.isEmpty()||csv.isEmpty())QSKIP("Set multi-security adapter fixtures");
+        QTemporaryDir dir;Repository repo(dir.path());auto p=repo.install(read(packageFile));repo.configure(p.value("id").toString(),python,true);
+        QuantPluginWidget widget(dir.path());widget.resize(1280,850);widget.show();
+        widget.findChild<QLineEdit*>("pluginInput")->setText(csv);widget.findChild<QCheckBox*>("pluginClosedBars")->setChecked(true);
+        QTest::mouseClick(widget.findChild<QPushButton*>("pluginRun"),Qt::LeftButton);
+        Job reader(dir.path());QTRY_VERIFY_WITH_TIMEOUT(!reader.records().isEmpty()&&reader.records()[0].toObject().value("status")=="completed",15000);
+        auto id=reader.records()[0].toObject().value("runId").toString();auto result=reader.reopen(id).value("result").toObject();
+        QCOMPARE(result.value("inputSemantics").toObject().value("securityCount").toInt(),4);
+        QCOMPARE(result.value("dataPolicy").toObject().value("adjustment").toString(),QString("declared-in-input"));
+        auto output=qEnvironmentVariable("WEBSTOCK_TEST_PANEL_SCREENSHOT");if(!output.isEmpty())QVERIFY(widget.grab().save(output));
+        QTemporaryDir target;Job imported(target.path());QCOMPARE(imported.importResult(reader.exportResult(id)),id);
+        QCOMPARE(imported.reopen(id).value("result").toObject(),result);QVERIFY(!imported.active());
+    }
     void cancelAndTimeoutTerminateDescendants(){
         auto python=qEnvironmentVariable("WEBSTOCK_TEST_PYTHON");if(python.isEmpty())QSKIP("Set WEBSTOCK_TEST_PYTHON for real process lifecycle tests");
         QTemporaryDir dir;Repository repo(dir.path());

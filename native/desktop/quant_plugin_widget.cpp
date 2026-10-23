@@ -148,7 +148,9 @@ void QuantPluginWidget::selectOperation(){
     fields_.clear();while(parameters_->rowCount())parameters_->removeRow(0);
     operation_=operations_->currentData().toJsonObject();description_->setText(operation_.value("description").toString());
     const bool query=operation_.value("inputKind")=="parameters-only";
-    form_->setRowVisible(input_->parentWidget(),!query);form_->setRowVisible(adjustment_,!query);form_->setRowVisible(closed_,!query);
+    form_->setRowVisible(input_->parentWidget(),!query);form_->setRowVisible(adjustment_,!query&&operation_.value("inputKind")!="market-panel-csv");form_->setRowVisible(closed_,!query);
+    if(auto label=qobject_cast<QLabel*>(form_->labelForField(input_->parentWidget())))
+        label->setText(operation_.value("inputKind")=="market-panel-csv"?"历史多证券 CSV":"历史K线 CSV");
     QJsonObject saved;
     if(!operation_.isEmpty()){
         auto p=repository_.plugin(plugins_->currentData().toString());

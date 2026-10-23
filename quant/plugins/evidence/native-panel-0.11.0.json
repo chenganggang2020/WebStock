@@ -1,0 +1,148 @@
+{
+  "schema": "webstock.plugin.native-acceptance.v1",
+  "runs": [
+    {
+      "pluginId": "org.webstock.panel-research",
+      "operationId": "market-breadth",
+      "version": "0.11.0",
+      "status": "verified",
+      "runId": "plugin-30295820-9a65-4e16-bb1d-84811296d416",
+      "resultSha256": "ba4a0d1c773f9afb9350a7159462209f3c738e7b1a1ae5112be8b933edfcb334",
+      "bars": 320,
+      "tables": [
+        {
+          "id": "indicators",
+          "rows": 80
+        }
+      ]
+    },
+    {
+      "pluginId": "org.webstock.panel-research",
+      "operationId": "beta-correlation",
+      "version": "0.11.0",
+      "status": "verified",
+      "runId": "plugin-d7b0e5e0-3fd5-4ede-a2f9-52728300d412",
+      "resultSha256": "77eb1120c95115940bc8b87a609c78badb678d257e415c4d52af4519ba2c9b6a",
+      "bars": 320,
+      "tables": [
+        {
+          "id": "risk-exposures",
+          "rows": 220
+        },
+        {
+          "id": "latest-correlation-matrix",
+          "rows": 9
+        }
+      ]
+    },
+    {
+      "pluginId": "org.webstock.panel-research",
+      "operationId": "cross-sectional-momentum",
+      "version": "0.11.0",
+      "status": "verified",
+      "runId": "plugin-2f6717fe-29eb-4fc1-bbe3-042de0a790f1",
+      "resultSha256": "08d830087c4ae82375b24c7a97b8917b28e357184f152ebc5d68133b261bf44e",
+      "bars": 320,
+      "tables": [
+        {
+          "id": "factor-scores",
+          "rows": 220
+        }
+      ]
+    },
+    {
+      "pluginId": "org.webstock.panel-research",
+      "operationId": "cross-sectional-reversal",
+      "version": "0.11.0",
+      "status": "verified",
+      "runId": "plugin-0112428b-6a72-422d-a3ec-421d5447f2de",
+      "resultSha256": "baa8de5912ce035f5065c98b84f2f81371f2b282ae47d71d2896173770351f16",
+      "bars": 320,
+      "tables": [
+        {
+          "id": "factor-scores",
+          "rows": 220
+        }
+      ]
+    },
+    {
+      "pluginId": "org.webstock.panel-research",
+      "operationId": "industry-relative-strength",
+      "version": "0.11.0",
+      "status": "verified",
+      "runId": "plugin-1b96f601-acca-4386-92e7-29a78924b684",
+      "resultSha256": "00eff17711417b4383265a0273f785f2340a40641175c67f21f860a160ca0b01",
+      "bars": 320,
+      "tables": [
+        {
+          "id": "relative-strength",
+          "rows": 220
+        },
+        {
+          "id": "industry-momentum",
+          "rows": 140
+        }
+      ]
+    },
+    {
+      "pluginId": "org.webstock.panel-research",
+      "operationId": "equal-cap-weight-indices",
+      "version": "0.11.0",
+      "status": "verified",
+      "runId": "plugin-aaabbd13-3098-4d96-b04d-1ad2e56befc2",
+      "resultSha256": "1d947224aa4f45b7319854047a3320acabc6582ba9c8b08718ee658d90f326e3",
+      "bars": 320,
+      "tables": [
+        {
+          "id": "indicators",
+          "rows": 80
+        }
+      ]
+    },
+    {
+      "pluginId": "org.webstock.panel-research",
+      "operationId": "cross-sectional-dispersion",
+      "version": "0.11.0",
+      "status": "verified",
+      "runId": "plugin-1334da0d-61e9-4645-803c-8d5013e89abd",
+      "resultSha256": "4f639724f0723c20299a5eda53b75e645af688d62d13bfb7fde696f18f31cf00",
+      "bars": 320,
+      "tables": [
+        {
+          "id": "indicators",
+          "rows": 80
+        }
+      ]
+    },
+    {
+      "pluginId": "org.webstock.panel-research",
+      "operationId": "free-float-turnover",
+      "version": "0.11.0",
+      "status": "verified",
+      "runId": "plugin-b8de2bae-9c89-4a2a-98fc-d22ad2b76e3e",
+      "resultSha256": "88fcae10d27b921f5f368a600d1a2315b9e23ca7bf250c657e813c7914d72feb",
+      "bars": 320,
+      "tables": [
+        {
+          "id": "turnover",
+          "rows": 220
+        }
+      ]
+    },
+    {
+      "pluginId": "org.webstock.panel-research",
+      "operationId": "actual-participation",
+      "version": "0.11.0",
+      "status": "verified",
+      "runId": "plugin-703c478a-cf10-466e-b6b2-9d3e49358eb7",
+      "resultSha256": "56032a0bf5598095e490bdf56ab7a4cced7e19b4cb5412f06cdc77f4eb7822c4",
+      "bars": 320,
+      "tables": [
+        {
+          "id": "participation",
+          "rows": 220
+        }
+      ]
+    }
+  ]
+}

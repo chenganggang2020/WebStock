@@ -16,7 +16,7 @@
       ]
     },
     "qt": {
-      "passed": 12,
+      "passed": 13,
       "failed": 0,
       "skipped": 0,
       "checks": [
@@ -35,7 +35,8 @@
         "query form hides CSV and validates ISO dates",
         "query snapshots and result archives roundtrip without execution",
         "per-operation parameters restored without running a job",
-        "tiny numeric defaults and restored values survive the native form down to 1e-12"
+        "tiny numeric defaults and restored values survive the native form down to 1e-12",
+        "multi-security native form, source metadata and archive without replay"
       ]
     },
     "temporal": {
@@ -63,6 +64,19 @@
       "steadyStateTolerance": 0,
       "atol": 1e-10,
       "rtol": 1e-10
+    },
+    "panel": {
+      "passed": 7,
+      "failed": 0,
+      "operations": 9,
+      "syntheticSecurities": 4,
+      "syntheticDecisions": 80,
+      "prefixDecisions": 60
+    },
+    "fullNativeWindow": {
+      "passed": 3,
+      "failed": 0,
+      "skipped": 0
     }
   },
   "integrationRuns": [
@@ -241,5 +255,9 @@
     "leanDotnetRebuild": "pending"
   },
   "nativeCoreExpansion010": "native-core-expansion-0.10.0.json",
-  "programSha256": "67e09d65a70447fccdef64ed7890f31ba15d2abfd9faec2f687b6edf95098dea"
+  "programSha256": "7b24d4ded4d570d8f740a529b2149eaf77784644ba2c5cf655ddce74c1bf8d7d",
+  "nativePanelAcceptance": [
+    "native-panel-0.11.0.json",
+    "native-panel-0.11.1.json"
+  ]
 }

@@ -790,9 +790,11 @@
       "overlap": "组合分散度与个股信号不同。",
       "evidence": "数学定义；风险应用",
       "refs": "https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/data_library/f-f_5_factors_2x3.html\nhttps://quant.10jqka.com.cn/view/help/8",
-      "status": "pending",
-      "implementations": [],
-      "implementationNote": "未完成；不以目录条目或近似名称充当实现。"
+      "status": "formula_implemented_and_tested",
+      "implementations": [
+        "panel-research:beta-correlation"
+      ],
+      "implementationNote": "收益窗口Beta及末次相关矩阵，完整观测和覆盖数明确；基准来自同一冻结面板。 已通过合成数据手算/历史截断与C++宿主验证；真实全市场PIT数据未完成外部认证。"
     },
     {
       "id": 44,
@@ -840,9 +842,11 @@
       "overlap": "与成交量相关，跨股票更可比。",
       "evidence": "数据定义；口径需确认",
       "refs": "https://quant.10jqka.com.cn/view/dataplatform",
-      "status": "pending",
-      "implementations": [],
-      "implementationNote": "未完成；不以目录条目或近似名称充当实现。"
+      "status": "formula_implemented_and_tested",
+      "implementations": [
+        "panel-research:free-float-turnover"
+      ],
+      "implementationNote": "明确股数单位和当时可用的流通股数，不以总股本冒充流通口径。 已通过合成数据手算/历史截断与C++宿主验证；真实全市场PIT数据未完成外部认证。"
     },
     {
       "id": 47,
@@ -856,11 +860,12 @@
       "overlap": "流动性约束，不应被包装为上涨预测。",
       "evidence": "数学定义；约束为本次判断",
       "refs": "https://vlab.stern.nyu.edu/docs/liquidity/ILLIQ-HIST",
-      "status": "partial",
+      "status": "formula_implemented_and_tested",
       "implementations": [
-        "core-indicators:amount-adv"
+        "core-indicators:amount-adv",
+        "panel-research:actual-participation"
       ],
-      "implementationNote": "实际成交额与截止前根的量/额ADV已实现；参与率需要成交执行数据，仍待接入。"
+      "implementationNote": "原有真实成交额/ADV加显式实际成交股数参与率；不把委托量估为成交量。 已通过合成数据手算/历史截断与C++宿主验证；真实全市场PIT数据未完成外部认证。"
     },
     {
       "id": 48,
@@ -1119,9 +1124,11 @@
       "overlap": "与单股量价 A/D 同名但完全不同。",
       "evidence": "公式/实现；未验证收益",
       "refs": "https://in.tradingview.com/support/solutions/43000589092-advance-decline-line/",
-      "status": "pending",
-      "implementations": [],
-      "implementationNote": "未完成；不以目录条目或近似名称充当实现。"
+      "status": "formula_implemented_and_tested",
+      "implementations": [
+        "panel-research:market-breadth"
+      ],
+      "implementationNote": "按每时点声明历史成分累积涨跌家数差，显示有效覆盖数。 已通过合成数据手算/历史截断与C++宿主验证；真实全市场PIT数据未完成外部认证。"
     },
     {
       "id": 63,
@@ -1135,9 +1142,11 @@
       "overlap": "与 A/D Line 同源，选择一种主展示即可。",
       "evidence": "定义/推导；未验证收益",
       "refs": "https://in.tradingview.com/support/solutions/43000794825-market-breadth-advancing-and-declining/\nhttps://in.tradingview.com/support/solutions/43000589092-advance-decline-line/",
-      "status": "pending",
-      "implementations": [],
-      "implementationNote": "未完成；不以目录条目或近似名称充当实现。"
+      "status": "formula_implemented_and_tested",
+      "implementations": [
+        "panel-research:market-breadth"
+      ],
+      "implementationNote": "上涨占比含有效平盘成分；涨跌比为上涨/下跌，零分母留空。 已通过合成数据手算/历史截断与C++宿主验证；真实全市场PIT数据未完成外部认证。"
     },
     {
       "id": 64,
@@ -1151,9 +1160,11 @@
       "overlap": "与指数趋势互补；与其他广度指标部分重叠。",
       "evidence": "基于公开数据的研究设计",
       "refs": "https://in.tradingview.com/support/solutions/43000794825-market-breadth-advancing-and-declining/\nhttps://ta-lib.org/functions/ema.html",
-      "status": "pending",
-      "implementations": [],
-      "implementationNote": "未完成；不以目录条目或近似名称充当实现。"
+      "status": "formula_implemented_and_tested",
+      "implementations": [
+        "panel-research:market-breadth"
+      ],
+      "implementationNote": "仅在历史成分中统计已预热股票的均线之上占比。 已通过合成数据手算/历史截断与C++宿主验证；真实全市场PIT数据未完成外部认证。"
     },
     {
       "id": 65,
@@ -1167,9 +1178,11 @@
       "overlap": "与 Donchian 的横截面汇总相关。",
       "evidence": "基于突破定义的研究设计",
       "refs": "https://www.tradingview.com/support/solutions/43000502253-donchian-channels-dc/\nhttps://in.tradingview.com/support/solutions/43000794825-market-breadth-advancing-and-declining/",
-      "status": "pending",
-      "implementations": [],
-      "implementationNote": "未完成；不以目录条目或近似名称充当实现。"
+      "status": "formula_implemented_and_tested",
+      "implementations": [
+        "panel-research:market-breadth"
+      ],
+      "implementationNote": "新高低比较当前与前n根高低价区间，分母预热与覆盖显示。 已通过合成数据手算/历史截断与C++宿主验证；真实全市场PIT数据未完成外部认证。"
     },
     {
       "id": 66,
@@ -1183,9 +1196,11 @@
       "overlap": "属于广度的 MACD 类变换。",
       "evidence": "公式/实现；未验证收益",
       "refs": "https://www.mcoscillator.com/download/docs/UnderstandingOscillators.pdf",
-      "status": "pending",
-      "implementations": [],
-      "implementationNote": "未完成；不以目录条目或近似名称充当实现。"
+      "status": "formula_implemented_and_tested",
+      "implementations": [
+        "panel-research:market-breadth"
+      ],
+      "implementationNote": "比例调整涨跌数EMA19-EMA39及首个有效点起累计Summation，缺口不跳过。 已通过合成数据手算/历史截断与C++宿主验证；真实全市场PIT数据未完成外部认证。"
     },
     {
       "id": 67,
@@ -1199,9 +1214,11 @@
       "overlap": "是相对表现，不是 RSI。",
       "evidence": "研究设计；动量文献作背景",
       "refs": "https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/data_library/det_mom_factor.html",
-      "status": "pending",
-      "implementations": [],
-      "implementationNote": "未完成；不以目录条目或近似名称充当实现。"
+      "status": "formula_implemented_and_tested",
+      "implementations": [
+        "panel-research:industry-relative-strength"
+      ],
+      "implementationNote": "当时已知行业分类的等权区间动量均值；不是可交易行业指数。 已通过合成数据手算/历史截断与C++宿主验证；真实全市场PIT数据未完成外部认证。"
     },
     {
       "id": 68,
@@ -1215,9 +1232,11 @@
       "overlap": "与横截面动量、Beta 有联系但不等同。",
       "evidence": "数学定义；参数未优化",
       "refs": "https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/data_library/det_mom_factor.html\nhttps://mba.tuck.dartmouth.edu/pages/faculty/ken.french/data_library/f-f_5_factors_2x3.html",
-      "status": "pending",
-      "implementations": [],
-      "implementationNote": "未完成；不以目录条目或近似名称充当实现。"
+      "status": "formula_implemented_and_tested",
+      "implementations": [
+        "panel-research:industry-relative-strength"
+      ],
+      "implementationNote": "个股对同一冻结面板基准、行业均值的财富比率；未冒充超额收益显著性。 已通过合成数据手算/历史截断与C++宿主验证；真实全市场PIT数据未完成外部认证。"
     },
     {
       "id": 69,
@@ -1231,9 +1250,11 @@
       "overlap": "补充广度，不能直接解释为资金流。",
       "evidence": "组合定义；解释为本次判断",
       "refs": "https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/data_library/f-f_5_factors_2x3.html",
-      "status": "pending",
-      "implementations": [],
-      "implementationNote": "未完成；不以目录条目或近似名称充当实现。"
+      "status": "formula_implemented_and_tested",
+      "implementations": [
+        "panel-research:equal-cap-weight-indices"
+      ],
+      "implementationNote": "用上一时点成分和市值设权的等权/市值指数，不含费用；原持有成分缺失后指数未知。 已通过合成数据手算/历史截断与C++宿主验证；真实全市场PIT数据未完成外部认证。"
     },
     {
       "id": 70,
@@ -1247,9 +1268,12 @@
       "overlap": "与相关矩阵、行业暴露相关。",
       "evidence": "统计定义；无收益结论",
       "refs": "https://quant.10jqka.com.cn/view/help/8",
-      "status": "pending",
-      "implementations": [],
-      "implementationNote": "未完成；不以目录条目或近似名称充当实现。"
+      "status": "formula_implemented_and_tested",
+      "implementations": [
+        "panel-research:cross-sectional-dispersion",
+        "panel-research:beta-correlation"
+      ],
+      "implementationNote": "历史成分区间收益标准差/IQR及可核对的相关矩阵；不另造共振评分。 已通过合成数据手算/历史截断与C++宿主验证；真实全市场PIT数据未完成外部认证。"
     },
     {
       "id": 71,
@@ -1279,9 +1303,11 @@
       "overlap": "与日线 ROC、相对强弱同族。",
       "evidence": "有实证文献；需本地复验",
       "refs": "https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/data_library/det_mom_factor.html\nhttps://www.nber.org/papers/w24458",
-      "status": "pending",
-      "implementations": [],
-      "implementationNote": "未完成；不以目录条目或近似名称充当实现。"
+      "status": "formula_implemented_and_tested",
+      "implementations": [
+        "panel-research:cross-sectional-momentum"
+      ],
+      "implementationNote": "可配置窗口及跳过期的历史动量，截面百分位/Z分数。 已通过合成数据手算/历史截断与C++宿主验证；真实全市场PIT数据未完成外部认证。"
     },
     {
       "id": 73,
@@ -1295,9 +1321,11 @@
       "overlap": "不能同时把相反规则都算作独立利好。",
       "evidence": "学术复现库线索；未复现原文",
       "refs": "https://www.openassetpricing.com/data/",
-      "status": "pending",
-      "implementations": [],
-      "implementationNote": "未完成；不以目录条目或近似名称充当实现。"
+      "status": "formula_implemented_and_tested",
+      "implementations": [
+        "panel-research:cross-sectional-reversal"
+      ],
+      "implementationNote": "明确窗口历史收益的负值及截面排名，窗口可设置短/长期。 已通过合成数据手算/历史截断与C++宿主验证；真实全市场PIT数据未完成外部认证。"
     },
     {
       "id": 74,

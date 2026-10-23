@@ -9,10 +9,11 @@
     "indicatorFamilies": 110,
     "source": "indicator-scope.json",
     "indicatorReadiness": {
-      "formula_implemented_and_tested": 55,
-      "partial": 6,
-      "pending": 49
-    }
+      "formula_implemented_and_tested": 69,
+      "partial": 5,
+      "pending": 36
+    },
+    "installedPackages": 21
   },
   "completionDefinition": [
     "All 19 projects have runnable installed adapters with declared capabilities, inputs, versions and actual results.",
@@ -294,14 +295,26 @@
     },
     {
       "id": "indicator-coverage",
-      "status": "201_talib_functions_and_47_custom_operations_verified",
+      "status": "201_talib_functions_47_core_and_9_panel_operations_verified",
       "note": "Function counts are not catalogue-family completion counts."
     },
     {
       "id": "all-engine-coverage",
       "status": "19_of_19_have_verified_initial_adapters",
       "note": "Initial declared capabilities only. Latest AKShare network checks failed after an earlier successful 243-row native run."
+    },
+    {
+      "id": "historical-panel-input",
+      "status": "typed_panel_input_and_9_operations_verified_in_native_widget",
+      "checks": [
+        "explicit-offset availability and membership",
+        "historical universe count",
+        "missing previous holdings do not disappear from wealth",
+        "future claim rejection",
+        "native install/run/archive"
+      ],
+      "limits": "Synthetic four-security fixture verifies mathematics and lifecycle; provider PIT provenance and real full-market history not certified."
     }
   ],
-  "latestPackageVersion": "0.10.0"
+  "latestPackageVersion": "0.11.1"
 }

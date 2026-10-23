@@ -143,6 +143,9 @@ def validate_parameters(operation, supplied):
 
 
 def compute(manifest, operation, frame, parameters):
+    if manifest["id"] == "org.webstock.panel-research":
+        from panel_research import calculate
+        return calculate(operation["id"],frame,parameters)
     if manifest["id"] == "org.webstock.lean":
         from lean_adapter import calculate
         return calculate(frame,parameters)
@@ -239,7 +242,13 @@ def main():
     elif request["input"]["closedBarsOnly"] is not True:
         raise ValueError("Closed-bar acknowledgement required")
     print(json.dumps({"event": "progress", "message": "核验完成，正在计算", "percent": 15}), flush=True)
-    frame = None if query else load_bars(source)
+    if query:
+        frame=None
+    elif operation["inputKind"]=="market-panel-csv":
+        from panel_contract import load_panel
+        frame=load_panel(source)
+    else:
+        frame=load_bars(source)
     computed = compute(manifest, operation, frame, parameters)
     versions = {}
     for dependency in manifest.get("distributions", []):
