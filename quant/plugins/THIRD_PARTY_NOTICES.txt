@@ -21,6 +21,10 @@ VeighNa CTA: https://github.com/vnpy/vnpy_ctastrategy (MIT)
 Qlib: https://github.com/microsoft/qlib (MIT)
 Zipline Reloaded: https://github.com/stefan-jansen/zipline-reloaded (Apache-2.0)
 RQAlpha: https://github.com/ricequant/rqalpha (Apache-2.0 with additional commercial-use restrictions; inspect installed LICENSE)
+WonderTrader: https://github.com/wondertrader/wondertrader (MIT)
+wtpy: https://github.com/wondertrader/wtpy (MIT; includes separately installed native engine binaries)
 
 No exchange data license, vendor proprietary formula, or commercial redistribution
 permission is implied by installation. Packages make no return guarantees.
+AKShare https://github.com/akfamily/akshare — MIT. Adapter calls the original stock_zh_a_hist API. Eastmoney is the declared external data provider; no data redistribution license is inferred from AKShare's software license. Downloaded results retain acquisition metadata and source-returned values.
+LEAN https://github.com/QuantConnect/Lean — Apache-2.0. Uses the user's original local .NET Release build, with a WebStock custom daily-data algorithm and proportional-fee model. No LEAN DLLs or upstream Data assets are bundled in .wspkg. Result records original engine assembly hashes. Runtime dependencies retain their respective upstream notices.

@@ -2,6 +2,7 @@
 #include "watchlist_backup_model.hpp"
 #include <QCryptographicHash>
 #include <QDateTime>
+#include <QDate>
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
@@ -56,6 +57,27 @@ static bool relative(const QString& path) {
     }
     return true;
 }
+QByteArray generatedData(const QJsonObject& artifact) {
+    auto name=artifact.value("name").toString();
+    require(relative(name)&&!name.contains('/'),"生成文件名称无效");
+    auto encoded=artifact.value("base64").toString().toLatin1();
+    auto raw=QByteArray::fromBase64(encoded,QByteArray::AbortOnBase64DecodingErrors);
+    require(!raw.isEmpty()&&raw.size()<=16*1024*1024&&raw.toBase64()==encoded&&hash(raw)==artifact.value("sha256").toString(),"生成文件内容或摘要无效");
+    return raw;
+}
+QByteArray tableCsv(const QJsonObject& table) {
+    auto columns=table.value("columns").toArray();auto rows=table.value("rows").toArray();
+    require(!columns.isEmpty()&&columns.size()<=64&&rows.size()<=100000,"导出表结构无效");
+    QByteArray result("\xEF\xBB\xBF");
+    auto append=[&result](const QJsonArray& row){QStringList values;for(auto cell:row){
+        require(cell.isNull()||cell.isBool()||cell.isString()||cell.isDouble(),"导出单元类型无效");
+        QString value=cell.isNull()?QString():cell.isDouble()?QString::number(cell.toDouble(),'g',17):cell.isBool()?(cell.toBool()?"true":"false"):cell.toString();
+        if(cell.isString()&&!value.isEmpty()&&QString("=+-@\t\r\n").contains(value[0]))value.prepend('\'');
+        value.replace('"',"\"\"");values<<"\""+value+"\"";
+    }result+=values.join(',').toUtf8()+"\r\n";};
+    append(columns);for(auto row:rows){require(row.isArray()&&row.toArray().size()==columns.size(),"导出行长度无效");append(row.toArray());}
+    return result;
+}
 static void plainDirectory(const QString& root, const QString& path) {
     const auto absolute = QDir::cleanPath(QFileInfo(path).absoluteFilePath());
     const auto base = QDir::cleanPath(QFileInfo(root).absoluteFilePath());
@@ -88,7 +110,7 @@ QJsonObject validateManifest(const QJsonObject& m) {
         require(QRegularExpression("^[a-z][a-z0-9_-]{0,80}$").match(id).hasMatch() && !names.contains(id), "重复或无效功能身份");
         names.insert(id);
         require(!op.value("title").toString().isEmpty() && !op.value("formulaVersion").toString().isEmpty() &&
-                op.value("inputKind") == "ohlcv-single-csv" && QStringList{"indicator","backtest"}.contains(op.value("outputKind").toString()) &&
+                QStringList{"ohlcv-single-csv","parameters-only"}.contains(op.value("inputKind").toString()) && QStringList{"indicator","backtest","data"}.contains(op.value("outputKind").toString()) &&
                 op.value("parameters").isArray() && op.value("parameters").toArray().size() <= 32, "功能定义不完整");
         QSet<QString> fields;
         for (auto p : op.value("parameters").toArray()) {
@@ -96,8 +118,11 @@ QJsonObject validateManifest(const QJsonObject& m) {
             require(QRegularExpression("^[a-zA-Z][a-zA-Z0-9_]{0,60}$").match(key).hasMatch() && !fields.contains(key), "参数身份重复或无效");
             fields.insert(key);
             auto type = field.value("type").toString();
-            require(QStringList{"integer","number","choice"}.contains(type), "不支持的参数类型");
+            require(QStringList{"integer","number","choice","text"}.contains(type), "不支持的参数类型");
             if (type == "choice") require(!field.value("choices").toArray().isEmpty(), "选项缺失");
+            else if(type == "text") require(field.value("minLength").isDouble() && field.value("maxLength").isDouble() &&
+                field.value("minLength").toInt()>=0 && field.value("maxLength").toInt()>=field.value("minLength").toInt() &&
+                field.value("maxLength").toInt()<=512 && QStringList{"text","date","cn-stock"}.contains(field.value("format").toString()),"文本参数范围无效");
             else require(field.value("minimum").isDouble() && field.value("maximum").isDouble() &&
                          field.value("minimum").toDouble() <= field.value("maximum").toDouble(), "参数范围无效");
         }
@@ -111,6 +136,13 @@ QJsonObject validateParameters(const QJsonObject& operation, const QJsonObject& 
         auto field = value.toObject(); auto key = field.value("id").toString(); keys.insert(key);
         auto v = parameters.contains(key) ? parameters.value(key) : field.value("default");
         if (field.value("type") == "choice") require(field.value("choices").toArray().contains(v), "参数选项无效：" + key);
+        else if(field.value("type") == "text") {
+            auto s=v.toString();auto format=field.value("format").toString();
+            require(v.isString()&&s.size()>=field.value("minLength").toInt()&&s.size()<=field.value("maxLength").toInt()&&
+                !QRegularExpression("[\\x00-\\x1f\\x7f]").match(s).hasMatch(),"文本参数无效："+key);
+            if(format=="cn-stock")require(QRegularExpression("^[0-9]{6}$").match(s).hasMatch(),"需要六位股票代码："+key);
+            if(format=="date")require(QRegularExpression("^[0-9]{4}-[0-9]{2}-[0-9]{2}$").match(s).hasMatch()&&QDate::fromString(s,Qt::ISODate).isValid(),"需要有效日期 YYYY-MM-DD："+key);
+        }
         else {
             auto n = v.toDouble();
             require(v.isDouble() && std::isfinite(n) && n >= field.value("minimum").toDouble() && n <= field.value("maximum").toDouble() &&
@@ -163,7 +195,8 @@ QJsonObject Repository::install(const QByteArray& package) {
     for (auto v : list) if (v.toObject().value("id") == m.value("id")) previous = v.toObject();
     const auto bytes = QJsonDocument(m).toJson(QJsonDocument::Indented);
     QJsonObject entry{{"id",m.value("id")},{"version",m.value("version")},{"name",m.value("name")},
-                      {"manifestSha256",hash(bytes)},{"enabled",true},{"runtimePath",previous.value("runtimePath").toString()}};
+                      {"manifestSha256",hash(bytes)},{"enabled",true},{"runtimePath",previous.value("runtimePath").toString()},
+                      {"parametersByOperation",previous.value("parametersByOperation").toObject()}};
     auto destination = directory(entry);
     if (QFileInfo::exists(destination)) {
         require(read(destination + "/manifest.json") == bytes, "同版本内容不同，请使用新版本号");
@@ -197,6 +230,14 @@ void Repository::uninstall(const QString& id) {
     QLockFile lock(root_+"/catalog.lock");require(lock.tryLock(0),"插件目录正在更新");
     QJsonArray next;for(auto p:plugins())if(p.toObject().value("id")!=id)next.append(p);
     // Version cache is retained for rollback; removed plugins cannot start jobs.
+    write(root_+"/catalog.json",QJsonObject{{"schema","webstock.plugin.catalog.v1"},{"plugins",next}});
+}
+void Repository::rememberParameters(const QString& id,const QString& operationId,const QJsonObject& parameters){
+    auto selected=plugin(id);QJsonObject operation;
+    for(auto op:selected.value("manifest").toObject().value("operations").toArray())if(op.toObject().value("id")==operationId)operation=op.toObject();
+    require(!operation.isEmpty(),"功能身份无效");auto checked=validateParameters(operation,parameters);
+    QLockFile lock(root_+"/catalog.lock");require(lock.tryLock(0),"插件配置正在更新");QJsonArray next;
+    for(auto v:plugins()){auto p=v.toObject();if(p.value("id")==id){auto saved=p.value("parametersByOperation").toObject();saved[operationId]=checked;p["parametersByOperation"]=saved;}next.append(p);}
     write(root_+"/catalog.json",QJsonObject{{"schema","webstock.plugin.catalog.v1"},{"plugins",next}});
 }
 static bool runIdValid(const QString& id) {
@@ -262,8 +303,11 @@ void Job::start(const QString& pluginId,const QString& operationId,const QString
     auto m=p.value("manifest").toObject();QJsonObject op;
     for(auto v:m.value("operations").toArray()) if(v.toObject().value("id")==operationId) op=v.toObject();
     require(!op.isEmpty(),"插件没有此功能"); auto args=validateParameters(op,parameters);
-    require(policy.value("closedBarsOnly")==true && QStringList{"unknown","unadjusted","forward","backward"}.contains(policy.value("adjustment").toString()),"请明确已完成K线及价格口径");
-    auto input=read(inputCsv,16*1024*1024); require(!input.isEmpty(),"输入为空");
+    const bool query=op.value("inputKind")=="parameters-only";
+    if(!query)require(policy.value("closedBarsOnly")==true && QStringList{"unknown","unadjusted","forward","backward"}.contains(policy.value("adjustment").toString()),"请明确已完成K线及价格口径");
+    auto input=query?QJsonDocument(QJsonObject{{"schema","webstock.plugin.query.v1"},{"operationId",operationId},{"parameters",args}}).toJson():read(inputCsv,16*1024*1024);
+    require(!input.isEmpty(),"输入为空");const QString inputFile=query?"input.json":"input.csv";
+    repository_.rememberParameters(pluginId,operationId,args);
     auto id="plugin-"+QUuid::createUuid().toString(QUuid::WithoutBraces);
     folder_=repository_.root()+"/jobs/"+id;plainDirectory(repository_.root(),folder_);
     require(QDir().mkpath(folder_+"/plugin"),"任务目录不可写");
@@ -275,8 +319,9 @@ void Job::start(const QString& pluginId,const QString& operationId,const QString
         QDir().mkpath(QFileInfo(folder_+"/plugin/"+i.key()).absolutePath());write(folder_+"/plugin/"+i.key(),bytes);
     }
     auto manifest=read(repository_.directory(p)+"/manifest.json");write(folder_+"/plugin/manifest.json",manifest);
-    write(folder_+"/input.csv",input);
-    auto frozen=policy;frozen["path"]="input.csv";frozen["sha256"]=hash(input);frozen["originalName"]=QFileInfo(inputCsv).fileName();
+    write(folder_+"/"+inputFile,input);
+    auto frozen=query?QJsonObject{{"kind","parameters-only"},{"source","explicit parameter query"}}:policy;
+    frozen["path"]=inputFile;frozen["sha256"]=hash(input);frozen["originalName"]=query?"query.json":QFileInfo(inputCsv).fileName();
     QJsonObject request{{"schema","webstock.plugin.request.v1"},{"runId",id},{"pluginId",pluginId},{"operationId",operationId},
                         {"manifestSha256",hash(manifest)},{"input",frozen},{"parameters",args},{"automaticTrading",false}};
     write(folder_+"/request.json",request);
@@ -306,13 +351,18 @@ void Job::drain() {
         } catch(const std::exception&) { /* Native engine logs are not result evidence. */ }
     }
 }
+static QString frozenInputName(const QJsonObject& request) {
+    auto path=request.value("input").toObject().value("path").toString();
+    require(QStringList{"input.csv","input.json"}.contains(path),"冻结输入文件名无效");return path;
+}
 QJsonObject Job::verify(const QString& directory,const QJsonObject& record) const {
     auto requestBytes=read(directory+"/request.json");require(hash(requestBytes)==record.value("requestSha256").toString(),"冻结请求已变化");
     auto request=object(requestBytes);auto manifestBytes=read(directory+"/plugin/manifest.json");
     require(hash(manifestBytes)==request.value("manifestSha256").toString(),"冻结插件清单已变化");
     auto m=validateManifest(object(manifestBytes));auto files=m.value("files").toObject();
     for(auto i=files.begin();i!=files.end();++i) require(hash(read(directory+"/plugin/"+i.key()))==i.value().toString(),"冻结代码已变化");
-    require(hash(read(directory+"/input.csv"))==request.value("input").toObject().value("sha256").toString(),"冻结数据已变化");
+    const auto inputFile=frozenInputName(request);const auto inputBytes=read(directory+"/"+inputFile,16*1024*1024);
+    require(hash(inputBytes)==request.value("input").toObject().value("sha256").toString(),"冻结数据已变化");
     auto resultBytes=read(directory+"/result.json",24*1024*1024);
     if(record.contains("resultSha256")) require(hash(resultBytes)==record.value("resultSha256").toString(),"结果摘要已变化");
     auto result=object(resultBytes);
@@ -323,6 +373,9 @@ QJsonObject Job::verify(const QString& directory,const QJsonObject& record) cons
             result.value("manifestSha256")==request.value("manifestSha256") && result.value("inputSha256")==request.value("input").toObject().value("sha256") &&
             result.value("parameters")==request.value("parameters") && result.value("dataPolicy")==request.value("input"),"结果和任务不匹配");
     QJsonObject op;for(auto v:m.value("operations").toArray()) if(v.toObject().value("id")==request.value("operationId")) op=v.toObject();
+    require((op.value("inputKind")=="parameters-only"?"input.json":"input.csv")==inputFile,"输入类型不匹配");
+    require(validateParameters(op,request.value("parameters").toObject())==request.value("parameters").toObject(),"冻结参数不完整");
+    if(inputFile=="input.json")require(object(inputBytes)==QJsonObject{{"schema","webstock.plugin.query.v1"},{"operationId",request.value("operationId")},{"parameters",request.value("parameters")}},"冻结查询与请求不匹配");
     require(!op.isEmpty() && result.value("kind")==op.value("outputKind") && !result.value("engineVersion").toString().isEmpty() &&
             !result.value("formulaVersion").toString().isEmpty() && result.value("warnings").isArray(),"结果能力或版本缺失");
     // Early 0.1/0.2 packages recorded TA-Lib's kernel version in this field.
@@ -336,6 +389,7 @@ QJsonObject Job::verify(const QString& directory,const QJsonObject& record) cons
         for(auto row:rows) {require(row.isArray()&&row.toArray().size()==columns.size(),"结果行长度无效");for(auto cell:row.toArray())
             require(cell.isNull()||cell.isString()||cell.isBool()||(cell.isDouble()&&std::isfinite(cell.toDouble())),"结果单元无效");}
     }
+    if(result.contains("generatedData"))generatedData(result.value("generatedData").toObject());
     return result;
 }
 void Job::finish(int exitCode,QProcess::ExitStatus status) {
@@ -377,7 +431,7 @@ QByteArray Job::exportResult(const QString& id) const {
     auto record=reopen(id);require(record.value("status")=="completed","只能导出完整且已核验的结果");
     auto dir=repository_.root()+"/jobs/"+id;
     auto manifest=object(read(dir+"/plugin/manifest.json"));
-    QStringList paths{"record.json","request.json","input.csv","result.json","plugin/manifest.json"};
+    QStringList paths{"record.json","request.json",frozenInputName(object(read(dir+"/request.json"))),"result.json","plugin/manifest.json"};
     for(auto path:manifest.value("files").toObject().keys())paths.append("plugin/"+path);
     QJsonArray files;qint64 total=0;
     for(auto path:paths){auto raw=read(dir+"/"+path);total+=raw.size();require(total<=48*1024*1024,"结果包原文超过48MiB");
@@ -394,7 +448,8 @@ QString Job::importResult(const QByteArray& bytes) {
         require(relative(path)&&!names.contains(path.toLower())&&raw.toBase64()==encoded&&hash(raw)==file.value("sha256").toString()&&raw.size()<=24*1024*1024&&total<=48*1024*1024,"结果文件路径、大小或摘要无效");
         names.insert(path.toLower());content[path]=raw;
     }
-    QSet<QString> expected{"record.json","request.json","input.csv","result.json","plugin/manifest.json"};
+    require(content.contains("request.json"),"结果包缺少请求");
+    QSet<QString> expected{"record.json","request.json",frozenInputName(object(content["request.json"])),"result.json","plugin/manifest.json"};
     for(auto path:expected)require(content.contains(path),"结果包缺少必需文件");
     auto manifest=validateManifest(object(content["plugin/manifest.json"]));
     for(auto path:manifest.value("files").toObject().keys())expected.insert("plugin/"+path);

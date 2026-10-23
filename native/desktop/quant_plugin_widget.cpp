@@ -92,7 +92,7 @@ QuantPluginWidget::QuantPluginWidget(QString root,QWidget* parent):QWidget(paren
     auto uninstall=new QPushButton("卸载所选插件");auto exportResult=new QPushButton("导出结果包");auto importResult=new QPushButton("导入结果包");
     bar->addWidget(install);bar->addWidget(configure);bar->addWidget(uninstall);bar->addWidget(exportResult);bar->addWidget(importResult);bar->addStretch();bar->addWidget(run_);bar->addWidget(cancel);layout->addLayout(bar);
     auto splitter=new QSplitter;layout->addWidget(splitter,1);auto scroll=new QScrollArea;scroll->setWidgetResizable(true);scroll->setMinimumWidth(320);
-    auto panel=new QWidget;auto form=new QFormLayout(panel);scroll->setWidget(panel);splitter->addWidget(scroll);
+    auto panel=new QWidget;auto form=new QFormLayout(panel);form_=form;scroll->setWidget(panel);splitter->addWidget(scroll);
     plugins_=new QComboBox;plugins_->setObjectName("pluginPicker");form->addRow("插件",plugins_);
     enabled_=new QCheckBox("启用此插件");form->addRow(enabled_);
     connect(enabled_,&QCheckBox::toggled,this,[this](bool checked){enabled_->setText(checked?"已启用此插件":"此插件已停用");});
@@ -147,8 +147,18 @@ void QuantPluginWidget::filterOperations(){
 void QuantPluginWidget::selectOperation(){
     fields_.clear();while(parameters_->rowCount())parameters_->removeRow(0);
     operation_=operations_->currentData().toJsonObject();description_->setText(operation_.value("description").toString());
+    const bool query=operation_.value("inputKind")=="parameters-only";
+    form_->setRowVisible(input_->parentWidget(),!query);form_->setRowVisible(adjustment_,!query);form_->setRowVisible(closed_,!query);
+    QJsonObject saved;
+    if(!operation_.isEmpty()){
+        auto p=repository_.plugin(plugins_->currentData().toString());
+        try{saved=quantPlugin::validateParameters(operation_,p.value("parametersByOperation").toObject().value(operation_.value("id").toString()).toObject());}
+        catch(const std::exception&){/* An older version's parameters may no longer be valid. */}
+    }
     for(auto v:operation_.value("parameters").toArray()){auto f=v.toObject();QWidget* field;
+        if(saved.contains(f.value("id").toString()))f["default"]=saved.value(f.value("id").toString());
         if(f.value("type")=="choice"){auto box=new QComboBox;for(auto x:f.value("choices").toArray())box->addItem(x.toVariant().toString(),x.toVariant());box->setCurrentIndex(box->findData(f.value("default").toVariant()));field=box;}
+        else if(f.value("type")=="text"){auto edit=new QLineEdit(f.value("default").toString());edit->setMaxLength(f.value("maxLength").toInt());if(f.value("format")=="date")edit->setPlaceholderText("YYYY-MM-DD");field=edit;}
         else {auto spin=new QDoubleSpinBox;spin->setDecimals(f.value("type")=="integer"?0:6);spin->setRange(f.value("minimum").toDouble(),f.value("maximum").toDouble());spin->setValue(f.value("default").toDouble());spin->setSingleStep(f.value("type")=="integer"?1:.01);field=spin;}
         field->setObjectName("pluginParam_"+f.value("id").toString());fields_[f.value("id").toString()]=field;parameters_->addRow(f.value("title").toString(),field);
     }
@@ -157,7 +167,7 @@ void QuantPluginWidget::refreshHistory(){history_->clear();for(auto v:job_.recor
 void QuantPluginWidget::start(){
     quantPlugin::require(!operation_.isEmpty(),"请选择已安装插件的功能");
     repository_.configure(plugins_->currentData().toString(),runtime_->text(),enabled_->isChecked());QJsonObject parameters;
-    for(auto i=fields_.begin();i!=fields_.end();++i){if(auto s=qobject_cast<QDoubleSpinBox*>(i.value()))parameters[i.key()]=s->value();else parameters[i.key()]=QJsonValue::fromVariant(qobject_cast<QComboBox*>(i.value())->currentData());}
+    for(auto i=fields_.begin();i!=fields_.end();++i){if(auto s=qobject_cast<QDoubleSpinBox*>(i.value()))parameters[i.key()]=s->value();else if(auto edit=qobject_cast<QLineEdit*>(i.value()))parameters[i.key()]=edit->text();else parameters[i.key()]=QJsonValue::fromVariant(qobject_cast<QComboBox*>(i.value())->currentData());}
     job_.start(plugins_->currentData().toString(),operation_.value("id").toString(),input_->text(),parameters,
                {{"closedBarsOnly",closed_->isChecked()},{"adjustment",adjustment_->currentData().toString()},
                 {"timezone","unspecified"},{"volumeUnit","unspecified"},{"source","user-selected local CSV"}},timeout_->value());
@@ -166,15 +176,27 @@ void QuantPluginWidget::showResult(const QString& id){
     auto record=job_.reopen(id);while(results_->count()){auto w=results_->widget(0);results_->removeTab(0);w->deleteLater();}
     auto result=record.value("result").toObject();
     for(auto v:result.value("tables").toArray()){auto table=v.toObject();auto panel=new QWidget;auto layout=new QVBoxLayout(panel);
-        if(QStringList{"indicators","equity","weight-index"}.contains(table.value("id").toString())){
+        auto saveTable=new QPushButton("导出此表 CSV");layout->addWidget(saveTable,0,Qt::AlignLeft);
+        connect(saveTable,&QPushButton::clicked,this,[this,table]{guard([this,table]{auto path=QFileDialog::getSaveFileName(this,"导出当前结果表",table.value("id").toString()+".csv","CSV (*.csv)");if(!path.isEmpty())quantPlugin::write(path,quantPlugin::tableCsv(table));});});
+        if(QStringList{"indicators","equity","weight-index","native-dsb-bars","market-data"}.contains(table.value("id").toString())||table.value("id").toString().startsWith("features-")){
             auto select=new QComboBox;auto columns=table.value("columns").toArray();for(int i=1;i<columns.size();++i)select->addItem(columns[i].toString(),i);layout->addWidget(select);
             auto plot=new SeriesPlot(table.value("rows").toArray(),panel);layout->addWidget(plot);connect(select,&QComboBox::currentIndexChanged,plot,[plot,select]{plot->setColumn(select->currentData().toInt());});
+            for(int i=1;i<columns.size();++i)if(columns[i].toString()=="equity")select->setCurrentIndex(select->findData(i));
+            plot->setColumn(select->currentData().toInt());
         }
         auto view=new QTableView;view->setModel(new ResultModel(table,view));view->horizontalHeader()->setSectionResizeMode(QHeaderView::Interactive);view->horizontalHeader()->setDefaultSectionSize(150);view->setAlternatingRowColors(false);view->setSelectionBehavior(QAbstractItemView::SelectRows);layout->addWidget(view,1);
         auto id=table.value("id").toString();
         results_->addTab(panel,id=="indicators"?"指标曲线与明细":id=="equity"?"权益曲线":id=="weight-index"?"权重单利指数":id=="daily-attribution"?"每日收益归因":id);
     }
+    if(result.contains("generatedData")){
+        auto artifact=result.value("generatedData").toObject();auto panel=new QWidget;auto layout=new QVBoxLayout(panel);
+        auto description=new QLabel("本次生成的文件："+artifact.value("name").toString()+"\nSHA256："+artifact.value("sha256").toString());description->setTextFormat(Qt::PlainText);description->setWordWrap(true);layout->addWidget(description);
+        auto save=new QPushButton("保存生成的数据文件");layout->addWidget(save);layout->addStretch();
+        connect(save,&QPushButton::clicked,this,[this,artifact]{guard([this,artifact]{auto bytes=quantPlugin::generatedData(artifact);auto path=QFileDialog::getSaveFileName(this,"保存生成的数据文件",artifact.value("name").toString(),"数据文件 (*)");if(!path.isEmpty())quantPlugin::write(path,bytes);});});
+        results_->addTab(panel,"生成的数据文件");
+    }
     auto detail=new QPlainTextEdit;detail->setReadOnly(true);auto metadata=result;metadata.remove("tables");if(metadata.isEmpty())metadata=record;
+    if(metadata.contains("generatedData")){auto artifact=metadata.value("generatedData").toObject();artifact.remove("base64");metadata["generatedData"]=artifact;}
     detail->setPlainText(QString::fromUtf8(QJsonDocument(metadata).toJson(QJsonDocument::Indented)));results_->addTab(detail,"版本、数据与诊断");
     QStringList warnings;for(auto w:result.value("warnings").toArray())warnings<<w.toString();
     status_->setText(statusText(record.value("status").toString())+"。"+warnings.join(" ")+record.value("message").toString());

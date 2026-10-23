@@ -79,14 +79,12 @@
       "repo": "QuantConnect/Lean",
       "role": "primary",
       "url": "https://github.com/QuantConnect/Lean.git",
-      "status": "pending_plugin_adapter",
-      "pluginId": null,
+      "status": "adapter_verified_in_cpp_host",
+      "pluginId": "org.webstock.lean",
       "remaining": [
-        "adapter",
-        "package",
-        "runtime",
-        "native_host_tests",
-        "full_program_validation"
+        "portable_runtime_setup",
+        "expanded_capabilities_and_tests",
+        "full_program_per_engine_validation"
       ]
     },
     {
@@ -172,14 +170,12 @@
       "repo": "wondertrader/wondertrader",
       "role": "primary",
       "url": "https://github.com/wondertrader/wondertrader.git",
-      "status": "pending_plugin_adapter",
-      "pluginId": null,
+      "status": "adapter_verified_in_cpp_host",
+      "pluginId": "org.webstock.wondertrader",
       "remaining": [
-        "adapter",
-        "package",
-        "runtime",
-        "native_host_tests",
-        "full_program_validation"
+        "portable_runtime_setup",
+        "expanded_capabilities_and_tests",
+        "full_program_per_engine_validation"
       ]
     },
     {
@@ -226,14 +222,12 @@
       "repo": "wondertrader/wtpy",
       "role": "companion",
       "url": "https://github.com/wondertrader/wtpy.git",
-      "status": "pending_plugin_adapter",
-      "pluginId": null,
+      "status": "adapter_verified_in_cpp_host",
+      "pluginId": "org.webstock.wtpy",
       "remaining": [
-        "adapter",
-        "package",
-        "runtime",
-        "native_host_tests",
-        "full_program_validation"
+        "portable_runtime_setup",
+        "expanded_capabilities_and_tests",
+        "full_program_per_engine_validation"
       ]
     },
     {
@@ -267,14 +261,13 @@
       "repo": "akfamily/akshare",
       "role": "helper",
       "url": "https://github.com/akfamily/akshare.git",
-      "status": "pending_plugin_adapter",
-      "pluginId": null,
+      "status": "adapter_verified_in_cpp_host",
+      "pluginId": "org.webstock.akshare",
       "remaining": [
-        "adapter",
-        "package",
-        "runtime",
-        "native_host_tests",
-        "full_program_validation"
+        "portable_runtime_setup",
+        "expanded_capabilities_and_tests",
+        "full_program_per_engine_validation",
+        "external_provider_availability"
       ]
     }
   ],
@@ -304,8 +297,9 @@
     },
     {
       "id": "all-engine-coverage",
-      "status": "15_of_19_have_verified_initial_adapters"
+      "status": "19_of_19_have_verified_initial_adapters",
+      "note": "Initial declared capabilities only. Latest AKShare network checks failed after an earlier successful 243-row native run."
     }
   ],
-  "latestPackageVersion": "0.5.0"
+  "latestPackageVersion": "0.8.1"
 }

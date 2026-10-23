@@ -2,9 +2,9 @@
   "schema": "webstock.plugin.verification.v1",
   "tests": {
     "python": {
-      "tests": 6,
+      "tests": 10,
       "talibFunctions": 201,
-      "customOperations": 24,
+      "customOperations": 34,
       "checks": [
         "each function runs declared defaults",
         "prefix invariance on 250/400 bars",
@@ -16,7 +16,7 @@
       ]
     },
     "qt": {
-      "passed": 9,
+      "passed": 11,
       "failed": 0,
       "skipped": 0,
       "checks": [
@@ -29,7 +29,12 @@
         "archived result reopens",
         "tampering rejected",
         "result export/import without execution",
-        "uninstall preserves verifiable history"
+        "uninstall preserves verifiable history",
+        "generated native artifact hash and safe filename",
+        "CSV quoting and spreadsheet formula-text escaping",
+        "query form hides CSV and validates ISO dates",
+        "query snapshots and result archives roundtrip without execution",
+        "per-operation parameters restored without running a job"
       ]
     }
   },
@@ -166,11 +171,38 @@
     "built": true,
     "qt": "6.9.1",
     "compiler": "MinGW13.1.0",
-    "programSha256": "2672c727e1938bafb2729d91426219e1f8bdb987502297291fde4ff782181503",
+    "programSha256": "01afcc6cd223bfe84c5d67897865c1a9b25664051e243a19654af563c1e4d1a7",
     "domainTests": "passed",
     "legacyIndicators": "passed",
-    "pluginPlatform": "passed, 9 QtTest cases, 0 skipped",
+    "pluginPlatform": "passed, 11 QtTest cases, 0 skipped",
     "nativeWindow": "passed, quotes/classic and legacy focus redirect, real installed TA-Lib workflow",
     "visualReview": "native dark theme inspected and table row contrast repaired"
+  },
+  "latestPackageVersion": "0.8.1",
+  "additionalEvidence": [
+    "native-acceptance-0.8.1.json",
+    "native-akshare-0.7.0.json",
+    "native-core-expansion-0.5.0.json"
+  ],
+  "onlineDataChecks": {
+    "dataContractTests": 3,
+    "nativeRealProviderRows": 243,
+    "observedTransientFailure": "ProxyError/remote connection closed; failed jobs preserved; a subsequent explicit run completed",
+    "source": "AKShare.stock_zh_a_hist / Eastmoney",
+    "pointInTimeDataset": false,
+    "latestVersion": "0.8.1",
+    "latestRecheck": "failed: proxy/remote connection closed; prior 0.7.0 successful snapshot remains verifiable"
+  },
+  "leanChecks": {
+    "temporalAndAccounting": "next-close fills, actual fee/cash/position ledger, prefix invariance passed",
+    "fullHistoricalBars": 4937,
+    "initialTimeoutSeconds": 180,
+    "resolution": "Original BacktestingResultHandler subclass disables optional heuristic ResultsAnalysis; original accounting and statistics retained",
+    "testSource": "tests/test_lean_adapter.py"
+  },
+  "runtimeRebuild": {
+    "data-tools": "fresh environment installed; dependency check, 10 indicator tests and 3 data contract tests passed",
+    "otherRecipes": "in progress",
+    "wheelHashesLocked": false
   }
 }

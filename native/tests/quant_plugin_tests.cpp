@@ -64,6 +64,47 @@ private slots:
         QVERIFY_EXCEPTION_THROWN(validateParameters(op,{{"n",true}}),std::runtime_error);
         QVERIFY_EXCEPTION_THROWN(validateParameters(op,{{"arbitrary",1}}),std::runtime_error);
     }
+    void generatedDataAndCsvExports(){
+        QByteArray bytes("native data\0bytes",17);
+        QJsonObject artifact{{"name","input.dsb"},{"sha256",hash(bytes)},{"base64",QString::fromLatin1(bytes.toBase64())}};
+        QCOMPARE(generatedData(artifact),bytes);
+        auto damaged=artifact;damaged["sha256"]=hash("different");QVERIFY_EXCEPTION_THROWN(generatedData(damaged),std::runtime_error);
+        damaged=artifact;damaged["name"]="../outside.dsb";QVERIFY_EXCEPTION_THROWN(generatedData(damaged),std::runtime_error);
+        damaged=artifact;damaged["base64"]="%%%";QVERIFY_EXCEPTION_THROWN(generatedData(damaged),std::runtime_error);
+        auto csv=tableCsv({{"columns",QJsonArray{"label","value"}},{"rows",QJsonArray{
+            QJsonArray{"a,\"b",-3.5},QJsonArray{"=1+1",QJsonValue()}}}});
+        QVERIFY(csv.startsWith("\xEF\xBB\xBF"));QVERIFY(csv.contains("\"a,\"\"b\",\"-3.5\""));
+        QVERIFY(csv.contains("\"'=1+1\",\"\""));
+        QVERIFY_EXCEPTION_THROWN(tableCsv({{"columns",QJsonArray{"x"}},{"rows",QJsonArray{QJsonArray{1,2}}}}),std::runtime_error);
+    }
+    void parameterQueryArchives(){
+        auto python=qEnvironmentVariable("WEBSTOCK_TEST_PYTHON");if(python.isEmpty())QSKIP("Set WEBSTOCK_TEST_PYTHON for query lifecycle test");
+        QByteArray code=R"PY(import json,hashlib,pathlib,sys
+r=pathlib.Path(sys.argv[1]);root=r.parent;q=json.loads(r.read_text());m=json.loads((root/'plugin/manifest.json').read_text())
+query=json.loads((root/'input.json').read_text());assert query['parameters']==q['parameters'];assert query['schema']=='webstock.plugin.query.v1'
+assert not (root/'input.csv').exists()
+out=dict(schema='webstock.plugin.result.v1',status='completed',automaticTrading=False,runId=q['runId'],pluginId=m['id'],pluginVersion=m['version'],operationId=q['operationId'],requestSha256=hashlib.sha256(r.read_bytes()).hexdigest(),manifestSha256=q['manifestSha256'],inputSha256=q['input']['sha256'],parameters=q['parameters'],dataPolicy=q['input'],kind='data',engineVersion='test-fixture',formulaVersion='fixture-v1',warnings=[],tables=[dict(id='market-data',columns=['date','value'],rows=[[q['parameters']['date'],1]])])
+(root/'result.json').write_text(json.dumps(out))
+)PY";
+        auto m=manifest(code);m["version"]="0.7.0";auto op=m.value("operations").toArray()[0].toObject();op["inputKind"]="parameters-only";op["outputKind"]="data";
+        op["parameters"]=QJsonArray{QJsonObject{{"id","date"},{"title","日期"},{"type","text"},{"format","date"},{"minLength",10},{"maxLength",10},{"default","2020-01-01"}}};m["operations"]=QJsonArray{op};
+        QVERIFY_EXCEPTION_THROWN(validateParameters(op,{{"date","2020-02-31"}}),std::runtime_error);
+        QVERIFY_EXCEPTION_THROWN(validateParameters(op,{{"date","20200101"}}),std::runtime_error);
+        QVERIFY_EXCEPTION_THROWN(validateParameters(op,{{"date",123}}),std::runtime_error);
+        QTemporaryDir dir;Repository repo(dir.path());repo.install(package(m,code));repo.configure("org.test.engine",python,true);
+        QuantPluginWidget widget(dir.path());widget.show();
+        QVERIFY(!widget.findChild<QLineEdit*>("pluginInput")->isVisible());
+        auto date=widget.findChild<QLineEdit*>("pluginParam_date");QVERIFY(date);date->setText("2020-02-03");
+        QTest::mouseClick(widget.findChild<QPushButton*>("pluginRun"),Qt::LeftButton);
+        Job reader(dir.path());QTRY_VERIFY_WITH_TIMEOUT(!reader.records().isEmpty()&&reader.records()[0].toObject().value("status")=="completed",10000);
+        auto id=reader.records()[0].toObject().value("runId").toString();auto result=reader.reopen(id).value("result").toObject();
+        QCOMPARE(result.value("parameters").toObject().value("date").toString(),QString("2020-02-03"));
+        auto bytes=reader.exportResult(id);QTemporaryDir copy;Job importer(copy.path());QCOMPARE(importer.importResult(bytes),id);
+        QCOMPARE(importer.reopen(id).value("result").toObject(),result);QVERIFY(!importer.active());
+        QuantPluginWidget reopened(dir.path());
+        QCOMPARE(reopened.findChild<QLineEdit*>("pluginParam_date")->text(),QString("2020-02-03"));
+        QVERIFY_EXCEPTION_THROWN(repo.rememberParameters("org.test.engine","test",{{"date","2020-02-31"}}),std::runtime_error);
+    }
     void recoversWithoutReplay(){
         QTemporaryDir dir;Repository repo(dir.path());QString id="plugin-12345678-1234-1234-1234-123456789abc";
         auto folder=dir.path()+"/jobs/"+id;QDir().mkpath(folder);write(folder+"/record.json",QJsonObject{{"runId",id},{"status","running"}});

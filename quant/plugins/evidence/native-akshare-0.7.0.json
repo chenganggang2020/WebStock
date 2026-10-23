@@ -1,0 +1,24 @@
+{
+  "schema": "webstock.plugin.native-acceptance.v1",
+  "runs": [
+    {
+      "pluginId": "org.webstock.akshare",
+      "operationId": "daily-eastmoney",
+      "version": "0.7.0",
+      "status": "verified",
+      "runId": "plugin-fdc0064a-854d-4e80-865c-c8e5574a9353",
+      "resultSha256": "0b867e7b46bc7d299cd1b62c16a3cc836cb7ab98280253972eb2bfefa4685a7f",
+      "bars": 243,
+      "tables": [
+        {
+          "id": "market-data",
+          "rows": 243
+        },
+        {
+          "id": "provider-return",
+          "rows": 243
+        }
+      ]
+    }
+  ]
+}

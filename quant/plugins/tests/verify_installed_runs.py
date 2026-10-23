@@ -16,6 +16,8 @@ def main():
         p.add_argument("--"+name,type=Path,required=True)
     p.add_argument("--only",help="Comma-separated project ids; default all packages")
     p.add_argument("--operations",help="Comma-separated operation ids for the selected project")
+    p.add_argument("--allow-network",action="store_true",help="Explicitly include online data providers")
+    p.add_argument("--lean-directory",type=Path,help="Local LEAN source tree with Release build and Data")
     args=p.parse_args()
     mapping={"talib":("data-tools","rsi"),"core-indicators":("data-tools","donchian-prior"),
         "hikyuu":("hikyuu","sma-cross"),"backtesting-py":("backtesting-py","sma-cross"),
@@ -23,13 +25,18 @@ def main():
         "bt":("bt","sma-weight"),"wbt":("czsc","sma-weight"),"czsc":("czsc","online-bi"),
         "ml4t-backtest":("ml4t-backtest","sma-cross"),"quantaxis":("quantaxis311","kdj"),
         "vnpy":("vnpy","rsi"),"vnpy-ctastrategy":("vnpy","sma-limit"),"qlib":("qlib","alpha158"),
-        "zipline-reloaded":("zipline-reloaded","sma-close"),"rqalpha":("rqalpha","sma-close")}
+        "zipline-reloaded":("zipline-reloaded","sma-close"),"rqalpha":("rqalpha","sma-close"),
+        "wtpy":("wtpy310","daily-dsb"),"wondertrader":("wtpy310","sma-native"),"akshare":("data-tools","daily-eastmoney"),"lean":("data-tools","sma-close")}
     environment=dict(os.environ,QT_QPA_PLATFORM="offscreen",PYTHONUTF8="1")
     rows=[]
     for package in sorted(args.packages.glob("*.wspkg")):
         manifest=json.loads(package.read_text(encoding="utf-8"))["manifest"]
         engine=manifest["id"].split(".")[-1]
         if args.only and engine not in args.only.split(","):continue
+        if engine=="akshare" and not args.allow_network:
+            print("Skipped AKShare online request; pass --allow-network to include it",flush=True);continue
+        if engine=="lean" and not args.lean_directory:
+            print("Skipped LEAN; pass --lean-directory to include it",flush=True);continue
         runtime,operation=mapping[engine]
         exe=args.environment_root/runtime/"Scripts/python.exe"
         base=[str(args.host),"--root",str(args.state)]
@@ -37,7 +44,11 @@ def main():
                                  capture_output=True,text=True,encoding="utf-8",timeout=60)
         if installed.returncode:raise RuntimeError(installed.stderr+installed.stdout)
         for operation in args.operations.split(",") if args.operations else [operation]:
-            ran=subprocess.run(base+["--run",manifest["id"]+"/"+operation,"--input",str(args.data)],env=environment,
+            extra=[]
+            if engine=="lean":
+                settings=args.state/"lean-test-parameters.json";settings.write_text(json.dumps({"engineDirectory":str(args.lean_directory.resolve())}),encoding="utf-8")
+                extra=["--parameters",str(settings)]
+            ran=subprocess.run(base+["--run",manifest["id"]+"/"+operation,"--input",str(args.data)]+extra,env=environment,
                                capture_output=True,text=True,encoding="utf-8",timeout=240)
             records=[json.loads(line) for line in ran.stdout.splitlines() if line.startswith("{")]
             if not records or ran.returncode or records[-1]["status"]!="completed":

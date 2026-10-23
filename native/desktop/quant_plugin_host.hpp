@@ -9,6 +9,8 @@
 #include <memory>
 
 namespace quantPlugin {
+QByteArray generatedData(const QJsonObject& artifact);
+QByteArray tableCsv(const QJsonObject& table);
 QByteArray read(const QString& path, qint64 limit = 32*1024*1024);
 QJsonObject object(const QByteArray& data);
 QString hash(const QByteArray& data);
@@ -28,6 +30,7 @@ public:
     QString directory(const QJsonObject& plugin) const;
     QJsonObject install(const QByteArray& package);
     void configure(const QString& id, const QString& runtimePath, bool enabled);
+    void rememberParameters(const QString& id, const QString& operationId, const QJsonObject& parameters);
     void uninstall(const QString& id);
 };
 

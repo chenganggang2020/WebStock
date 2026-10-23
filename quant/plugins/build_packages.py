@@ -20,7 +20,7 @@ def number(key, default, minimum=2, maximum=10000, title=None, kind=None):
 def save_package(output, manifest, sources):
     content = {name: (HERE/source).read_bytes() for name, source in sources.items()}
     manifest.update(schema="webstock.plugin.manifest.v1", protocolVersion=1,
-                    entrypoint="worker.py", runtime="python", version="0.5.0",
+                    entrypoint="worker.py", runtime="python", version="0.8.1",
                     files={name: hashlib.sha256(raw).hexdigest() for name,raw in content.items()})
     package = {"schema": "webstock.plugin.package.v1", "manifest": manifest,
                "files": {name: base64.b64encode(raw).decode("ascii") for name,raw in content.items()}}
@@ -167,6 +167,37 @@ def main():
                     number("capital",100000.,1,1e10,title="初始资金"),number("quantity",100,1,1000000,title="每次买入数量"),
                     number("feeBps",5.,0,1000,title="单边费率（基点）")]}]},
             {"worker.py":"worker.py",adapter:adapter,"THIRD_PARTY_NOTICES.txt":"THIRD_PARTY_NOTICES.txt"}))
+    records.append(save_package(args.output,{"id":"org.webstock.wtpy","name":"wtpy 原生数据工具","license":"MIT",
+        "source":"https://github.com/wondertrader/wtpy","distributions":["wtpy","pandas","numpy"],"operations":[{
+            "id":"daily-dsb","title":"日线DSB转换、读回与导出","formulaVersion":"wtpy-native-daily-dsb-roundtrip-v1",
+            "inputKind":"ohlcv-single-csv","outputKind":"indicator","parameters":[],
+            "description":"调用原版原生数据组件；逐项核对转换后的日期及OHLCV，保存可导出的DSB。"}]},
+        {"worker.py":"worker.py","wondertrader_adapters.py":"wondertrader_adapters.py","THIRD_PARTY_NOTICES.txt":"THIRD_PARTY_NOTICES.txt"}))
+    records.append(save_package(args.output,{"id":"org.webstock.wondertrader","name":"WonderTrader 原生回测","license":"MIT",
+        "source":"https://github.com/wondertrader/wondertrader","distributions":["wtpy","pandas","numpy"],"operations":[{
+            "id":"sma-native","title":"均线交叉 · 原生日线撮合","formulaVersion":"wondertrader-daily-sma-cross-v1",
+            "inputKind":"ohlcv-single-csv","outputKind":"backtest","description":"使用wtpy发行版的原生引擎DLL，费用按笔取整到分；保留原始信号和成交表。",
+            "parameters":[number("fast",10,title="快速均线"),number("slow",30,title="慢速均线"),
+                number("capital",100000.,1,1e10,title="初始参考资金"),number("quantity",100,1,1000000,title="数量"),
+                number("feeBps",5.,0,1000,title="单边费率（基点）")]}]},
+        {"worker.py":"worker.py","wondertrader_adapters.py":"wondertrader_adapters.py","THIRD_PARTY_NOTICES.txt":"THIRD_PARTY_NOTICES.txt"}))
+    records.append(save_package(args.output,{"id":"org.webstock.akshare","name":"AKShare 历史数据采集","license":"MIT",
+        "source":"https://github.com/akfamily/akshare","distributions":["akshare","pandas","numpy"],"operations":[{
+            "id":"daily-eastmoney","title":"A股历史日线 · 东方财富","formulaVersion":"akshare-eastmoney-daily-snapshot-v1",
+            "inputKind":"parameters-only","outputKind":"data","description":"点击运行后联网取数，保存来源与采集时间；结束日期需早于今天。",
+            "parameters":[{"id":key,"title":title,"type":"text","format":fmt,"minLength":length,"maxLength":length,"default":default}
+                for key,title,fmt,length,default in [("symbol","六位股票代码","cn-stock",6,"000001"),
+                    ("startDate","开始日期","date",10,"2020-01-01"),("endDate","结束日期","date",10,"2020-12-31")]]+
+                [{"id":"adjustment","title":"价格复权方式","type":"choice","default":"unadjusted","choices":["unadjusted","forward","backward"]}]}]},
+        {"worker.py":"worker.py","akshare_adapter.py":"akshare_adapter.py","THIRD_PARTY_NOTICES.txt":"THIRD_PARTY_NOTICES.txt"}))
+    records.append(save_package(args.output,{"id":"org.webstock.lean","name":"LEAN 本地回测引擎","license":"Apache-2.0",
+        "source":"https://github.com/QuantConnect/Lean","distributions":["pandas","numpy"],"operations":[{
+            "id":"sma-close","title":"均线交叉 · 下一输入根收盘执行","formulaVersion":"lean-lagged-sma-cross-close-v1",
+            "inputKind":"ohlcv-single-csv","outputKind":"backtest","description":"原版.NET引擎；需.NET10 SDK与本地已构建的LEAN目录。",
+            "parameters":[{"id":"engineDirectory","title":"LEAN源码及Release构建目录","type":"text","format":"text","minLength":0,"maxLength":512,"default":""},
+                number("fast",10,title="快速均线"),number("slow",30,title="慢速均线"),number("capital",100000.,1,1e10,title="初始虚拟资金"),
+                number("quantity",100,1,1000000,title="每次数量"),number("feeBps",5.,0,1000,title="单边费率（基点）")]}]},
+        {"worker.py":"worker.py","lean_adapter.py":"lean_adapter.py","lean/WebStockFrozenAlgorithm.cs":"lean/WebStockFrozenAlgorithm.cs","THIRD_PARTY_NOTICES.txt":"THIRD_PARTY_NOTICES.txt"}))
     (args.output/"index.json").write_text(json.dumps(records,ensure_ascii=False,indent=2),encoding="utf-8")
     print(json.dumps(records,ensure_ascii=False))
 

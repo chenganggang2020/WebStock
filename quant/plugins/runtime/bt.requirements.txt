@@ -1,0 +1,28 @@
+# Exact package versions observed in the verified local Windows runtime.
+# Source distributions use full Git commits; wheel hashes are not locked yet.
+bt==1.4.1
+cloudpickle==3.1.2
+colorama==0.4.6
+contourpy==1.4.0
+cycler==0.12.1
+decorator==5.3.1
+ffn==1.4.1
+fonttools==4.67.0
+joblib==1.6.0
+kiwisolver==1.5.1
+matplotlib==3.11.2
+narwhals==2.27.1
+numpy==2.5.4
+packaging==26.3
+pandas==3.1.0
+pillow==13.0.0
+pyparsing==3.3.3
+PyPrind==2.11.3
+python-dateutil==3.0.0
+scikit-learn==1.9.1
+scipy==1.18.1
+six==1.17.0
+tabulate==0.10.0
+threadpoolctl==3.7.0
+tqdm==4.70.1
+tzdata==2026.5

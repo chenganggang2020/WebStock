@@ -19,7 +19,7 @@ class QuantPluginWidget : public QWidget {
     QLineEdit *runtime_, *input_, *filter_;
     QCheckBox *closed_, *enabled_;
     QSpinBox *timeout_;
-    QFormLayout* parameters_;
+    QFormLayout *parameters_, *form_;
     QMap<QString,QWidget*> fields_;
     QJsonObject operation_;
     QLabel *status_, *description_;

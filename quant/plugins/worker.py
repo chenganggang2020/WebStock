@@ -1,4 +1,4 @@
-"""Versioned, offline plugin worker. All paths are relative to a frozen job.
+"""Versioned plugin worker. All job paths are relative to a frozen job.
 
 The native host owns process lifetime and validates the result a second time.
 Plugins are executable code, not a security sandbox. Never load untrusted packages.
@@ -119,6 +119,16 @@ def validate_parameters(operation, supplied):
         if field["type"] == "choice":
             if value not in field["choices"]:
                 raise ValueError(f"Invalid choice: {key}")
+        elif field["type"] == "text":
+            import re
+            from datetime import date
+            if not isinstance(value,str) or not field["minLength"]<=len(value)<=field["maxLength"] or any(ord(c)<32 or ord(c)==127 for c in value):
+                raise ValueError(f"Invalid text: {key}")
+            if field["format"]=="cn-stock" and not re.fullmatch(r"[0-9]{6}",value):
+                raise ValueError(f"Six-digit stock code required: {key}")
+            if field["format"]=="date":
+                if not re.fullmatch(r"[0-9]{4}-[0-9]{2}-[0-9]{2}",value):raise ValueError(f"ISO date required: {key}")
+                date.fromisoformat(value)
         else:
             if isinstance(value, bool) or not isinstance(value, (float, int)) or not math.isfinite(value):
                 raise ValueError(f"Invalid number: {key}")
@@ -133,6 +143,12 @@ def validate_parameters(operation, supplied):
 
 
 def compute(manifest, operation, frame, parameters):
+    if manifest["id"] == "org.webstock.lean":
+        from lean_adapter import calculate
+        return calculate(frame,parameters)
+    if manifest["id"] == "org.webstock.akshare":
+        from akshare_adapter import fetch
+        return fetch(parameters)
     if manifest["id"] == "org.webstock.talib":
         import pandas as pd
         import talib
@@ -184,6 +200,12 @@ def compute(manifest, operation, frame, parameters):
     if manifest["id"] == "org.webstock.rqalpha":
         from rqalpha_adapter import calculate
         return calculate(frame,parameters)
+    if manifest["id"] == "org.webstock.wtpy":
+        from wondertrader_adapters import roundtrip
+        return roundtrip(frame)
+    if manifest["id"] == "org.webstock.wondertrader":
+        from wondertrader_adapters import backtest
+        return backtest(frame,parameters)
     if manifest["id"] in ("org.webstock.bt", "org.webstock.wbt", "org.webstock.czsc"):
         from research_adapters import calculate
         return calculate(manifest["id"].split(".")[-1], frame, parameters)
@@ -208,10 +230,16 @@ def main():
     source = checked_path(root, request["input"]["path"])
     if digest(source.read_bytes()) != request["input"]["sha256"]:
         raise ValueError("Frozen input changed")
-    if request["input"]["closedBarsOnly"] is not True:
+    query=operation["inputKind"]=="parameters-only"
+    if request["input"]["path"] != ("input.json" if query else "input.csv"):
+        raise ValueError("Frozen input kind mismatch")
+    if query:
+        if read_json(source)!={"schema":"webstock.plugin.query.v1","operationId":operation["id"],"parameters":parameters}:
+            raise ValueError("Frozen query differs from parameters")
+    elif request["input"]["closedBarsOnly"] is not True:
         raise ValueError("Closed-bar acknowledgement required")
     print(json.dumps({"event": "progress", "message": "核验完成，正在计算", "percent": 15}), flush=True)
-    frame = load_bars(source)
+    frame = None if query else load_bars(source)
     computed = compute(manifest, operation, frame, parameters)
     versions = {}
     for dependency in manifest.get("distributions", []):
@@ -220,7 +248,7 @@ def main():
               "runId": request["runId"], "pluginId": manifest["id"], "pluginVersion": manifest["version"],
               "operationId": operation["id"], "requestSha256": digest(request_path.read_bytes()),
               "inputSha256": request["input"]["sha256"], "manifestSha256": request["manifestSha256"],
-              "parameters": parameters, "dependencies": versions, "bars": len(frame),
+              "parameters": parameters, "dependencies": versions, "bars": computed["bars"] if query else len(frame),
               "dataPolicy": request["input"], **computed}
     blob = json.dumps(clean(result), ensure_ascii=False, allow_nan=False, separators=(",", ":")).encode("utf-8")
     if len(blob) > 24 * 1024 * 1024:

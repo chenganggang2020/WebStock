@@ -1,0 +1,109 @@
+{
+  "schema": "webstock.plugin.runtime-recipes.v1",
+  "platform": "windows-amd64",
+  "recipes": {
+    "data-tools": {
+      "python": "3.12",
+      "observedPython": "3.12.14",
+      "requirements": "data-tools.requirements.txt",
+      "packageCount": 38,
+      "freshInstallationVerified": false
+    },
+    "hikyuu": {
+      "python": "3.12",
+      "observedPython": "3.12.14",
+      "requirements": "hikyuu.requirements.txt",
+      "packageCount": 107,
+      "freshInstallationVerified": false
+    },
+    "rqalpha": {
+      "python": "3.12",
+      "observedPython": "3.12.14",
+      "requirements": "rqalpha.requirements.txt",
+      "packageCount": 42,
+      "freshInstallationVerified": false
+    },
+    "vnpy": {
+      "python": "3.12",
+      "observedPython": "3.12.14",
+      "requirements": "vnpy.requirements.txt",
+      "packageCount": 61,
+      "freshInstallationVerified": false
+    },
+    "qlib": {
+      "python": "3.12",
+      "observedPython": "3.12.14",
+      "requirements": "qlib.requirements.txt",
+      "packageCount": 193,
+      "freshInstallationVerified": false
+    },
+    "vectorbt": {
+      "python": "3.12",
+      "observedPython": "3.12.14",
+      "requirements": "vectorbt.requirements.txt",
+      "packageCount": 68,
+      "freshInstallationVerified": false
+    },
+    "backtesting-py": {
+      "python": "3.12",
+      "observedPython": "3.12.14",
+      "requirements": "backtesting-py.requirements.txt",
+      "packageCount": 21,
+      "freshInstallationVerified": false
+    },
+    "backtrader": {
+      "python": "3.12",
+      "observedPython": "3.12.14",
+      "requirements": "backtrader.requirements.txt",
+      "packageCount": 14,
+      "freshInstallationVerified": false
+    },
+    "bt": {
+      "python": "3.12",
+      "observedPython": "3.12.14",
+      "requirements": "bt.requirements.txt",
+      "packageCount": 26,
+      "freshInstallationVerified": false
+    },
+    "zipline-reloaded": {
+      "python": "3.12",
+      "observedPython": "3.12.14",
+      "requirements": "zipline-reloaded.requirements.txt",
+      "packageCount": 71,
+      "freshInstallationVerified": false
+    },
+    "ml4t-backtest": {
+      "python": "3.12",
+      "observedPython": "3.12.14",
+      "requirements": "ml4t-backtest.requirements.txt",
+      "packageCount": 26,
+      "freshInstallationVerified": false
+    },
+    "czsc": {
+      "python": "3.12",
+      "observedPython": "3.12.14",
+      "requirements": "czsc.requirements.txt",
+      "packageCount": 41,
+      "freshInstallationVerified": false
+    },
+    "wtpy310": {
+      "python": "3.10",
+      "observedPython": "3.10.22",
+      "requirements": "wtpy310.requirements.txt",
+      "packageCount": 43,
+      "freshInstallationVerified": false
+    },
+    "quantaxis311": {
+      "python": "3.11",
+      "observedPython": "3.11.6",
+      "requirements": "quantaxis311.requirements.txt",
+      "packageCount": 170,
+      "freshInstallationVerified": false
+    }
+  },
+  "limitations": [
+    "Version and source-commit snapshots, not cryptographic wheel lockfiles.",
+    "Fresh-install verification is tracked separately.",
+    "LEAN additionally requires .NET10 SDK and its original Release build/Data."
+  ]
+}
