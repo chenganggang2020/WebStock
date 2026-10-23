@@ -19,7 +19,8 @@ def fixture(n=400):
     opening=close*(1+rng.normal(0,.004,n))
     return pd.DataFrame({"time":pd.date_range("2020-01-01",periods=n).astype(str),"open":opening,
         "high":np.maximum(close,opening)+.7,"low":np.minimum(close,opening)-.7,"close":close,
-        "volume":rng.integers(100,10000,n).astype(float),"amount":close*rng.integers(100,10000,n)})
+        "volume":rng.integers(100,10000,n).astype(float),"amount":close*rng.integers(100,10000,n),
+        "volumeunit":"share","amountunit":"CNY","timezone":"Asia/Shanghai"})
 
 
 class PluginTests(unittest.TestCase):
@@ -39,6 +40,36 @@ class PluginTests(unittest.TestCase):
                 self.assertEqual(len(result["tables"][0]["rows"]),len(self.bars))
                 self.assertEqual(result["formulaVersion"],operation["formulaVersion"])
                 self.assertTrue(result["kernelVersion"].startswith("TA-Lib/"))
+
+    def test_ohlc_volatility_flat_and_overnight_gap(self):
+        bars=fixture(5)
+        for col in ("open","high","low","close"):bars[col]=[10.,10.,20.,20.,20.]
+        out,_=calculate("ohlc-volatility",bars,{"period":2,"annualBars":1})
+        # Every individual session is flat; only the observed overnight jump
+        # contributes to YZ's sample variance, not the intraday estimators.
+        np.testing.assert_allclose(out[["parkinson","garmanKlass","rogersSatchell"]].iloc[1:],0)
+        np.testing.assert_allclose(out.yangZhang.iloc[2:4],np.log(2)/np.sqrt(2))
+        self.assertTrue(out.yangZhang.iloc[:2].isna().all());self.assertEqual(out.yangZhang.iloc[4],0)
+        bars=fixture(4);bars["open"]=10.;bars["close"]=10.;bars["high"]=20.;bars["low"]=5.
+        out,_=calculate("ohlc-volatility",bars,{"period":2,"annualBars":1})
+        self.assertAlmostEqual(out.parkinson.iloc[-1],np.sqrt(np.log(2)))
+        self.assertAlmostEqual(out.garmanKlass.iloc[-1],np.sqrt(2)*np.log(2))
+        self.assertAlmostEqual(out.rogersSatchell.iloc[-1],np.sqrt(2)*np.log(2))
+
+    def test_actual_vwap_resets_and_refuses_unknown_units(self):
+        b=fixture(3);b["time"]=["2020-01-01 10:00:00","2020-01-01 11:00:00","2020-01-02 10:00:00"]
+        b["volume"]=100.;b["amount"]=[1000.,2000.,3000.]
+        out,_=calculate("vwap-actual-day",b,{})
+        np.testing.assert_allclose(out.vwap,[10,15,30])
+        out,_=calculate("vwap-actual-anchor",b,{"anchorDate":"2020-01-01"})
+        np.testing.assert_allclose(out.vwap,[10,15,20])
+        out,_=calculate("vwap-actual-anchor",b,{"anchorDate":"2020-01-02"})
+        np.testing.assert_allclose(out.vwap,[np.nan,np.nan,30],equal_nan=True)
+        with self.assertRaises(ValueError):calculate("vwap-actual-day",b.drop(columns="amount"),{})
+        b["volumeunit"]="lot"
+        with self.assertRaises(ValueError):calculate("vwap-actual-day",b,{})
+        b["volumeunit"]="share";b.loc[0,"volume"]=0
+        with self.assertRaises(ValueError):calculate("vwap-actual-day",b,{})
 
     def test_supertrend_hand_calculated_state_changes(self):
         bars=fixture(6);bars["close"]=[10,10,13,12,7,8];bars["open"]=bars.close

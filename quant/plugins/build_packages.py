@@ -20,7 +20,7 @@ def number(key, default, minimum=2, maximum=10000, title=None, kind=None):
 def save_package(output, manifest, sources):
     content = {name: (HERE/source).read_bytes() for name, source in sources.items()}
     manifest.update(schema="webstock.plugin.manifest.v1", protocolVersion=1,
-                    entrypoint="worker.py", runtime="python", version="0.8.1",
+                    entrypoint="worker.py", runtime="python", version="0.9.0",
                     files={name: hashlib.sha256(raw).hexdigest() for name,raw in content.items()})
     package = {"schema": "webstock.plugin.package.v1", "manifest": manifest,
                "files": {name: base64.b64encode(raw).decode("ascii") for name,raw in content.items()}}
@@ -65,12 +65,13 @@ def main():
         "supertrend":"Supertrend（ATR方向线）","ichimoku":"Ichimoku（按可知时间）","dpo":"DPO（不向过去回填）",
         "pbx":"PBX（EMA+两条SMA版本）","dma":"DMA / AMA","lwr":"LWR（正向超买刻度）",
         "brar-cr-vr-psy":"BR / AR / CR / VR / PSY","emv":"Ease of Movement","bb-kc-squeeze":"BB-KC收缩状态",
-        "amount-adv":"成交额 / ADV / 成交量ADV"}
+        "amount-adv":"成交额 / ADV / 成交量ADV","ohlc-volatility":"Parkinson / GK / RS / Yang–Zhang 波动率",
+        "vwap-actual-day":"真实VWAP（按自然日重置）","vwap-actual-anchor":"真实Anchored VWAP（指定日期）"}
     core=[]
     for key,title in names.items():
         fields=[] if key in ("bbi","ao-ac","vpt","anchored-vwap-proxy","heikin-ashi") else [number("period",20,title="计算周期")]
         if key=="tsi": fields=[number("fast",13,title="快速平滑"),number("slow",25,title="慢速平滑")]
-        if key in ("realized-volatility","ewma-volatility","drawdown-downside"):
+        if key in ("realized-volatility","ewma-volatility","drawdown-downside","ohlc-volatility"):
             fields.append(number("annualBars",252,1,100000,title="每年K线数"))
         if key=="ewma-volatility":fields.append(number("decay",0.94,0.01,0.9999,title="衰减系数"))
         if key=="bollinger-derived":fields.append(number("rankWindow",120,title="分位历史窗口"))
@@ -83,6 +84,8 @@ def main():
         if key=="lwr":fields=[number("period",9,title="区间周期"),number("smooth",3,title="平滑周期")]
         if key=="emv":fields.append(number("volumeScale",1000000.,1,1e12,title="成交量缩放系数"))
         if key=="bb-kc-squeeze":fields.extend([number("bbMultiple",2.,.1,10,title="布林倍数"),number("kcMultiple",1.5,.1,10,title="Keltner倍数")])
+        if key=="vwap-actual-day":fields=[]
+        if key=="vwap-actual-anchor":fields=[{"id":"anchorDate","title":"锚点日期","type":"text","format":"date","minLength":10,"maxLength":10,"default":"2020-01-01"}]
         core.append({"id":key,"title":title,"formulaVersion":"webstock-"+key+"-v1","parameters":fields,
                      "inputKind":"ohlcv-single-csv","outputKind":"indicator","description":"仅使用已完成K线的有版本公式。"})
     records.append(save_package(args.output,{"id":"org.webstock.core-indicators","name":"WebStock 补充指标","license":"Project source terms",

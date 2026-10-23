@@ -18,6 +18,7 @@ def main():
     p.add_argument("--operations",help="Comma-separated operation ids for the selected project")
     p.add_argument("--allow-network",action="store_true",help="Explicitly include online data providers")
     p.add_argument("--lean-directory",type=Path,help="Local LEAN source tree with Release build and Data")
+    p.add_argument("--runtime-map",type=Path,help="Optional JSON map from runtime name to exact Python executable")
     args=p.parse_args()
     mapping={"talib":("data-tools","rsi"),"core-indicators":("data-tools","donchian-prior"),
         "hikyuu":("hikyuu","sma-cross"),"backtesting-py":("backtesting-py","sma-cross"),
@@ -28,6 +29,7 @@ def main():
         "zipline-reloaded":("zipline-reloaded","sma-close"),"rqalpha":("rqalpha","sma-close"),
         "wtpy":("wtpy310","daily-dsb"),"wondertrader":("wtpy310","sma-native"),"akshare":("data-tools","daily-eastmoney"),"lean":("data-tools","sma-close")}
     environment=dict(os.environ,QT_QPA_PLATFORM="offscreen",PYTHONUTF8="1")
+    runtime_map=json.loads(args.runtime_map.read_text(encoding="utf-8")) if args.runtime_map else {}
     rows=[]
     for package in sorted(args.packages.glob("*.wspkg")):
         manifest=json.loads(package.read_text(encoding="utf-8"))["manifest"]
@@ -38,7 +40,7 @@ def main():
         if engine=="lean" and not args.lean_directory:
             print("Skipped LEAN; pass --lean-directory to include it",flush=True);continue
         runtime,operation=mapping[engine]
-        exe=args.environment_root/runtime/"Scripts/python.exe"
+        exe=Path(runtime_map[runtime]) if runtime in runtime_map else args.environment_root/runtime/"Scripts/python.exe"
         base=[str(args.host),"--root",str(args.state)]
         installed=subprocess.run(base+["--install",str(package),"--runtime",str(exe)],env=environment,
                                  capture_output=True,text=True,encoding="utf-8",timeout=60)

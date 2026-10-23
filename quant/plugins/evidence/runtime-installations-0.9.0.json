@@ -1,0 +1,278 @@
+{
+  "schema": "webstock.plugin.runtime-installations.v1",
+  "recipes": [
+    {
+      "recipe": "data-tools",
+      "python": [
+        3,
+        12,
+        14
+      ],
+      "packageCount": 38,
+      "requirementsSha256": "f3b58f5f0e887fab398568f13cda148bede751f742ae8fb99090e535b3252fe7",
+      "sourceCommits": [],
+      "restoredSourceData": [],
+      "dependencyCheck": "passed",
+      "nativeAdapterChecks": "passed",
+      "metricParity": "matched baseline"
+    },
+    {
+      "recipe": "hikyuu",
+      "python": [
+        3,
+        12,
+        14
+      ],
+      "packageCount": 107,
+      "requirementsSha256": "73056e2898b9494b658ee80e9076070a17fa9e5e2f624fd78a43de6a979549ab",
+      "sourceCommits": [],
+      "restoredSourceData": [],
+      "dependencyCheck": "passed",
+      "nativeAdapterChecks": "passed",
+      "metricParity": "matched baseline"
+    },
+    {
+      "recipe": "rqalpha",
+      "python": [
+        3,
+        12,
+        14
+      ],
+      "packageCount": 42,
+      "requirementsSha256": "3bb7bbb09efa79de0b165f76183434802338e30f1a45e4613ed3ba75c873a9ad",
+      "sourceCommits": [
+        {
+          "package": "rqalpha",
+          "url": "https://github.com/ricequant/rqalpha.git",
+          "commit": "6a996af2876013615ceea141a97bad94ac4ab7f3"
+        }
+      ],
+      "restoredSourceData": [],
+      "dependencyCheck": "passed",
+      "nativeAdapterChecks": "passed",
+      "metricParity": "matched baseline"
+    },
+    {
+      "recipe": "vnpy",
+      "python": [
+        3,
+        12,
+        14
+      ],
+      "packageCount": 61,
+      "requirementsSha256": "9f2935b839af74b32357793a8faa49ff972b1feda06e5a648accb785f932b76e",
+      "sourceCommits": [
+        {
+          "package": "vnpy",
+          "url": "https://github.com/vnpy/vnpy.git",
+          "commit": "c6e231caf32b7fc97e6459817fff66458cf7e7c4"
+        },
+        {
+          "package": "vnpy_ctastrategy",
+          "url": "https://github.com/vnpy/vnpy_ctastrategy.git",
+          "commit": "7a8768de9784dda35a7b261a7ade1dbfbff50919"
+        }
+      ],
+      "restoredSourceData": [],
+      "dependencyCheck": "passed",
+      "nativeAdapterChecks": "passed",
+      "metricParity": "matched baseline"
+    },
+    {
+      "recipe": "qlib",
+      "python": [
+        3,
+        12,
+        14
+      ],
+      "packageCount": 193,
+      "requirementsSha256": "cd4029cdfc2b4039ad518e5a1a1b8e29f6c793d063689ee6713169cf3919c5f3",
+      "sourceCommits": [],
+      "restoredSourceData": [],
+      "dependencyCheck": "passed",
+      "nativeAdapterChecks": "passed",
+      "metricParity": "matched baseline"
+    },
+    {
+      "recipe": "vectorbt",
+      "python": [
+        3,
+        12,
+        14
+      ],
+      "packageCount": 68,
+      "requirementsSha256": "067a2e45fbb5d45815bd5ee910f6942689bf42c4159a840dd5f5b2c52bc62342",
+      "sourceCommits": [
+        {
+          "package": "vectorbt",
+          "url": "https://github.com/polakowo/vectorbt.git",
+          "commit": "8e30b8ce102f302bec0c0226e05b59714453bebd"
+        }
+      ],
+      "restoredSourceData": [],
+      "dependencyCheck": "passed",
+      "nativeAdapterChecks": "passed",
+      "metricParity": "matched baseline"
+    },
+    {
+      "recipe": "backtesting-py",
+      "python": [
+        3,
+        12,
+        14
+      ],
+      "packageCount": 21,
+      "requirementsSha256": "438859e38a0af0ad40c73d5783500b4d610e149eabf6a85e3fb02976f663a733",
+      "sourceCommits": [
+        {
+          "package": "backtesting",
+          "url": "https://github.com/kernc/backtesting.py.git",
+          "commit": "ca2e2611621e472542ba90f7243a1fa06a7d7108"
+        }
+      ],
+      "restoredSourceData": [
+        {
+          "repository": "backtesting-py",
+          "path": "backtesting/autoscale_cb.js",
+          "destination": "backtesting/autoscale_cb.js",
+          "sha256": "4dd9734e334695001ed7cfc957d284b538b106481ec9169aac987e3562ed8535",
+          "reason": "Upstream wheel omits a JS file that its plotting module reads at import time.",
+          "commit": "ca2e2611621e472542ba90f7243a1fa06a7d7108",
+          "managedBy": "webstock-runtime manifest, additional upstream data file"
+        }
+      ],
+      "dependencyCheck": "passed",
+      "nativeAdapterChecks": "passed",
+      "metricParity": "matched baseline"
+    },
+    {
+      "recipe": "backtrader",
+      "python": [
+        3,
+        12,
+        14
+      ],
+      "packageCount": 14,
+      "requirementsSha256": "66c2aa609b4af3479f034bcf4a82503ac7dc45e7465d25e219ba6a03777aacd5",
+      "sourceCommits": [
+        {
+          "package": "backtrader",
+          "url": "https://github.com/mementum/backtrader.git",
+          "commit": "b853d7c90b6721476eb5a5ea3135224e33db1f14"
+        }
+      ],
+      "restoredSourceData": [],
+      "dependencyCheck": "passed",
+      "nativeAdapterChecks": "passed",
+      "metricParity": "matched baseline"
+    },
+    {
+      "recipe": "bt",
+      "python": [
+        3,
+        12,
+        14
+      ],
+      "packageCount": 26,
+      "requirementsSha256": "415e89fb81bb97090c34809dee5e8b71f04138291026be89012220a49f188f30",
+      "sourceCommits": [],
+      "restoredSourceData": [],
+      "dependencyCheck": "passed",
+      "nativeAdapterChecks": "passed",
+      "metricParity": "matched baseline"
+    },
+    {
+      "recipe": "zipline-reloaded",
+      "python": [
+        3,
+        12,
+        14
+      ],
+      "packageCount": 71,
+      "requirementsSha256": "09f61cb1e670a309dc189e29b95b5a73dd1a1b7366ba51d4139165ce11ba641e",
+      "sourceCommits": [],
+      "restoredSourceData": [],
+      "dependencyCheck": "passed",
+      "nativeAdapterChecks": "passed",
+      "metricParity": "matched baseline"
+    },
+    {
+      "recipe": "ml4t-backtest",
+      "python": [
+        3,
+        12,
+        14
+      ],
+      "packageCount": 26,
+      "requirementsSha256": "058dd8feb3477ee3b6af926a6d51f3eaeae58461e13fda8c9825a6cae817fd96",
+      "sourceCommits": [
+        {
+          "package": "ml4t-backtest",
+          "url": "https://github.com/ml4t/backtest.git",
+          "commit": "45becfb0985eb59e63c7e3d3f513dba372b103da"
+        }
+      ],
+      "restoredSourceData": [],
+      "dependencyCheck": "passed",
+      "nativeAdapterChecks": "passed",
+      "metricParity": "matched baseline"
+    },
+    {
+      "recipe": "czsc",
+      "python": [
+        3,
+        12,
+        14
+      ],
+      "packageCount": 41,
+      "requirementsSha256": "09692453dce8bc1b201ee42a8b609b20ea2c1cfc44793f10c0e8707d2475566e",
+      "sourceCommits": [],
+      "restoredSourceData": [],
+      "dependencyCheck": "passed",
+      "nativeAdapterChecks": "passed",
+      "metricParity": "matched baseline"
+    },
+    {
+      "recipe": "wtpy310",
+      "python": [
+        3,
+        10,
+        22
+      ],
+      "packageCount": 43,
+      "requirementsSha256": "8c655dc1f4f91ea84fdf93110459194f32f079a876b138c6918e250e6f28c4ae",
+      "sourceCommits": [],
+      "restoredSourceData": [],
+      "dependencyCheck": "passed",
+      "nativeAdapterChecks": "passed",
+      "metricParity": "matched baseline"
+    },
+    {
+      "recipe": "quantaxis311",
+      "python": [
+        3,
+        11,
+        6
+      ],
+      "packageCount": 170,
+      "requirementsSha256": "6662835570dbf01301bf951f7fc082f4354072fd18e748d2532a663e5af77397",
+      "sourceCommits": [
+        {
+          "package": "quantaxis",
+          "url": "https://github.com/yutiansut/QUANTAXIS.git",
+          "commit": "232aa7ac9869966108f02a8fff85f1f7b09a9ce2"
+        }
+      ],
+      "restoredSourceData": [],
+      "dependencyCheck": "passed",
+      "nativeAdapterChecks": "passed",
+      "metricParity": "matched baseline"
+    }
+  ],
+  "limits": [
+    "Same Windows machine, not a clean second-device acceptance",
+    "Existing Python interpreters and caches/source mirrors used",
+    "Wheel hashes and self-contained LEAN .NET build delivery pending",
+    "AKShare latest live provider run failed; no fake online success"
+  ]
+}

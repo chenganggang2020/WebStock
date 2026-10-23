@@ -7,98 +7,190 @@
       "observedPython": "3.12.14",
       "requirements": "data-tools.requirements.txt",
       "packageCount": 38,
-      "freshInstallationVerified": false
+      "freshInstallationVerified": true,
+      "sourceRepositories": [],
+      "verificationScope": "New non-editable environment on current Windows machine, existing Python and cached packages/source mirrors; original LEAN .NET runtime remains external."
     },
     "hikyuu": {
       "python": "3.12",
       "observedPython": "3.12.14",
       "requirements": "hikyuu.requirements.txt",
       "packageCount": 107,
-      "freshInstallationVerified": false
+      "freshInstallationVerified": true,
+      "sourceRepositories": [],
+      "verificationScope": "New non-editable environment on current Windows machine, existing Python and cached packages/source mirrors; original LEAN .NET runtime remains external."
     },
     "rqalpha": {
       "python": "3.12",
       "observedPython": "3.12.14",
       "requirements": "rqalpha.requirements.txt",
       "packageCount": 42,
-      "freshInstallationVerified": false
+      "freshInstallationVerified": true,
+      "sourceRepositories": [
+        {
+          "package": "rqalpha",
+          "directoryName": "rqalpha",
+          "url": "https://github.com/ricequant/rqalpha.git",
+          "commit": "6a996af2876013615ceea141a97bad94ac4ab7f3"
+        }
+      ],
+      "verificationScope": "New non-editable environment on current Windows machine, existing Python and cached packages/source mirrors; original LEAN .NET runtime remains external."
     },
     "vnpy": {
       "python": "3.12",
       "observedPython": "3.12.14",
       "requirements": "vnpy.requirements.txt",
       "packageCount": 61,
-      "freshInstallationVerified": false
+      "freshInstallationVerified": true,
+      "sourceRepositories": [
+        {
+          "package": "vnpy",
+          "directoryName": "vnpy",
+          "url": "https://github.com/vnpy/vnpy.git",
+          "commit": "c6e231caf32b7fc97e6459817fff66458cf7e7c4"
+        },
+        {
+          "package": "vnpy_ctastrategy",
+          "directoryName": "vnpy-ctastrategy",
+          "url": "https://github.com/vnpy/vnpy_ctastrategy.git",
+          "commit": "7a8768de9784dda35a7b261a7ade1dbfbff50919"
+        }
+      ],
+      "verificationScope": "New non-editable environment on current Windows machine, existing Python and cached packages/source mirrors; original LEAN .NET runtime remains external."
     },
     "qlib": {
       "python": "3.12",
       "observedPython": "3.12.14",
       "requirements": "qlib.requirements.txt",
       "packageCount": 193,
-      "freshInstallationVerified": false
+      "freshInstallationVerified": true,
+      "sourceRepositories": [],
+      "verificationScope": "New non-editable environment on current Windows machine, existing Python and cached packages/source mirrors; original LEAN .NET runtime remains external."
     },
     "vectorbt": {
       "python": "3.12",
       "observedPython": "3.12.14",
       "requirements": "vectorbt.requirements.txt",
       "packageCount": 68,
-      "freshInstallationVerified": false
+      "freshInstallationVerified": true,
+      "sourceRepositories": [
+        {
+          "package": "vectorbt",
+          "directoryName": "vectorbt",
+          "url": "https://github.com/polakowo/vectorbt.git",
+          "commit": "8e30b8ce102f302bec0c0226e05b59714453bebd"
+        }
+      ],
+      "verificationScope": "New non-editable environment on current Windows machine, existing Python and cached packages/source mirrors; original LEAN .NET runtime remains external."
     },
     "backtesting-py": {
       "python": "3.12",
       "observedPython": "3.12.14",
       "requirements": "backtesting-py.requirements.txt",
       "packageCount": 21,
-      "freshInstallationVerified": false
+      "freshInstallationVerified": true,
+      "sourceRepositories": [
+        {
+          "package": "backtesting",
+          "directoryName": "backtesting-py",
+          "url": "https://github.com/kernc/backtesting.py.git",
+          "commit": "ca2e2611621e472542ba90f7243a1fa06a7d7108"
+        }
+      ],
+      "restoreSourceData": [
+        {
+          "repository": "backtesting-py",
+          "path": "backtesting/autoscale_cb.js",
+          "destination": "backtesting/autoscale_cb.js",
+          "sha256": "4dd9734e334695001ed7cfc957d284b538b106481ec9169aac987e3562ed8535",
+          "reason": "Upstream wheel omits a JS file that its plotting module reads at import time."
+        }
+      ],
+      "verificationScope": "New non-editable environment on current Windows machine, existing Python and cached packages/source mirrors; original LEAN .NET runtime remains external."
     },
     "backtrader": {
       "python": "3.12",
       "observedPython": "3.12.14",
       "requirements": "backtrader.requirements.txt",
       "packageCount": 14,
-      "freshInstallationVerified": false
+      "freshInstallationVerified": true,
+      "sourceRepositories": [
+        {
+          "package": "backtrader",
+          "directoryName": "backtrader",
+          "url": "https://github.com/mementum/backtrader.git",
+          "commit": "b853d7c90b6721476eb5a5ea3135224e33db1f14"
+        }
+      ],
+      "verificationScope": "New non-editable environment on current Windows machine, existing Python and cached packages/source mirrors; original LEAN .NET runtime remains external."
     },
     "bt": {
       "python": "3.12",
       "observedPython": "3.12.14",
       "requirements": "bt.requirements.txt",
       "packageCount": 26,
-      "freshInstallationVerified": false
+      "freshInstallationVerified": true,
+      "sourceRepositories": [],
+      "verificationScope": "New non-editable environment on current Windows machine, existing Python and cached packages/source mirrors; original LEAN .NET runtime remains external."
     },
     "zipline-reloaded": {
       "python": "3.12",
       "observedPython": "3.12.14",
       "requirements": "zipline-reloaded.requirements.txt",
       "packageCount": 71,
-      "freshInstallationVerified": false
+      "freshInstallationVerified": true,
+      "sourceRepositories": [],
+      "verificationScope": "New non-editable environment on current Windows machine, existing Python and cached packages/source mirrors; original LEAN .NET runtime remains external."
     },
     "ml4t-backtest": {
       "python": "3.12",
       "observedPython": "3.12.14",
       "requirements": "ml4t-backtest.requirements.txt",
       "packageCount": 26,
-      "freshInstallationVerified": false
+      "freshInstallationVerified": true,
+      "sourceRepositories": [
+        {
+          "package": "ml4t-backtest",
+          "directoryName": "ml4t-backtest",
+          "url": "https://github.com/ml4t/backtest.git",
+          "commit": "45becfb0985eb59e63c7e3d3f513dba372b103da"
+        }
+      ],
+      "verificationScope": "New non-editable environment on current Windows machine, existing Python and cached packages/source mirrors; original LEAN .NET runtime remains external."
     },
     "czsc": {
       "python": "3.12",
       "observedPython": "3.12.14",
       "requirements": "czsc.requirements.txt",
       "packageCount": 41,
-      "freshInstallationVerified": false
+      "freshInstallationVerified": true,
+      "sourceRepositories": [],
+      "verificationScope": "New non-editable environment on current Windows machine, existing Python and cached packages/source mirrors; original LEAN .NET runtime remains external."
     },
     "wtpy310": {
       "python": "3.10",
       "observedPython": "3.10.22",
       "requirements": "wtpy310.requirements.txt",
       "packageCount": 43,
-      "freshInstallationVerified": false
+      "freshInstallationVerified": true,
+      "sourceRepositories": [],
+      "verificationScope": "New non-editable environment on current Windows machine, existing Python and cached packages/source mirrors; original LEAN .NET runtime remains external."
     },
     "quantaxis311": {
       "python": "3.11",
       "observedPython": "3.11.6",
       "requirements": "quantaxis311.requirements.txt",
       "packageCount": 170,
-      "freshInstallationVerified": false
+      "freshInstallationVerified": true,
+      "sourceRepositories": [
+        {
+          "package": "quantaxis",
+          "directoryName": "quantaxis",
+          "url": "https://github.com/yutiansut/QUANTAXIS.git",
+          "commit": "232aa7ac9869966108f02a8fff85f1f7b09a9ce2"
+        }
+      ],
+      "verificationScope": "New non-editable environment on current Windows machine, existing Python and cached packages/source mirrors; original LEAN .NET runtime remains external."
     }
   },
   "limitations": [

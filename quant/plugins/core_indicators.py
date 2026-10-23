@@ -197,6 +197,42 @@ def calculate(name, b, p):
         if not np.isfinite(amount).all() or (amount<0).any():raise ValueError("Invalid actual amount")
         out["amount"]=amount;out["priorAmountADV"]=amount.shift().rolling(n).mean();out["priorVolumeADV"]=v.shift().rolling(n).mean()
         warning.append("ADV分母截止前一根，保留原币种与量单位；参与率还需要实际委托/成交量，未由行情凭空估计。")
+    elif name == "ohlc-volatility":
+        if n<2:raise ValueError("Volatility requires at least two observations")
+        high_low=np.log(h/l);open_close=np.log(c/o);overnight=np.log(o/c.shift())
+        rs=np.log(h/c)*np.log(h/o)+np.log(l/c)*np.log(l/o)
+        k=.34/(1.34+(n+1)/(n-1))
+        estimates={"parkinson":high_low.pow(2).rolling(n).mean()/(4*np.log(2)),
+            "garmanKlass":(.5*high_low.pow(2)-(2*np.log(2)-1)*open_close.pow(2)).rolling(n).mean(),
+            "rogersSatchell":rs.rolling(n).mean(),
+            "yangZhang":overnight.rolling(n).var(ddof=1)+k*open_close.rolling(n).var(ddof=1)+(1-k)*rs.rolling(n).mean()}
+        for key,variance in estimates.items():out[key]=np.sqrt(variance.clip(lower=0)*p["annualBars"])
+        warning.append("均为尾随n根的年化估计；YZ隔夜项需n+1根价格，方差使用n-1分母、alpha=1.34。")
+        warning.append("高低价估计的分布及跳空假设不同，不把估计效率或历史低波动解释为收益优势。")
+    elif name in ("vwap-actual-day","vwap-actual-anchor"):
+        from datetime import date
+        from zoneinfo import ZoneInfo
+        required={"amount","volumeunit","amountunit","timezone"}
+        if not required<=set(b.columns):raise ValueError("Actual VWAP requires amount and declared volumeunit/amountunit/timezone")
+        if not b.volumeunit.eq("share").all() or b.amountunit.nunique(dropna=False)!=1 or b.amountunit.iloc[0] not in ("CNY","USD","HKD"):
+            raise ValueError("Actual VWAP requires shares and one declared CNY/USD/HKD amount currency")
+        if b.timezone.nunique(dropna=False)!=1:raise ValueError("One declared timezone required")
+        zone=ZoneInfo(str(b.timezone.iloc[0]));stamp=pd.to_datetime(b.time)
+        local=stamp.dt.tz_localize(zone,ambiguous="raise",nonexistent="raise") if stamp.dt.tz is None else stamp.dt.tz_convert(zone)
+        amount=pd.to_numeric(b.amount,errors="raise")
+        if not np.isfinite(amount).all() or (amount<0).any() or ((v==0)&(amount!=0)).any():raise ValueError("Invalid actual amount or zero-volume mismatch")
+        if name=="vwap-actual-day":
+            cumulative_amount=amount.groupby(local.dt.date).cumsum();cumulative_volume=v.groupby(local.dt.date).cumsum()
+            warning.append("按声明时区的自然日重置；不推测跨午夜夜盘的交易日。日线输入时为各日真实成交均价。")
+        else:
+            anchor=date.fromisoformat(p["anchorDate"]);active=local.dt.date>=anchor
+            cumulative_amount=amount.where(active).cumsum();cumulative_volume=v.where(active).cumsum()
+            if anchor<local.dt.date.iloc[0]:warning.append("锚点早于输入起点，只能累计实际提供的区间，锚点后的缺失历史没有补齐。")
+            warning.append("锚点为参数指定自然日零时；结果按当时可知值输出，选择锚点本身仍需防止事后挑选。")
+        out["vwap"]=ratio(cumulative_amount,cumulative_volume)
+        out["cumulativeAmount"]=cumulative_amount;out["cumulativeShares"]=cumulative_volume
+        warning.append("使用真实成交额累计÷真实股数累计，币种为"+str(b.amountunit.iloc[0])+"；不使用典型价或收盘价估计成交额。")
+        warning.append("成交额和股数需来自同一统计范围，单位声明由数据提供方保证；输出真实成交均价不自动复权。")
     else:
         raise ValueError("Unknown formula")
     return out, warning

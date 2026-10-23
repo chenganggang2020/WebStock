@@ -626,10 +626,12 @@
       "risk": "不同估计量的漂移、跳跃、连续交易假设不同。",
       "overlap": "波动估计器的替代方案。",
       "evidence": "方法索引；推导及实现待核",
-      "refs": "https://arch.readthedocs.io/en/latest/univariate/introduction.html",
-      "status": "pending",
-      "implementations": [],
-      "implementationNote": "未完成；不以目录条目或近似名称充当实现。"
+      "refs": "https://raw.githubusercontent.com/joshuaulrich/TTR/master/R/volatility.R",
+      "status": "formula_implemented_and_tested",
+      "implementations": [
+        "core:ohlc-volatility"
+      ],
+      "implementationNote": "Four explicitly defined trailing OHLC estimators, n-1 sample variances and alpha=1.34 for YZ. Hand-calculated flat/jump/range cases and prefix invariance tested; no efficiency or return superiority claim."
     },
     {
       "id": 35,
@@ -983,11 +985,12 @@
       "overlap": "日内执行用途与日线选股用途不同。",
       "evidence": "公式/实现；未验证收益",
       "refs": "https://www.tradingview.com/support/solutions/43000502018-volume-weighted-average-price-vwap/\nhttps://www.tradingview.com/support/solutions/43000614331-technical-ratings/",
-      "status": "partial",
+      "status": "formula_implemented_and_tested",
       "implementations": [
-        "core-indicators:vwma"
+        "core:vwma",
+        "core:vwap-actual-day"
       ],
-      "implementationNote": "真实成交额VWAP及日内重置待实现"
+      "implementationNote": "VWMA uses closing-price weights. Actual VWAP sums provided turnover divided by shares, requires declared currency/timezone/volume units, resets by local calendar date, and does not infer overnight sessions or replace missing turnover."
     },
     {
       "id": 55,
@@ -1001,11 +1004,12 @@
       "overlap": "与 VWAP 同原理，新增的是锚定规则。",
       "evidence": "基于 VWAP 的设计；锚点须预定",
       "refs": "https://www.tradingview.com/support/solutions/43000502018-volume-weighted-average-price-vwap/",
-      "status": "partial",
+      "status": "formula_implemented_and_tested",
       "implementations": [
-        "core-indicators:anchored-vwap-proxy"
+        "core:vwap-actual-anchor",
+        "core:anchored-vwap-proxy"
       ],
-      "implementationNote": "已实现首根锚定典型价近似；真实成交额与事件锚点接口待实现"
+      "implementationNote": "Actual amount/share anchored VWAP and separately labelled typical-price proxy. Anchor date is explicit, earlier missing input is not filled; tests cover anchor exclusion and future-prefix invariance."
     },
     {
       "id": 56,

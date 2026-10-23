@@ -12,6 +12,13 @@
 创建后需运行对应适配器测试，并在C++程序中选择该目录的Scripts/python.exe。
 dependencies_verified只表示安装与依赖检查成功，不表示全部功能已验收。
 
+已有缓存时可加 --offline；缺失依赖时明确失败，不自动联网。
+已有此前下载的仓库时可加 --source-root <仓库父目录>，安装器核对完整Git提交号，
+从本地Git对象构建非可编辑安装，避免依赖原工作目录。每次仍创建新环境。
+Windows长路径设置仅作用于安装器子进程，Python构建启用UTF-8；不改全局系统配置。
+Backtesting.py固定提交的wheel漏带导入所需autoscale_cb.js，安装器从同一提交取回，
+核验SHA256并在webstock-runtime.json记录；不改其交易逻辑。该额外数据文件由运行环境记录管理。
+
 项目与环境对应：
 data-tools：TA-Lib、WebStock补充指标、AKShare、LEAN的Python协调程序。
 hikyuu / rqalpha / qlib / vectorbt / backtesting-py / backtrader / bt /

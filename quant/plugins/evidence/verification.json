@@ -2,9 +2,9 @@
   "schema": "webstock.plugin.verification.v1",
   "tests": {
     "python": {
-      "tests": 10,
+      "tests": 12,
       "talibFunctions": 201,
-      "customOperations": 34,
+      "customOperations": 37,
       "checks": [
         "each function runs declared defaults",
         "prefix invariance on 250/400 bars",
@@ -178,11 +178,15 @@
     "nativeWindow": "passed, quotes/classic and legacy focus redirect, real installed TA-Lib workflow",
     "visualReview": "native dark theme inspected and table row contrast repaired"
   },
-  "latestPackageVersion": "0.8.1",
+  "latestPackageVersion": "0.9.0",
   "additionalEvidence": [
     "native-acceptance-0.8.1.json",
     "native-akshare-0.7.0.json",
-    "native-core-expansion-0.5.0.json"
+    "native-core-expansion-0.5.0.json",
+    "native-core-expansion-0.9.0.json",
+    "runtime-rebuild-0.8.1.json",
+    "runtime-parity-0.8.1.json",
+    "runtime-installations-0.9.0.json"
   ],
   "onlineDataChecks": {
     "dataContractTests": 3,
@@ -190,8 +194,8 @@
     "observedTransientFailure": "ProxyError/remote connection closed; failed jobs preserved; a subsequent explicit run completed",
     "source": "AKShare.stock_zh_a_hist / Eastmoney",
     "pointInTimeDataset": false,
-    "latestVersion": "0.8.1",
-    "latestRecheck": "failed: proxy/remote connection closed; prior 0.7.0 successful snapshot remains verifiable"
+    "latestVersion": "0.9.0",
+    "latestRecheck": "failed: proxy/remote connection closed in rebuilt runtime; prior 0.7.0 successful snapshot remains verifiable"
   },
   "leanChecks": {
     "temporalAndAccounting": "next-close fills, actual fee/cash/position ledger, prefix invariance passed",
@@ -201,8 +205,12 @@
     "testSource": "tests/test_lean_adapter.py"
   },
   "runtimeRebuild": {
-    "data-tools": "fresh environment installed; dependency check, 10 indicator tests and 3 data contract tests passed",
-    "otherRecipes": "in progress",
-    "wheelHashesLocked": false
+    "freshEnvironments": 14,
+    "dependencyChecks": "passed",
+    "nativeOfflineAdapterRuns": 19,
+    "numericalParity": "matched baseline primary metric tables",
+    "wheelHashesLocked": false,
+    "secondMachineAcceptance": false,
+    "leanDotnetRebuild": "pending"
   }
 }

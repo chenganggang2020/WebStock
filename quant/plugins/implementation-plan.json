@@ -9,9 +9,9 @@
     "indicatorFamilies": 110,
     "source": "indicator-scope.json",
     "indicatorReadiness": {
-      "formula_implemented_and_tested": 45,
-      "partial": 10,
-      "pending": 55
+      "formula_implemented_and_tested": 48,
+      "partial": 8,
+      "pending": 54
     }
   },
   "completionDefinition": [
@@ -30,7 +30,7 @@
       "status": "adapter_verified_in_cpp_host",
       "pluginId": "org.webstock.hikyuu",
       "remaining": [
-        "portable_runtime_setup",
+        "wheel_hash_locks_and_clean_machine_distribution",
         "expanded_capabilities_and_tests",
         "full_program_per_engine_validation"
       ]
@@ -43,7 +43,7 @@
       "status": "adapter_verified_in_cpp_host",
       "pluginId": "org.webstock.rqalpha",
       "remaining": [
-        "portable_runtime_setup",
+        "wheel_hash_locks_and_clean_machine_distribution",
         "expanded_capabilities_and_tests",
         "full_program_per_engine_validation"
       ]
@@ -56,7 +56,7 @@
       "status": "adapter_verified_in_cpp_host",
       "pluginId": "org.webstock.vnpy",
       "remaining": [
-        "portable_runtime_setup",
+        "wheel_hash_locks_and_clean_machine_distribution",
         "expanded_capabilities_and_tests",
         "full_program_per_engine_validation"
       ]
@@ -69,7 +69,7 @@
       "status": "adapter_verified_in_cpp_host",
       "pluginId": "org.webstock.qlib",
       "remaining": [
-        "portable_runtime_setup",
+        "wheel_hash_locks_and_clean_machine_distribution",
         "expanded_capabilities_and_tests",
         "full_program_per_engine_validation"
       ]
@@ -82,7 +82,7 @@
       "status": "adapter_verified_in_cpp_host",
       "pluginId": "org.webstock.lean",
       "remaining": [
-        "portable_runtime_setup",
+        "wheel_hash_locks_and_clean_machine_distribution",
         "expanded_capabilities_and_tests",
         "full_program_per_engine_validation"
       ]
@@ -95,7 +95,7 @@
       "status": "adapter_verified_in_cpp_host",
       "pluginId": "org.webstock.backtrader",
       "remaining": [
-        "portable_runtime_setup",
+        "wheel_hash_locks_and_clean_machine_distribution",
         "expanded_capabilities_and_tests",
         "full_program_per_engine_validation"
       ]
@@ -108,7 +108,7 @@
       "status": "adapter_verified_in_cpp_host",
       "pluginId": "org.webstock.backtesting-py",
       "remaining": [
-        "portable_runtime_setup",
+        "wheel_hash_locks_and_clean_machine_distribution",
         "expanded_capabilities_and_tests",
         "full_program_per_engine_validation"
       ]
@@ -121,7 +121,7 @@
       "status": "adapter_verified_in_cpp_host",
       "pluginId": "org.webstock.vectorbt",
       "remaining": [
-        "portable_runtime_setup",
+        "wheel_hash_locks_and_clean_machine_distribution",
         "expanded_capabilities_and_tests",
         "full_program_per_engine_validation"
       ]
@@ -134,7 +134,7 @@
       "status": "adapter_verified_in_cpp_host",
       "pluginId": "org.webstock.bt",
       "remaining": [
-        "portable_runtime_setup",
+        "wheel_hash_locks_and_clean_machine_distribution",
         "expanded_capabilities_and_tests",
         "full_program_per_engine_validation"
       ]
@@ -147,7 +147,7 @@
       "status": "adapter_verified_in_cpp_host",
       "pluginId": "org.webstock.zipline-reloaded",
       "remaining": [
-        "portable_runtime_setup",
+        "wheel_hash_locks_and_clean_machine_distribution",
         "expanded_capabilities_and_tests",
         "full_program_per_engine_validation"
       ]
@@ -160,7 +160,7 @@
       "status": "adapter_verified_in_cpp_host",
       "pluginId": "org.webstock.ml4t-backtest",
       "remaining": [
-        "portable_runtime_setup",
+        "wheel_hash_locks_and_clean_machine_distribution",
         "expanded_capabilities_and_tests",
         "full_program_per_engine_validation"
       ]
@@ -173,7 +173,7 @@
       "status": "adapter_verified_in_cpp_host",
       "pluginId": "org.webstock.wondertrader",
       "remaining": [
-        "portable_runtime_setup",
+        "wheel_hash_locks_and_clean_machine_distribution",
         "expanded_capabilities_and_tests",
         "full_program_per_engine_validation"
       ]
@@ -186,7 +186,7 @@
       "status": "adapter_verified_in_cpp_host",
       "pluginId": "org.webstock.quantaxis",
       "remaining": [
-        "portable_runtime_setup",
+        "wheel_hash_locks_and_clean_machine_distribution",
         "expanded_capabilities_and_tests",
         "full_program_per_engine_validation"
       ]
@@ -199,7 +199,7 @@
       "status": "adapter_verified_in_cpp_host",
       "pluginId": "org.webstock.czsc",
       "remaining": [
-        "portable_runtime_setup",
+        "wheel_hash_locks_and_clean_machine_distribution",
         "expanded_capabilities_and_tests",
         "full_program_per_engine_validation"
       ]
@@ -212,7 +212,7 @@
       "status": "adapter_verified_in_cpp_host",
       "pluginId": "org.webstock.vnpy-ctastrategy",
       "remaining": [
-        "portable_runtime_setup",
+        "wheel_hash_locks_and_clean_machine_distribution",
         "expanded_capabilities_and_tests",
         "full_program_per_engine_validation"
       ]
@@ -225,7 +225,7 @@
       "status": "adapter_verified_in_cpp_host",
       "pluginId": "org.webstock.wtpy",
       "remaining": [
-        "portable_runtime_setup",
+        "wheel_hash_locks_and_clean_machine_distribution",
         "expanded_capabilities_and_tests",
         "full_program_per_engine_validation"
       ]
@@ -238,7 +238,7 @@
       "status": "adapter_verified_in_cpp_host",
       "pluginId": "org.webstock.wbt",
       "remaining": [
-        "portable_runtime_setup",
+        "wheel_hash_locks_and_clean_machine_distribution",
         "expanded_capabilities_and_tests",
         "full_program_per_engine_validation"
       ]
@@ -251,7 +251,7 @@
       "status": "adapter_verified_in_cpp_host",
       "pluginId": "org.webstock.talib",
       "remaining": [
-        "portable_runtime_setup",
+        "wheel_hash_locks_and_clean_machine_distribution",
         "expanded_capabilities_and_tests",
         "full_program_per_engine_validation"
       ]
@@ -264,7 +264,7 @@
       "status": "adapter_verified_in_cpp_host",
       "pluginId": "org.webstock.akshare",
       "remaining": [
-        "portable_runtime_setup",
+        "wheel_hash_locks_and_clean_machine_distribution",
         "expanded_capabilities_and_tests",
         "full_program_per_engine_validation",
         "external_provider_availability"
@@ -274,9 +274,11 @@
   "milestones": [
     {
       "id": "plugin-platform",
-      "status": "implemented_and_tested_in_isolated_cpp_host",
+      "status": "native_platform_and_fresh_python_runtime_rebuilds_verified",
       "pending": [
-        "portable_runtime_installation"
+        "wheel_hash_locks",
+        "self_contained_lean_runtime_build",
+        "clean_second_machine_acceptance"
       ]
     },
     {
@@ -292,7 +294,7 @@
     },
     {
       "id": "indicator-coverage",
-      "status": "201_talib_functions_and_34_custom_operations_verified",
+      "status": "201_talib_functions_and_37_custom_operations_verified",
       "note": "Function counts are not catalogue-family completion counts."
     },
     {
@@ -301,5 +303,5 @@
       "note": "Initial declared capabilities only. Latest AKShare network checks failed after an earlier successful 243-row native run."
     }
   ],
-  "latestPackageVersion": "0.8.1"
+  "latestPackageVersion": "0.9.0"
 }
