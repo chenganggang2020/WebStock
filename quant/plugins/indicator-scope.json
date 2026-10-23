@@ -1778,9 +1778,12 @@
       "overlap": "状态名称只是解释，不是可观察真值。",
       "evidence": "官方方法；应用未验证",
       "refs": "https://www.statsmodels.org/stable/generated/statsmodels.tsa.regime_switching.markov_regression.MarkovRegression.predict.html",
-      "status": "pending",
-      "implementations": [],
-      "implementationNote": "未完成；不以目录条目或近似名称充当实现。"
+      "status": "formula_implemented_and_tested",
+      "implementations": [
+        "statistical-models:gaussian-hmm",
+        "statistical-models:markov-switching"
+      ],
+      "implementationNote": "原版hmmlearn/arch/statsmodels，明确尾随训练窗口与观察间隔；只输出当时可知端点，不回填平滑状态。原生运行、前缀及独立递推/矩阵检查通过；未收敛窗口保留不可用与原因，不代表收益有效。"
     },
     {
       "id": 99,
@@ -1794,9 +1797,13 @@
       "overlap": "与 EWMA、实现波动率是替代/增强关系。",
       "evidence": "公式/实现；未验证收益",
       "refs": "https://arch.readthedocs.io/en/latest/univariate/introduction.html",
-      "status": "pending",
-      "implementations": [],
-      "implementationNote": "未完成；不以目录条目或近似名称充当实现。"
+      "status": "formula_implemented_and_tested",
+      "implementations": [
+        "statistical-models:garch",
+        "statistical-models:egarch",
+        "statistical-models:gjr-garch"
+      ],
+      "implementationNote": "原版hmmlearn/arch/statsmodels，明确尾随训练窗口与观察间隔；只输出当时可知端点，不回填平滑状态。原生运行、前缀及独立递推/矩阵检查通过；未收敛窗口保留不可用与原因，不代表收益有效。"
     },
     {
       "id": 100,
@@ -1828,9 +1835,13 @@
       "overlap": "模型复杂不等于信号强。",
       "evidence": "方法目录；未选择具体阶数",
       "refs": "https://www.statsmodels.org/stable/statespace.html",
-      "status": "pending",
-      "implementations": [],
-      "implementationNote": "未完成；不以目录条目或近似名称充当实现。"
+      "status": "formula_implemented_and_tested",
+      "implementations": [
+        "statistical-models:arima",
+        "statistical-models:arx",
+        "statistical-models:var"
+      ],
+      "implementationNote": "原版hmmlearn/arch/statsmodels，明确尾随训练窗口与观察间隔；只输出当时可知端点，不回填平滑状态。原生运行、前缀及独立递推/矩阵检查通过；未收敛窗口保留不可用与原因，不代表收益有效。"
     },
     {
       "id": 102,
@@ -1844,9 +1855,11 @@
       "overlap": "不是单股价格低于均线就必然回归。",
       "evidence": "检验方法已核；策略未回测",
       "refs": "https://www.statsmodels.org/stable/generated/statsmodels.tsa.stattools.coint.html",
-      "status": "pending",
-      "implementations": [],
-      "implementationNote": "未完成；不以目录条目或近似名称充当实现。"
+      "status": "formula_implemented_and_tested",
+      "implementations": [
+        "statistical-models:cointegration-pair"
+      ],
+      "implementationNote": "原版hmmlearn/arch/statsmodels，明确尾随训练窗口与观察间隔；只输出当时可知端点，不回填平滑状态。原生运行、前缀及独立递推/矩阵检查通过；未收敛窗口保留不可用与原因，不代表收益有效。"
     },
     {
       "id": 103,

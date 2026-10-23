@@ -58,14 +58,17 @@ protected:
     void paintEvent(QPaintEvent*) override {
         QPainter p(this);p.fillRect(rect(),palette().base());p.setRenderHint(QPainter::Antialiasing);
         QRectF area(95,18,std::max(10,width()-120),std::max(10,height()-55));
-        p.setPen(palette().mid().color());p.drawRect(area);
         double low=std::numeric_limits<double>::infinity(),high=-low;
         for(auto row:rows_) {auto v=row.toArray().at(column_);if(v.isDouble()){low=std::min(low,v.toDouble());high=std::max(high,v.toDouble());}}
         p.setPen(palette().text().color());
         if(!std::isfinite(low)){p.drawText(area,Qt::AlignCenter,"此列没有有效数值（可能预热不足）");return;}
         if(high==low){high+=std::max(1.,std::abs(high)*.01);low-=std::max(1.,std::abs(low)*.01);}
-        p.drawText(QRectF(0,10,90,25),Qt::AlignRight,QString::number(high,'g',8));
-        p.drawText(QRectF(0,area.bottom()-15,90,25),Qt::AlignRight,QString::number(low,'g',8));
+        const auto highText=QString::number(high,'g',8),lowText=QString::number(low,'g',8);
+        const int labelWidth=std::max(90,std::max(p.fontMetrics().horizontalAdvance(highText),p.fontMetrics().horizontalAdvance(lowText))+8);
+        area=QRectF(labelWidth+8,18,std::max(10,width()-labelWidth-33),std::max(10,height()-55));
+        p.setPen(palette().mid().color());p.drawRect(area);p.setPen(palette().text().color());
+        p.drawText(QRectF(0,10,labelWidth,25),Qt::AlignRight,highText);
+        p.drawText(QRectF(0,area.bottom()-15,labelWidth,25),Qt::AlignRight,lowText);
         QPainterPath path;bool gap=true;
         // Preserve gaps and extrema in pixel buckets rather than selecting every Nth bar.
         int count=rows_.size();int bucket=std::max(1,count/std::max(1,int(area.width())));
@@ -100,12 +103,15 @@ protected:
     void paintEvent(QPaintEvent*) override {
         QPainter p(this);p.fillRect(rect(),palette().base());
         if(rows_.isEmpty()||lower_<0||upper_<0||volume_<0||valueArea_<0)return;
-        QRectF area(95,25,std::max(10,width()-120),std::max(10,height()-65));
+        const auto upperText=QString::number(rows_.last().toArray().at(upper_).toDouble(),'g',10);
+        const auto lowerText=QString::number(rows_.first().toArray().at(lower_).toDouble(),'g',10);
+        const int labelWidth=std::max(90,std::max(p.fontMetrics().horizontalAdvance(upperText),p.fontMetrics().horizontalAdvance(lowerText))+8);
+        QRectF area(labelWidth+8,25,std::max(10,width()-labelWidth-33),std::max(10,height()-65));
         double maximum=0;for(auto row:rows_)maximum=std::max(maximum,row.toArray().at(volume_).toDouble());
         if(maximum<=0)return;
         p.setPen(palette().mid().color());p.drawRect(area);p.setPen(palette().text().color());
-        p.drawText(QRectF(0,area.top()-12,90,25),Qt::AlignRight,QString::number(rows_.last().toArray().at(upper_).toDouble(),'g',10));
-        p.drawText(QRectF(0,area.bottom()-12,90,25),Qt::AlignRight,QString::number(rows_.first().toArray().at(lower_).toDouble(),'g',10));
+        p.drawText(QRectF(0,area.top()-12,labelWidth,25),Qt::AlignRight,upperText);
+        p.drawText(QRectF(0,area.bottom()-12,labelWidth,25),Qt::AlignRight,lowerText);
         p.drawText(QRectF(area.left(),area.bottom()+7,area.width(),25),QString("成交股数（逐价格箱）；蓝色为价值区间 · 最大箱 %1 股").arg(QString::number(maximum,'g',10)));
         double height=area.height()/rows_.size();
         for(int i=0;i<rows_.size();++i){auto row=rows_[i].toArray();

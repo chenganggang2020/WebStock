@@ -143,6 +143,12 @@ def validate_parameters(operation, supplied):
 
 
 def compute(manifest, operation, frame, parameters):
+    if manifest["id"] == "org.webstock.statistical-models":
+        if operation["inputKind"]=="market-panel-csv":
+            from econometric_panel import calculate
+        else:
+            from statistical_models import calculate
+        return calculate(operation["id"],frame,parameters)
     if manifest["id"] == "org.webstock.learning-models":
         from learning_models import calculate
         return calculate(operation["id"],frame,parameters)

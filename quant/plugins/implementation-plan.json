@@ -9,11 +9,11 @@
     "indicatorFamilies": 110,
     "source": "indicator-scope.json",
     "indicatorReadiness": {
-      "formula_implemented_and_tested": 87,
+      "formula_implemented_and_tested": 91,
       "partial": 5,
-      "pending": 18
+      "pending": 14
     },
-    "installedPackages": 23
+    "installedPackages": 24
   },
   "completionDefinition": [
     "All 19 projects have runnable installed adapters with declared capabilities, inputs, versions and actual results.",
@@ -299,7 +299,7 @@
     },
     {
       "id": "indicator-coverage",
-      "status": "201_talib_47_core_20_panel_5_event_6_learning_operations_verified",
+      "status": "201_talib_47_core_20_panel_5_event_6_learning_9_statistical_operations_verified",
       "note": "Function counts are not catalogue-family completion counts."
     },
     {
@@ -343,7 +343,18 @@
         "last trained model JSON export"
       ],
       "limits": "Fixed declared features and hyperparameters; not exhaustive model search or return validation."
+    },
+    {
+      "id": "statistical-endpoint-models",
+      "status": "nine_original_models_verified_in_cpp_host_and_full_window",
+      "checks": [
+        "trailing as-of windows",
+        "no smoothed state backfill",
+        "independent filtering variance and matrix checks",
+        "failed optimizations remain unavailable"
+      ],
+      "limits": "Historical fixture and synthetic panels are not profitability validation; explicit fixed configurations, no exhaustive model search."
     }
   ],
-  "latestPackageVersion": "0.14.0"
+  "latestPackageVersion": "0.15.0"
 }

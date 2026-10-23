@@ -9,6 +9,9 @@ Hikyuu: https://github.com/fasiondog/hikyuu (Apache-2.0 root, MIT components)
 NumPy: https://numpy.org/doc/stable/license.html (BSD-3-Clause)
 scikit-learn: https://github.com/scikit-learn/scikit-learn/blob/main/COPYING (BSD-3-Clause); original estimators imported from the configured runtime.
 LightGBM: https://github.com/microsoft/LightGBM/blob/master/LICENSE (MIT); original CPU model training/prediction imported from the configured runtime.
+statsmodels: https://github.com/statsmodels/statsmodels/blob/main/LICENSE.txt (BSD-3-Clause).
+hmmlearn: https://github.com/hmmlearn/hmmlearn/blob/main/LICENSE.txt (BSD-3-Clause).
+arch: https://github.com/bashtage/arch/blob/main/LICENSE.md (NCSA/University of Illinois); original volatility estimators imported from the configured runtime.
 pandas: https://github.com/pandas-dev/pandas/blob/main/LICENSE (BSD-3-Clause)
 Backtesting.py: https://github.com/kernc/backtesting.py (AGPL-3.0)
 Backtrader: https://github.com/mementum/backtrader (GPL-3.0)

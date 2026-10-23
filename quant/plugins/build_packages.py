@@ -20,7 +20,7 @@ def number(key, default, minimum=2, maximum=10000, title=None, kind=None):
 def save_package(output, manifest, sources):
     content = {name: (HERE/source).read_bytes() for name, source in sources.items()}
     manifest.update(schema="webstock.plugin.manifest.v1", protocolVersion=1,
-                    entrypoint="worker.py", runtime="python", version="0.14.0",
+                    entrypoint="worker.py", runtime="python", version="0.15.0",
                     files={name: hashlib.sha256(raw).hexdigest() for name,raw in content.items()})
     package = {"schema": "webstock.plugin.package.v1", "manifest": manifest,
                "files": {name: base64.b64encode(raw).decode("ascii") for name,raw in content.items()}}
@@ -274,6 +274,30 @@ def main():
     records.append(save_package(args.output,{"id":"org.webstock.learning-models","name":"WebStock 逐时点学习模型","license":"Project source terms; upstream BSD-3-Clause/MIT",
         "source":"https://github.com/chenganggang2020/WebStock","distributions":["numpy","pandas","scikit-learn","lightgbm"],"operations":learners},
         {"worker.py":"worker.py","learning_models.py":"learning_models.py","LEARNING_MODELS.txt":"LEARNING_MODELS.txt","THIRD_PARTY_NOTICES.txt":"THIRD_PARTY_NOTICES.txt"}))
+    statistical=[]
+    for key,title in {"gaussian-hmm":"Gaussian HMM · 当前过滤状态", "markov-switching":"Markov切换 · 当前过滤状态",
+        "garch":"GARCH(1,1) · 一步波动预测", "egarch":"EGARCH(1,1,1) · 一步波动预测", "gjr-garch":"GJR-GARCH(1,1,1) · 一步波动预测",
+        "arima":"ARIMA · 对数价格一步预测", "arx":"ARX · 双证券收益预测", "var":"VAR · 双证券联合预测", "cointegration-pair":"协整诊断 / 历史系数残差Z"}.items():
+        multi=key in ("arx","var","cointegration-pair")
+        fields=[number("trainingRows",252,40,5000,title="尾随训练观察数"),number("forecastEvery",20,1,5000,title="每隔多少根拟合及观察")]
+        if not multi:fields.append(number("maxIterations",500,20,2000,title="优化迭代上限"))
+        if key in ("gaussian-hmm","markov-switching"):
+            fields.append(number("states",2,2,3,title="状态数量"))
+        if key=="gaussian-hmm":fields.append(number("seed",2026,0,2147483647,title="随机种子"))
+        if key in ("garch","egarch","gjr-garch"):fields.append(number("annualBars",252,1,100000,title="年化根数"))
+        if key=="arima":fields.extend([number("arOrder",1,0,5,title="AR阶数 p"),number("differenceOrder",1,0,2,title="差分阶数 d"),number("maOrder",0,0,5,title="MA阶数 q")])
+        if multi:
+            fields.extend([{"id":key2,"title":title2,"type":"text","format":"text","minLength":1,"maxLength":64,"default":default}
+                for key2,title2,default in [("security","目标证券代码","000001"),("reference","参照证券代码","000002")]])
+        if key=="var":fields.append(number("lags",1,1,5,title="VAR滞后阶数"))
+        if key=="cointegration-pair":fields.append(number("adfLags",1,0,5,title="ADF固定滞后阶数"))
+        statistical.append({"id":key,"title":title,"formulaVersion":"webstock-statistical-"+key+"-v1","parameters":fields,
+            "inputKind":"market-panel-csv" if multi else "ohlcv-single-csv","outputKind":"indicator",
+            "description":"原版hmmlearn/arch/statsmodels；只在已知时点拟合尾随窗口，未收敛窗口保留失败状态。见STATISTICAL_MODELS.txt。"})
+    records.append(save_package(args.output,{"id":"org.webstock.statistical-models","name":"WebStock 统计与时序模型","license":"Project source terms; upstream BSD-3-Clause/NCSA",
+        "source":"https://github.com/chenganggang2020/WebStock","distributions":["numpy","pandas","scipy","statsmodels","hmmlearn","arch"],"operations":statistical},
+        {"worker.py":"worker.py","statistical_models.py":"statistical_models.py","econometric_panel.py":"econometric_panel.py","panel_contract.py":"panel_contract.py",
+         "STATISTICAL_MODELS.txt":"STATISTICAL_MODELS.txt","PANEL_INPUT.txt":"PANEL_INPUT.txt","THIRD_PARTY_NOTICES.txt":"THIRD_PARTY_NOTICES.txt"}))
     (args.output/"index.json").write_text(json.dumps(records,ensure_ascii=False,indent=2),encoding="utf-8")
     print(json.dumps(records,ensure_ascii=False))
 

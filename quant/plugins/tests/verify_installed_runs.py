@@ -31,7 +31,8 @@ def main():
         "vnpy":("vnpy","rsi"),"vnpy-ctastrategy":("vnpy","sma-limit"),"qlib":("qlib","alpha158"),
         "zipline-reloaded":("zipline-reloaded","sma-close"),"rqalpha":("rqalpha","sma-close"),
         "wtpy":("wtpy310","daily-dsb"),"wondertrader":("wtpy310","sma-native"),"akshare":("data-tools","daily-eastmoney"),"lean":("data-tools","sma-close"),
-        "panel-research":("data-tools","market-breadth"),"event-research":("data-tools","quote-liquidity"),"learning-models":("qlib","ridge")}
+        "panel-research":("data-tools","market-breadth"),"event-research":("data-tools","quote-liquidity"),"learning-models":("qlib","ridge"),
+        "statistical-models":("statistical-models","garch")}
     environment=dict(os.environ,QT_QPA_PLATFORM="offscreen",PYTHONUTF8="1")
     runtime_map=json.loads(args.runtime_map.read_text(encoding="utf-8")) if args.runtime_map else {}
     operation_inputs=json.loads(args.operation_inputs.read_text(encoding="utf-8")) if args.operation_inputs else {}
@@ -76,6 +77,7 @@ def main():
                  "runId":record["runId"],"resultSha256":record["resultSha256"],"bars":result["bars"],
                  "inputSha256":result["inputSha256"],"inputName":data.name,
                  "tables":[{"id":t["id"],"rows":len(t["rows"])} for t in result["tables"]]}
+            if "modelSemantics" in result:row["modelSemantics"]=result["modelSemantics"]
             rows.append(row);print(json.dumps(row,ensure_ascii=False),flush=True)
     args.evidence.parent.mkdir(parents=True,exist_ok=True)
     args.evidence.write_text(json.dumps({"schema":"webstock.plugin.native-acceptance.v1","runs":rows},ensure_ascii=False,indent=2),encoding="utf-8")

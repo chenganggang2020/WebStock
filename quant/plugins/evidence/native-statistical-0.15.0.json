@@ -1,0 +1,299 @@
+{
+  "schema": "webstock.plugin.native-acceptance.v1",
+  "runs": [
+    {
+      "pluginId": "org.webstock.statistical-models",
+      "operationId": "gaussian-hmm",
+      "version": "0.15.0",
+      "status": "verified",
+      "runId": "plugin-4ae2e7a1-b2ad-4f50-9d0a-000a47afa31d",
+      "resultSha256": "eb3b1ec719355268586b6e3bee9f0aecd9d97bd0ddb5b609abce7219d01a3fe6",
+      "bars": 1000,
+      "inputSha256": "ecb475376307a9555810b20f5ca81a4fe01df35d0145cf8e9dfbfa7c4ea71933",
+      "inputName": "hikyuu-first1000-statistical.csv",
+      "tables": [
+        {
+          "id": "indicators",
+          "rows": 38
+        },
+        {
+          "id": "training-audit",
+          "rows": 38
+        },
+        {
+          "id": "fitted-parameters",
+          "rows": 0
+        }
+      ],
+      "modelSemantics": {
+        "trailingRows": 252,
+        "forecastEvery": 20,
+        "fitCount": 38,
+        "unavailableFits": 0,
+        "horizonBars": 1,
+        "historicalStatesRepainted": false
+      }
+    },
+    {
+      "pluginId": "org.webstock.statistical-models",
+      "operationId": "markov-switching",
+      "version": "0.15.0",
+      "status": "verified",
+      "runId": "plugin-b5f5d683-b195-45f1-970f-a3fe3a93b1f5",
+      "resultSha256": "97cdf5de62bfe5a5f996437cb26d684e2556ec649f53406dbc98d3c0a28d2065",
+      "bars": 1000,
+      "inputSha256": "ecb475376307a9555810b20f5ca81a4fe01df35d0145cf8e9dfbfa7c4ea71933",
+      "inputName": "hikyuu-first1000-statistical.csv",
+      "tables": [
+        {
+          "id": "indicators",
+          "rows": 38
+        },
+        {
+          "id": "training-audit",
+          "rows": 38
+        },
+        {
+          "id": "fitted-parameters",
+          "rows": 228
+        }
+      ],
+      "modelSemantics": {
+        "trailingRows": 252,
+        "forecastEvery": 20,
+        "fitCount": 38,
+        "unavailableFits": 0,
+        "horizonBars": 1,
+        "historicalStatesRepainted": false
+      }
+    },
+    {
+      "pluginId": "org.webstock.statistical-models",
+      "operationId": "garch",
+      "version": "0.15.0",
+      "status": "verified",
+      "runId": "plugin-dcfdb713-2c22-4d54-b1f9-4a8fab9f2ea9",
+      "resultSha256": "3b174adfb7993b3c930ae00d42258fa2a856c6bd56cbc1a81099888630041bd3",
+      "bars": 1000,
+      "inputSha256": "ecb475376307a9555810b20f5ca81a4fe01df35d0145cf8e9dfbfa7c4ea71933",
+      "inputName": "hikyuu-first1000-statistical.csv",
+      "tables": [
+        {
+          "id": "indicators",
+          "rows": 38
+        },
+        {
+          "id": "training-audit",
+          "rows": 38
+        },
+        {
+          "id": "fitted-parameters",
+          "rows": 152
+        }
+      ],
+      "modelSemantics": {
+        "trailingRows": 252,
+        "forecastEvery": 20,
+        "fitCount": 38,
+        "unavailableFits": 0,
+        "horizonBars": 1,
+        "historicalStatesRepainted": false
+      }
+    },
+    {
+      "pluginId": "org.webstock.statistical-models",
+      "operationId": "egarch",
+      "version": "0.15.0",
+      "status": "verified",
+      "runId": "plugin-b1277448-e2bc-45dd-ad03-5a7b8db90b8e",
+      "resultSha256": "8ec80423176886ae30cfeea818a2b0020c413ea429db3838347036c7c20763fb",
+      "bars": 1000,
+      "inputSha256": "ecb475376307a9555810b20f5ca81a4fe01df35d0145cf8e9dfbfa7c4ea71933",
+      "inputName": "hikyuu-first1000-statistical.csv",
+      "tables": [
+        {
+          "id": "indicators",
+          "rows": 38
+        },
+        {
+          "id": "training-audit",
+          "rows": 38
+        },
+        {
+          "id": "fitted-parameters",
+          "rows": 155
+        }
+      ],
+      "modelSemantics": {
+        "trailingRows": 252,
+        "forecastEvery": 20,
+        "fitCount": 38,
+        "unavailableFits": 7,
+        "horizonBars": 1,
+        "historicalStatesRepainted": false
+      }
+    },
+    {
+      "pluginId": "org.webstock.statistical-models",
+      "operationId": "gjr-garch",
+      "version": "0.15.0",
+      "status": "verified",
+      "runId": "plugin-76d510dd-bb0a-46bc-ba75-4789aa5cd26c",
+      "resultSha256": "5d834499f6526bda0221a48079243827ae70aaec33c467f9b67ef48817545d9b",
+      "bars": 1000,
+      "inputSha256": "ecb475376307a9555810b20f5ca81a4fe01df35d0145cf8e9dfbfa7c4ea71933",
+      "inputName": "hikyuu-first1000-statistical.csv",
+      "tables": [
+        {
+          "id": "indicators",
+          "rows": 38
+        },
+        {
+          "id": "training-audit",
+          "rows": 38
+        },
+        {
+          "id": "fitted-parameters",
+          "rows": 175
+        }
+      ],
+      "modelSemantics": {
+        "trailingRows": 252,
+        "forecastEvery": 20,
+        "fitCount": 38,
+        "unavailableFits": 3,
+        "horizonBars": 1,
+        "historicalStatesRepainted": false
+      }
+    },
+    {
+      "pluginId": "org.webstock.statistical-models",
+      "operationId": "arima",
+      "version": "0.15.0",
+      "status": "verified",
+      "runId": "plugin-36b8d8ad-318c-42f8-bac5-fa6ff4787e9e",
+      "resultSha256": "5b4931d3644aaa7525882ae713368df5cd08263afd831beaeb4d1b8d3390c5c0",
+      "bars": 1000,
+      "inputSha256": "ecb475376307a9555810b20f5ca81a4fe01df35d0145cf8e9dfbfa7c4ea71933",
+      "inputName": "hikyuu-first1000-statistical.csv",
+      "tables": [
+        {
+          "id": "indicators",
+          "rows": 38
+        },
+        {
+          "id": "training-audit",
+          "rows": 38
+        },
+        {
+          "id": "fitted-parameters",
+          "rows": 74
+        }
+      ],
+      "modelSemantics": {
+        "trailingRows": 252,
+        "forecastEvery": 20,
+        "fitCount": 38,
+        "unavailableFits": 1,
+        "horizonBars": 1,
+        "historicalStatesRepainted": false
+      }
+    },
+    {
+      "pluginId": "org.webstock.statistical-models",
+      "operationId": "arx",
+      "version": "0.15.0",
+      "status": "verified",
+      "runId": "plugin-5ddd2121-639d-486e-96c0-4702b878cf86",
+      "resultSha256": "305b70728e8c32c5a3f896d158ae8e925b0d357e47d280634c7af7f22d00152a",
+      "bars": 1600,
+      "inputSha256": "52f995b51b8c829d1278ed4ccac6e7cd83c2d190b72e677819b0971d492786a1",
+      "inputName": "synthetic-econometric-panel.csv",
+      "tables": [
+        {
+          "id": "indicators",
+          "rows": 8
+        },
+        {
+          "id": "training-audit",
+          "rows": 8
+        },
+        {
+          "id": "fitted-parameters",
+          "rows": 24
+        }
+      ],
+      "modelSemantics": {
+        "security": "000001",
+        "reference": "000002",
+        "trainingRows": 252,
+        "forecastEvery": 20,
+        "unavailableFits": 0
+      }
+    },
+    {
+      "pluginId": "org.webstock.statistical-models",
+      "operationId": "var",
+      "version": "0.15.0",
+      "status": "verified",
+      "runId": "plugin-0890e877-66a9-4e5c-83ce-30b78a696ab4",
+      "resultSha256": "ada2076e9cf1ec2d1c8376382048da1743299f714ab5d0b6b3349861c46da294",
+      "bars": 1600,
+      "inputSha256": "52f995b51b8c829d1278ed4ccac6e7cd83c2d190b72e677819b0971d492786a1",
+      "inputName": "synthetic-econometric-panel.csv",
+      "tables": [
+        {
+          "id": "indicators",
+          "rows": 8
+        },
+        {
+          "id": "training-audit",
+          "rows": 8
+        },
+        {
+          "id": "fitted-parameters",
+          "rows": 48
+        }
+      ],
+      "modelSemantics": {
+        "security": "000001",
+        "reference": "000002",
+        "trainingRows": 252,
+        "forecastEvery": 20,
+        "unavailableFits": 0
+      }
+    },
+    {
+      "pluginId": "org.webstock.statistical-models",
+      "operationId": "cointegration-pair",
+      "version": "0.15.0",
+      "status": "verified",
+      "runId": "plugin-18d594e2-5d34-467a-9feb-ec1e52166ae9",
+      "resultSha256": "89015e69af85ddb4290bd0862dab81986457c565bdcfd433b36e89232cc17d0d",
+      "bars": 1600,
+      "inputSha256": "52f995b51b8c829d1278ed4ccac6e7cd83c2d190b72e677819b0971d492786a1",
+      "inputName": "synthetic-econometric-panel.csv",
+      "tables": [
+        {
+          "id": "indicators",
+          "rows": 8
+        },
+        {
+          "id": "training-audit",
+          "rows": 8
+        },
+        {
+          "id": "fitted-parameters",
+          "rows": 32
+        }
+      ],
+      "modelSemantics": {
+        "security": "000001",
+        "reference": "000002",
+        "trainingRows": 252,
+        "forecastEvery": 20,
+        "unavailableFits": 0
+      }
+    }
+  ]
+}

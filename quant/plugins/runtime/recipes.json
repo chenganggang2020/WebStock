@@ -191,6 +191,15 @@
         }
       ],
       "verificationScope": "New non-editable environment on current Windows machine, existing Python and cached packages/source mirrors; original LEAN .NET runtime remains external."
+    },
+    "statistical-models": {
+      "python": "3.12",
+      "observedPython": "3.12.14",
+      "requirements": "statistical-models.requirements.txt",
+      "packageCount": 20,
+      "sourceRepositories": [],
+      "freshInstallationVerified": true,
+      "verificationScope": "New environment rebuilt offline from exact 20-version snapshot; 10 tests and nine native operations verified"
     }
   },
   "limitations": [

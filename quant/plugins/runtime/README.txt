@@ -1,7 +1,7 @@
 独立环境依赖快照（安装验证进行中）
 ================================
 
-这些文件来自本次已验证的14个本机环境，记录每个Python包的精确版本。
+这些文件来自本次已验证的15组本机环境，记录每个Python包的精确版本。
 原先从源码安装的项目改为GitHub完整提交号，没有本机绝对路径或可编辑目录依赖。
 它们尚不是包含所有wheel哈希的跨平台锁文件，也不能仅凭文件存在就认定可在新机器使用。
 
@@ -20,13 +20,18 @@ Backtesting.py固定提交的wheel漏带导入所需autoscale_cb.js，安装器�
 核验SHA256并在webstock-runtime.json记录；不改其交易逻辑。该额外数据文件由运行环境记录管理。
 
 项目与环境对应：
-data-tools：TA-Lib、WebStock补充指标、AKShare、LEAN的Python协调程序。
+data-tools：TA-Lib、WebStock补充/多证券/财务/逐笔指标、AKShare、LEAN的Python协调程序。
 hikyuu / rqalpha / qlib / vectorbt / backtesting-py / backtrader / bt /
 zipline-reloaded / ml4t-backtest：各自对应同名项目。
 vnpy：VeighNa和VeighNa CTA。
 czsc：CZSC与WBT。
 wtpy310：WonderTrader与wtpy，Python3.10。
 quantaxis311：QUANTAXIS，Python3.11。
+qlib环境还可运行逐时点学习插件（scikit-learn及LightGBM）。
+statistical-models：hmmlearn、arch、statsmodels，供统计与时序插件使用。
 
 LEAN额外需要.NET10 SDK、原版LEAN Release构建与Data基础文件；Python依赖安装不替代该构建。
+可运行setup_lean_runtime.py --destination <新目录> --source-mirror <本地LEAN源码> --offline。
+lean-locks包含与固定源码提交匹配的20份NuGet内容哈希锁；独立构建使用locked-mode。
+省略--source-mirror和--offline可从固定提交联网构建，仍不会覆盖旧目录或修改全局设置。
 运行包不带第三方可执行文件。再发行运行环境时仍需保留所有第三方许可与通知。

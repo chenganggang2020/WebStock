@@ -112,6 +112,16 @@
       "testRows": 260,
       "prefixRows": 210,
       "source": "tests/test_learning_models.py"
+    },
+    "statistical": {
+      "passed": 6,
+      "failed": 0,
+      "operations": 6
+    },
+    "econometricPanel": {
+      "passed": 4,
+      "failed": 0,
+      "operations": 3
     }
   },
   "integrationRuns": [
@@ -247,14 +257,14 @@
     "built": true,
     "qt": "6.9.1",
     "compiler": "MinGW13.1.0",
-    "programSha256": "36870ca810f58a2da6541548c1ecd70230ca1fcd52e615643bf93ad7201fd15a",
+    "programSha256": "ff4d9224a3f69386aa72448ebaa0465607b7121f817e5c587305044f3e7bc61c",
     "domainTests": "passed",
     "legacyIndicators": "passed",
     "pluginPlatform": "passed, 14 QtTest cases, 0 skipped",
     "nativeWindow": "passed, quotes/classic and legacy focus redirect, real installed TA-Lib workflow",
-    "visualReview": "native dark theme inspected and table row contrast repaired"
+    "visualReview": "dark native model window inspected; plot axis width follows full signed labels"
   },
-  "latestPackageVersion": "0.14.0",
+  "latestPackageVersion": "0.15.0",
   "additionalEvidence": [
     "native-acceptance-0.8.1.json",
     "native-akshare-0.7.0.json",
@@ -284,7 +294,7 @@
     "testSource": "tests/test_lean_adapter.py"
   },
   "runtimeRebuild": {
-    "freshEnvironments": 14,
+    "freshEnvironments": 15,
     "dependencyChecks": "passed",
     "nativeOfflineAdapterRuns": 19,
     "numericalParity": "matched baseline primary metric tables",
@@ -293,7 +303,7 @@
     "leanDotnetRebuild": "fresh pinned checkout, 20 content-hash dependency locks, locked offline restore, original engine run and equity parity verified"
   },
   "nativeCoreExpansion010": "native-core-expansion-0.10.0.json",
-  "programSha256": "36870ca810f58a2da6541548c1ecd70230ca1fcd52e615643bf93ad7201fd15a",
+  "programSha256": "ff4d9224a3f69386aa72448ebaa0465607b7121f817e5c587305044f3e7bc61c",
   "nativePanelAcceptance": [
     "native-panel-0.11.0.json",
     "native-panel-0.11.1.json"
@@ -309,5 +319,12 @@
     "failed": 0,
     "skipped": 0,
     "scope": "actual quotes/classic/focus entry, original learner run, frozen history reopening"
+  },
+  "nativeStatisticalAcceptance": "native-statistical-0.15.0.json",
+  "nativeStatisticalWindow": {
+    "passed": 3,
+    "failed": 0,
+    "skipped": 0,
+    "scope": "actual quotes/classic/focus entry, HMM run and history reopening"
   }
 }

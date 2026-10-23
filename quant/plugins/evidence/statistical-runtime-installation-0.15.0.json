@@ -1,0 +1,100 @@
+{
+  "schema": "webstock.plugin.runtime-install.v1",
+  "recipe": "statistical-models",
+  "createdAtUtc": "2026-10-23T23:08:10.199472+00:00",
+  "requirementsSha256": "52c5ce5c26b7707f41c5483345882ca438a8093aa36588ae71e8190f5c6a87da",
+  "status": "dependencies_verified",
+  "adapterVerification": "10 tests and nine native operations passed; unavailable optimization windows recorded",
+  "wheelHashesLocked": false,
+  "offline": true,
+  "restoredSourceData": [],
+  "inventory": {
+    "python": [
+      3,
+      12,
+      14
+    ],
+    "packages": [
+      {
+        "name": "arch",
+        "version": "8.0.0"
+      },
+      {
+        "name": "cloudpickle",
+        "version": "3.1.2"
+      },
+      {
+        "name": "formulaic",
+        "version": "1.2.2"
+      },
+      {
+        "name": "hmmlearn",
+        "version": "0.3.3"
+      },
+      {
+        "name": "interface_meta",
+        "version": "2.0.1"
+      },
+      {
+        "name": "joblib",
+        "version": "1.6.0"
+      },
+      {
+        "name": "narwhals",
+        "version": "2.27.1"
+      },
+      {
+        "name": "numpy",
+        "version": "2.5.4"
+      },
+      {
+        "name": "packaging",
+        "version": "26.3"
+      },
+      {
+        "name": "pandas",
+        "version": "3.1.0"
+      },
+      {
+        "name": "patsy",
+        "version": "1.0.3"
+      },
+      {
+        "name": "python-dateutil",
+        "version": "3.0.0"
+      },
+      {
+        "name": "scikit-learn",
+        "version": "1.9.1"
+      },
+      {
+        "name": "scipy",
+        "version": "1.18.1"
+      },
+      {
+        "name": "six",
+        "version": "1.17.0"
+      },
+      {
+        "name": "statsmodels",
+        "version": "0.15.0"
+      },
+      {
+        "name": "threadpoolctl",
+        "version": "3.7.0"
+      },
+      {
+        "name": "typing_extensions",
+        "version": "4.16.0"
+      },
+      {
+        "name": "tzdata",
+        "version": "2026.5"
+      },
+      {
+        "name": "wrapt",
+        "version": "2.5.1"
+      }
+    ]
+  }
+}

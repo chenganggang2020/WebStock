@@ -1,0 +1,58 @@
+统计与时序模型（WebStock v1）
+
+原库：hmmlearn 0.3.3、arch 8.0.0、statsmodels 0.15.0（实际运行版本另写入结果）。
+使用单独的statistical-models运行环境；通过setup_runtime.py的对应recipe安装。
+输入单证券OHLCV；ARX/VAR/协整另用PANEL_INPUT.txt规定的历史同步多证券CSV。
+每次训练默认252个观察，每20根拟合和观察一次，最多1000次拟合。
+观察间隔是显式参数，间隔内不伪造逐日预测。只有当前/更早数据进入当次模型。
+拟合不收敛、退化或矩阵奇异，保留fit-unavailable及诊断；不以后来模型补回。
+若全程没有有效拟合，任务明确失败。原库警告保留于training-audit。
+
+收益使用log(close/previousClose)；HMM/Markov/波动模型内部乘100，输出再除100。
+ARIMA使用对数价格；ARX/VAR/协整直接使用小数对数收益或对数价格。
+以下实现是明确的研究配置，不代表各模型家族的所有结构和阶数。
+
+Gaussian HMM / Markov切换
+HMM：单变量高斯发射，diag covariance，2或3状态，固定种子；EM容差0.001，最小协方差参数0.001（百分数平方单位）。
+只取当前窗口最末点的后验概率，该端点等价于仅根据截至当前观察的过滤概率；不输出中间点的事后平滑状态。
+额外核对最终似然改善；达到迭代上限但仍不满足收敛容差，不视为完成拟合。
+MarkovRegression：常数均值与切换方差，EM初始化10轮，无随机多起点搜索，检查优化收敛标志。
+直接使用filtered_marginal_probabilities末点。状态按本次均值升序编号，并保留原状态映射。
+不同窗口的“状态1”不等于固定牛熊标签。下一期状态概率由当前过滤概率乘转移矩阵得到。
+
+GARCH / GJR-GARCH / EGARCH
+原arch_model，常数均值、正态残差，p=1,q=1；GARCH o=0，GJR和EGARCH o=1。
+固定百分数缩放，关闭自动rescale。只做一步解析预测，避免把EGARCH多步当作有简单解析解。
+保存原始参数、最后残差、条件方差、优化状态；输出一步方差、标准差、按annualBars年化的标准差。
+GARCH：omega+alpha*eps²+beta*variance。
+GJR另加gamma*1[eps<0]*eps²。
+EGARCH一步对数方差：omega+alpha*(abs(z)-sqrt(2/pi))+gamma*z+beta*log(variance)。
+这些是条件波动预测，不是已验证的仓位或收益策略。
+
+ARIMA
+原版ARIMA对数价格，显式p/d/q，不做全样本自动选阶。d>0时trend=n，否则带常数。
+输出下一观察根的对数价格预测、指数化的价格中位数及条件95%区间。
+指数化对数均值不冒充价格期望值；区间不包含参数估计不确定性。
+
+ARX / VAR / 协整残差
+必须选择两只不同证券，每个决策时点两者都齐全；缺失会拒绝，不前向填充或缩短股票池。
+ARX：原OLS，y=下一根目标证券对数收益，x=常数、当前目标收益、当前参照收益；
+在i时点训练的最后结果为i-1（最后特征i-2），再用当下已知收益预测i+1。
+VAR：原VAR，两证券对数收益，显式固定lag，无自动IC选阶。训练截至当前i，预测i+1。
+输出原库稳定性判断，参数矩阵奇异则不可用。初始实现为两证券，不表示任意维VAR已开放。
+协整：只用[i-window,i-1]的对数价格OLS（带截距），按当前价格计算残差；
+Z=(当前残差-训练残差均值)/训练残差标准差(ddof=2)。当前点不用于估计beta和标准差。
+同一训练窗口作Engle-Granger（固定ADF滞后、trend=c、autolag=None），另列两个水平序列的ADF诊断。
+协整检验以I(1)、误差设定等前提为条件，小p值不是可交易协整证明；反复窗口未经多重检验校正。
+对数价格beta是弹性，不是可直接下单的股数比。回测还需退出规则、借券与费用等独立设计。
+
+验证包括历史前缀不变、独立HMM前向递推、三种条件方差手算、随机游走ARIMA边界、
+独立ARX/VAR/配对矩阵计算及缺失/退化拒绝。合成数据只验公式与流程，不证明收益。
+
+一手参考
+https://hmmlearn.readthedocs.io/en/stable/api.html
+https://arch.readthedocs.io/en/stable/univariate/forecasting.html
+https://www.statsmodels.org/stable/generated/statsmodels.tsa.regime_switching.markov_regression.MarkovRegression.html
+https://www.statsmodels.org/stable/generated/statsmodels.tsa.arima.model.ARIMA.html
+https://www.statsmodels.org/stable/vector_ar.html
+https://www.statsmodels.org/stable/generated/statsmodels.tsa.stattools.coint.html
