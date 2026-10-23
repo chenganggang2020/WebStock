@@ -30,6 +30,9 @@ def wilder(s, n):
 
 
 def calculate(name, b, p):
+    from temporal_indicators import OPERATIONS, calculate as temporal_calculate
+    if name in OPERATIONS:
+        return temporal_calculate(name, b, p)
     n = int(p.get("period", 20))
     c, h, l, v, o = (b[k] for k in ("close", "high", "low", "volume", "open"))
     r = c.pct_change(fill_method=None)

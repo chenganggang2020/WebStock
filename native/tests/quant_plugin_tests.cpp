@@ -12,6 +12,7 @@
 #include <QTabWidget>
 #include <QListWidget>
 #include <QFontDatabase>
+#include <QDoubleSpinBox>
 using namespace quantPlugin;
 
 class PluginTests:public QObject{
@@ -63,6 +64,15 @@ private slots:
         QVERIFY_EXCEPTION_THROWN(validateParameters(op,{{"n",2.5}}),std::runtime_error);
         QVERIFY_EXCEPTION_THROWN(validateParameters(op,{{"n",true}}),std::runtime_error);
         QVERIFY_EXCEPTION_THROWN(validateParameters(op,{{"arbitrary",1}}),std::runtime_error);
+    }
+    void smallNumericParametersSurviveNativeForm(){
+        auto m=manifest();auto op=m.value("operations").toArray()[0].toObject();
+        op["parameters"]=QJsonArray{QJsonObject{{"id","variance"},{"title","Variance"},{"type","number"},{"default",1e-7},{"minimum",1e-12},{"maximum",1.}}};
+        m["operations"]=QJsonArray{op};QTemporaryDir dir;Repository repo(dir.path());repo.install(package(m));
+        QuantPluginWidget widget(dir.path());auto value=widget.findChild<QDoubleSpinBox*>("pluginParam_variance");QVERIFY(value);
+        QCOMPARE(value->value(),1e-7);value->setValue(1e-12);QCOMPARE(value->value(),1e-12);
+        repo.rememberParameters("org.test.engine","test",{{"variance",1e-12}});
+        QuantPluginWidget reopened(dir.path());QCOMPARE(reopened.findChild<QDoubleSpinBox*>("pluginParam_variance")->value(),1e-12);
     }
     void generatedDataAndCsvExports(){
         QByteArray bytes("native data\0bytes",17);

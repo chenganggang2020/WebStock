@@ -20,7 +20,7 @@ def number(key, default, minimum=2, maximum=10000, title=None, kind=None):
 def save_package(output, manifest, sources):
     content = {name: (HERE/source).read_bytes() for name, source in sources.items()}
     manifest.update(schema="webstock.plugin.manifest.v1", protocolVersion=1,
-                    entrypoint="worker.py", runtime="python", version="0.9.0",
+                    entrypoint="worker.py", runtime="python", version="0.10.0",
                     files={name: hashlib.sha256(raw).hexdigest() for name,raw in content.items()})
     package = {"schema": "webstock.plugin.package.v1", "manifest": manifest,
                "files": {name: base64.b64encode(raw).decode("ascii") for name,raw in content.items()}}
@@ -66,7 +66,12 @@ def main():
         "pbx":"PBX（EMA+两条SMA版本）","dma":"DMA / AMA","lwr":"LWR（正向超买刻度）",
         "brar-cr-vr-psy":"BR / AR / CR / VR / PSY","emv":"Ease of Movement","bb-kc-squeeze":"BB-KC收缩状态",
         "amount-adv":"成交额 / ADV / 成交量ADV","ohlc-volatility":"Parkinson / GK / RS / Yang–Zhang 波动率",
-        "vwap-actual-day":"真实VWAP（按自然日重置）","vwap-actual-anchor":"真实Anchored VWAP（指定日期）"}
+        "vwap-actual-day":"真实VWAP（按自然日重置）","vwap-actual-anchor":"真实Anchored VWAP（指定日期）",
+        "confirmed-pivots":"Pivot / 分形（确认时点）","zigzag-confirmed":"ZigZag（收盘反转确认）",
+        "fibonacci-confirmed":"Fibonacci（已确认双锚点）","structure-events":"BOS / CHoCH / FVG / Order Block（明确规则）",
+        "renko-close":"Renko（固定砖尺寸，收盘确认）","kalman-filter":"Kalman（只向前过滤）",
+        "hurst-rs":"Hurst R/S（尾随收益窗口）","higuchi-dimension":"Higuchi 分维（尾随窗口）",
+        "permutation-entropy":"排列熵（严格序列）","fft-trailing":"FFT 周期摘要（尾随窗口）"}
     core=[]
     for key,title in names.items():
         fields=[] if key in ("bbi","ao-ac","vpt","anchored-vwap-proxy","heikin-ashi") else [number("period",20,title="计算周期")]
@@ -86,11 +91,23 @@ def main():
         if key=="bb-kc-squeeze":fields.extend([number("bbMultiple",2.,.1,10,title="布林倍数"),number("kcMultiple",1.5,.1,10,title="Keltner倍数")])
         if key=="vwap-actual-day":fields=[]
         if key=="vwap-actual-anchor":fields=[{"id":"anchorDate","title":"锚点日期","type":"text","format":"date","minLength":10,"maxLength":10,"default":"2020-01-01"}]
+        if key in ("confirmed-pivots","structure-events"):
+            fields=[number("left",2,1,1000,title="左侧根数"),number("right",2,1,1000,title="右侧确认根数")]
+        if key=="structure-events":fields.extend([number("blockLookback",20,1,1000,title="反向K线回看"),number("minGapPct",0.,0,50,title="最小间隙百分比")])
+        if key in ("zigzag-confirmed","fibonacci-confirmed"):fields=[number("reversalPct",5.,.01,99,title="反转幅度（%）")]
+        if key=="renko-close":fields=[number("boxSize",1.,1e-8,1e8,title="固定砖尺寸（价格单位）")]
+        if key=="kalman-filter":fields=[{"id":"model","title":"状态模型","type":"choice","default":"local-linear-trend","choices":["local-level","local-linear-trend"]},
+            number("levelVariance",.00001,0.,1.,title="水平过程方差"),number("trendVariance",.0000001,0.,1.,title="斜率过程方差"),
+            number("observationVariance",.0001,1e-12,1.,title="观测噪声方差"),number("initialVariance",.01,1e-12,100.,title="初始状态方差")]
+        if key=="hurst-rs":fields=[number("period",256,64,2048,title="收益窗口")]
+        if key=="higuchi-dimension":fields=[number("period",128,17,2048,title="价格窗口"),number("maximumScale",8,2,64,title="最大尺度")]
+        if key=="permutation-entropy":fields=[number("period",120,8,2048,title="价格窗口"),number("order",3,2,6,title="嵌入维度"),number("delay",1,1,100,title="嵌入延迟")]
+        if key=="fft-trailing":fields=[number("period",64,8,2048,title="频谱窗口")]
         core.append({"id":key,"title":title,"formulaVersion":"webstock-"+key+"-v1","parameters":fields,
                      "inputKind":"ohlcv-single-csv","outputKind":"indicator","description":"仅使用已完成K线的有版本公式。"})
     records.append(save_package(args.output,{"id":"org.webstock.core-indicators","name":"WebStock 补充指标","license":"Project source terms",
         "source":"https://github.com/chenganggang2020/WebStock","distributions":["numpy","pandas"],"operations":core},
-        {"worker.py":"worker.py","core_indicators.py":"core_indicators.py","THIRD_PARTY_NOTICES.txt":"THIRD_PARTY_NOTICES.txt"}))
+        {"worker.py":"worker.py","core_indicators.py":"core_indicators.py","temporal_indicators.py":"temporal_indicators.py","THIRD_PARTY_NOTICES.txt":"THIRD_PARTY_NOTICES.txt"}))
     records.append(save_package(args.output,{"id":"org.webstock.hikyuu","name":"Hikyuu 回测引擎","license":"Apache-2.0 / MIT component notices",
         "source":"https://github.com/fasiondog/hikyuu","distributions":["hikyuu","pandas"],"operations":[{
             "id":"sma-cross","title":"均线交叉 · 下一根开盘执行","formulaVersion":"hikyuu-sma-cross-next-open-v1",

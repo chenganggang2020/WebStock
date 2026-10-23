@@ -111,8 +111,8 @@ class PluginTests(unittest.TestCase):
                 with self.subTest(plugin=manifest["id"],operation=operation["id"]):
                     params=validate_parameters(operation,{})
                     full=compute(manifest,operation,self.bars,params)["tables"][0]["rows"]
-                    prefix=compute(manifest,operation,self.bars.iloc[:250].copy(),params)["tables"][0]["rows"]
-                    np.testing.assert_allclose(np.array([r[1:] for r in full[:250]],dtype=float),
+                    prefix=compute(manifest,operation,self.bars.iloc[:350].copy(),params)["tables"][0]["rows"]
+                    np.testing.assert_allclose(np.array([r[1:] for r in full[:350]],dtype=float),
                         np.array([r[1:] for r in prefix],dtype=float),rtol=1e-10,atol=1e-10,equal_nan=True)
 
     def test_prior_boundaries_and_zero_volume(self):

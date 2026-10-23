@@ -159,7 +159,16 @@ void QuantPluginWidget::selectOperation(){
         if(saved.contains(f.value("id").toString()))f["default"]=saved.value(f.value("id").toString());
         if(f.value("type")=="choice"){auto box=new QComboBox;for(auto x:f.value("choices").toArray())box->addItem(x.toVariant().toString(),x.toVariant());box->setCurrentIndex(box->findData(f.value("default").toVariant()));field=box;}
         else if(f.value("type")=="text"){auto edit=new QLineEdit(f.value("default").toString());edit->setMaxLength(f.value("maxLength").toInt());if(f.value("format")=="date")edit->setPlaceholderText("YYYY-MM-DD");field=edit;}
-        else {auto spin=new QDoubleSpinBox;spin->setDecimals(f.value("type")=="integer"?0:6);spin->setRange(f.value("minimum").toDouble(),f.value("maximum").toDouble());spin->setValue(f.value("default").toDouble());spin->setSingleStep(f.value("type")=="integer"?1:.01);field=spin;}
+        else {
+            auto spin=new QDoubleSpinBox;const bool integer=f.value("type")=="integer";int decimals=integer?0:6;
+            if(!integer)for(const auto& key:QStringList{"default","minimum"}){
+                const double value=std::abs(f.value(key).toDouble());
+                if(value>0&&value<1)decimals=std::max(decimals,std::min(12,int(std::ceil(-std::log10(value)))+2));
+            }
+            spin->setDecimals(decimals);spin->setRange(f.value("minimum").toDouble(),f.value("maximum").toDouble());
+            spin->setValue(f.value("default").toDouble());spin->setSingleStep(integer?1:.01);
+            if(!integer)spin->setStepType(QAbstractSpinBox::AdaptiveDecimalStepType);field=spin;
+        }
         field->setObjectName("pluginParam_"+f.value("id").toString());fields_[f.value("id").toString()]=field;parameters_->addRow(f.value("title").toString(),field);
     }
 }

@@ -142,3 +142,9 @@ runtime/提供14组精确版本和源码提交快照，setup_runtime.py只创建
 修复安装器子进程的Windows长路径和UTF-8构建；按同一源提交及SHA恢复Backtesting.py wheel遗漏的JS数据文件。
 支持 --offline 和 --source-root；不改全局网络/系统设置，也不覆盖旧环境。
 第二台干净机器、全部wheel哈希锁定和LEAN自包含.NET构建交付仍未完成。
+
+0.10.0：新增10项有确认时点的结构/统计运算，核心共47项。110类目录现为55类已实现并测试、6类部分、49类待实现。
+Pivot/Fractal、ZigZag、Fibonacci、明确规则的BOS/CHoCH/FVG/Order Block、固定尺寸Renko、Kalman过滤、Hurst R/S、Higuchi分维、排列熵及尾随FFT均已原生运行4937根样本。
+新增9项独立边界与手算测试，原12项测试覆盖350/400根截断一致性；另在RQAlpha环境中用statsmodels原版过滤核对Kalman的两种状态模型，关闭其稳态近似后逐项一致。
+原生表单修复小于1e-6的数值参数被四舍五入为零的问题，保留到1e-12并支持按数量级调整。
+公式约定和一手参考见TEMPORAL_FORMULAS.txt。模型实现不表示收益有效。目标继续进行。

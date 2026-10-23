@@ -1585,9 +1585,12 @@
       "overlap": "图画在拐点处，不代表当时能识别。",
       "evidence": "时序风险已核；具体算法需审计",
       "refs": "https://tradingview.com/pine-script-docs/concepts/repainting/",
-      "status": "pending",
-      "implementations": [],
-      "implementationNote": "未完成；不以目录条目或近似名称充当实现。"
+      "status": "formula_implemented_and_tested",
+      "implementations": [
+        "core-indicators:confirmed-pivots",
+        "core-indicators:zigzag-confirmed"
+      ],
+      "implementationNote": "严格左右拐点及收盘百分比ZigZag；仅在确认时点输出，未确认末端不回填。"
     },
     {
       "id": 92,
@@ -1601,9 +1604,11 @@
       "overlap": "价格比例划线不构成新增市场信息。",
       "evidence": "方法索引；有效性未证实",
       "refs": "https://tradingview.com/pine-script-docs/concepts/repainting/",
-      "status": "pending",
-      "implementations": [],
-      "implementationNote": "未完成；不以目录条目或近似名称充当实现。"
+      "status": "formula_implemented_and_tested",
+      "implementations": [
+        "core-indicators:fibonacci-confirmed"
+      ],
+      "implementationNote": "最近两个已确认相反拐点的回撤与扩展；锚点规则固定，按确认时点更新。"
     },
     {
       "id": 93,
@@ -1617,9 +1622,11 @@
       "overlap": "与支撑阻力、拐点、缺口共享输入。",
       "evidence": "厂商说明；非独立效果证据",
       "refs": "https://www.luxalgo.com/library/indicator/smart-money-concepts-smc/\nhttps://tradingview.com/pine-script-docs/concepts/repainting/",
-      "status": "pending",
-      "implementations": [],
-      "implementationNote": "未完成；不以目录条目或近似名称充当实现。"
+      "status": "formula_implemented_and_tested",
+      "implementations": [
+        "core-indicators:structure-events"
+      ],
+      "implementationNote": "WebStock明确规则版BOS/CHoCH/FVG/Order Block事件；不复刻厂商脚本，不推断机构意图。"
     },
     {
       "id": 94,
@@ -1633,11 +1640,12 @@
       "overlap": "展示变换不等于可执行策略。",
       "evidence": "平台风险文档；构造实现待选",
       "refs": "https://tradingview.com/pine-script-docs/concepts/repainting/",
-      "status": "partial",
+      "status": "formula_implemented_and_tested",
       "implementations": [
-        "core-indicators:heikin-ashi"
+        "core-indicators:heikin-ashi",
+        "core-indicators:renko-close"
       ],
-      "implementationNote": "Renko等重采样待实现"
+      "implementationNote": "Heikin Ashi与固定尺寸、收盘确认、两砖反转Renko；合成价不可用作撮合价。"
     },
     {
       "id": 95,
@@ -1733,9 +1741,11 @@
       "overlap": "不能靠平滑曲线外观证明预测力。",
       "evidence": "官方方法；应用未验证",
       "refs": "https://www.statsmodels.org/stable/statespace.html",
-      "status": "pending",
-      "implementations": [],
-      "implementationNote": "未完成；不以目录条目或近似名称充当实现。"
+      "status": "formula_implemented_and_tested",
+      "implementations": [
+        "core-indicators:kalman-filter"
+      ],
+      "implementationNote": "对数价格的局部水平/局部线性趋势过滤；固定参数，无后向平滑；与statsmodels原版过滤对照通过。"
     },
     {
       "id": 101,
@@ -1781,9 +1791,13 @@
       "overlap": "与趋势/波动特征的增量需验证。",
       "evidence": "方法研究；金融外推未验证",
       "refs": "https://arxiv.org/abs/1211.2862",
-      "status": "pending",
-      "implementations": [],
-      "implementationNote": "未完成；不以目录条目或近似名称充当实现。"
+      "status": "formula_implemented_and_tested",
+      "implementations": [
+        "core-indicators:hurst-rs",
+        "core-indicators:higuchi-dimension",
+        "core-indicators:permutation-entropy"
+      ],
+      "implementationNote": "尾随收益未校正R/S、对数价格Higuchi分维、排除同值的归一化排列熵；窗口、尺度和时点明确。"
     },
     {
       "id": 104,
@@ -1797,16 +1811,17 @@
       "overlap": "周期估计不是稳定周期的证据。",
       "evidence": "公式/实现；未验证收益",
       "refs": "https://ta-lib.org/functions/ht_dcperiod.html",
-      "status": "partial",
+      "status": "formula_implemented_and_tested",
       "implementations": [
         "talib:ht_dcperiod",
         "talib:ht_dcphase",
         "talib:ht_phasor",
         "talib:ht_sine",
         "talib:ht_trendline",
-        "talib:ht_trendmode"
+        "talib:ht_trendmode",
+        "core-indicators:fft-trailing"
       ],
-      "implementationNote": "FFT及其他周期滤波待实现"
+      "implementationNote": "新增尾随去趋势Hann窗FFT摘要；不将全样本频谱回填；原有Hilbert函数保留。"
     },
     {
       "id": 105,

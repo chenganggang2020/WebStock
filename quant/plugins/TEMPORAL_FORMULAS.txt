@@ -1,0 +1,33 @@
+0.10.0 结构与统计指标的明确约定
+
+所有输出行的 time 均为实际可知时间。bar 字段从输入第0根开始计数；它描述拐点位置，不是信号产生时间。
+
+confirmed-pivots：候选高/低点必须严格超过左右指定数量的全部高/低价，同价不确认。左右各2根对应严格五根分形。确认写在候选右边第right根，不移动到候选时间。
+zigzag-confirmed：只检查收盘价，反向幅度相对候选极值计算。高点回落reversalPct或低点上涨reversalPct才确认。首次方向建立前同时维护已观察高低点；不强制确认最后端点。同价极值保留首次。边界仅有机器精度舍入容差。
+fibonacci-confirmed：A/B是最近两个已确认相反拐点；回撤=B-(B-A)*r，r为.236/.382/.5/.618/.786；扩展=B+(B-A)*(e-1)，e为1.272/1.618。新锚点仅改变其确认行及以后。不是事后寻找最漂亮的历史划线。
+
+structure-events：这是一套WebStock明确规则，不代表所有SMC脚本的共同标准。
+收盘严格越过最新确认且未被消耗的高/低拐点，触发一次突破；初次及同向突破记BOS，反向突破记CHoCH。方向为+1/-1。
+FVG仅定义为第1根和第3根高低区间不重叠，缺口须超过minGapPct；不要求第2根颜色。第3根收盘后可知。
+Order Block定义为突破前blockLookback根内最后一根反向实体K线的完整高低范围；不存在则留空。输出在突破行，原K线位置仅作来源。没有有效区间延伸、订单流推断或自动交易。
+
+renko-close：首根收盘为固定网格锚，砖高为正的固定价格值。顺向一个砖形成新砖，反向两个砖才形成反向砖；大跳空可产生多砖。每根输出最终合成收盘、方向、新增砖数、最后新砖开盘。仅消费收盘，不猜测根内高低价先后。合成砖价不是实际成交价；不以最后价格或全样本ATR重算历史尺寸。
+
+kalman-filter：观测为log(close)。local-level模型为随机游走水平；local-linear-trend状态为水平/斜率，转移矩阵[[1,1],[0,1]]，观测矩阵[1,0]。过程噪声为指定方差对角阵，观测噪声为指定正方差。首根观测初始化水平、斜率0，协方差初值显式。之后只作向前预测和更新，协方差用Joseph形式。输出当前过滤状态及下一根对数观测预测和方差，不作后向平滑或全样本拟合。
+
+hurst-rs：尾随n个对数收益按8、16、32…至n/2分成不重叠段。去段内均值后累积，极差除以段内样本标准差；对每个尺度的平均R/S作log-log OLS。至少3个有效尺度，不做Anis-Lloyd有限样本校正。不能把短窗H>0.5当作现成收益证据。
+higuchi-dimension：对尾随对数价格，k=1..maximumScale；每种起点子序列的绝对差和乘(n-1)/(差分个数*k*k)，各起点平均后拟合log长度对log(1/k)。常量无定义，估计值不强制裁剪。它是序列图形复杂度估计。
+permutation-entropy：窗口内按order/delay组成嵌入向量，统计严格排序模式。含同值的向量舍弃，概率熵除以log(order!)。全部同值时留空，不用下标人为拆开平局。validPatterns显示实际有效样本数。
+fft-trailing：尾随对数价格线性去趋势，乘Hann窗后作rFFT；去除DC，单边功率除Nyquist外加倍。输出最大功率频点的周期（输入根数）、功率占比和归一化频谱熵。常量或线性趋势残差接近机器噪声时留空。没有全样本FFT回填，也没有周期持续的承诺。
+
+一手方法/实现资料（用于核对定义；没有复制厂商脚本）：
+https://www.tradingview.com/pine-script-docs/concepts/repainting/
+https://www.tradingview.com/support/solutions/43000502284-understanding-renko-charts/
+https://www.luxalgo.com/library/indicator/smart-money-concepts-smc/
+https://www.statsmodels.org/stable/statespace.html
+https://cschoel.github.io/nolds/nolds.html#hurst-exponent
+https://raw.githubusercontent.com/raphaelvallat/antropy/master/src/antropy/fractal.py
+https://raw.githubusercontent.com/raphaelvallat/antropy/master/src/antropy/entropy.py
+https://numpy.org/doc/stable/reference/routines.fft.html
+
+验证：test_temporal_indicators.py的手算/反例；test_plugins.py对全部运算比较350根与400根历史前缀；test_kalman_reference.py与statsmodels原版两模型过滤结果逐项比较（关闭原版稳态近似）；evidence/native-core-expansion-0.10.0.json记录10项真实C++宿主运行。

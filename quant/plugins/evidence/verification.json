@@ -4,10 +4,10 @@
     "python": {
       "tests": 12,
       "talibFunctions": 201,
-      "customOperations": 37,
+      "customOperations": 47,
       "checks": [
         "each function runs declared defaults",
-        "prefix invariance on 250/400 bars",
+        "prefix invariance on 350/400 bars",
         "prior-only breakout and RVOL denominators",
         "zero volume remains unavailable",
         "different RSI definitions remain different",
@@ -16,7 +16,7 @@
       ]
     },
     "qt": {
-      "passed": 11,
+      "passed": 12,
       "failed": 0,
       "skipped": 0,
       "checks": [
@@ -34,8 +34,35 @@
         "CSV quoting and spreadsheet formula-text escaping",
         "query form hides CSV and validates ISO dates",
         "query snapshots and result archives roundtrip without execution",
-        "per-operation parameters restored without running a job"
+        "per-operation parameters restored without running a job",
+        "tiny numeric defaults and restored values survive the native form down to 1e-12"
       ]
+    },
+    "temporal": {
+      "passed": 9,
+      "failed": 0,
+      "checks": [
+        "confirmation time and ties",
+        "percentage reversal and unfinished endpoint",
+        "confirmed Fibonacci anchors",
+        "one-time structure break and block availability",
+        "Renko gap and decimal boundary",
+        "Kalman hand recurrence",
+        "ordinal entropy ties",
+        "Higuchi linear dimension",
+        "known-period FFT"
+      ]
+    },
+    "kalmanReference": {
+      "passed": 1,
+      "models": [
+        "local-level",
+        "local-linear-trend"
+      ],
+      "originalLibrary": "statsmodels 0.15.0",
+      "steadyStateTolerance": 0,
+      "atol": 1e-10,
+      "rtol": 1e-10
     }
   },
   "integrationRuns": [
@@ -212,5 +239,7 @@
     "wheelHashesLocked": false,
     "secondMachineAcceptance": false,
     "leanDotnetRebuild": "pending"
-  }
+  },
+  "nativeCoreExpansion010": "native-core-expansion-0.10.0.json",
+  "programSha256": "67e09d65a70447fccdef64ed7890f31ba15d2abfd9faec2f687b6edf95098dea"
 }

@@ -49,6 +49,8 @@ WebStock 量化插件本机预览版
 $taskRepo = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..\..')).Path
 Copy-Item -LiteralPath (Join-Path $taskRepo 'quant\plugins\THIRD_PARTY_NOTICES.txt') -Destination $taskRelease
 Copy-Item -LiteralPath (Join-Path $taskRepo 'quant\plugins\implementation-plan.json') -Destination $taskRelease
+Copy-Item -LiteralPath (Join-Path $taskRepo 'quant\plugins\README.txt') -Destination (Join-Path $taskRelease 'plugin-readme.txt')
+Copy-Item -LiteralPath (Join-Path $taskRepo 'quant\plugins\TEMPORAL_FORMULAS.txt') -Destination $taskRelease
 $taskSetup = Join-Path $taskRelease 'runtime-setup'
 New-Item -ItemType Directory -Path $taskSetup | Out-Null
 Copy-Item -LiteralPath (Join-Path $taskRepo 'quant\plugins\setup_runtime.py') -Destination $taskSetup
