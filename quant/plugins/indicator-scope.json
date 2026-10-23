@@ -1738,9 +1738,13 @@
       "overlap": "模型不是新增信息；收益与分类目标不同。",
       "evidence": "有实证文献；需本地复验",
       "refs": "https://www.nber.org/papers/w25398\nhttps://scikit-learn.org/stable/modules/calibration.html\nhttps://scikit-learn.org/stable/modules/generated/sklearn.model_selection.TimeSeriesSplit.html",
-      "status": "pending",
-      "implementations": [],
-      "implementationNote": "未完成；不以目录条目或近似名称充当实现。"
+      "status": "formula_implemented_and_tested",
+      "implementations": [
+        "learning-models:linear",
+        "learning-models:ridge",
+        "learning-models:logistic"
+      ],
+      "implementationNote": "原版库逐时点训练；固定七项已知价量特征，只训练成熟且隔离后的标签，标准化仅训练集拟合。预测与成熟后评价分离，训练审计及JSON参数导出。全部模型通过前缀/边界与C++宿主4937根验收；不代表全部特征/调参方案或收益优势。"
     },
     {
       "id": 97,
@@ -1754,9 +1758,13 @@
       "overlap": "堆叠同源指标不能保证新增信号。",
       "evidence": "有实证文献；需本地复验",
       "refs": "https://www.nber.org/papers/w25398\nhttps://www.davidhbailey.com/dhbpapers/backtest-prob.pdf",
-      "status": "pending",
-      "implementations": [],
-      "implementationNote": "未完成；不以目录条目或近似名称充当实现。"
+      "status": "formula_implemented_and_tested",
+      "implementations": [
+        "learning-models:random-forest",
+        "learning-models:gradient-boosting",
+        "learning-models:lightgbm"
+      ],
+      "implementationNote": "原版库逐时点训练；固定七项已知价量特征，只训练成熟且隔离后的标签，标准化仅训练集拟合。预测与成熟后评价分离，训练审计及JSON参数导出。全部模型通过前缀/边界与C++宿主4937根验收；不代表全部特征/调参方案或收益优势。"
     },
     {
       "id": 98,

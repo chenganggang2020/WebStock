@@ -104,6 +104,14 @@
       "operations": 5,
       "syntheticEvents": 240,
       "prefixEvents": 120
+    },
+    "learning": {
+      "passed": 6,
+      "failed": 0,
+      "estimators": 6,
+      "testRows": 260,
+      "prefixRows": 210,
+      "source": "tests/test_learning_models.py"
     }
   },
   "integrationRuns": [
@@ -246,7 +254,7 @@
     "nativeWindow": "passed, quotes/classic and legacy focus redirect, real installed TA-Lib workflow",
     "visualReview": "native dark theme inspected and table row contrast repaired"
   },
-  "latestPackageVersion": "0.13.1",
+  "latestPackageVersion": "0.14.0",
   "additionalEvidence": [
     "native-acceptance-0.8.1.json",
     "native-akshare-0.7.0.json",
@@ -294,5 +302,12 @@
   "nativeEventAcceptance": [
     "native-events-0.13.0.json",
     "native-events-0.13.1.json"
-  ]
+  ],
+  "nativeLearningAcceptance": "native-learning-0.14.0.json",
+  "nativeLearningWindow": {
+    "passed": 3,
+    "failed": 0,
+    "skipped": 0,
+    "scope": "actual quotes/classic/focus entry, original learner run, frozen history reopening"
+  }
 }

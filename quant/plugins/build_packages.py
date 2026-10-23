@@ -20,7 +20,7 @@ def number(key, default, minimum=2, maximum=10000, title=None, kind=None):
 def save_package(output, manifest, sources):
     content = {name: (HERE/source).read_bytes() for name, source in sources.items()}
     manifest.update(schema="webstock.plugin.manifest.v1", protocolVersion=1,
-                    entrypoint="worker.py", runtime="python", version="0.13.1",
+                    entrypoint="worker.py", runtime="python", version="0.14.0",
                     files={name: hashlib.sha256(raw).hexdigest() for name,raw in content.items()})
     package = {"schema": "webstock.plugin.package.v1", "manifest": manifest,
                "files": {name: base64.b64encode(raw).decode("ascii") for name,raw in content.items()}}
@@ -258,6 +258,22 @@ def main():
         "source":"https://github.com/chenganggang2020/WebStock","distributions":["numpy","pandas"],"operations":events},
         {"worker.py":"worker.py","panel_contract.py":"panel_contract.py","event_contract.py":"event_contract.py","event_research.py":"event_research.py",
          "EVENT_INPUT.txt":"EVENT_INPUT.txt","THIRD_PARTY_NOTICES.txt":"THIRD_PARTY_NOTICES.txt"}))
+    learners=[]
+    for key,title in {"linear":"线性回归 · 逐时点训练", "ridge":"Ridge · 逐时点训练", "logistic":"Logistic 上涨概率 · 逐时点训练",
+        "random-forest":"随机森林 · 逐时点训练", "gradient-boosting":"GBDT · 逐时点训练", "lightgbm":"LightGBM · 逐时点训练"}.items():
+        fields=[number("trainingRows",252,40,5000,title="每次训练有效样本数"),number("horizon",5,1,252,title="预测未来根数"),
+            number("purgeBars",1,1,252,title="标签成熟后隔离根数"),number("retrainEvery",63,1,5000,title="每隔多少根重训"),
+            number("seed",2026,0,2147483647,title="随机种子")]
+        if key=="ridge":fields.append(number("alpha",1.,0.,10000.,title="Ridge惩罚强度"))
+        if key=="logistic":fields.append(number("regularizationC",1.,1e-6,10000.,title="Logistic C"))
+        if key in ("random-forest","gradient-boosting","lightgbm"):
+            fields.extend([number("estimators",64,1,256,title="树数量"),number("maxDepth",3,1,8,title="树最大深度"),number("minLeaf",10,1,1000,title="叶节点最少样本")])
+        if key in ("gradient-boosting","lightgbm"):fields.append(number("learningRate",.05,.001,1.,title="学习率"))
+        learners.append({"id":key,"title":title,"formulaVersion":"webstock-learning-"+key+"-v1","parameters":fields,
+            "inputKind":"ohlcv-single-csv","outputKind":"indicator","description":"原版scikit-learn/LightGBM；固定七项价量特征，只训练已成熟标签，输出预测、事后评价、训练审计及最后模型参数。见LEARNING_MODELS.txt。"})
+    records.append(save_package(args.output,{"id":"org.webstock.learning-models","name":"WebStock 逐时点学习模型","license":"Project source terms; upstream BSD-3-Clause/MIT",
+        "source":"https://github.com/chenganggang2020/WebStock","distributions":["numpy","pandas","scikit-learn","lightgbm"],"operations":learners},
+        {"worker.py":"worker.py","learning_models.py":"learning_models.py","LEARNING_MODELS.txt":"LEARNING_MODELS.txt","THIRD_PARTY_NOTICES.txt":"THIRD_PARTY_NOTICES.txt"}))
     (args.output/"index.json").write_text(json.dumps(records,ensure_ascii=False,indent=2),encoding="utf-8")
     print(json.dumps(records,ensure_ascii=False))
 

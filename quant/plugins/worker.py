@@ -143,6 +143,9 @@ def validate_parameters(operation, supplied):
 
 
 def compute(manifest, operation, frame, parameters):
+    if manifest["id"] == "org.webstock.learning-models":
+        from learning_models import calculate
+        return calculate(operation["id"],frame,parameters)
     if manifest["id"] == "org.webstock.event-research":
         from event_research import calculate
         return calculate(operation["id"],frame,parameters)

@@ -9,11 +9,11 @@
     "indicatorFamilies": 110,
     "source": "indicator-scope.json",
     "indicatorReadiness": {
-      "formula_implemented_and_tested": 85,
+      "formula_implemented_and_tested": 87,
       "partial": 5,
-      "pending": 20
+      "pending": 18
     },
-    "installedPackages": 22
+    "installedPackages": 23
   },
   "completionDefinition": [
     "All 19 projects have runnable installed adapters with declared capabilities, inputs, versions and actual results.",
@@ -299,7 +299,7 @@
     },
     {
       "id": "indicator-coverage",
-      "status": "201_talib_functions_47_core_20_panel_and_5_event_operations_verified",
+      "status": "201_talib_47_core_20_panel_5_event_6_learning_operations_verified",
       "note": "Function counts are not catalogue-family completion counts."
     },
     {
@@ -330,7 +330,20 @@
         "native install/run/plot/archive"
       ],
       "limits": "Synthetic events validate math and lifecycle; no exchange completeness certification or broker historical feed connection."
+    },
+    {
+      "id": "chronological-learning",
+      "status": "six_original_estimators_verified_in_cpp_host_and_full_window",
+      "checks": [
+        "mature labels with purge gap",
+        "train-only scaling",
+        "independent linear and ridge solve",
+        "prefix invariance and future perturbation",
+        "evaluation at outcome maturity",
+        "last trained model JSON export"
+      ],
+      "limits": "Fixed declared features and hyperparameters; not exhaustive model search or return validation."
     }
   ],
-  "latestPackageVersion": "0.13.1"
+  "latestPackageVersion": "0.14.0"
 }
