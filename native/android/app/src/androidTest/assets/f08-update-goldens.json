@@ -1,0 +1,4653 @@
+{
+  "schema": "f08-legacy-update-golden/v1",
+  "sources": [
+    {
+      "path": "services\\industryResearchService.js",
+      "sha256": "baca125dfbf8ad7ecf466be23d4e7e40e690668ea727769ee6b2bdbe05278ce3"
+    },
+    {
+      "path": "services\\industryResearchSourceService.js",
+      "sha256": "d0dc72f31217413d1a625329ee1c472f82ab5d7cd6d7b12c27937caa32a243d4"
+    },
+    {
+      "path": "services\\industryResearchScheduler.js",
+      "sha256": "f1de90b8d648fd0a55f0653f7bf7cbe072fb3fd2ca9c3a9f676ae37438ae16dc"
+    }
+  ],
+  "networkCalls": 0,
+  "aiCalls": 0,
+  "cases": [
+    {
+      "name": "complete-metric",
+      "before": {
+        "topics": [
+          {
+            "id": "bellows",
+            "name": "波纹管",
+            "aliases": [
+              "bellows"
+            ],
+            "sourceUrls": [],
+            "enabled": false,
+            "intervalMinutes": 1440,
+            "lastAttemptAt": null,
+            "lastSuccessAt": null,
+            "nextDueAt": null,
+            "currentVersionId": null,
+            "config": {}
+          },
+          {
+            "id": "diamond-thermal",
+            "name": "金刚石散热",
+            "aliases": [
+              "diamond",
+              "thermal spreader"
+            ],
+            "sourceUrls": [],
+            "enabled": false,
+            "intervalMinutes": 1440,
+            "lastAttemptAt": null,
+            "lastSuccessAt": null,
+            "nextDueAt": null,
+            "currentVersionId": null,
+            "config": {}
+          },
+          {
+            "id": "f08-topic",
+            "name": "金融基础设施",
+            "aliases": [
+              "原别名"
+            ],
+            "sourceUrls": [
+              "https://example.org/a"
+            ],
+            "enabled": false,
+            "intervalMinutes": 1440,
+            "lastAttemptAt": null,
+            "lastSuccessAt": null,
+            "nextDueAt": null,
+            "currentVersionId": null,
+            "config": {}
+          },
+          {
+            "id": "thin-film-lithium-niobate",
+            "name": "薄膜铌酸锂",
+            "aliases": [
+              "薄膜铌酸锂",
+              "thin-film lithium niobate"
+            ],
+            "sourceUrls": [],
+            "enabled": false,
+            "intervalMinutes": 1440,
+            "lastAttemptAt": null,
+            "lastSuccessAt": null,
+            "nextDueAt": null,
+            "currentVersionId": null,
+            "config": {}
+          },
+          {
+            "id": "v-groove-fau",
+            "name": "V型槽/FAU",
+            "aliases": [
+              "v-groove",
+              "FAU"
+            ],
+            "sourceUrls": [],
+            "enabled": false,
+            "intervalMinutes": 1440,
+            "lastAttemptAt": null,
+            "lastSuccessAt": null,
+            "nextDueAt": null,
+            "currentVersionId": null,
+            "config": {}
+          }
+        ],
+        "evidence": [],
+        "versions": [],
+        "runs": []
+      },
+      "sourceAcquisitions": [
+        {
+          "canonicalUrl": "https://example.org/a",
+          "requestedUrl": "https://example.org/a",
+          "finalUrl": "https://example.org/a",
+          "contentSha256": "da711a1844c890f50d2ff0893ec6adaa9473e9a7e103e20c0f1db775a8a1a385",
+          "text": "金融基础设施产品。2025年行业收入12亿元；原文完整尾部。",
+          "title": "受控原资料",
+          "publishedAt": "2026-10-13T23:59:00.000Z",
+          "fetchedAt": "2026-10-14T00:00:00.000Z",
+          "locator": {
+            "type": "controlled-full-text",
+            "offsetUnit": "UTF-16/legacy-normalizeText"
+          },
+          "extractorVersion": "fixture-no-network"
+        }
+      ],
+      "normalizedProposals": [
+        {
+          "stage": "components",
+          "product": "金融基础设施产品",
+          "company": {
+            "name": "待绑定公司",
+            "stockCode": null,
+            "identityEvidenceIds": []
+          },
+          "claim": "2025年行业收入12亿元",
+          "polarity": "supports",
+          "evidenceRefs": [
+            {
+              "url": "https://example.org/a",
+              "quote": "2025年行业收入12亿元"
+            }
+          ],
+          "metrics": [
+            {
+              "name": "收入",
+              "value": 12,
+              "rawValue": "12",
+              "unit": "亿元",
+              "scope": "2025年行业",
+              "period": "2025",
+              "evidenceId": null
+            }
+          ]
+        }
+      ],
+      "startedAt": "2026-10-14T00:00:00.000Z",
+      "input": {
+        "proposals": [
+          {
+            "stage": "components",
+            "product": "金融基础设施产品",
+            "company": {
+              "name": "待绑定公司",
+              "stockCode": "600000"
+            },
+            "claim": "2025年行业收入12亿元",
+            "polarity": "supports",
+            "evidenceRefs": [
+              {
+                "url": "https://example.org/a",
+                "quote": "2025年行业收入12亿元"
+              }
+            ],
+            "metrics": [
+              {
+                "name": "收入",
+                "value": 12,
+                "rawValue": "12",
+                "unit": "亿元",
+                "scope": "2025年行业",
+                "period": "2025"
+              }
+            ]
+          }
+        ]
+      },
+      "expected": {
+        "run": {
+          "id": "run_00000000-0000-4000-8000-000000000001",
+          "status": "succeeded",
+          "requestedCount": 1,
+          "successCount": 1,
+          "failedCount": 0,
+          "duplicateCount": 0,
+          "startedAt": "2026-10-14T00:00:00.000Z",
+          "completedAt": "2026-10-14T00:00:00.000Z",
+          "ai": "disabled",
+          "partial": false,
+          "errors": []
+        },
+        "currentVersion": {
+          "id": "version_00000000-0000-4000-8000-000000000004",
+          "topicId": "f08-topic",
+          "sequence": 1,
+          "previousVersionId": null,
+          "createdAt": "2026-10-14T00:00:00.000Z",
+          "knowledgeCutoffAt": "2026-10-14T00:00:00.000Z",
+          "evidenceIds": [
+            "evidence_00000000-0000-4000-8000-000000000002"
+          ],
+          "relations": [
+            {
+              "id": "relation_00000000-0000-4000-8000-000000000003",
+              "topicId": "f08-topic",
+              "stage": "components",
+              "product": "金融基础设施产品",
+              "company": {
+                "name": "待绑定公司",
+                "stockCode": null,
+                "identityEvidenceIds": []
+              },
+              "claim": "2025年行业收入12亿元",
+              "evidenceIds": [
+                "evidence_00000000-0000-4000-8000-000000000002"
+              ],
+              "evidenceRefs": [
+                {
+                  "evidenceId": "evidence_00000000-0000-4000-8000-000000000002",
+                  "url": "https://example.org/a",
+                  "quote": "2025年行业收入12亿元",
+                  "locator": {
+                    "type": "controlled-full-text",
+                    "offsetUnit": "UTF-16/legacy-normalizeText"
+                  },
+                  "start": 9,
+                  "end": 22,
+                  "position": {
+                    "start": 9,
+                    "end": 22
+                  }
+                }
+              ],
+              "polarity": "supports",
+              "status": "candidate",
+              "reasonCodes": [],
+              "metrics": [
+                {
+                  "name": "收入",
+                  "value": 12,
+                  "rawValue": "12",
+                  "unit": "亿元",
+                  "scope": "2025年行业",
+                  "period": "2025",
+                  "evidenceId": "evidence_00000000-0000-4000-8000-000000000002"
+                }
+              ],
+              "review": null
+            }
+          ],
+          "analysis": {
+            "kind": "none",
+            "text": "",
+            "evidenceIds": [],
+            "model": null
+          },
+          "changes": {
+            "added": [
+              "relation_00000000-0000-4000-8000-000000000003"
+            ],
+            "changed": [],
+            "disputed": []
+          },
+          "gaps": [],
+          "run": {
+            "requestedCount": 1,
+            "successCount": 1,
+            "failedCount": 0,
+            "duplicateCount": 0,
+            "startedAt": "2026-10-14T00:00:00.000Z",
+            "completedAt": "2026-10-14T00:00:00.000Z",
+            "ai": "disabled",
+            "partial": false,
+            "errors": []
+          },
+          "status": "complete",
+          "contentHash": "3859a90de42225a2a02cb587ed6e090f769f2327d9df0d8a2dc0adc551a8b0af",
+          "evidence": [
+            {
+              "id": "evidence_00000000-0000-4000-8000-000000000002",
+              "canonicalUrl": "https://example.org/a",
+              "requestedUrl": "https://example.org/a",
+              "finalUrl": "https://example.org/a",
+              "contentSha256": "da711a1844c890f50d2ff0893ec6adaa9473e9a7e103e20c0f1db775a8a1a385",
+              "title": "受控原资料",
+              "publishedAt": "2026-10-13T23:59:00.000Z",
+              "fetchedAt": "2026-10-14T00:00:00.000Z",
+              "locator": {
+                "type": "controlled-full-text",
+                "offsetUnit": "UTF-16/legacy-normalizeText"
+              },
+              "extractorVersion": "fixture-no-network",
+              "status": "fetched"
+            }
+          ]
+        }
+      },
+      "second": null,
+      "archive": {
+        "topics": [
+          {
+            "id": "bellows",
+            "name": "波纹管",
+            "aliases": [
+              "bellows"
+            ],
+            "sourceUrls": [],
+            "enabled": false,
+            "intervalMinutes": 1440,
+            "lastAttemptAt": null,
+            "lastSuccessAt": null,
+            "nextDueAt": null,
+            "currentVersionId": null,
+            "config": {}
+          },
+          {
+            "id": "diamond-thermal",
+            "name": "金刚石散热",
+            "aliases": [
+              "diamond",
+              "thermal spreader"
+            ],
+            "sourceUrls": [],
+            "enabled": false,
+            "intervalMinutes": 1440,
+            "lastAttemptAt": null,
+            "lastSuccessAt": null,
+            "nextDueAt": null,
+            "currentVersionId": null,
+            "config": {}
+          },
+          {
+            "id": "f08-topic",
+            "name": "金融基础设施",
+            "aliases": [
+              "原别名"
+            ],
+            "sourceUrls": [
+              "https://example.org/a"
+            ],
+            "enabled": false,
+            "intervalMinutes": 1440,
+            "lastAttemptAt": "2026-10-14T00:00:00.000Z",
+            "lastSuccessAt": "2026-10-14T00:00:00.000Z",
+            "nextDueAt": "2026-10-15T00:00:00.000Z",
+            "currentVersionId": "version_00000000-0000-4000-8000-000000000004",
+            "config": {}
+          },
+          {
+            "id": "thin-film-lithium-niobate",
+            "name": "薄膜铌酸锂",
+            "aliases": [
+              "薄膜铌酸锂",
+              "thin-film lithium niobate"
+            ],
+            "sourceUrls": [],
+            "enabled": false,
+            "intervalMinutes": 1440,
+            "lastAttemptAt": null,
+            "lastSuccessAt": null,
+            "nextDueAt": null,
+            "currentVersionId": null,
+            "config": {}
+          },
+          {
+            "id": "v-groove-fau",
+            "name": "V型槽/FAU",
+            "aliases": [
+              "v-groove",
+              "FAU"
+            ],
+            "sourceUrls": [],
+            "enabled": false,
+            "intervalMinutes": 1440,
+            "lastAttemptAt": null,
+            "lastSuccessAt": null,
+            "nextDueAt": null,
+            "currentVersionId": null,
+            "config": {}
+          }
+        ],
+        "evidence": [
+          {
+            "id": "evidence_00000000-0000-4000-8000-000000000002",
+            "canonicalUrl": "https://example.org/a",
+            "contentSha256": "da711a1844c890f50d2ff0893ec6adaa9473e9a7e103e20c0f1db775a8a1a385",
+            "createdAt": "2026-10-14T00:00:00.000Z",
+            "payload": {
+              "canonicalUrl": "https://example.org/a",
+              "requestedUrl": "https://example.org/a",
+              "finalUrl": "https://example.org/a",
+              "contentSha256": "da711a1844c890f50d2ff0893ec6adaa9473e9a7e103e20c0f1db775a8a1a385",
+              "title": "受控原资料",
+              "publishedAt": "2026-10-13T23:59:00.000Z",
+              "fetchedAt": "2026-10-14T00:00:00.000Z",
+              "locator": {
+                "type": "controlled-full-text",
+                "offsetUnit": "UTF-16/legacy-normalizeText"
+              },
+              "extractorVersion": "fixture-no-network",
+              "id": "evidence_00000000-0000-4000-8000-000000000002",
+              "status": "fetched",
+              "text": "金融基础设施产品。2025年行业收入12亿元；原文完整尾部。"
+            }
+          }
+        ],
+        "versions": [
+          {
+            "id": "version_00000000-0000-4000-8000-000000000004",
+            "topicId": "f08-topic",
+            "sequence": 1,
+            "previousVersionId": null,
+            "contentHash": "3859a90de42225a2a02cb587ed6e090f769f2327d9df0d8a2dc0adc551a8b0af",
+            "createdAt": "2026-10-14T00:00:00.000Z",
+            "payload": {
+              "id": "version_00000000-0000-4000-8000-000000000004",
+              "topicId": "f08-topic",
+              "sequence": 1,
+              "previousVersionId": null,
+              "createdAt": "2026-10-14T00:00:00.000Z",
+              "knowledgeCutoffAt": "2026-10-14T00:00:00.000Z",
+              "evidenceIds": [
+                "evidence_00000000-0000-4000-8000-000000000002"
+              ],
+              "relations": [
+                {
+                  "id": "relation_00000000-0000-4000-8000-000000000003",
+                  "topicId": "f08-topic",
+                  "stage": "components",
+                  "product": "金融基础设施产品",
+                  "company": {
+                    "name": "待绑定公司",
+                    "stockCode": null,
+                    "identityEvidenceIds": []
+                  },
+                  "claim": "2025年行业收入12亿元",
+                  "evidenceIds": [
+                    "evidence_00000000-0000-4000-8000-000000000002"
+                  ],
+                  "evidenceRefs": [
+                    {
+                      "evidenceId": "evidence_00000000-0000-4000-8000-000000000002",
+                      "url": "https://example.org/a",
+                      "quote": "2025年行业收入12亿元",
+                      "locator": {
+                        "type": "controlled-full-text",
+                        "offsetUnit": "UTF-16/legacy-normalizeText"
+                      },
+                      "start": 9,
+                      "end": 22,
+                      "position": {
+                        "start": 9,
+                        "end": 22
+                      }
+                    }
+                  ],
+                  "polarity": "supports",
+                  "status": "candidate",
+                  "reasonCodes": [],
+                  "metrics": [
+                    {
+                      "name": "收入",
+                      "value": 12,
+                      "rawValue": "12",
+                      "unit": "亿元",
+                      "scope": "2025年行业",
+                      "period": "2025",
+                      "evidenceId": "evidence_00000000-0000-4000-8000-000000000002"
+                    }
+                  ],
+                  "review": null
+                }
+              ],
+              "analysis": {
+                "kind": "none",
+                "text": "",
+                "evidenceIds": [],
+                "model": null
+              },
+              "changes": {
+                "added": [
+                  "relation_00000000-0000-4000-8000-000000000003"
+                ],
+                "changed": [],
+                "disputed": []
+              },
+              "gaps": [],
+              "run": {
+                "requestedCount": 1,
+                "successCount": 1,
+                "failedCount": 0,
+                "duplicateCount": 0,
+                "startedAt": "2026-10-14T00:00:00.000Z",
+                "completedAt": "2026-10-14T00:00:00.000Z",
+                "ai": "disabled",
+                "partial": false,
+                "errors": []
+              },
+              "status": "complete",
+              "contentHash": "3859a90de42225a2a02cb587ed6e090f769f2327d9df0d8a2dc0adc551a8b0af"
+            }
+          }
+        ],
+        "runs": [
+          {
+            "id": "run_00000000-0000-4000-8000-000000000001",
+            "topicId": "f08-topic",
+            "status": "succeeded",
+            "startedAt": "2026-10-14T00:00:00.000Z",
+            "completedAt": "2026-10-14T00:00:00.000Z",
+            "payload": {
+              "requestedCount": 1,
+              "successCount": 1,
+              "failedCount": 0,
+              "duplicateCount": 0,
+              "startedAt": "2026-10-14T00:00:00.000Z",
+              "completedAt": "2026-10-14T00:00:00.000Z",
+              "ai": "disabled",
+              "partial": false,
+              "errors": []
+            }
+          }
+        ]
+      },
+      "fetchCalls": 1,
+      "sqlite": "3.53.1"
+    },
+    {
+      "name": "same-source-no-change",
+      "before": {
+        "topics": [
+          {
+            "id": "bellows",
+            "name": "波纹管",
+            "aliases": [
+              "bellows"
+            ],
+            "sourceUrls": [],
+            "enabled": false,
+            "intervalMinutes": 1440,
+            "lastAttemptAt": null,
+            "lastSuccessAt": null,
+            "nextDueAt": null,
+            "currentVersionId": null,
+            "config": {}
+          },
+          {
+            "id": "diamond-thermal",
+            "name": "金刚石散热",
+            "aliases": [
+              "diamond",
+              "thermal spreader"
+            ],
+            "sourceUrls": [],
+            "enabled": false,
+            "intervalMinutes": 1440,
+            "lastAttemptAt": null,
+            "lastSuccessAt": null,
+            "nextDueAt": null,
+            "currentVersionId": null,
+            "config": {}
+          },
+          {
+            "id": "f08-topic",
+            "name": "金融基础设施",
+            "aliases": [
+              "原别名"
+            ],
+            "sourceUrls": [
+              "https://example.org/a"
+            ],
+            "enabled": false,
+            "intervalMinutes": 1440,
+            "lastAttemptAt": null,
+            "lastSuccessAt": null,
+            "nextDueAt": null,
+            "currentVersionId": null,
+            "config": {}
+          },
+          {
+            "id": "thin-film-lithium-niobate",
+            "name": "薄膜铌酸锂",
+            "aliases": [
+              "薄膜铌酸锂",
+              "thin-film lithium niobate"
+            ],
+            "sourceUrls": [],
+            "enabled": false,
+            "intervalMinutes": 1440,
+            "lastAttemptAt": null,
+            "lastSuccessAt": null,
+            "nextDueAt": null,
+            "currentVersionId": null,
+            "config": {}
+          },
+          {
+            "id": "v-groove-fau",
+            "name": "V型槽/FAU",
+            "aliases": [
+              "v-groove",
+              "FAU"
+            ],
+            "sourceUrls": [],
+            "enabled": false,
+            "intervalMinutes": 1440,
+            "lastAttemptAt": null,
+            "lastSuccessAt": null,
+            "nextDueAt": null,
+            "currentVersionId": null,
+            "config": {}
+          }
+        ],
+        "evidence": [],
+        "versions": [],
+        "runs": []
+      },
+      "sourceAcquisitions": [
+        {
+          "canonicalUrl": "https://example.org/a",
+          "requestedUrl": "https://example.org/a",
+          "finalUrl": "https://example.org/a",
+          "contentSha256": "da711a1844c890f50d2ff0893ec6adaa9473e9a7e103e20c0f1db775a8a1a385",
+          "text": "金融基础设施产品。2025年行业收入12亿元；原文完整尾部。",
+          "title": "受控原资料",
+          "publishedAt": "2026-10-13T23:59:00.000Z",
+          "fetchedAt": "2026-10-14T00:00:00.000Z",
+          "locator": {
+            "type": "controlled-full-text",
+            "offsetUnit": "UTF-16/legacy-normalizeText"
+          },
+          "extractorVersion": "fixture-no-network"
+        },
+        {
+          "canonicalUrl": "https://example.org/a",
+          "requestedUrl": "https://example.org/a",
+          "finalUrl": "https://example.org/a",
+          "contentSha256": "da711a1844c890f50d2ff0893ec6adaa9473e9a7e103e20c0f1db775a8a1a385",
+          "text": "金融基础设施产品。2025年行业收入12亿元；原文完整尾部。",
+          "title": "受控原资料",
+          "publishedAt": "2026-10-13T23:59:00.000Z",
+          "fetchedAt": "2026-10-14T00:00:00.000Z",
+          "locator": {
+            "type": "controlled-full-text",
+            "offsetUnit": "UTF-16/legacy-normalizeText"
+          },
+          "extractorVersion": "fixture-no-network"
+        }
+      ],
+      "normalizedProposals": [
+        {
+          "stage": "components",
+          "product": "金融基础设施产品",
+          "company": {
+            "name": "待绑定公司",
+            "stockCode": null,
+            "identityEvidenceIds": []
+          },
+          "claim": "2025年行业收入12亿元",
+          "polarity": "supports",
+          "evidenceRefs": [
+            {
+              "url": "https://example.org/a",
+              "quote": "2025年行业收入12亿元"
+            }
+          ],
+          "metrics": [
+            {
+              "name": "收入",
+              "value": 12,
+              "rawValue": "12",
+              "unit": "亿元",
+              "scope": "2025年行业",
+              "period": "2025",
+              "evidenceId": null
+            }
+          ]
+        }
+      ],
+      "startedAt": "2026-10-14T00:00:00.000Z",
+      "input": {
+        "proposals": [
+          {
+            "stage": "components",
+            "product": "金融基础设施产品",
+            "company": {
+              "name": "待绑定公司",
+              "stockCode": "600000"
+            },
+            "claim": "2025年行业收入12亿元",
+            "polarity": "supports",
+            "evidenceRefs": [
+              {
+                "url": "https://example.org/a",
+                "quote": "2025年行业收入12亿元"
+              }
+            ],
+            "metrics": [
+              {
+                "name": "收入",
+                "value": 12,
+                "rawValue": "12",
+                "unit": "亿元",
+                "scope": "2025年行业",
+                "period": "2025"
+              }
+            ]
+          }
+        ]
+      },
+      "expected": {
+        "run": {
+          "id": "run_00000000-0000-4000-8000-000000000001",
+          "status": "succeeded",
+          "requestedCount": 1,
+          "successCount": 1,
+          "failedCount": 0,
+          "duplicateCount": 0,
+          "startedAt": "2026-10-14T00:00:00.000Z",
+          "completedAt": "2026-10-14T00:00:00.000Z",
+          "ai": "disabled",
+          "partial": false,
+          "errors": []
+        },
+        "currentVersion": {
+          "id": "version_00000000-0000-4000-8000-000000000004",
+          "topicId": "f08-topic",
+          "sequence": 1,
+          "previousVersionId": null,
+          "createdAt": "2026-10-14T00:00:00.000Z",
+          "knowledgeCutoffAt": "2026-10-14T00:00:00.000Z",
+          "evidenceIds": [
+            "evidence_00000000-0000-4000-8000-000000000002"
+          ],
+          "relations": [
+            {
+              "id": "relation_00000000-0000-4000-8000-000000000003",
+              "topicId": "f08-topic",
+              "stage": "components",
+              "product": "金融基础设施产品",
+              "company": {
+                "name": "待绑定公司",
+                "stockCode": null,
+                "identityEvidenceIds": []
+              },
+              "claim": "2025年行业收入12亿元",
+              "evidenceIds": [
+                "evidence_00000000-0000-4000-8000-000000000002"
+              ],
+              "evidenceRefs": [
+                {
+                  "evidenceId": "evidence_00000000-0000-4000-8000-000000000002",
+                  "url": "https://example.org/a",
+                  "quote": "2025年行业收入12亿元",
+                  "locator": {
+                    "type": "controlled-full-text",
+                    "offsetUnit": "UTF-16/legacy-normalizeText"
+                  },
+                  "start": 9,
+                  "end": 22,
+                  "position": {
+                    "start": 9,
+                    "end": 22
+                  }
+                }
+              ],
+              "polarity": "supports",
+              "status": "candidate",
+              "reasonCodes": [],
+              "metrics": [
+                {
+                  "name": "收入",
+                  "value": 12,
+                  "rawValue": "12",
+                  "unit": "亿元",
+                  "scope": "2025年行业",
+                  "period": "2025",
+                  "evidenceId": "evidence_00000000-0000-4000-8000-000000000002"
+                }
+              ],
+              "review": null
+            }
+          ],
+          "analysis": {
+            "kind": "none",
+            "text": "",
+            "evidenceIds": [],
+            "model": null
+          },
+          "changes": {
+            "added": [
+              "relation_00000000-0000-4000-8000-000000000003"
+            ],
+            "changed": [],
+            "disputed": []
+          },
+          "gaps": [],
+          "run": {
+            "requestedCount": 1,
+            "successCount": 1,
+            "failedCount": 0,
+            "duplicateCount": 0,
+            "startedAt": "2026-10-14T00:00:00.000Z",
+            "completedAt": "2026-10-14T00:00:00.000Z",
+            "ai": "disabled",
+            "partial": false,
+            "errors": []
+          },
+          "status": "complete",
+          "contentHash": "3859a90de42225a2a02cb587ed6e090f769f2327d9df0d8a2dc0adc551a8b0af",
+          "evidence": [
+            {
+              "id": "evidence_00000000-0000-4000-8000-000000000002",
+              "canonicalUrl": "https://example.org/a",
+              "requestedUrl": "https://example.org/a",
+              "finalUrl": "https://example.org/a",
+              "contentSha256": "da711a1844c890f50d2ff0893ec6adaa9473e9a7e103e20c0f1db775a8a1a385",
+              "title": "受控原资料",
+              "publishedAt": "2026-10-13T23:59:00.000Z",
+              "fetchedAt": "2026-10-14T00:00:00.000Z",
+              "locator": {
+                "type": "controlled-full-text",
+                "offsetUnit": "UTF-16/legacy-normalizeText"
+              },
+              "extractorVersion": "fixture-no-network",
+              "status": "fetched"
+            }
+          ]
+        }
+      },
+      "second": {
+        "run": {
+          "id": "run_00000000-0000-4000-8000-000000000005",
+          "status": "no_change",
+          "requestedCount": 1,
+          "successCount": 1,
+          "failedCount": 0,
+          "duplicateCount": 1,
+          "startedAt": "2026-10-14T00:00:00.000Z",
+          "completedAt": "2026-10-14T00:00:00.000Z",
+          "ai": "disabled",
+          "partial": false,
+          "errors": [],
+          "noChange": true
+        },
+        "currentVersion": {
+          "id": "version_00000000-0000-4000-8000-000000000004",
+          "topicId": "f08-topic",
+          "sequence": 1,
+          "previousVersionId": null,
+          "createdAt": "2026-10-14T00:00:00.000Z",
+          "knowledgeCutoffAt": "2026-10-14T00:00:00.000Z",
+          "evidenceIds": [
+            "evidence_00000000-0000-4000-8000-000000000002"
+          ],
+          "relations": [
+            {
+              "id": "relation_00000000-0000-4000-8000-000000000003",
+              "topicId": "f08-topic",
+              "stage": "components",
+              "product": "金融基础设施产品",
+              "company": {
+                "name": "待绑定公司",
+                "stockCode": null,
+                "identityEvidenceIds": []
+              },
+              "claim": "2025年行业收入12亿元",
+              "evidenceIds": [
+                "evidence_00000000-0000-4000-8000-000000000002"
+              ],
+              "evidenceRefs": [
+                {
+                  "evidenceId": "evidence_00000000-0000-4000-8000-000000000002",
+                  "url": "https://example.org/a",
+                  "quote": "2025年行业收入12亿元",
+                  "locator": {
+                    "type": "controlled-full-text",
+                    "offsetUnit": "UTF-16/legacy-normalizeText"
+                  },
+                  "start": 9,
+                  "end": 22,
+                  "position": {
+                    "start": 9,
+                    "end": 22
+                  }
+                }
+              ],
+              "polarity": "supports",
+              "status": "candidate",
+              "reasonCodes": [],
+              "metrics": [
+                {
+                  "name": "收入",
+                  "value": 12,
+                  "rawValue": "12",
+                  "unit": "亿元",
+                  "scope": "2025年行业",
+                  "period": "2025",
+                  "evidenceId": "evidence_00000000-0000-4000-8000-000000000002"
+                }
+              ],
+              "review": null
+            }
+          ],
+          "analysis": {
+            "kind": "none",
+            "text": "",
+            "evidenceIds": [],
+            "model": null
+          },
+          "changes": {
+            "added": [
+              "relation_00000000-0000-4000-8000-000000000003"
+            ],
+            "changed": [],
+            "disputed": []
+          },
+          "gaps": [],
+          "run": {
+            "requestedCount": 1,
+            "successCount": 1,
+            "failedCount": 0,
+            "duplicateCount": 0,
+            "startedAt": "2026-10-14T00:00:00.000Z",
+            "completedAt": "2026-10-14T00:00:00.000Z",
+            "ai": "disabled",
+            "partial": false,
+            "errors": []
+          },
+          "status": "complete",
+          "contentHash": "3859a90de42225a2a02cb587ed6e090f769f2327d9df0d8a2dc0adc551a8b0af",
+          "evidence": [
+            {
+              "id": "evidence_00000000-0000-4000-8000-000000000002",
+              "canonicalUrl": "https://example.org/a",
+              "requestedUrl": "https://example.org/a",
+              "finalUrl": "https://example.org/a",
+              "contentSha256": "da711a1844c890f50d2ff0893ec6adaa9473e9a7e103e20c0f1db775a8a1a385",
+              "title": "受控原资料",
+              "publishedAt": "2026-10-13T23:59:00.000Z",
+              "fetchedAt": "2026-10-14T00:00:00.000Z",
+              "locator": {
+                "type": "controlled-full-text",
+                "offsetUnit": "UTF-16/legacy-normalizeText"
+              },
+              "extractorVersion": "fixture-no-network",
+              "status": "fetched"
+            }
+          ]
+        }
+      },
+      "archive": {
+        "topics": [
+          {
+            "id": "bellows",
+            "name": "波纹管",
+            "aliases": [
+              "bellows"
+            ],
+            "sourceUrls": [],
+            "enabled": false,
+            "intervalMinutes": 1440,
+            "lastAttemptAt": null,
+            "lastSuccessAt": null,
+            "nextDueAt": null,
+            "currentVersionId": null,
+            "config": {}
+          },
+          {
+            "id": "diamond-thermal",
+            "name": "金刚石散热",
+            "aliases": [
+              "diamond",
+              "thermal spreader"
+            ],
+            "sourceUrls": [],
+            "enabled": false,
+            "intervalMinutes": 1440,
+            "lastAttemptAt": null,
+            "lastSuccessAt": null,
+            "nextDueAt": null,
+            "currentVersionId": null,
+            "config": {}
+          },
+          {
+            "id": "f08-topic",
+            "name": "金融基础设施",
+            "aliases": [
+              "原别名"
+            ],
+            "sourceUrls": [
+              "https://example.org/a"
+            ],
+            "enabled": false,
+            "intervalMinutes": 1440,
+            "lastAttemptAt": "2026-10-14T00:00:00.000Z",
+            "lastSuccessAt": "2026-10-14T00:00:00.000Z",
+            "nextDueAt": "2026-10-15T00:00:00.000Z",
+            "currentVersionId": "version_00000000-0000-4000-8000-000000000004",
+            "config": {}
+          },
+          {
+            "id": "thin-film-lithium-niobate",
+            "name": "薄膜铌酸锂",
+            "aliases": [
+              "薄膜铌酸锂",
+              "thin-film lithium niobate"
+            ],
+            "sourceUrls": [],
+            "enabled": false,
+            "intervalMinutes": 1440,
+            "lastAttemptAt": null,
+            "lastSuccessAt": null,
+            "nextDueAt": null,
+            "currentVersionId": null,
+            "config": {}
+          },
+          {
+            "id": "v-groove-fau",
+            "name": "V型槽/FAU",
+            "aliases": [
+              "v-groove",
+              "FAU"
+            ],
+            "sourceUrls": [],
+            "enabled": false,
+            "intervalMinutes": 1440,
+            "lastAttemptAt": null,
+            "lastSuccessAt": null,
+            "nextDueAt": null,
+            "currentVersionId": null,
+            "config": {}
+          }
+        ],
+        "evidence": [
+          {
+            "id": "evidence_00000000-0000-4000-8000-000000000002",
+            "canonicalUrl": "https://example.org/a",
+            "contentSha256": "da711a1844c890f50d2ff0893ec6adaa9473e9a7e103e20c0f1db775a8a1a385",
+            "createdAt": "2026-10-14T00:00:00.000Z",
+            "payload": {
+              "canonicalUrl": "https://example.org/a",
+              "requestedUrl": "https://example.org/a",
+              "finalUrl": "https://example.org/a",
+              "contentSha256": "da711a1844c890f50d2ff0893ec6adaa9473e9a7e103e20c0f1db775a8a1a385",
+              "title": "受控原资料",
+              "publishedAt": "2026-10-13T23:59:00.000Z",
+              "fetchedAt": "2026-10-14T00:00:00.000Z",
+              "locator": {
+                "type": "controlled-full-text",
+                "offsetUnit": "UTF-16/legacy-normalizeText"
+              },
+              "extractorVersion": "fixture-no-network",
+              "id": "evidence_00000000-0000-4000-8000-000000000002",
+              "status": "fetched",
+              "text": "金融基础设施产品。2025年行业收入12亿元；原文完整尾部。"
+            }
+          }
+        ],
+        "versions": [
+          {
+            "id": "version_00000000-0000-4000-8000-000000000004",
+            "topicId": "f08-topic",
+            "sequence": 1,
+            "previousVersionId": null,
+            "contentHash": "3859a90de42225a2a02cb587ed6e090f769f2327d9df0d8a2dc0adc551a8b0af",
+            "createdAt": "2026-10-14T00:00:00.000Z",
+            "payload": {
+              "id": "version_00000000-0000-4000-8000-000000000004",
+              "topicId": "f08-topic",
+              "sequence": 1,
+              "previousVersionId": null,
+              "createdAt": "2026-10-14T00:00:00.000Z",
+              "knowledgeCutoffAt": "2026-10-14T00:00:00.000Z",
+              "evidenceIds": [
+                "evidence_00000000-0000-4000-8000-000000000002"
+              ],
+              "relations": [
+                {
+                  "id": "relation_00000000-0000-4000-8000-000000000003",
+                  "topicId": "f08-topic",
+                  "stage": "components",
+                  "product": "金融基础设施产品",
+                  "company": {
+                    "name": "待绑定公司",
+                    "stockCode": null,
+                    "identityEvidenceIds": []
+                  },
+                  "claim": "2025年行业收入12亿元",
+                  "evidenceIds": [
+                    "evidence_00000000-0000-4000-8000-000000000002"
+                  ],
+                  "evidenceRefs": [
+                    {
+                      "evidenceId": "evidence_00000000-0000-4000-8000-000000000002",
+                      "url": "https://example.org/a",
+                      "quote": "2025年行业收入12亿元",
+                      "locator": {
+                        "type": "controlled-full-text",
+                        "offsetUnit": "UTF-16/legacy-normalizeText"
+                      },
+                      "start": 9,
+                      "end": 22,
+                      "position": {
+                        "start": 9,
+                        "end": 22
+                      }
+                    }
+                  ],
+                  "polarity": "supports",
+                  "status": "candidate",
+                  "reasonCodes": [],
+                  "metrics": [
+                    {
+                      "name": "收入",
+                      "value": 12,
+                      "rawValue": "12",
+                      "unit": "亿元",
+                      "scope": "2025年行业",
+                      "period": "2025",
+                      "evidenceId": "evidence_00000000-0000-4000-8000-000000000002"
+                    }
+                  ],
+                  "review": null
+                }
+              ],
+              "analysis": {
+                "kind": "none",
+                "text": "",
+                "evidenceIds": [],
+                "model": null
+              },
+              "changes": {
+                "added": [
+                  "relation_00000000-0000-4000-8000-000000000003"
+                ],
+                "changed": [],
+                "disputed": []
+              },
+              "gaps": [],
+              "run": {
+                "requestedCount": 1,
+                "successCount": 1,
+                "failedCount": 0,
+                "duplicateCount": 0,
+                "startedAt": "2026-10-14T00:00:00.000Z",
+                "completedAt": "2026-10-14T00:00:00.000Z",
+                "ai": "disabled",
+                "partial": false,
+                "errors": []
+              },
+              "status": "complete",
+              "contentHash": "3859a90de42225a2a02cb587ed6e090f769f2327d9df0d8a2dc0adc551a8b0af"
+            }
+          }
+        ],
+        "runs": [
+          {
+            "id": "run_00000000-0000-4000-8000-000000000001",
+            "topicId": "f08-topic",
+            "status": "succeeded",
+            "startedAt": "2026-10-14T00:00:00.000Z",
+            "completedAt": "2026-10-14T00:00:00.000Z",
+            "payload": {
+              "requestedCount": 1,
+              "successCount": 1,
+              "failedCount": 0,
+              "duplicateCount": 0,
+              "startedAt": "2026-10-14T00:00:00.000Z",
+              "completedAt": "2026-10-14T00:00:00.000Z",
+              "ai": "disabled",
+              "partial": false,
+              "errors": []
+            }
+          },
+          {
+            "id": "run_00000000-0000-4000-8000-000000000005",
+            "topicId": "f08-topic",
+            "status": "no_change",
+            "startedAt": "2026-10-14T00:00:00.000Z",
+            "completedAt": "2026-10-14T00:00:00.000Z",
+            "payload": {
+              "requestedCount": 1,
+              "successCount": 1,
+              "failedCount": 0,
+              "duplicateCount": 1,
+              "startedAt": "2026-10-14T00:00:00.000Z",
+              "completedAt": "2026-10-14T00:00:00.000Z",
+              "ai": "disabled",
+              "partial": false,
+              "errors": [],
+              "noChange": true
+            }
+          }
+        ]
+      },
+      "fetchCalls": 2,
+      "sqlite": "3.53.1"
+    },
+    {
+      "name": "polarity-conflict",
+      "before": {
+        "topics": [
+          {
+            "id": "bellows",
+            "name": "波纹管",
+            "aliases": [
+              "bellows"
+            ],
+            "sourceUrls": [],
+            "enabled": false,
+            "intervalMinutes": 1440,
+            "lastAttemptAt": null,
+            "lastSuccessAt": null,
+            "nextDueAt": null,
+            "currentVersionId": null,
+            "config": {}
+          },
+          {
+            "id": "diamond-thermal",
+            "name": "金刚石散热",
+            "aliases": [
+              "diamond",
+              "thermal spreader"
+            ],
+            "sourceUrls": [],
+            "enabled": false,
+            "intervalMinutes": 1440,
+            "lastAttemptAt": null,
+            "lastSuccessAt": null,
+            "nextDueAt": null,
+            "currentVersionId": null,
+            "config": {}
+          },
+          {
+            "id": "f08-topic",
+            "name": "金融基础设施",
+            "aliases": [
+              "原别名"
+            ],
+            "sourceUrls": [
+              "https://example.org/a"
+            ],
+            "enabled": false,
+            "intervalMinutes": 1440,
+            "lastAttemptAt": null,
+            "lastSuccessAt": null,
+            "nextDueAt": null,
+            "currentVersionId": null,
+            "config": {}
+          },
+          {
+            "id": "thin-film-lithium-niobate",
+            "name": "薄膜铌酸锂",
+            "aliases": [
+              "薄膜铌酸锂",
+              "thin-film lithium niobate"
+            ],
+            "sourceUrls": [],
+            "enabled": false,
+            "intervalMinutes": 1440,
+            "lastAttemptAt": null,
+            "lastSuccessAt": null,
+            "nextDueAt": null,
+            "currentVersionId": null,
+            "config": {}
+          },
+          {
+            "id": "v-groove-fau",
+            "name": "V型槽/FAU",
+            "aliases": [
+              "v-groove",
+              "FAU"
+            ],
+            "sourceUrls": [],
+            "enabled": false,
+            "intervalMinutes": 1440,
+            "lastAttemptAt": null,
+            "lastSuccessAt": null,
+            "nextDueAt": null,
+            "currentVersionId": null,
+            "config": {}
+          }
+        ],
+        "evidence": [],
+        "versions": [],
+        "runs": []
+      },
+      "sourceAcquisitions": [
+        {
+          "canonicalUrl": "https://example.org/a",
+          "requestedUrl": "https://example.org/a",
+          "finalUrl": "https://example.org/a",
+          "contentSha256": "da711a1844c890f50d2ff0893ec6adaa9473e9a7e103e20c0f1db775a8a1a385",
+          "text": "金融基础设施产品。2025年行业收入12亿元；原文完整尾部。",
+          "title": "受控原资料",
+          "publishedAt": "2026-10-13T23:59:00.000Z",
+          "fetchedAt": "2026-10-14T00:00:00.000Z",
+          "locator": {
+            "type": "controlled-full-text",
+            "offsetUnit": "UTF-16/legacy-normalizeText"
+          },
+          "extractorVersion": "fixture-no-network"
+        }
+      ],
+      "normalizedProposals": [
+        {
+          "stage": "components",
+          "product": "金融基础设施产品",
+          "company": {
+            "name": "待绑定公司",
+            "stockCode": null,
+            "identityEvidenceIds": []
+          },
+          "claim": "2025年行业收入12亿元",
+          "polarity": "supports",
+          "evidenceRefs": [
+            {
+              "url": "https://example.org/a",
+              "quote": "2025年行业收入12亿元"
+            }
+          ],
+          "metrics": [
+            {
+              "name": "收入",
+              "value": 12,
+              "rawValue": "12",
+              "unit": "亿元",
+              "scope": "2025年行业",
+              "period": "2025",
+              "evidenceId": null
+            }
+          ]
+        },
+        {
+          "stage": "components",
+          "product": "金融基础设施产品",
+          "company": {
+            "name": "待绑定公司",
+            "stockCode": null,
+            "identityEvidenceIds": []
+          },
+          "claim": "2025年行业收入12亿元",
+          "polarity": "contradicts",
+          "evidenceRefs": [
+            {
+              "url": "https://example.org/a",
+              "quote": "2025年行业收入12亿元"
+            }
+          ],
+          "metrics": [
+            {
+              "name": "收入",
+              "value": 12,
+              "rawValue": "12",
+              "unit": "亿元",
+              "scope": "2025年行业",
+              "period": "2025",
+              "evidenceId": null
+            }
+          ]
+        }
+      ],
+      "startedAt": "2026-10-14T00:00:00.000Z",
+      "input": {
+        "proposals": [
+          {
+            "stage": "components",
+            "product": "金融基础设施产品",
+            "company": {
+              "name": "待绑定公司",
+              "stockCode": "600000"
+            },
+            "claim": "2025年行业收入12亿元",
+            "polarity": "supports",
+            "evidenceRefs": [
+              {
+                "url": "https://example.org/a",
+                "quote": "2025年行业收入12亿元"
+              }
+            ],
+            "metrics": [
+              {
+                "name": "收入",
+                "value": 12,
+                "rawValue": "12",
+                "unit": "亿元",
+                "scope": "2025年行业",
+                "period": "2025"
+              }
+            ]
+          },
+          {
+            "stage": "components",
+            "product": "金融基础设施产品",
+            "company": {
+              "name": "待绑定公司",
+              "stockCode": "600000"
+            },
+            "claim": "2025年行业收入12亿元",
+            "polarity": "contradicts",
+            "evidenceRefs": [
+              {
+                "url": "https://example.org/a",
+                "quote": "2025年行业收入12亿元"
+              }
+            ],
+            "metrics": [
+              {
+                "name": "收入",
+                "value": 12,
+                "rawValue": "12",
+                "unit": "亿元",
+                "scope": "2025年行业",
+                "period": "2025"
+              }
+            ]
+          }
+        ]
+      },
+      "expected": {
+        "run": {
+          "id": "run_00000000-0000-4000-8000-000000000001",
+          "status": "succeeded",
+          "requestedCount": 1,
+          "successCount": 1,
+          "failedCount": 0,
+          "duplicateCount": 0,
+          "startedAt": "2026-10-14T00:00:00.000Z",
+          "completedAt": "2026-10-14T00:00:00.000Z",
+          "ai": "disabled",
+          "partial": false,
+          "errors": []
+        },
+        "currentVersion": {
+          "id": "version_00000000-0000-4000-8000-000000000005",
+          "topicId": "f08-topic",
+          "sequence": 1,
+          "previousVersionId": null,
+          "createdAt": "2026-10-14T00:00:00.000Z",
+          "knowledgeCutoffAt": "2026-10-14T00:00:00.000Z",
+          "evidenceIds": [
+            "evidence_00000000-0000-4000-8000-000000000002"
+          ],
+          "relations": [
+            {
+              "id": "relation_00000000-0000-4000-8000-000000000003",
+              "topicId": "f08-topic",
+              "stage": "components",
+              "product": "金融基础设施产品",
+              "company": {
+                "name": "待绑定公司",
+                "stockCode": null,
+                "identityEvidenceIds": []
+              },
+              "claim": "2025年行业收入12亿元",
+              "evidenceIds": [
+                "evidence_00000000-0000-4000-8000-000000000002"
+              ],
+              "evidenceRefs": [
+                {
+                  "evidenceId": "evidence_00000000-0000-4000-8000-000000000002",
+                  "url": "https://example.org/a",
+                  "quote": "2025年行业收入12亿元",
+                  "locator": {
+                    "type": "controlled-full-text",
+                    "offsetUnit": "UTF-16/legacy-normalizeText"
+                  },
+                  "start": 9,
+                  "end": 22,
+                  "position": {
+                    "start": 9,
+                    "end": 22
+                  }
+                }
+              ],
+              "polarity": "supports",
+              "status": "disputed",
+              "reasonCodes": [
+                "POLARITY_CONFLICT"
+              ],
+              "metrics": [
+                {
+                  "name": "收入",
+                  "value": 12,
+                  "rawValue": "12",
+                  "unit": "亿元",
+                  "scope": "2025年行业",
+                  "period": "2025",
+                  "evidenceId": "evidence_00000000-0000-4000-8000-000000000002"
+                }
+              ],
+              "review": null
+            },
+            {
+              "id": "relation_00000000-0000-4000-8000-000000000004",
+              "topicId": "f08-topic",
+              "stage": "components",
+              "product": "金融基础设施产品",
+              "company": {
+                "name": "待绑定公司",
+                "stockCode": null,
+                "identityEvidenceIds": []
+              },
+              "claim": "2025年行业收入12亿元",
+              "evidenceIds": [
+                "evidence_00000000-0000-4000-8000-000000000002"
+              ],
+              "evidenceRefs": [
+                {
+                  "evidenceId": "evidence_00000000-0000-4000-8000-000000000002",
+                  "url": "https://example.org/a",
+                  "quote": "2025年行业收入12亿元",
+                  "locator": {
+                    "type": "controlled-full-text",
+                    "offsetUnit": "UTF-16/legacy-normalizeText"
+                  },
+                  "start": 9,
+                  "end": 22,
+                  "position": {
+                    "start": 9,
+                    "end": 22
+                  }
+                }
+              ],
+              "polarity": "contradicts",
+              "status": "disputed",
+              "reasonCodes": [
+                "POLARITY_CONFLICT"
+              ],
+              "metrics": [
+                {
+                  "name": "收入",
+                  "value": 12,
+                  "rawValue": "12",
+                  "unit": "亿元",
+                  "scope": "2025年行业",
+                  "period": "2025",
+                  "evidenceId": "evidence_00000000-0000-4000-8000-000000000002"
+                }
+              ],
+              "review": null
+            }
+          ],
+          "analysis": {
+            "kind": "none",
+            "text": "",
+            "evidenceIds": [],
+            "model": null
+          },
+          "changes": {
+            "added": [
+              "relation_00000000-0000-4000-8000-000000000003"
+            ],
+            "changed": [],
+            "disputed": [
+              "relation_00000000-0000-4000-8000-000000000004",
+              "relation_00000000-0000-4000-8000-000000000003"
+            ]
+          },
+          "gaps": [],
+          "run": {
+            "requestedCount": 1,
+            "successCount": 1,
+            "failedCount": 0,
+            "duplicateCount": 0,
+            "startedAt": "2026-10-14T00:00:00.000Z",
+            "completedAt": "2026-10-14T00:00:00.000Z",
+            "ai": "disabled",
+            "partial": false,
+            "errors": []
+          },
+          "status": "complete",
+          "contentHash": "444d3e8bd6262fefc3ddc798aefa1d18e440e4512b6e38791694f8e11e78e87a",
+          "evidence": [
+            {
+              "id": "evidence_00000000-0000-4000-8000-000000000002",
+              "canonicalUrl": "https://example.org/a",
+              "requestedUrl": "https://example.org/a",
+              "finalUrl": "https://example.org/a",
+              "contentSha256": "da711a1844c890f50d2ff0893ec6adaa9473e9a7e103e20c0f1db775a8a1a385",
+              "title": "受控原资料",
+              "publishedAt": "2026-10-13T23:59:00.000Z",
+              "fetchedAt": "2026-10-14T00:00:00.000Z",
+              "locator": {
+                "type": "controlled-full-text",
+                "offsetUnit": "UTF-16/legacy-normalizeText"
+              },
+              "extractorVersion": "fixture-no-network",
+              "status": "fetched"
+            }
+          ]
+        }
+      },
+      "second": null,
+      "archive": {
+        "topics": [
+          {
+            "id": "bellows",
+            "name": "波纹管",
+            "aliases": [
+              "bellows"
+            ],
+            "sourceUrls": [],
+            "enabled": false,
+            "intervalMinutes": 1440,
+            "lastAttemptAt": null,
+            "lastSuccessAt": null,
+            "nextDueAt": null,
+            "currentVersionId": null,
+            "config": {}
+          },
+          {
+            "id": "diamond-thermal",
+            "name": "金刚石散热",
+            "aliases": [
+              "diamond",
+              "thermal spreader"
+            ],
+            "sourceUrls": [],
+            "enabled": false,
+            "intervalMinutes": 1440,
+            "lastAttemptAt": null,
+            "lastSuccessAt": null,
+            "nextDueAt": null,
+            "currentVersionId": null,
+            "config": {}
+          },
+          {
+            "id": "f08-topic",
+            "name": "金融基础设施",
+            "aliases": [
+              "原别名"
+            ],
+            "sourceUrls": [
+              "https://example.org/a"
+            ],
+            "enabled": false,
+            "intervalMinutes": 1440,
+            "lastAttemptAt": "2026-10-14T00:00:00.000Z",
+            "lastSuccessAt": "2026-10-14T00:00:00.000Z",
+            "nextDueAt": "2026-10-15T00:00:00.000Z",
+            "currentVersionId": "version_00000000-0000-4000-8000-000000000005",
+            "config": {}
+          },
+          {
+            "id": "thin-film-lithium-niobate",
+            "name": "薄膜铌酸锂",
+            "aliases": [
+              "薄膜铌酸锂",
+              "thin-film lithium niobate"
+            ],
+            "sourceUrls": [],
+            "enabled": false,
+            "intervalMinutes": 1440,
+            "lastAttemptAt": null,
+            "lastSuccessAt": null,
+            "nextDueAt": null,
+            "currentVersionId": null,
+            "config": {}
+          },
+          {
+            "id": "v-groove-fau",
+            "name": "V型槽/FAU",
+            "aliases": [
+              "v-groove",
+              "FAU"
+            ],
+            "sourceUrls": [],
+            "enabled": false,
+            "intervalMinutes": 1440,
+            "lastAttemptAt": null,
+            "lastSuccessAt": null,
+            "nextDueAt": null,
+            "currentVersionId": null,
+            "config": {}
+          }
+        ],
+        "evidence": [
+          {
+            "id": "evidence_00000000-0000-4000-8000-000000000002",
+            "canonicalUrl": "https://example.org/a",
+            "contentSha256": "da711a1844c890f50d2ff0893ec6adaa9473e9a7e103e20c0f1db775a8a1a385",
+            "createdAt": "2026-10-14T00:00:00.000Z",
+            "payload": {
+              "canonicalUrl": "https://example.org/a",
+              "requestedUrl": "https://example.org/a",
+              "finalUrl": "https://example.org/a",
+              "contentSha256": "da711a1844c890f50d2ff0893ec6adaa9473e9a7e103e20c0f1db775a8a1a385",
+              "title": "受控原资料",
+              "publishedAt": "2026-10-13T23:59:00.000Z",
+              "fetchedAt": "2026-10-14T00:00:00.000Z",
+              "locator": {
+                "type": "controlled-full-text",
+                "offsetUnit": "UTF-16/legacy-normalizeText"
+              },
+              "extractorVersion": "fixture-no-network",
+              "id": "evidence_00000000-0000-4000-8000-000000000002",
+              "status": "fetched",
+              "text": "金融基础设施产品。2025年行业收入12亿元；原文完整尾部。"
+            }
+          }
+        ],
+        "versions": [
+          {
+            "id": "version_00000000-0000-4000-8000-000000000005",
+            "topicId": "f08-topic",
+            "sequence": 1,
+            "previousVersionId": null,
+            "contentHash": "444d3e8bd6262fefc3ddc798aefa1d18e440e4512b6e38791694f8e11e78e87a",
+            "createdAt": "2026-10-14T00:00:00.000Z",
+            "payload": {
+              "id": "version_00000000-0000-4000-8000-000000000005",
+              "topicId": "f08-topic",
+              "sequence": 1,
+              "previousVersionId": null,
+              "createdAt": "2026-10-14T00:00:00.000Z",
+              "knowledgeCutoffAt": "2026-10-14T00:00:00.000Z",
+              "evidenceIds": [
+                "evidence_00000000-0000-4000-8000-000000000002"
+              ],
+              "relations": [
+                {
+                  "id": "relation_00000000-0000-4000-8000-000000000003",
+                  "topicId": "f08-topic",
+                  "stage": "components",
+                  "product": "金融基础设施产品",
+                  "company": {
+                    "name": "待绑定公司",
+                    "stockCode": null,
+                    "identityEvidenceIds": []
+                  },
+                  "claim": "2025年行业收入12亿元",
+                  "evidenceIds": [
+                    "evidence_00000000-0000-4000-8000-000000000002"
+                  ],
+                  "evidenceRefs": [
+                    {
+                      "evidenceId": "evidence_00000000-0000-4000-8000-000000000002",
+                      "url": "https://example.org/a",
+                      "quote": "2025年行业收入12亿元",
+                      "locator": {
+                        "type": "controlled-full-text",
+                        "offsetUnit": "UTF-16/legacy-normalizeText"
+                      },
+                      "start": 9,
+                      "end": 22,
+                      "position": {
+                        "start": 9,
+                        "end": 22
+                      }
+                    }
+                  ],
+                  "polarity": "supports",
+                  "status": "disputed",
+                  "reasonCodes": [
+                    "POLARITY_CONFLICT"
+                  ],
+                  "metrics": [
+                    {
+                      "name": "收入",
+                      "value": 12,
+                      "rawValue": "12",
+                      "unit": "亿元",
+                      "scope": "2025年行业",
+                      "period": "2025",
+                      "evidenceId": "evidence_00000000-0000-4000-8000-000000000002"
+                    }
+                  ],
+                  "review": null
+                },
+                {
+                  "id": "relation_00000000-0000-4000-8000-000000000004",
+                  "topicId": "f08-topic",
+                  "stage": "components",
+                  "product": "金融基础设施产品",
+                  "company": {
+                    "name": "待绑定公司",
+                    "stockCode": null,
+                    "identityEvidenceIds": []
+                  },
+                  "claim": "2025年行业收入12亿元",
+                  "evidenceIds": [
+                    "evidence_00000000-0000-4000-8000-000000000002"
+                  ],
+                  "evidenceRefs": [
+                    {
+                      "evidenceId": "evidence_00000000-0000-4000-8000-000000000002",
+                      "url": "https://example.org/a",
+                      "quote": "2025年行业收入12亿元",
+                      "locator": {
+                        "type": "controlled-full-text",
+                        "offsetUnit": "UTF-16/legacy-normalizeText"
+                      },
+                      "start": 9,
+                      "end": 22,
+                      "position": {
+                        "start": 9,
+                        "end": 22
+                      }
+                    }
+                  ],
+                  "polarity": "contradicts",
+                  "status": "disputed",
+                  "reasonCodes": [
+                    "POLARITY_CONFLICT"
+                  ],
+                  "metrics": [
+                    {
+                      "name": "收入",
+                      "value": 12,
+                      "rawValue": "12",
+                      "unit": "亿元",
+                      "scope": "2025年行业",
+                      "period": "2025",
+                      "evidenceId": "evidence_00000000-0000-4000-8000-000000000002"
+                    }
+                  ],
+                  "review": null
+                }
+              ],
+              "analysis": {
+                "kind": "none",
+                "text": "",
+                "evidenceIds": [],
+                "model": null
+              },
+              "changes": {
+                "added": [
+                  "relation_00000000-0000-4000-8000-000000000003"
+                ],
+                "changed": [],
+                "disputed": [
+                  "relation_00000000-0000-4000-8000-000000000004",
+                  "relation_00000000-0000-4000-8000-000000000003"
+                ]
+              },
+              "gaps": [],
+              "run": {
+                "requestedCount": 1,
+                "successCount": 1,
+                "failedCount": 0,
+                "duplicateCount": 0,
+                "startedAt": "2026-10-14T00:00:00.000Z",
+                "completedAt": "2026-10-14T00:00:00.000Z",
+                "ai": "disabled",
+                "partial": false,
+                "errors": []
+              },
+              "status": "complete",
+              "contentHash": "444d3e8bd6262fefc3ddc798aefa1d18e440e4512b6e38791694f8e11e78e87a"
+            }
+          }
+        ],
+        "runs": [
+          {
+            "id": "run_00000000-0000-4000-8000-000000000001",
+            "topicId": "f08-topic",
+            "status": "succeeded",
+            "startedAt": "2026-10-14T00:00:00.000Z",
+            "completedAt": "2026-10-14T00:00:00.000Z",
+            "payload": {
+              "requestedCount": 1,
+              "successCount": 1,
+              "failedCount": 0,
+              "duplicateCount": 0,
+              "startedAt": "2026-10-14T00:00:00.000Z",
+              "completedAt": "2026-10-14T00:00:00.000Z",
+              "ai": "disabled",
+              "partial": false,
+              "errors": []
+            }
+          }
+        ]
+      },
+      "fetchCalls": 1,
+      "sqlite": "3.53.1"
+    },
+    {
+      "name": "unmatched-quote",
+      "before": {
+        "topics": [
+          {
+            "id": "bellows",
+            "name": "波纹管",
+            "aliases": [
+              "bellows"
+            ],
+            "sourceUrls": [],
+            "enabled": false,
+            "intervalMinutes": 1440,
+            "lastAttemptAt": null,
+            "lastSuccessAt": null,
+            "nextDueAt": null,
+            "currentVersionId": null,
+            "config": {}
+          },
+          {
+            "id": "diamond-thermal",
+            "name": "金刚石散热",
+            "aliases": [
+              "diamond",
+              "thermal spreader"
+            ],
+            "sourceUrls": [],
+            "enabled": false,
+            "intervalMinutes": 1440,
+            "lastAttemptAt": null,
+            "lastSuccessAt": null,
+            "nextDueAt": null,
+            "currentVersionId": null,
+            "config": {}
+          },
+          {
+            "id": "f08-topic",
+            "name": "金融基础设施",
+            "aliases": [
+              "原别名"
+            ],
+            "sourceUrls": [
+              "https://example.org/a"
+            ],
+            "enabled": false,
+            "intervalMinutes": 1440,
+            "lastAttemptAt": null,
+            "lastSuccessAt": null,
+            "nextDueAt": null,
+            "currentVersionId": null,
+            "config": {}
+          },
+          {
+            "id": "thin-film-lithium-niobate",
+            "name": "薄膜铌酸锂",
+            "aliases": [
+              "薄膜铌酸锂",
+              "thin-film lithium niobate"
+            ],
+            "sourceUrls": [],
+            "enabled": false,
+            "intervalMinutes": 1440,
+            "lastAttemptAt": null,
+            "lastSuccessAt": null,
+            "nextDueAt": null,
+            "currentVersionId": null,
+            "config": {}
+          },
+          {
+            "id": "v-groove-fau",
+            "name": "V型槽/FAU",
+            "aliases": [
+              "v-groove",
+              "FAU"
+            ],
+            "sourceUrls": [],
+            "enabled": false,
+            "intervalMinutes": 1440,
+            "lastAttemptAt": null,
+            "lastSuccessAt": null,
+            "nextDueAt": null,
+            "currentVersionId": null,
+            "config": {}
+          }
+        ],
+        "evidence": [],
+        "versions": [],
+        "runs": []
+      },
+      "sourceAcquisitions": [
+        {
+          "canonicalUrl": "https://example.org/a",
+          "requestedUrl": "https://example.org/a",
+          "finalUrl": "https://example.org/a",
+          "contentSha256": "da711a1844c890f50d2ff0893ec6adaa9473e9a7e103e20c0f1db775a8a1a385",
+          "text": "金融基础设施产品。2025年行业收入12亿元；原文完整尾部。",
+          "title": "受控原资料",
+          "publishedAt": "2026-10-13T23:59:00.000Z",
+          "fetchedAt": "2026-10-14T00:00:00.000Z",
+          "locator": {
+            "type": "controlled-full-text",
+            "offsetUnit": "UTF-16/legacy-normalizeText"
+          },
+          "extractorVersion": "fixture-no-network"
+        }
+      ],
+      "normalizedProposals": [
+        {
+          "stage": "components",
+          "product": "金融基础设施产品",
+          "company": {
+            "name": "待绑定公司",
+            "stockCode": null,
+            "identityEvidenceIds": []
+          },
+          "claim": "2025年行业收入12亿元",
+          "polarity": "supports",
+          "evidenceRefs": [
+            {
+              "url": "https://example.org/a",
+              "quote": "不存在的原文"
+            }
+          ],
+          "metrics": [
+            {
+              "name": "收入",
+              "value": 12,
+              "rawValue": "12",
+              "unit": "亿元",
+              "scope": "2025年行业",
+              "period": "2025",
+              "evidenceId": null
+            }
+          ]
+        }
+      ],
+      "startedAt": "2026-10-14T00:00:00.000Z",
+      "input": {
+        "proposals": [
+          {
+            "stage": "components",
+            "product": "金融基础设施产品",
+            "company": {
+              "name": "待绑定公司",
+              "stockCode": "600000"
+            },
+            "claim": "2025年行业收入12亿元",
+            "polarity": "supports",
+            "evidenceRefs": [
+              {
+                "url": "https://example.org/a",
+                "quote": "不存在的原文"
+              }
+            ],
+            "metrics": [
+              {
+                "name": "收入",
+                "value": 12,
+                "rawValue": "12",
+                "unit": "亿元",
+                "scope": "2025年行业",
+                "period": "2025"
+              }
+            ]
+          }
+        ]
+      },
+      "expected": {
+        "run": {
+          "id": "run_00000000-0000-4000-8000-000000000001",
+          "status": "succeeded",
+          "requestedCount": 1,
+          "successCount": 1,
+          "failedCount": 0,
+          "duplicateCount": 0,
+          "startedAt": "2026-10-14T00:00:00.000Z",
+          "completedAt": "2026-10-14T00:00:00.000Z",
+          "ai": "disabled",
+          "partial": false,
+          "errors": []
+        },
+        "currentVersion": {
+          "id": "version_00000000-0000-4000-8000-000000000003",
+          "topicId": "f08-topic",
+          "sequence": 1,
+          "previousVersionId": null,
+          "createdAt": "2026-10-14T00:00:00.000Z",
+          "knowledgeCutoffAt": "2026-10-14T00:00:00.000Z",
+          "evidenceIds": [
+            "evidence_00000000-0000-4000-8000-000000000002"
+          ],
+          "relations": [],
+          "analysis": {
+            "kind": "none",
+            "text": "",
+            "evidenceIds": [],
+            "model": null
+          },
+          "changes": {
+            "added": [],
+            "changed": [],
+            "disputed": []
+          },
+          "gaps": [
+            {
+              "kind": "manual_unchecked",
+              "stage": "components",
+              "product": "金融基础设施产品",
+              "claim": "2025年行业收入12亿元",
+              "reasonCodes": [
+                "quote_not_found"
+              ],
+              "evidenceRefs": [
+                {
+                  "url": "https://example.org/a",
+                  "quote": "不存在的原文"
+                }
+              ],
+              "metrics": [
+                {
+                  "name": "收入",
+                  "value": null,
+                  "rawValue": "12",
+                  "unit": "亿元",
+                  "scope": "2025年行业",
+                  "period": "2025",
+                  "evidenceId": null,
+                  "reasonCode": "METRIC_UNVERIFIED"
+                }
+              ]
+            }
+          ],
+          "run": {
+            "requestedCount": 1,
+            "successCount": 1,
+            "failedCount": 0,
+            "duplicateCount": 0,
+            "startedAt": "2026-10-14T00:00:00.000Z",
+            "completedAt": "2026-10-14T00:00:00.000Z",
+            "ai": "disabled",
+            "partial": false,
+            "errors": []
+          },
+          "status": "complete",
+          "contentHash": "805b5c321c42e573bb77a602597f710b29afd178fb45260422ca8f5892a19503",
+          "evidence": [
+            {
+              "id": "evidence_00000000-0000-4000-8000-000000000002",
+              "canonicalUrl": "https://example.org/a",
+              "requestedUrl": "https://example.org/a",
+              "finalUrl": "https://example.org/a",
+              "contentSha256": "da711a1844c890f50d2ff0893ec6adaa9473e9a7e103e20c0f1db775a8a1a385",
+              "title": "受控原资料",
+              "publishedAt": "2026-10-13T23:59:00.000Z",
+              "fetchedAt": "2026-10-14T00:00:00.000Z",
+              "locator": {
+                "type": "controlled-full-text",
+                "offsetUnit": "UTF-16/legacy-normalizeText"
+              },
+              "extractorVersion": "fixture-no-network",
+              "status": "fetched"
+            }
+          ]
+        }
+      },
+      "second": null,
+      "archive": {
+        "topics": [
+          {
+            "id": "bellows",
+            "name": "波纹管",
+            "aliases": [
+              "bellows"
+            ],
+            "sourceUrls": [],
+            "enabled": false,
+            "intervalMinutes": 1440,
+            "lastAttemptAt": null,
+            "lastSuccessAt": null,
+            "nextDueAt": null,
+            "currentVersionId": null,
+            "config": {}
+          },
+          {
+            "id": "diamond-thermal",
+            "name": "金刚石散热",
+            "aliases": [
+              "diamond",
+              "thermal spreader"
+            ],
+            "sourceUrls": [],
+            "enabled": false,
+            "intervalMinutes": 1440,
+            "lastAttemptAt": null,
+            "lastSuccessAt": null,
+            "nextDueAt": null,
+            "currentVersionId": null,
+            "config": {}
+          },
+          {
+            "id": "f08-topic",
+            "name": "金融基础设施",
+            "aliases": [
+              "原别名"
+            ],
+            "sourceUrls": [
+              "https://example.org/a"
+            ],
+            "enabled": false,
+            "intervalMinutes": 1440,
+            "lastAttemptAt": "2026-10-14T00:00:00.000Z",
+            "lastSuccessAt": "2026-10-14T00:00:00.000Z",
+            "nextDueAt": "2026-10-15T00:00:00.000Z",
+            "currentVersionId": "version_00000000-0000-4000-8000-000000000003",
+            "config": {}
+          },
+          {
+            "id": "thin-film-lithium-niobate",
+            "name": "薄膜铌酸锂",
+            "aliases": [
+              "薄膜铌酸锂",
+              "thin-film lithium niobate"
+            ],
+            "sourceUrls": [],
+            "enabled": false,
+            "intervalMinutes": 1440,
+            "lastAttemptAt": null,
+            "lastSuccessAt": null,
+            "nextDueAt": null,
+            "currentVersionId": null,
+            "config": {}
+          },
+          {
+            "id": "v-groove-fau",
+            "name": "V型槽/FAU",
+            "aliases": [
+              "v-groove",
+              "FAU"
+            ],
+            "sourceUrls": [],
+            "enabled": false,
+            "intervalMinutes": 1440,
+            "lastAttemptAt": null,
+            "lastSuccessAt": null,
+            "nextDueAt": null,
+            "currentVersionId": null,
+            "config": {}
+          }
+        ],
+        "evidence": [
+          {
+            "id": "evidence_00000000-0000-4000-8000-000000000002",
+            "canonicalUrl": "https://example.org/a",
+            "contentSha256": "da711a1844c890f50d2ff0893ec6adaa9473e9a7e103e20c0f1db775a8a1a385",
+            "createdAt": "2026-10-14T00:00:00.000Z",
+            "payload": {
+              "canonicalUrl": "https://example.org/a",
+              "requestedUrl": "https://example.org/a",
+              "finalUrl": "https://example.org/a",
+              "contentSha256": "da711a1844c890f50d2ff0893ec6adaa9473e9a7e103e20c0f1db775a8a1a385",
+              "title": "受控原资料",
+              "publishedAt": "2026-10-13T23:59:00.000Z",
+              "fetchedAt": "2026-10-14T00:00:00.000Z",
+              "locator": {
+                "type": "controlled-full-text",
+                "offsetUnit": "UTF-16/legacy-normalizeText"
+              },
+              "extractorVersion": "fixture-no-network",
+              "id": "evidence_00000000-0000-4000-8000-000000000002",
+              "status": "fetched",
+              "text": "金融基础设施产品。2025年行业收入12亿元；原文完整尾部。"
+            }
+          }
+        ],
+        "versions": [
+          {
+            "id": "version_00000000-0000-4000-8000-000000000003",
+            "topicId": "f08-topic",
+            "sequence": 1,
+            "previousVersionId": null,
+            "contentHash": "805b5c321c42e573bb77a602597f710b29afd178fb45260422ca8f5892a19503",
+            "createdAt": "2026-10-14T00:00:00.000Z",
+            "payload": {
+              "id": "version_00000000-0000-4000-8000-000000000003",
+              "topicId": "f08-topic",
+              "sequence": 1,
+              "previousVersionId": null,
+              "createdAt": "2026-10-14T00:00:00.000Z",
+              "knowledgeCutoffAt": "2026-10-14T00:00:00.000Z",
+              "evidenceIds": [
+                "evidence_00000000-0000-4000-8000-000000000002"
+              ],
+              "relations": [],
+              "analysis": {
+                "kind": "none",
+                "text": "",
+                "evidenceIds": [],
+                "model": null
+              },
+              "changes": {
+                "added": [],
+                "changed": [],
+                "disputed": []
+              },
+              "gaps": [
+                {
+                  "kind": "manual_unchecked",
+                  "stage": "components",
+                  "product": "金融基础设施产品",
+                  "claim": "2025年行业收入12亿元",
+                  "reasonCodes": [
+                    "quote_not_found"
+                  ],
+                  "evidenceRefs": [
+                    {
+                      "url": "https://example.org/a",
+                      "quote": "不存在的原文"
+                    }
+                  ],
+                  "metrics": [
+                    {
+                      "name": "收入",
+                      "value": null,
+                      "rawValue": "12",
+                      "unit": "亿元",
+                      "scope": "2025年行业",
+                      "period": "2025",
+                      "evidenceId": null,
+                      "reasonCode": "METRIC_UNVERIFIED"
+                    }
+                  ]
+                }
+              ],
+              "run": {
+                "requestedCount": 1,
+                "successCount": 1,
+                "failedCount": 0,
+                "duplicateCount": 0,
+                "startedAt": "2026-10-14T00:00:00.000Z",
+                "completedAt": "2026-10-14T00:00:00.000Z",
+                "ai": "disabled",
+                "partial": false,
+                "errors": []
+              },
+              "status": "complete",
+              "contentHash": "805b5c321c42e573bb77a602597f710b29afd178fb45260422ca8f5892a19503"
+            }
+          }
+        ],
+        "runs": [
+          {
+            "id": "run_00000000-0000-4000-8000-000000000001",
+            "topicId": "f08-topic",
+            "status": "succeeded",
+            "startedAt": "2026-10-14T00:00:00.000Z",
+            "completedAt": "2026-10-14T00:00:00.000Z",
+            "payload": {
+              "requestedCount": 1,
+              "successCount": 1,
+              "failedCount": 0,
+              "duplicateCount": 0,
+              "startedAt": "2026-10-14T00:00:00.000Z",
+              "completedAt": "2026-10-14T00:00:00.000Z",
+              "ai": "disabled",
+              "partial": false,
+              "errors": []
+            }
+          }
+        ]
+      },
+      "fetchCalls": 1,
+      "sqlite": "3.53.1"
+    },
+    {
+      "name": "metric-context-gap",
+      "before": {
+        "topics": [
+          {
+            "id": "bellows",
+            "name": "波纹管",
+            "aliases": [
+              "bellows"
+            ],
+            "sourceUrls": [],
+            "enabled": false,
+            "intervalMinutes": 1440,
+            "lastAttemptAt": null,
+            "lastSuccessAt": null,
+            "nextDueAt": null,
+            "currentVersionId": null,
+            "config": {}
+          },
+          {
+            "id": "diamond-thermal",
+            "name": "金刚石散热",
+            "aliases": [
+              "diamond",
+              "thermal spreader"
+            ],
+            "sourceUrls": [],
+            "enabled": false,
+            "intervalMinutes": 1440,
+            "lastAttemptAt": null,
+            "lastSuccessAt": null,
+            "nextDueAt": null,
+            "currentVersionId": null,
+            "config": {}
+          },
+          {
+            "id": "f08-topic",
+            "name": "金融基础设施",
+            "aliases": [
+              "原别名"
+            ],
+            "sourceUrls": [
+              "https://example.org/a"
+            ],
+            "enabled": false,
+            "intervalMinutes": 1440,
+            "lastAttemptAt": null,
+            "lastSuccessAt": null,
+            "nextDueAt": null,
+            "currentVersionId": null,
+            "config": {}
+          },
+          {
+            "id": "thin-film-lithium-niobate",
+            "name": "薄膜铌酸锂",
+            "aliases": [
+              "薄膜铌酸锂",
+              "thin-film lithium niobate"
+            ],
+            "sourceUrls": [],
+            "enabled": false,
+            "intervalMinutes": 1440,
+            "lastAttemptAt": null,
+            "lastSuccessAt": null,
+            "nextDueAt": null,
+            "currentVersionId": null,
+            "config": {}
+          },
+          {
+            "id": "v-groove-fau",
+            "name": "V型槽/FAU",
+            "aliases": [
+              "v-groove",
+              "FAU"
+            ],
+            "sourceUrls": [],
+            "enabled": false,
+            "intervalMinutes": 1440,
+            "lastAttemptAt": null,
+            "lastSuccessAt": null,
+            "nextDueAt": null,
+            "currentVersionId": null,
+            "config": {}
+          }
+        ],
+        "evidence": [],
+        "versions": [],
+        "runs": []
+      },
+      "sourceAcquisitions": [
+        {
+          "canonicalUrl": "https://example.org/a",
+          "requestedUrl": "https://example.org/a",
+          "finalUrl": "https://example.org/a",
+          "contentSha256": "da711a1844c890f50d2ff0893ec6adaa9473e9a7e103e20c0f1db775a8a1a385",
+          "text": "金融基础设施产品。2025年行业收入12亿元；原文完整尾部。",
+          "title": "受控原资料",
+          "publishedAt": "2026-10-13T23:59:00.000Z",
+          "fetchedAt": "2026-10-14T00:00:00.000Z",
+          "locator": {
+            "type": "controlled-full-text",
+            "offsetUnit": "UTF-16/legacy-normalizeText"
+          },
+          "extractorVersion": "fixture-no-network"
+        }
+      ],
+      "normalizedProposals": [
+        {
+          "stage": "components",
+          "product": "金融基础设施产品",
+          "company": {
+            "name": "待绑定公司",
+            "stockCode": null,
+            "identityEvidenceIds": []
+          },
+          "claim": "2025年行业收入12亿元",
+          "polarity": "supports",
+          "evidenceRefs": [
+            {
+              "url": "https://example.org/a",
+              "quote": "2025年行业收入12亿元"
+            }
+          ],
+          "metrics": [
+            {
+              "name": "收入",
+              "value": 12,
+              "rawValue": "12",
+              "unit": "亿元",
+              "scope": "不在引文的范围",
+              "period": null,
+              "evidenceId": null
+            }
+          ]
+        }
+      ],
+      "startedAt": "2026-10-14T00:00:00.000Z",
+      "input": {
+        "proposals": [
+          {
+            "stage": "components",
+            "product": "金融基础设施产品",
+            "company": {
+              "name": "待绑定公司",
+              "stockCode": "600000"
+            },
+            "claim": "2025年行业收入12亿元",
+            "polarity": "supports",
+            "evidenceRefs": [
+              {
+                "url": "https://example.org/a",
+                "quote": "2025年行业收入12亿元"
+              }
+            ],
+            "metrics": [
+              {
+                "name": "收入",
+                "value": 12,
+                "rawValue": "12",
+                "unit": "亿元",
+                "scope": "不在引文的范围"
+              }
+            ]
+          }
+        ]
+      },
+      "expected": {
+        "run": {
+          "id": "run_00000000-0000-4000-8000-000000000001",
+          "status": "succeeded",
+          "requestedCount": 1,
+          "successCount": 1,
+          "failedCount": 0,
+          "duplicateCount": 0,
+          "startedAt": "2026-10-14T00:00:00.000Z",
+          "completedAt": "2026-10-14T00:00:00.000Z",
+          "ai": "disabled",
+          "partial": false,
+          "errors": []
+        },
+        "currentVersion": {
+          "id": "version_00000000-0000-4000-8000-000000000004",
+          "topicId": "f08-topic",
+          "sequence": 1,
+          "previousVersionId": null,
+          "createdAt": "2026-10-14T00:00:00.000Z",
+          "knowledgeCutoffAt": "2026-10-14T00:00:00.000Z",
+          "evidenceIds": [
+            "evidence_00000000-0000-4000-8000-000000000002"
+          ],
+          "relations": [
+            {
+              "id": "relation_00000000-0000-4000-8000-000000000003",
+              "topicId": "f08-topic",
+              "stage": "components",
+              "product": "金融基础设施产品",
+              "company": {
+                "name": "待绑定公司",
+                "stockCode": null,
+                "identityEvidenceIds": []
+              },
+              "claim": "2025年行业收入12亿元",
+              "evidenceIds": [
+                "evidence_00000000-0000-4000-8000-000000000002"
+              ],
+              "evidenceRefs": [
+                {
+                  "evidenceId": "evidence_00000000-0000-4000-8000-000000000002",
+                  "url": "https://example.org/a",
+                  "quote": "2025年行业收入12亿元",
+                  "locator": {
+                    "type": "controlled-full-text",
+                    "offsetUnit": "UTF-16/legacy-normalizeText"
+                  },
+                  "start": 9,
+                  "end": 22,
+                  "position": {
+                    "start": 9,
+                    "end": 22
+                  }
+                }
+              ],
+              "polarity": "supports",
+              "status": "candidate",
+              "reasonCodes": [],
+              "metrics": [
+                {
+                  "name": "收入",
+                  "value": null,
+                  "rawValue": "12",
+                  "unit": "亿元",
+                  "scope": "不在引文的范围",
+                  "period": null,
+                  "evidenceId": null,
+                  "reasonCode": "METRIC_UNVERIFIED"
+                }
+              ],
+              "review": null
+            }
+          ],
+          "analysis": {
+            "kind": "none",
+            "text": "",
+            "evidenceIds": [],
+            "model": null
+          },
+          "changes": {
+            "added": [
+              "relation_00000000-0000-4000-8000-000000000003"
+            ],
+            "changed": [],
+            "disputed": []
+          },
+          "gaps": [
+            {
+              "kind": "metric_unchecked",
+              "stage": "components",
+              "product": "金融基础设施产品",
+              "claim": "2025年行业收入12亿元",
+              "metric": {
+                "name": "收入",
+                "value": null,
+                "rawValue": "12",
+                "unit": "亿元",
+                "scope": "不在引文的范围",
+                "period": null,
+                "evidenceId": null,
+                "reasonCode": "METRIC_UNVERIFIED"
+              },
+              "reasonCodes": [
+                "METRIC_UNVERIFIED"
+              ],
+              "evidenceRefs": [
+                {
+                  "evidenceId": "evidence_00000000-0000-4000-8000-000000000002",
+                  "url": "https://example.org/a",
+                  "quote": "2025年行业收入12亿元",
+                  "locator": {
+                    "type": "controlled-full-text",
+                    "offsetUnit": "UTF-16/legacy-normalizeText"
+                  },
+                  "start": 9,
+                  "end": 22,
+                  "position": {
+                    "start": 9,
+                    "end": 22
+                  }
+                }
+              ]
+            }
+          ],
+          "run": {
+            "requestedCount": 1,
+            "successCount": 1,
+            "failedCount": 0,
+            "duplicateCount": 0,
+            "startedAt": "2026-10-14T00:00:00.000Z",
+            "completedAt": "2026-10-14T00:00:00.000Z",
+            "ai": "disabled",
+            "partial": false,
+            "errors": []
+          },
+          "status": "complete",
+          "contentHash": "b9cc123a5384f692294d5204261154a659f07e24f2a8fe298018579751123ef2",
+          "evidence": [
+            {
+              "id": "evidence_00000000-0000-4000-8000-000000000002",
+              "canonicalUrl": "https://example.org/a",
+              "requestedUrl": "https://example.org/a",
+              "finalUrl": "https://example.org/a",
+              "contentSha256": "da711a1844c890f50d2ff0893ec6adaa9473e9a7e103e20c0f1db775a8a1a385",
+              "title": "受控原资料",
+              "publishedAt": "2026-10-13T23:59:00.000Z",
+              "fetchedAt": "2026-10-14T00:00:00.000Z",
+              "locator": {
+                "type": "controlled-full-text",
+                "offsetUnit": "UTF-16/legacy-normalizeText"
+              },
+              "extractorVersion": "fixture-no-network",
+              "status": "fetched"
+            }
+          ]
+        }
+      },
+      "second": null,
+      "archive": {
+        "topics": [
+          {
+            "id": "bellows",
+            "name": "波纹管",
+            "aliases": [
+              "bellows"
+            ],
+            "sourceUrls": [],
+            "enabled": false,
+            "intervalMinutes": 1440,
+            "lastAttemptAt": null,
+            "lastSuccessAt": null,
+            "nextDueAt": null,
+            "currentVersionId": null,
+            "config": {}
+          },
+          {
+            "id": "diamond-thermal",
+            "name": "金刚石散热",
+            "aliases": [
+              "diamond",
+              "thermal spreader"
+            ],
+            "sourceUrls": [],
+            "enabled": false,
+            "intervalMinutes": 1440,
+            "lastAttemptAt": null,
+            "lastSuccessAt": null,
+            "nextDueAt": null,
+            "currentVersionId": null,
+            "config": {}
+          },
+          {
+            "id": "f08-topic",
+            "name": "金融基础设施",
+            "aliases": [
+              "原别名"
+            ],
+            "sourceUrls": [
+              "https://example.org/a"
+            ],
+            "enabled": false,
+            "intervalMinutes": 1440,
+            "lastAttemptAt": "2026-10-14T00:00:00.000Z",
+            "lastSuccessAt": "2026-10-14T00:00:00.000Z",
+            "nextDueAt": "2026-10-15T00:00:00.000Z",
+            "currentVersionId": "version_00000000-0000-4000-8000-000000000004",
+            "config": {}
+          },
+          {
+            "id": "thin-film-lithium-niobate",
+            "name": "薄膜铌酸锂",
+            "aliases": [
+              "薄膜铌酸锂",
+              "thin-film lithium niobate"
+            ],
+            "sourceUrls": [],
+            "enabled": false,
+            "intervalMinutes": 1440,
+            "lastAttemptAt": null,
+            "lastSuccessAt": null,
+            "nextDueAt": null,
+            "currentVersionId": null,
+            "config": {}
+          },
+          {
+            "id": "v-groove-fau",
+            "name": "V型槽/FAU",
+            "aliases": [
+              "v-groove",
+              "FAU"
+            ],
+            "sourceUrls": [],
+            "enabled": false,
+            "intervalMinutes": 1440,
+            "lastAttemptAt": null,
+            "lastSuccessAt": null,
+            "nextDueAt": null,
+            "currentVersionId": null,
+            "config": {}
+          }
+        ],
+        "evidence": [
+          {
+            "id": "evidence_00000000-0000-4000-8000-000000000002",
+            "canonicalUrl": "https://example.org/a",
+            "contentSha256": "da711a1844c890f50d2ff0893ec6adaa9473e9a7e103e20c0f1db775a8a1a385",
+            "createdAt": "2026-10-14T00:00:00.000Z",
+            "payload": {
+              "canonicalUrl": "https://example.org/a",
+              "requestedUrl": "https://example.org/a",
+              "finalUrl": "https://example.org/a",
+              "contentSha256": "da711a1844c890f50d2ff0893ec6adaa9473e9a7e103e20c0f1db775a8a1a385",
+              "title": "受控原资料",
+              "publishedAt": "2026-10-13T23:59:00.000Z",
+              "fetchedAt": "2026-10-14T00:00:00.000Z",
+              "locator": {
+                "type": "controlled-full-text",
+                "offsetUnit": "UTF-16/legacy-normalizeText"
+              },
+              "extractorVersion": "fixture-no-network",
+              "id": "evidence_00000000-0000-4000-8000-000000000002",
+              "status": "fetched",
+              "text": "金融基础设施产品。2025年行业收入12亿元；原文完整尾部。"
+            }
+          }
+        ],
+        "versions": [
+          {
+            "id": "version_00000000-0000-4000-8000-000000000004",
+            "topicId": "f08-topic",
+            "sequence": 1,
+            "previousVersionId": null,
+            "contentHash": "b9cc123a5384f692294d5204261154a659f07e24f2a8fe298018579751123ef2",
+            "createdAt": "2026-10-14T00:00:00.000Z",
+            "payload": {
+              "id": "version_00000000-0000-4000-8000-000000000004",
+              "topicId": "f08-topic",
+              "sequence": 1,
+              "previousVersionId": null,
+              "createdAt": "2026-10-14T00:00:00.000Z",
+              "knowledgeCutoffAt": "2026-10-14T00:00:00.000Z",
+              "evidenceIds": [
+                "evidence_00000000-0000-4000-8000-000000000002"
+              ],
+              "relations": [
+                {
+                  "id": "relation_00000000-0000-4000-8000-000000000003",
+                  "topicId": "f08-topic",
+                  "stage": "components",
+                  "product": "金融基础设施产品",
+                  "company": {
+                    "name": "待绑定公司",
+                    "stockCode": null,
+                    "identityEvidenceIds": []
+                  },
+                  "claim": "2025年行业收入12亿元",
+                  "evidenceIds": [
+                    "evidence_00000000-0000-4000-8000-000000000002"
+                  ],
+                  "evidenceRefs": [
+                    {
+                      "evidenceId": "evidence_00000000-0000-4000-8000-000000000002",
+                      "url": "https://example.org/a",
+                      "quote": "2025年行业收入12亿元",
+                      "locator": {
+                        "type": "controlled-full-text",
+                        "offsetUnit": "UTF-16/legacy-normalizeText"
+                      },
+                      "start": 9,
+                      "end": 22,
+                      "position": {
+                        "start": 9,
+                        "end": 22
+                      }
+                    }
+                  ],
+                  "polarity": "supports",
+                  "status": "candidate",
+                  "reasonCodes": [],
+                  "metrics": [
+                    {
+                      "name": "收入",
+                      "value": null,
+                      "rawValue": "12",
+                      "unit": "亿元",
+                      "scope": "不在引文的范围",
+                      "period": null,
+                      "evidenceId": null,
+                      "reasonCode": "METRIC_UNVERIFIED"
+                    }
+                  ],
+                  "review": null
+                }
+              ],
+              "analysis": {
+                "kind": "none",
+                "text": "",
+                "evidenceIds": [],
+                "model": null
+              },
+              "changes": {
+                "added": [
+                  "relation_00000000-0000-4000-8000-000000000003"
+                ],
+                "changed": [],
+                "disputed": []
+              },
+              "gaps": [
+                {
+                  "kind": "metric_unchecked",
+                  "stage": "components",
+                  "product": "金融基础设施产品",
+                  "claim": "2025年行业收入12亿元",
+                  "metric": {
+                    "name": "收入",
+                    "value": null,
+                    "rawValue": "12",
+                    "unit": "亿元",
+                    "scope": "不在引文的范围",
+                    "period": null,
+                    "evidenceId": null,
+                    "reasonCode": "METRIC_UNVERIFIED"
+                  },
+                  "reasonCodes": [
+                    "METRIC_UNVERIFIED"
+                  ],
+                  "evidenceRefs": [
+                    {
+                      "evidenceId": "evidence_00000000-0000-4000-8000-000000000002",
+                      "url": "https://example.org/a",
+                      "quote": "2025年行业收入12亿元",
+                      "locator": {
+                        "type": "controlled-full-text",
+                        "offsetUnit": "UTF-16/legacy-normalizeText"
+                      },
+                      "start": 9,
+                      "end": 22,
+                      "position": {
+                        "start": 9,
+                        "end": 22
+                      }
+                    }
+                  ]
+                }
+              ],
+              "run": {
+                "requestedCount": 1,
+                "successCount": 1,
+                "failedCount": 0,
+                "duplicateCount": 0,
+                "startedAt": "2026-10-14T00:00:00.000Z",
+                "completedAt": "2026-10-14T00:00:00.000Z",
+                "ai": "disabled",
+                "partial": false,
+                "errors": []
+              },
+              "status": "complete",
+              "contentHash": "b9cc123a5384f692294d5204261154a659f07e24f2a8fe298018579751123ef2"
+            }
+          }
+        ],
+        "runs": [
+          {
+            "id": "run_00000000-0000-4000-8000-000000000001",
+            "topicId": "f08-topic",
+            "status": "succeeded",
+            "startedAt": "2026-10-14T00:00:00.000Z",
+            "completedAt": "2026-10-14T00:00:00.000Z",
+            "payload": {
+              "requestedCount": 1,
+              "successCount": 1,
+              "failedCount": 0,
+              "duplicateCount": 0,
+              "startedAt": "2026-10-14T00:00:00.000Z",
+              "completedAt": "2026-10-14T00:00:00.000Z",
+              "ai": "disabled",
+              "partial": false,
+              "errors": []
+            }
+          }
+        ]
+      },
+      "fetchCalls": 1,
+      "sqlite": "3.53.1"
+    },
+    {
+      "name": "source-failure",
+      "before": {
+        "topics": [
+          {
+            "id": "bellows",
+            "name": "波纹管",
+            "aliases": [
+              "bellows"
+            ],
+            "sourceUrls": [],
+            "enabled": false,
+            "intervalMinutes": 1440,
+            "lastAttemptAt": null,
+            "lastSuccessAt": null,
+            "nextDueAt": null,
+            "currentVersionId": null,
+            "config": {}
+          },
+          {
+            "id": "diamond-thermal",
+            "name": "金刚石散热",
+            "aliases": [
+              "diamond",
+              "thermal spreader"
+            ],
+            "sourceUrls": [],
+            "enabled": false,
+            "intervalMinutes": 1440,
+            "lastAttemptAt": null,
+            "lastSuccessAt": null,
+            "nextDueAt": null,
+            "currentVersionId": null,
+            "config": {}
+          },
+          {
+            "id": "f08-topic",
+            "name": "金融基础设施",
+            "aliases": [
+              "原别名"
+            ],
+            "sourceUrls": [
+              "https://example.org/a"
+            ],
+            "enabled": false,
+            "intervalMinutes": 1440,
+            "lastAttemptAt": null,
+            "lastSuccessAt": null,
+            "nextDueAt": null,
+            "currentVersionId": null,
+            "config": {}
+          },
+          {
+            "id": "thin-film-lithium-niobate",
+            "name": "薄膜铌酸锂",
+            "aliases": [
+              "薄膜铌酸锂",
+              "thin-film lithium niobate"
+            ],
+            "sourceUrls": [],
+            "enabled": false,
+            "intervalMinutes": 1440,
+            "lastAttemptAt": null,
+            "lastSuccessAt": null,
+            "nextDueAt": null,
+            "currentVersionId": null,
+            "config": {}
+          },
+          {
+            "id": "v-groove-fau",
+            "name": "V型槽/FAU",
+            "aliases": [
+              "v-groove",
+              "FAU"
+            ],
+            "sourceUrls": [],
+            "enabled": false,
+            "intervalMinutes": 1440,
+            "lastAttemptAt": null,
+            "lastSuccessAt": null,
+            "nextDueAt": null,
+            "currentVersionId": null,
+            "config": {}
+          }
+        ],
+        "evidence": [],
+        "versions": [],
+        "runs": []
+      },
+      "sourceAcquisitions": [
+        {
+          "requestedUrl": "https://example.org/missing",
+          "errorCode": "SOURCE_UNAVAILABLE"
+        }
+      ],
+      "normalizedProposals": [
+        {
+          "stage": "components",
+          "product": "金融基础设施产品",
+          "company": {
+            "name": "待绑定公司",
+            "stockCode": null,
+            "identityEvidenceIds": []
+          },
+          "claim": "2025年行业收入12亿元",
+          "polarity": "supports",
+          "evidenceRefs": [
+            {
+              "url": "https://example.org/a",
+              "quote": "2025年行业收入12亿元"
+            }
+          ],
+          "metrics": [
+            {
+              "name": "收入",
+              "value": 12,
+              "rawValue": "12",
+              "unit": "亿元",
+              "scope": "2025年行业",
+              "period": "2025",
+              "evidenceId": null
+            }
+          ]
+        }
+      ],
+      "startedAt": "2026-10-14T00:00:00.000Z",
+      "input": {
+        "sourceUrls": [
+          "https://example.org/missing"
+        ],
+        "proposals": [
+          {
+            "stage": "components",
+            "product": "金融基础设施产品",
+            "company": {
+              "name": "待绑定公司",
+              "stockCode": "600000"
+            },
+            "claim": "2025年行业收入12亿元",
+            "polarity": "supports",
+            "evidenceRefs": [
+              {
+                "url": "https://example.org/a",
+                "quote": "2025年行业收入12亿元"
+              }
+            ],
+            "metrics": [
+              {
+                "name": "收入",
+                "value": 12,
+                "rawValue": "12",
+                "unit": "亿元",
+                "scope": "2025年行业",
+                "period": "2025"
+              }
+            ]
+          }
+        ]
+      },
+      "expected": {
+        "run": {
+          "id": "run_00000000-0000-4000-8000-000000000001",
+          "status": "failed",
+          "requestedCount": 1,
+          "successCount": 0,
+          "failedCount": 1,
+          "duplicateCount": 0,
+          "errors": [
+            {
+              "url": "https://example.org/missing",
+              "code": "SOURCE_UNAVAILABLE"
+            }
+          ],
+          "partial": false,
+          "knowledgeCutoffAt": "2026-10-14T00:00:00.000Z",
+          "startedAt": "2026-10-14T00:00:00.000Z",
+          "completedAt": "2026-10-14T00:00:00.000Z",
+          "ai": "disabled"
+        },
+        "currentVersion": null
+      },
+      "second": null,
+      "archive": {
+        "topics": [
+          {
+            "id": "bellows",
+            "name": "波纹管",
+            "aliases": [
+              "bellows"
+            ],
+            "sourceUrls": [],
+            "enabled": false,
+            "intervalMinutes": 1440,
+            "lastAttemptAt": null,
+            "lastSuccessAt": null,
+            "nextDueAt": null,
+            "currentVersionId": null,
+            "config": {}
+          },
+          {
+            "id": "diamond-thermal",
+            "name": "金刚石散热",
+            "aliases": [
+              "diamond",
+              "thermal spreader"
+            ],
+            "sourceUrls": [],
+            "enabled": false,
+            "intervalMinutes": 1440,
+            "lastAttemptAt": null,
+            "lastSuccessAt": null,
+            "nextDueAt": null,
+            "currentVersionId": null,
+            "config": {}
+          },
+          {
+            "id": "f08-topic",
+            "name": "金融基础设施",
+            "aliases": [
+              "原别名"
+            ],
+            "sourceUrls": [
+              "https://example.org/a"
+            ],
+            "enabled": false,
+            "intervalMinutes": 1440,
+            "lastAttemptAt": "2026-10-14T00:00:00.000Z",
+            "lastSuccessAt": null,
+            "nextDueAt": "2026-10-15T00:00:00.000Z",
+            "currentVersionId": null,
+            "config": {}
+          },
+          {
+            "id": "thin-film-lithium-niobate",
+            "name": "薄膜铌酸锂",
+            "aliases": [
+              "薄膜铌酸锂",
+              "thin-film lithium niobate"
+            ],
+            "sourceUrls": [],
+            "enabled": false,
+            "intervalMinutes": 1440,
+            "lastAttemptAt": null,
+            "lastSuccessAt": null,
+            "nextDueAt": null,
+            "currentVersionId": null,
+            "config": {}
+          },
+          {
+            "id": "v-groove-fau",
+            "name": "V型槽/FAU",
+            "aliases": [
+              "v-groove",
+              "FAU"
+            ],
+            "sourceUrls": [],
+            "enabled": false,
+            "intervalMinutes": 1440,
+            "lastAttemptAt": null,
+            "lastSuccessAt": null,
+            "nextDueAt": null,
+            "currentVersionId": null,
+            "config": {}
+          }
+        ],
+        "evidence": [],
+        "versions": [],
+        "runs": [
+          {
+            "id": "run_00000000-0000-4000-8000-000000000001",
+            "topicId": "f08-topic",
+            "status": "failed",
+            "startedAt": "2026-10-14T00:00:00.000Z",
+            "completedAt": "2026-10-14T00:00:00.000Z",
+            "payload": {
+              "requestedCount": 1,
+              "successCount": 0,
+              "failedCount": 1,
+              "duplicateCount": 0,
+              "errors": [
+                {
+                  "url": "https://example.org/missing",
+                  "code": "SOURCE_UNAVAILABLE"
+                }
+              ],
+              "partial": false,
+              "knowledgeCutoffAt": "2026-10-14T00:00:00.000Z",
+              "startedAt": "2026-10-14T00:00:00.000Z",
+              "completedAt": "2026-10-14T00:00:00.000Z",
+              "ai": "disabled"
+            }
+          }
+        ]
+      },
+      "fetchCalls": 1,
+      "sqlite": "3.53.1"
+    },
+    {
+      "name": "partial-source",
+      "before": {
+        "topics": [
+          {
+            "id": "bellows",
+            "name": "波纹管",
+            "aliases": [
+              "bellows"
+            ],
+            "sourceUrls": [],
+            "enabled": false,
+            "intervalMinutes": 1440,
+            "lastAttemptAt": null,
+            "lastSuccessAt": null,
+            "nextDueAt": null,
+            "currentVersionId": null,
+            "config": {}
+          },
+          {
+            "id": "diamond-thermal",
+            "name": "金刚石散热",
+            "aliases": [
+              "diamond",
+              "thermal spreader"
+            ],
+            "sourceUrls": [],
+            "enabled": false,
+            "intervalMinutes": 1440,
+            "lastAttemptAt": null,
+            "lastSuccessAt": null,
+            "nextDueAt": null,
+            "currentVersionId": null,
+            "config": {}
+          },
+          {
+            "id": "f08-topic",
+            "name": "金融基础设施",
+            "aliases": [
+              "原别名"
+            ],
+            "sourceUrls": [
+              "https://example.org/a"
+            ],
+            "enabled": false,
+            "intervalMinutes": 1440,
+            "lastAttemptAt": null,
+            "lastSuccessAt": null,
+            "nextDueAt": null,
+            "currentVersionId": null,
+            "config": {}
+          },
+          {
+            "id": "thin-film-lithium-niobate",
+            "name": "薄膜铌酸锂",
+            "aliases": [
+              "薄膜铌酸锂",
+              "thin-film lithium niobate"
+            ],
+            "sourceUrls": [],
+            "enabled": false,
+            "intervalMinutes": 1440,
+            "lastAttemptAt": null,
+            "lastSuccessAt": null,
+            "nextDueAt": null,
+            "currentVersionId": null,
+            "config": {}
+          },
+          {
+            "id": "v-groove-fau",
+            "name": "V型槽/FAU",
+            "aliases": [
+              "v-groove",
+              "FAU"
+            ],
+            "sourceUrls": [],
+            "enabled": false,
+            "intervalMinutes": 1440,
+            "lastAttemptAt": null,
+            "lastSuccessAt": null,
+            "nextDueAt": null,
+            "currentVersionId": null,
+            "config": {}
+          }
+        ],
+        "evidence": [],
+        "versions": [],
+        "runs": []
+      },
+      "sourceAcquisitions": [
+        {
+          "canonicalUrl": "https://example.org/a",
+          "requestedUrl": "https://example.org/a",
+          "finalUrl": "https://example.org/a",
+          "contentSha256": "da711a1844c890f50d2ff0893ec6adaa9473e9a7e103e20c0f1db775a8a1a385",
+          "text": "金融基础设施产品。2025年行业收入12亿元；原文完整尾部。",
+          "title": "受控原资料",
+          "publishedAt": "2026-10-13T23:59:00.000Z",
+          "fetchedAt": "2026-10-14T00:00:00.000Z",
+          "locator": {
+            "type": "controlled-full-text",
+            "offsetUnit": "UTF-16/legacy-normalizeText"
+          },
+          "extractorVersion": "fixture-no-network"
+        },
+        {
+          "requestedUrl": "https://example.org/missing",
+          "errorCode": "SOURCE_UNAVAILABLE"
+        }
+      ],
+      "normalizedProposals": [
+        {
+          "stage": "components",
+          "product": "金融基础设施产品",
+          "company": {
+            "name": "待绑定公司",
+            "stockCode": null,
+            "identityEvidenceIds": []
+          },
+          "claim": "2025年行业收入12亿元",
+          "polarity": "supports",
+          "evidenceRefs": [
+            {
+              "url": "https://example.org/a",
+              "quote": "2025年行业收入12亿元"
+            }
+          ],
+          "metrics": [
+            {
+              "name": "收入",
+              "value": 12,
+              "rawValue": "12",
+              "unit": "亿元",
+              "scope": "2025年行业",
+              "period": "2025",
+              "evidenceId": null
+            }
+          ]
+        }
+      ],
+      "startedAt": "2026-10-14T00:00:00.000Z",
+      "input": {
+        "sourceUrls": [
+          "https://example.org/a",
+          "https://example.org/missing"
+        ],
+        "proposals": [
+          {
+            "stage": "components",
+            "product": "金融基础设施产品",
+            "company": {
+              "name": "待绑定公司",
+              "stockCode": "600000"
+            },
+            "claim": "2025年行业收入12亿元",
+            "polarity": "supports",
+            "evidenceRefs": [
+              {
+                "url": "https://example.org/a",
+                "quote": "2025年行业收入12亿元"
+              }
+            ],
+            "metrics": [
+              {
+                "name": "收入",
+                "value": 12,
+                "rawValue": "12",
+                "unit": "亿元",
+                "scope": "2025年行业",
+                "period": "2025"
+              }
+            ]
+          }
+        ]
+      },
+      "expected": {
+        "run": {
+          "id": "run_00000000-0000-4000-8000-000000000001",
+          "status": "partial",
+          "requestedCount": 2,
+          "successCount": 1,
+          "failedCount": 1,
+          "duplicateCount": 0,
+          "startedAt": "2026-10-14T00:00:00.000Z",
+          "completedAt": "2026-10-14T00:00:00.000Z",
+          "ai": "disabled",
+          "partial": true,
+          "errors": [
+            {
+              "url": "https://example.org/missing",
+              "code": "SOURCE_UNAVAILABLE"
+            }
+          ]
+        },
+        "currentVersion": {
+          "id": "version_00000000-0000-4000-8000-000000000004",
+          "topicId": "f08-topic",
+          "sequence": 1,
+          "previousVersionId": null,
+          "createdAt": "2026-10-14T00:00:00.000Z",
+          "knowledgeCutoffAt": "2026-10-14T00:00:00.000Z",
+          "evidenceIds": [
+            "evidence_00000000-0000-4000-8000-000000000002"
+          ],
+          "relations": [
+            {
+              "id": "relation_00000000-0000-4000-8000-000000000003",
+              "topicId": "f08-topic",
+              "stage": "components",
+              "product": "金融基础设施产品",
+              "company": {
+                "name": "待绑定公司",
+                "stockCode": null,
+                "identityEvidenceIds": []
+              },
+              "claim": "2025年行业收入12亿元",
+              "evidenceIds": [
+                "evidence_00000000-0000-4000-8000-000000000002"
+              ],
+              "evidenceRefs": [
+                {
+                  "evidenceId": "evidence_00000000-0000-4000-8000-000000000002",
+                  "url": "https://example.org/a",
+                  "quote": "2025年行业收入12亿元",
+                  "locator": {
+                    "type": "controlled-full-text",
+                    "offsetUnit": "UTF-16/legacy-normalizeText"
+                  },
+                  "start": 9,
+                  "end": 22,
+                  "position": {
+                    "start": 9,
+                    "end": 22
+                  }
+                }
+              ],
+              "polarity": "supports",
+              "status": "candidate",
+              "reasonCodes": [],
+              "metrics": [
+                {
+                  "name": "收入",
+                  "value": 12,
+                  "rawValue": "12",
+                  "unit": "亿元",
+                  "scope": "2025年行业",
+                  "period": "2025",
+                  "evidenceId": "evidence_00000000-0000-4000-8000-000000000002"
+                }
+              ],
+              "review": null
+            }
+          ],
+          "analysis": {
+            "kind": "none",
+            "text": "",
+            "evidenceIds": [],
+            "model": null
+          },
+          "changes": {
+            "added": [
+              "relation_00000000-0000-4000-8000-000000000003"
+            ],
+            "changed": [],
+            "disputed": []
+          },
+          "gaps": [
+            {
+              "kind": "source_unchecked",
+              "reason": "SOURCE_UNAVAILABLE",
+              "url": "https://example.org/missing"
+            }
+          ],
+          "run": {
+            "requestedCount": 2,
+            "successCount": 1,
+            "failedCount": 1,
+            "duplicateCount": 0,
+            "startedAt": "2026-10-14T00:00:00.000Z",
+            "completedAt": "2026-10-14T00:00:00.000Z",
+            "ai": "disabled",
+            "partial": true,
+            "errors": [
+              {
+                "url": "https://example.org/missing",
+                "code": "SOURCE_UNAVAILABLE"
+              }
+            ]
+          },
+          "status": "partial",
+          "contentHash": "d95e6d85d83ce261123cc700fc058b54b6cd4b844388727ff26a12951999c8b6",
+          "evidence": [
+            {
+              "id": "evidence_00000000-0000-4000-8000-000000000002",
+              "canonicalUrl": "https://example.org/a",
+              "requestedUrl": "https://example.org/a",
+              "finalUrl": "https://example.org/a",
+              "contentSha256": "da711a1844c890f50d2ff0893ec6adaa9473e9a7e103e20c0f1db775a8a1a385",
+              "title": "受控原资料",
+              "publishedAt": "2026-10-13T23:59:00.000Z",
+              "fetchedAt": "2026-10-14T00:00:00.000Z",
+              "locator": {
+                "type": "controlled-full-text",
+                "offsetUnit": "UTF-16/legacy-normalizeText"
+              },
+              "extractorVersion": "fixture-no-network",
+              "status": "fetched"
+            }
+          ]
+        }
+      },
+      "second": null,
+      "archive": {
+        "topics": [
+          {
+            "id": "bellows",
+            "name": "波纹管",
+            "aliases": [
+              "bellows"
+            ],
+            "sourceUrls": [],
+            "enabled": false,
+            "intervalMinutes": 1440,
+            "lastAttemptAt": null,
+            "lastSuccessAt": null,
+            "nextDueAt": null,
+            "currentVersionId": null,
+            "config": {}
+          },
+          {
+            "id": "diamond-thermal",
+            "name": "金刚石散热",
+            "aliases": [
+              "diamond",
+              "thermal spreader"
+            ],
+            "sourceUrls": [],
+            "enabled": false,
+            "intervalMinutes": 1440,
+            "lastAttemptAt": null,
+            "lastSuccessAt": null,
+            "nextDueAt": null,
+            "currentVersionId": null,
+            "config": {}
+          },
+          {
+            "id": "f08-topic",
+            "name": "金融基础设施",
+            "aliases": [
+              "原别名"
+            ],
+            "sourceUrls": [
+              "https://example.org/a"
+            ],
+            "enabled": false,
+            "intervalMinutes": 1440,
+            "lastAttemptAt": "2026-10-14T00:00:00.000Z",
+            "lastSuccessAt": "2026-10-14T00:00:00.000Z",
+            "nextDueAt": "2026-10-15T00:00:00.000Z",
+            "currentVersionId": "version_00000000-0000-4000-8000-000000000004",
+            "config": {}
+          },
+          {
+            "id": "thin-film-lithium-niobate",
+            "name": "薄膜铌酸锂",
+            "aliases": [
+              "薄膜铌酸锂",
+              "thin-film lithium niobate"
+            ],
+            "sourceUrls": [],
+            "enabled": false,
+            "intervalMinutes": 1440,
+            "lastAttemptAt": null,
+            "lastSuccessAt": null,
+            "nextDueAt": null,
+            "currentVersionId": null,
+            "config": {}
+          },
+          {
+            "id": "v-groove-fau",
+            "name": "V型槽/FAU",
+            "aliases": [
+              "v-groove",
+              "FAU"
+            ],
+            "sourceUrls": [],
+            "enabled": false,
+            "intervalMinutes": 1440,
+            "lastAttemptAt": null,
+            "lastSuccessAt": null,
+            "nextDueAt": null,
+            "currentVersionId": null,
+            "config": {}
+          }
+        ],
+        "evidence": [
+          {
+            "id": "evidence_00000000-0000-4000-8000-000000000002",
+            "canonicalUrl": "https://example.org/a",
+            "contentSha256": "da711a1844c890f50d2ff0893ec6adaa9473e9a7e103e20c0f1db775a8a1a385",
+            "createdAt": "2026-10-14T00:00:00.000Z",
+            "payload": {
+              "canonicalUrl": "https://example.org/a",
+              "requestedUrl": "https://example.org/a",
+              "finalUrl": "https://example.org/a",
+              "contentSha256": "da711a1844c890f50d2ff0893ec6adaa9473e9a7e103e20c0f1db775a8a1a385",
+              "title": "受控原资料",
+              "publishedAt": "2026-10-13T23:59:00.000Z",
+              "fetchedAt": "2026-10-14T00:00:00.000Z",
+              "locator": {
+                "type": "controlled-full-text",
+                "offsetUnit": "UTF-16/legacy-normalizeText"
+              },
+              "extractorVersion": "fixture-no-network",
+              "id": "evidence_00000000-0000-4000-8000-000000000002",
+              "status": "fetched",
+              "text": "金融基础设施产品。2025年行业收入12亿元；原文完整尾部。"
+            }
+          }
+        ],
+        "versions": [
+          {
+            "id": "version_00000000-0000-4000-8000-000000000004",
+            "topicId": "f08-topic",
+            "sequence": 1,
+            "previousVersionId": null,
+            "contentHash": "d95e6d85d83ce261123cc700fc058b54b6cd4b844388727ff26a12951999c8b6",
+            "createdAt": "2026-10-14T00:00:00.000Z",
+            "payload": {
+              "id": "version_00000000-0000-4000-8000-000000000004",
+              "topicId": "f08-topic",
+              "sequence": 1,
+              "previousVersionId": null,
+              "createdAt": "2026-10-14T00:00:00.000Z",
+              "knowledgeCutoffAt": "2026-10-14T00:00:00.000Z",
+              "evidenceIds": [
+                "evidence_00000000-0000-4000-8000-000000000002"
+              ],
+              "relations": [
+                {
+                  "id": "relation_00000000-0000-4000-8000-000000000003",
+                  "topicId": "f08-topic",
+                  "stage": "components",
+                  "product": "金融基础设施产品",
+                  "company": {
+                    "name": "待绑定公司",
+                    "stockCode": null,
+                    "identityEvidenceIds": []
+                  },
+                  "claim": "2025年行业收入12亿元",
+                  "evidenceIds": [
+                    "evidence_00000000-0000-4000-8000-000000000002"
+                  ],
+                  "evidenceRefs": [
+                    {
+                      "evidenceId": "evidence_00000000-0000-4000-8000-000000000002",
+                      "url": "https://example.org/a",
+                      "quote": "2025年行业收入12亿元",
+                      "locator": {
+                        "type": "controlled-full-text",
+                        "offsetUnit": "UTF-16/legacy-normalizeText"
+                      },
+                      "start": 9,
+                      "end": 22,
+                      "position": {
+                        "start": 9,
+                        "end": 22
+                      }
+                    }
+                  ],
+                  "polarity": "supports",
+                  "status": "candidate",
+                  "reasonCodes": [],
+                  "metrics": [
+                    {
+                      "name": "收入",
+                      "value": 12,
+                      "rawValue": "12",
+                      "unit": "亿元",
+                      "scope": "2025年行业",
+                      "period": "2025",
+                      "evidenceId": "evidence_00000000-0000-4000-8000-000000000002"
+                    }
+                  ],
+                  "review": null
+                }
+              ],
+              "analysis": {
+                "kind": "none",
+                "text": "",
+                "evidenceIds": [],
+                "model": null
+              },
+              "changes": {
+                "added": [
+                  "relation_00000000-0000-4000-8000-000000000003"
+                ],
+                "changed": [],
+                "disputed": []
+              },
+              "gaps": [
+                {
+                  "kind": "source_unchecked",
+                  "reason": "SOURCE_UNAVAILABLE",
+                  "url": "https://example.org/missing"
+                }
+              ],
+              "run": {
+                "requestedCount": 2,
+                "successCount": 1,
+                "failedCount": 1,
+                "duplicateCount": 0,
+                "startedAt": "2026-10-14T00:00:00.000Z",
+                "completedAt": "2026-10-14T00:00:00.000Z",
+                "ai": "disabled",
+                "partial": true,
+                "errors": [
+                  {
+                    "url": "https://example.org/missing",
+                    "code": "SOURCE_UNAVAILABLE"
+                  }
+                ]
+              },
+              "status": "partial",
+              "contentHash": "d95e6d85d83ce261123cc700fc058b54b6cd4b844388727ff26a12951999c8b6"
+            }
+          }
+        ],
+        "runs": [
+          {
+            "id": "run_00000000-0000-4000-8000-000000000001",
+            "topicId": "f08-topic",
+            "status": "partial",
+            "startedAt": "2026-10-14T00:00:00.000Z",
+            "completedAt": "2026-10-14T00:00:00.000Z",
+            "payload": {
+              "requestedCount": 2,
+              "successCount": 1,
+              "failedCount": 1,
+              "duplicateCount": 0,
+              "startedAt": "2026-10-14T00:00:00.000Z",
+              "completedAt": "2026-10-14T00:00:00.000Z",
+              "ai": "disabled",
+              "partial": true,
+              "errors": [
+                {
+                  "url": "https://example.org/missing",
+                  "code": "SOURCE_UNAVAILABLE"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "fetchCalls": 2,
+      "sqlite": "3.53.1"
+    },
+    {
+      "name": "no-ai-config",
+      "before": {
+        "topics": [
+          {
+            "id": "bellows",
+            "name": "波纹管",
+            "aliases": [
+              "bellows"
+            ],
+            "sourceUrls": [],
+            "enabled": false,
+            "intervalMinutes": 1440,
+            "lastAttemptAt": null,
+            "lastSuccessAt": null,
+            "nextDueAt": null,
+            "currentVersionId": null,
+            "config": {}
+          },
+          {
+            "id": "diamond-thermal",
+            "name": "金刚石散热",
+            "aliases": [
+              "diamond",
+              "thermal spreader"
+            ],
+            "sourceUrls": [],
+            "enabled": false,
+            "intervalMinutes": 1440,
+            "lastAttemptAt": null,
+            "lastSuccessAt": null,
+            "nextDueAt": null,
+            "currentVersionId": null,
+            "config": {}
+          },
+          {
+            "id": "f08-topic",
+            "name": "金融基础设施",
+            "aliases": [
+              "原别名"
+            ],
+            "sourceUrls": [
+              "https://example.org/a"
+            ],
+            "enabled": false,
+            "intervalMinutes": 1440,
+            "lastAttemptAt": null,
+            "lastSuccessAt": null,
+            "nextDueAt": null,
+            "currentVersionId": null,
+            "config": {}
+          },
+          {
+            "id": "thin-film-lithium-niobate",
+            "name": "薄膜铌酸锂",
+            "aliases": [
+              "薄膜铌酸锂",
+              "thin-film lithium niobate"
+            ],
+            "sourceUrls": [],
+            "enabled": false,
+            "intervalMinutes": 1440,
+            "lastAttemptAt": null,
+            "lastSuccessAt": null,
+            "nextDueAt": null,
+            "currentVersionId": null,
+            "config": {}
+          },
+          {
+            "id": "v-groove-fau",
+            "name": "V型槽/FAU",
+            "aliases": [
+              "v-groove",
+              "FAU"
+            ],
+            "sourceUrls": [],
+            "enabled": false,
+            "intervalMinutes": 1440,
+            "lastAttemptAt": null,
+            "lastSuccessAt": null,
+            "nextDueAt": null,
+            "currentVersionId": null,
+            "config": {}
+          }
+        ],
+        "evidence": [],
+        "versions": [],
+        "runs": []
+      },
+      "sourceAcquisitions": [
+        {
+          "canonicalUrl": "https://example.org/a",
+          "requestedUrl": "https://example.org/a",
+          "finalUrl": "https://example.org/a",
+          "contentSha256": "da711a1844c890f50d2ff0893ec6adaa9473e9a7e103e20c0f1db775a8a1a385",
+          "text": "金融基础设施产品。2025年行业收入12亿元；原文完整尾部。",
+          "title": "受控原资料",
+          "publishedAt": "2026-10-13T23:59:00.000Z",
+          "fetchedAt": "2026-10-14T00:00:00.000Z",
+          "locator": {
+            "type": "controlled-full-text",
+            "offsetUnit": "UTF-16/legacy-normalizeText"
+          },
+          "extractorVersion": "fixture-no-network"
+        }
+      ],
+      "normalizedProposals": [
+        {
+          "stage": "components",
+          "product": "金融基础设施产品",
+          "company": {
+            "name": "待绑定公司",
+            "stockCode": null,
+            "identityEvidenceIds": []
+          },
+          "claim": "2025年行业收入12亿元",
+          "polarity": "supports",
+          "evidenceRefs": [
+            {
+              "url": "https://example.org/a",
+              "quote": "2025年行业收入12亿元"
+            }
+          ],
+          "metrics": [
+            {
+              "name": "收入",
+              "value": 12,
+              "rawValue": "12",
+              "unit": "亿元",
+              "scope": "2025年行业",
+              "period": "2025",
+              "evidenceId": null
+            }
+          ]
+        }
+      ],
+      "startedAt": "2026-10-14T00:00:00.000Z",
+      "input": {
+        "useAi": true,
+        "proposals": [
+          {
+            "stage": "components",
+            "product": "金融基础设施产品",
+            "company": {
+              "name": "待绑定公司",
+              "stockCode": "600000"
+            },
+            "claim": "2025年行业收入12亿元",
+            "polarity": "supports",
+            "evidenceRefs": [
+              {
+                "url": "https://example.org/a",
+                "quote": "2025年行业收入12亿元"
+              }
+            ],
+            "metrics": [
+              {
+                "name": "收入",
+                "value": 12,
+                "rawValue": "12",
+                "unit": "亿元",
+                "scope": "2025年行业",
+                "period": "2025"
+              }
+            ]
+          }
+        ]
+      },
+      "expected": {
+        "run": {
+          "id": "run_00000000-0000-4000-8000-000000000001",
+          "status": "succeeded",
+          "requestedCount": 1,
+          "successCount": 1,
+          "failedCount": 0,
+          "duplicateCount": 0,
+          "startedAt": "2026-10-14T00:00:00.000Z",
+          "completedAt": "2026-10-14T00:00:00.000Z",
+          "ai": "failed",
+          "partial": false,
+          "errors": []
+        },
+        "currentVersion": {
+          "id": "version_00000000-0000-4000-8000-000000000004",
+          "topicId": "f08-topic",
+          "sequence": 1,
+          "previousVersionId": null,
+          "createdAt": "2026-10-14T00:00:00.000Z",
+          "knowledgeCutoffAt": "2026-10-14T00:00:00.000Z",
+          "evidenceIds": [
+            "evidence_00000000-0000-4000-8000-000000000002"
+          ],
+          "relations": [
+            {
+              "id": "relation_00000000-0000-4000-8000-000000000003",
+              "topicId": "f08-topic",
+              "stage": "components",
+              "product": "金融基础设施产品",
+              "company": {
+                "name": "待绑定公司",
+                "stockCode": null,
+                "identityEvidenceIds": []
+              },
+              "claim": "2025年行业收入12亿元",
+              "evidenceIds": [
+                "evidence_00000000-0000-4000-8000-000000000002"
+              ],
+              "evidenceRefs": [
+                {
+                  "evidenceId": "evidence_00000000-0000-4000-8000-000000000002",
+                  "url": "https://example.org/a",
+                  "quote": "2025年行业收入12亿元",
+                  "locator": {
+                    "type": "controlled-full-text",
+                    "offsetUnit": "UTF-16/legacy-normalizeText"
+                  },
+                  "start": 9,
+                  "end": 22,
+                  "position": {
+                    "start": 9,
+                    "end": 22
+                  }
+                }
+              ],
+              "polarity": "supports",
+              "status": "candidate",
+              "reasonCodes": [],
+              "metrics": [
+                {
+                  "name": "收入",
+                  "value": 12,
+                  "rawValue": "12",
+                  "unit": "亿元",
+                  "scope": "2025年行业",
+                  "period": "2025",
+                  "evidenceId": "evidence_00000000-0000-4000-8000-000000000002"
+                }
+              ],
+              "review": null
+            }
+          ],
+          "analysis": {
+            "kind": "none",
+            "text": "",
+            "evidenceIds": [],
+            "model": null,
+            "status": "failed",
+            "errorCode": "AI_NOT_CONFIGURED"
+          },
+          "changes": {
+            "added": [
+              "relation_00000000-0000-4000-8000-000000000003"
+            ],
+            "changed": [],
+            "disputed": []
+          },
+          "gaps": [],
+          "run": {
+            "requestedCount": 1,
+            "successCount": 1,
+            "failedCount": 0,
+            "duplicateCount": 0,
+            "startedAt": "2026-10-14T00:00:00.000Z",
+            "completedAt": "2026-10-14T00:00:00.000Z",
+            "ai": "failed",
+            "partial": false,
+            "errors": []
+          },
+          "status": "complete",
+          "contentHash": "7d23df35805d2008aa4fb716f3032ac28a811bd749125248059b8d7df53dcd5c",
+          "evidence": [
+            {
+              "id": "evidence_00000000-0000-4000-8000-000000000002",
+              "canonicalUrl": "https://example.org/a",
+              "requestedUrl": "https://example.org/a",
+              "finalUrl": "https://example.org/a",
+              "contentSha256": "da711a1844c890f50d2ff0893ec6adaa9473e9a7e103e20c0f1db775a8a1a385",
+              "title": "受控原资料",
+              "publishedAt": "2026-10-13T23:59:00.000Z",
+              "fetchedAt": "2026-10-14T00:00:00.000Z",
+              "locator": {
+                "type": "controlled-full-text",
+                "offsetUnit": "UTF-16/legacy-normalizeText"
+              },
+              "extractorVersion": "fixture-no-network",
+              "status": "fetched"
+            }
+          ]
+        }
+      },
+      "second": null,
+      "archive": {
+        "topics": [
+          {
+            "id": "bellows",
+            "name": "波纹管",
+            "aliases": [
+              "bellows"
+            ],
+            "sourceUrls": [],
+            "enabled": false,
+            "intervalMinutes": 1440,
+            "lastAttemptAt": null,
+            "lastSuccessAt": null,
+            "nextDueAt": null,
+            "currentVersionId": null,
+            "config": {}
+          },
+          {
+            "id": "diamond-thermal",
+            "name": "金刚石散热",
+            "aliases": [
+              "diamond",
+              "thermal spreader"
+            ],
+            "sourceUrls": [],
+            "enabled": false,
+            "intervalMinutes": 1440,
+            "lastAttemptAt": null,
+            "lastSuccessAt": null,
+            "nextDueAt": null,
+            "currentVersionId": null,
+            "config": {}
+          },
+          {
+            "id": "f08-topic",
+            "name": "金融基础设施",
+            "aliases": [
+              "原别名"
+            ],
+            "sourceUrls": [
+              "https://example.org/a"
+            ],
+            "enabled": false,
+            "intervalMinutes": 1440,
+            "lastAttemptAt": "2026-10-14T00:00:00.000Z",
+            "lastSuccessAt": "2026-10-14T00:00:00.000Z",
+            "nextDueAt": "2026-10-15T00:00:00.000Z",
+            "currentVersionId": "version_00000000-0000-4000-8000-000000000004",
+            "config": {}
+          },
+          {
+            "id": "thin-film-lithium-niobate",
+            "name": "薄膜铌酸锂",
+            "aliases": [
+              "薄膜铌酸锂",
+              "thin-film lithium niobate"
+            ],
+            "sourceUrls": [],
+            "enabled": false,
+            "intervalMinutes": 1440,
+            "lastAttemptAt": null,
+            "lastSuccessAt": null,
+            "nextDueAt": null,
+            "currentVersionId": null,
+            "config": {}
+          },
+          {
+            "id": "v-groove-fau",
+            "name": "V型槽/FAU",
+            "aliases": [
+              "v-groove",
+              "FAU"
+            ],
+            "sourceUrls": [],
+            "enabled": false,
+            "intervalMinutes": 1440,
+            "lastAttemptAt": null,
+            "lastSuccessAt": null,
+            "nextDueAt": null,
+            "currentVersionId": null,
+            "config": {}
+          }
+        ],
+        "evidence": [
+          {
+            "id": "evidence_00000000-0000-4000-8000-000000000002",
+            "canonicalUrl": "https://example.org/a",
+            "contentSha256": "da711a1844c890f50d2ff0893ec6adaa9473e9a7e103e20c0f1db775a8a1a385",
+            "createdAt": "2026-10-14T00:00:00.000Z",
+            "payload": {
+              "canonicalUrl": "https://example.org/a",
+              "requestedUrl": "https://example.org/a",
+              "finalUrl": "https://example.org/a",
+              "contentSha256": "da711a1844c890f50d2ff0893ec6adaa9473e9a7e103e20c0f1db775a8a1a385",
+              "title": "受控原资料",
+              "publishedAt": "2026-10-13T23:59:00.000Z",
+              "fetchedAt": "2026-10-14T00:00:00.000Z",
+              "locator": {
+                "type": "controlled-full-text",
+                "offsetUnit": "UTF-16/legacy-normalizeText"
+              },
+              "extractorVersion": "fixture-no-network",
+              "id": "evidence_00000000-0000-4000-8000-000000000002",
+              "status": "fetched",
+              "text": "金融基础设施产品。2025年行业收入12亿元；原文完整尾部。"
+            }
+          }
+        ],
+        "versions": [
+          {
+            "id": "version_00000000-0000-4000-8000-000000000004",
+            "topicId": "f08-topic",
+            "sequence": 1,
+            "previousVersionId": null,
+            "contentHash": "7d23df35805d2008aa4fb716f3032ac28a811bd749125248059b8d7df53dcd5c",
+            "createdAt": "2026-10-14T00:00:00.000Z",
+            "payload": {
+              "id": "version_00000000-0000-4000-8000-000000000004",
+              "topicId": "f08-topic",
+              "sequence": 1,
+              "previousVersionId": null,
+              "createdAt": "2026-10-14T00:00:00.000Z",
+              "knowledgeCutoffAt": "2026-10-14T00:00:00.000Z",
+              "evidenceIds": [
+                "evidence_00000000-0000-4000-8000-000000000002"
+              ],
+              "relations": [
+                {
+                  "id": "relation_00000000-0000-4000-8000-000000000003",
+                  "topicId": "f08-topic",
+                  "stage": "components",
+                  "product": "金融基础设施产品",
+                  "company": {
+                    "name": "待绑定公司",
+                    "stockCode": null,
+                    "identityEvidenceIds": []
+                  },
+                  "claim": "2025年行业收入12亿元",
+                  "evidenceIds": [
+                    "evidence_00000000-0000-4000-8000-000000000002"
+                  ],
+                  "evidenceRefs": [
+                    {
+                      "evidenceId": "evidence_00000000-0000-4000-8000-000000000002",
+                      "url": "https://example.org/a",
+                      "quote": "2025年行业收入12亿元",
+                      "locator": {
+                        "type": "controlled-full-text",
+                        "offsetUnit": "UTF-16/legacy-normalizeText"
+                      },
+                      "start": 9,
+                      "end": 22,
+                      "position": {
+                        "start": 9,
+                        "end": 22
+                      }
+                    }
+                  ],
+                  "polarity": "supports",
+                  "status": "candidate",
+                  "reasonCodes": [],
+                  "metrics": [
+                    {
+                      "name": "收入",
+                      "value": 12,
+                      "rawValue": "12",
+                      "unit": "亿元",
+                      "scope": "2025年行业",
+                      "period": "2025",
+                      "evidenceId": "evidence_00000000-0000-4000-8000-000000000002"
+                    }
+                  ],
+                  "review": null
+                }
+              ],
+              "analysis": {
+                "kind": "none",
+                "text": "",
+                "evidenceIds": [],
+                "model": null,
+                "status": "failed",
+                "errorCode": "AI_NOT_CONFIGURED"
+              },
+              "changes": {
+                "added": [
+                  "relation_00000000-0000-4000-8000-000000000003"
+                ],
+                "changed": [],
+                "disputed": []
+              },
+              "gaps": [],
+              "run": {
+                "requestedCount": 1,
+                "successCount": 1,
+                "failedCount": 0,
+                "duplicateCount": 0,
+                "startedAt": "2026-10-14T00:00:00.000Z",
+                "completedAt": "2026-10-14T00:00:00.000Z",
+                "ai": "failed",
+                "partial": false,
+                "errors": []
+              },
+              "status": "complete",
+              "contentHash": "7d23df35805d2008aa4fb716f3032ac28a811bd749125248059b8d7df53dcd5c"
+            }
+          }
+        ],
+        "runs": [
+          {
+            "id": "run_00000000-0000-4000-8000-000000000001",
+            "topicId": "f08-topic",
+            "status": "succeeded",
+            "startedAt": "2026-10-14T00:00:00.000Z",
+            "completedAt": "2026-10-14T00:00:00.000Z",
+            "payload": {
+              "requestedCount": 1,
+              "successCount": 1,
+              "failedCount": 0,
+              "duplicateCount": 0,
+              "startedAt": "2026-10-14T00:00:00.000Z",
+              "completedAt": "2026-10-14T00:00:00.000Z",
+              "ai": "failed",
+              "partial": false,
+              "errors": []
+            }
+          }
+        ]
+      },
+      "fetchCalls": 1,
+      "sqlite": "3.53.1"
+    },
+    {
+      "name": "future-source",
+      "before": {
+        "topics": [
+          {
+            "id": "bellows",
+            "name": "波纹管",
+            "aliases": [
+              "bellows"
+            ],
+            "sourceUrls": [],
+            "enabled": false,
+            "intervalMinutes": 1440,
+            "lastAttemptAt": null,
+            "lastSuccessAt": null,
+            "nextDueAt": null,
+            "currentVersionId": null,
+            "config": {}
+          },
+          {
+            "id": "diamond-thermal",
+            "name": "金刚石散热",
+            "aliases": [
+              "diamond",
+              "thermal spreader"
+            ],
+            "sourceUrls": [],
+            "enabled": false,
+            "intervalMinutes": 1440,
+            "lastAttemptAt": null,
+            "lastSuccessAt": null,
+            "nextDueAt": null,
+            "currentVersionId": null,
+            "config": {}
+          },
+          {
+            "id": "f08-topic",
+            "name": "金融基础设施",
+            "aliases": [
+              "原别名"
+            ],
+            "sourceUrls": [
+              "https://example.org/a"
+            ],
+            "enabled": false,
+            "intervalMinutes": 1440,
+            "lastAttemptAt": null,
+            "lastSuccessAt": null,
+            "nextDueAt": null,
+            "currentVersionId": null,
+            "config": {}
+          },
+          {
+            "id": "thin-film-lithium-niobate",
+            "name": "薄膜铌酸锂",
+            "aliases": [
+              "薄膜铌酸锂",
+              "thin-film lithium niobate"
+            ],
+            "sourceUrls": [],
+            "enabled": false,
+            "intervalMinutes": 1440,
+            "lastAttemptAt": null,
+            "lastSuccessAt": null,
+            "nextDueAt": null,
+            "currentVersionId": null,
+            "config": {}
+          },
+          {
+            "id": "v-groove-fau",
+            "name": "V型槽/FAU",
+            "aliases": [
+              "v-groove",
+              "FAU"
+            ],
+            "sourceUrls": [],
+            "enabled": false,
+            "intervalMinutes": 1440,
+            "lastAttemptAt": null,
+            "lastSuccessAt": null,
+            "nextDueAt": null,
+            "currentVersionId": null,
+            "config": {}
+          }
+        ],
+        "evidence": [],
+        "versions": [],
+        "runs": []
+      },
+      "sourceAcquisitions": [
+        {
+          "canonicalUrl": "https://example.org/a",
+          "requestedUrl": "https://example.org/a",
+          "finalUrl": "https://example.org/a",
+          "text": "原文",
+          "contentSha256": "354b28c85333456866931a77eacdf6cd18d80b79981ccf1f4ca927b84fd99302",
+          "publishedAt": "2026-10-14T00:00:00.001Z",
+          "fetchedAt": "2026-10-14T00:00:00.000Z",
+          "locator": {
+            "type": "fixture"
+          }
+        }
+      ],
+      "normalizedProposals": [
+        {
+          "stage": "components",
+          "product": "金融基础设施产品",
+          "company": {
+            "name": "待绑定公司",
+            "stockCode": null,
+            "identityEvidenceIds": []
+          },
+          "claim": "2025年行业收入12亿元",
+          "polarity": "supports",
+          "evidenceRefs": [
+            {
+              "url": "https://example.org/a",
+              "quote": "2025年行业收入12亿元"
+            }
+          ],
+          "metrics": [
+            {
+              "name": "收入",
+              "value": 12,
+              "rawValue": "12",
+              "unit": "亿元",
+              "scope": "2025年行业",
+              "period": "2025",
+              "evidenceId": null
+            }
+          ]
+        }
+      ],
+      "startedAt": "2026-10-14T00:00:00.000Z",
+      "input": {
+        "proposals": [
+          {
+            "stage": "components",
+            "product": "金融基础设施产品",
+            "company": {
+              "name": "待绑定公司",
+              "stockCode": "600000"
+            },
+            "claim": "2025年行业收入12亿元",
+            "polarity": "supports",
+            "evidenceRefs": [
+              {
+                "url": "https://example.org/a",
+                "quote": "2025年行业收入12亿元"
+              }
+            ],
+            "metrics": [
+              {
+                "name": "收入",
+                "value": 12,
+                "rawValue": "12",
+                "unit": "亿元",
+                "scope": "2025年行业",
+                "period": "2025"
+              }
+            ]
+          }
+        ]
+      },
+      "expected": {
+        "run": {
+          "id": "run_00000000-0000-4000-8000-000000000001",
+          "status": "failed",
+          "requestedCount": 1,
+          "successCount": 0,
+          "failedCount": 1,
+          "duplicateCount": 0,
+          "errors": [
+            {
+              "url": "https://example.org/a",
+              "code": "SOURCE_FUTURE_PUBLISHED_AT"
+            }
+          ],
+          "partial": false,
+          "knowledgeCutoffAt": "2026-10-14T00:00:00.000Z",
+          "startedAt": "2026-10-14T00:00:00.000Z",
+          "completedAt": "2026-10-14T00:00:00.000Z",
+          "ai": "disabled"
+        },
+        "currentVersion": null
+      },
+      "second": null,
+      "archive": {
+        "topics": [
+          {
+            "id": "bellows",
+            "name": "波纹管",
+            "aliases": [
+              "bellows"
+            ],
+            "sourceUrls": [],
+            "enabled": false,
+            "intervalMinutes": 1440,
+            "lastAttemptAt": null,
+            "lastSuccessAt": null,
+            "nextDueAt": null,
+            "currentVersionId": null,
+            "config": {}
+          },
+          {
+            "id": "diamond-thermal",
+            "name": "金刚石散热",
+            "aliases": [
+              "diamond",
+              "thermal spreader"
+            ],
+            "sourceUrls": [],
+            "enabled": false,
+            "intervalMinutes": 1440,
+            "lastAttemptAt": null,
+            "lastSuccessAt": null,
+            "nextDueAt": null,
+            "currentVersionId": null,
+            "config": {}
+          },
+          {
+            "id": "f08-topic",
+            "name": "金融基础设施",
+            "aliases": [
+              "原别名"
+            ],
+            "sourceUrls": [
+              "https://example.org/a"
+            ],
+            "enabled": false,
+            "intervalMinutes": 1440,
+            "lastAttemptAt": "2026-10-14T00:00:00.000Z",
+            "lastSuccessAt": null,
+            "nextDueAt": "2026-10-15T00:00:00.000Z",
+            "currentVersionId": null,
+            "config": {}
+          },
+          {
+            "id": "thin-film-lithium-niobate",
+            "name": "薄膜铌酸锂",
+            "aliases": [
+              "薄膜铌酸锂",
+              "thin-film lithium niobate"
+            ],
+            "sourceUrls": [],
+            "enabled": false,
+            "intervalMinutes": 1440,
+            "lastAttemptAt": null,
+            "lastSuccessAt": null,
+            "nextDueAt": null,
+            "currentVersionId": null,
+            "config": {}
+          },
+          {
+            "id": "v-groove-fau",
+            "name": "V型槽/FAU",
+            "aliases": [
+              "v-groove",
+              "FAU"
+            ],
+            "sourceUrls": [],
+            "enabled": false,
+            "intervalMinutes": 1440,
+            "lastAttemptAt": null,
+            "lastSuccessAt": null,
+            "nextDueAt": null,
+            "currentVersionId": null,
+            "config": {}
+          }
+        ],
+        "evidence": [],
+        "versions": [],
+        "runs": [
+          {
+            "id": "run_00000000-0000-4000-8000-000000000001",
+            "topicId": "f08-topic",
+            "status": "failed",
+            "startedAt": "2026-10-14T00:00:00.000Z",
+            "completedAt": "2026-10-14T00:00:00.000Z",
+            "payload": {
+              "requestedCount": 1,
+              "successCount": 0,
+              "failedCount": 1,
+              "duplicateCount": 0,
+              "errors": [
+                {
+                  "url": "https://example.org/a",
+                  "code": "SOURCE_FUTURE_PUBLISHED_AT"
+                }
+              ],
+              "partial": false,
+              "knowledgeCutoffAt": "2026-10-14T00:00:00.000Z",
+              "startedAt": "2026-10-14T00:00:00.000Z",
+              "completedAt": "2026-10-14T00:00:00.000Z",
+              "ai": "disabled"
+            }
+          }
+        ]
+      },
+      "fetchCalls": 1,
+      "sqlite": "3.53.1"
+    }
+  ],
+  "scheduler": {
+    "intervals": 1,
+    "disabledTickReturned": true,
+    "stoppedTickReturned": false,
+    "enabledTopic": {
+      "id": "f08-topic",
+      "name": "金融基础设施",
+      "aliases": [
+        "原别名"
+      ],
+      "sourceUrls": [
+        "https://example.org/a"
+      ],
+      "enabled": true,
+      "intervalMinutes": 60,
+      "lastAttemptAt": null,
+      "lastSuccessAt": null,
+      "nextDueAt": "2026-10-14T01:00:00.000Z",
+      "currentVersionId": null,
+      "config": {}
+    }
+  }
+}

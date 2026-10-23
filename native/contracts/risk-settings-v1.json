@@ -1,0 +1,34 @@
+{
+  "schema": "risk-settings/v1",
+  "legacyKey": "webstock_risk_settings",
+  "defaultThresholds": {"drawdown": 8, "dailyDrop": 3, "leaderDrop": 3},
+  "units": "percentage points; 8 means 8 percent",
+  "validation": "all three are finite numbers greater than zero; HTML suggested ranges are not extra business caps",
+  "scope": "device/global preferences; explicit selected account for holdings, actual configured watchlist and manual leader roster for other signals; not per-account limits or stop prices",
+  "recordFields": ["schema", "revision", "thresholds", "updatedAt", "legacyOriginal", "importWarnings"],
+  "persistence": "dedicated UTF-8 JSON preference file; per-file lock and atomic replace; full-record baseline CAS; missing file reads revision0/defaults without writing preference data; corrupt/future record rejects without reset",
+  "consumer": {
+    "drawdown": "position unrealizedPnlRate <= -drawdown; high at <= -1.8*drawdown",
+    "dailyDrop": "position todayChange and non-held watchlist change <= -dailyDrop; position high at <= -1.6*dailyDrop",
+    "dailyRise": "same dailyDrop magnitude also controls >= +dailyDrop positive signals",
+    "leaderDrop": "explicit-identity manual leader change <= -leaderDrop; high at <= -1.6*leaderDrop",
+    "independent": ["watchlist alertHigh", "watchlist alertLow", "retained/stale quote reminder"],
+    "ordering": "native source/rule order; explicit severity; no claim to reproduce the legacy 0-or-9 high-rank sorting bug"
+  },
+  "nativeAdapter": {
+    "inputs": ["accounts", "trades", "quoteInstruments", "watchlistInstruments", "leaderConfig", "capturedAt", "sourceLabel"],
+    "quoteFields": ["price", "changePercent", "source", "tradeDate", "tradeTime", "checkedAt", "cached", "error"],
+    "positionMetric": "existing native moving-average ledger averageCost * quantity gives unrounded cost; price * quantity gives value; audited legacy estimated exit fee/tax constants are both zero; JS-style round((value-cost)/cost*100,2); exclude closed quantities",
+    "boundary": "floating P/L over cost, not historical peak drawdown, performance return or forecast; no edits to existing ledger/calculation modules",
+    "identity": "full instrument IDs, account IDs and manual sector/member IDs; no bare-code quote guessing for unresolved leaders; held-watch daily dedup uses full ID",
+    "unknown": "null/missing/nonfinite/unavailable stays unknown, no fabricated zero; stale numeric predicates retain old behavior with source/time/stale label"
+  },
+  "imports": ["native risk-settings/v1 record", "explicit webstock_risk_settings object or original JSON string", "raw old object with at least one actual threshold field"],
+  "importPolicy": "preview full original, normalized values and per-field fallback warnings; explicit browser key may be empty and use disclosed defaults; unrelated server table backup rejected; confirmation uses captured full baseline; cancel no preference write; unsaved editor and baseline preserved if import changes active values",
+  "draftPolicy": "atomic private sidecar preserves baseline, three strings, selected account, filter and pending preview; Bundle/QJsonObject holds file marker only; theme/filter/scope do not save business preferences; unreadable state blocks automatic overwrite until explicit discard/reload",
+  "sourceAction": "fresh saved-threshold evaluation must still contain the exact selected alert including account, source row, metric, threshold and severity; local unsaved draft blocks external navigation; root verifies full ID/name and protects target draft",
+  "limits": {"preferenceOrImportMiB": 1, "draftMiB": 4, "inputRowsPerArray": 10000, "pageAlerts": 50},
+  "back": "internal detail/preview reader to settings retaining draft and pending import returns true; otherwise false; no browser history",
+  "prohibitedActions": ["orders", "trade creation", "auto upload", "paid AI", "production database writes", "automatic price refresh"],
+  "verificationBoundary": "independent Qt/JVM/SDK and actual legacy-source reference checks; root owns shared host/build and 5564 emulator acceptance; no ARM-device acceptance inferred"
+}

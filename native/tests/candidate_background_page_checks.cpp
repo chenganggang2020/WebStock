@@ -1,0 +1,42 @@
+#include "window_local_candidate_background.hpp"
+#include "business_store.hpp"
+#include "local_candidate_background.hpp"
+#include <QCoreApplication>
+#include <QTemporaryDir>
+#include <QFile>
+#include <QJsonDocument>
+#include <QSqlQuery>
+#include <QCryptographicHash>
+#include <QTextStream>
+#include <stdexcept>
+using namespace candidateBackgroundHost;
+static int checks=0;static void check(bool ok,const char*why){++checks;if(!ok)throw std::runtime_error(why);}
+static QJsonObject json(QString p){QFile f(p);check(f.open(QIODevice::ReadOnly),"fixture read");return QJsonDocument::fromJson(f.readAll()).object();}
+static void sql(QString p,const std::function<void(QSqlDatabase&)>& action){auto name=QUuid::createUuid().toString();{auto db=QSqlDatabase::addDatabase("QSQLITE",name);db.setDatabaseName(p);check(db.open(),"isolated SQL open");action(db);db.close();}QSqlDatabase::removeDatabase(name);}
+static void exec(QSqlDatabase&db,QString text){QSqlQuery q(db);check(q.exec(text),qPrintable(q.lastError().text()));}
+static void seed(const Paths&p,const QJsonObject&fixture){auto all=fixture["sources"].toObject();sql(p.business,[&](auto&db){exec(db,"CREATE TABLE records(kind TEXT,id TEXT,payload TEXT,PRIMARY KEY(kind,id))");for(auto key:QStringList{"accounts","trades"})for(auto v:all["holdings"].toObject()["data"].toObject()[key].toArray()){QSqlQuery q(db);q.prepare("INSERT INTO records VALUES(?,?,?)");q.addBindValue(key);q.addBindValue(v.toObject()["id"].toString());q.addBindValue(QString::fromUtf8(QJsonDocument(v.toObject()).toJson(QJsonDocument::Compact)));check(q.exec(),"seed business");}});
+ sql(p.recent,[&](auto&db){exec(db,"PRAGMA application_id=1381188401");exec(db,"CREATE TABLE recent_entries(id TEXT PRIMARY KEY,payload TEXT NOT NULL)");for(auto v:all["recent"].toObject()["data"].toObject()["rows"].toArray()){QSqlQuery q(db);q.prepare("INSERT INTO recent_entries VALUES(?,?)");q.addBindValue(v.toObject()["id"].toString());q.addBindValue(QString::fromUtf8(QJsonDocument(v.toObject()).toJson(QJsonDocument::Compact)));check(q.exec(),"seed recent");}});
+ sql(p.leaders,[&](auto&db){exec(db,"PRAGMA application_id=1397511729");exec(db,"CREATE TABLE config(id INTEGER PRIMARY KEY,revision INTEGER,digest TEXT,payload BLOB)");auto config=all["leaders"].toObject()["data"].toObject();auto raw=QJsonDocument(config).toJson(QJsonDocument::Compact);QSqlQuery q(db);q.prepare("INSERT INTO config VALUES(1,?,?,?)");q.addBindValue(config["revision"].toInt());q.addBindValue(QString::fromLatin1(QCryptographicHash::hash(raw,QCryptographicHash::Sha256).toHex()));q.addBindValue(raw);check(q.exec(),"seed leaders");});}
+template<class F>static void rejects(F call,const char*why){bool failed=false;try{call();}catch(const std::exception&){failed=true;}check(failed,why);}
+
+#include "local_candidate_page.hpp"
+#include "local_candidate_store.hpp"
+#include <QApplication>
+#include <QPushButton>
+#include <QComboBox>
+#include <QLabel>
+#include <QLineEdit>
+#include <QListWidget>
+#include <QDialog>
+#include <QTableWidget>
+#include <QElapsedTimer>
+#include <QTimer>
+#include <QThread>
+static void waitFor(const std::function<bool()>& ready){QElapsedTimer timer;timer.start();while(!ready()&&timer.elapsed()<10000){QApplication::processEvents();QThread::msleep(2);}check(ready(),"UI operation timeout");}
+int main(int argc,char**argv){QApplication app(argc,argv);try{check(argc==5,"UI isolated root/fixtures/output");QTemporaryDir temp(QString(argv[1])+"/ui-XXXXXX");check(temp.isValid(),"UI isolated directory");Paths paths{temp.path()+"/business.sqlite",temp.path()+"/recent.sqlite",temp.path()+"/leaders.sqlite",temp.path()+"/evidence.sqlite"};auto fixture=json(argv[2]);seed(paths,fixture);auto cut=QDateTime::fromString(fixture["capturedAt"].toString(),Qt::ISODateWithMs);QJsonObject stock;for(auto v:json(argv[3])["cases"].toArray()){auto c=v.toObject();if(c.contains("error"))continue;auto rows=c["result"].toObject()["rows"].toArray();if(!rows.isEmpty()&&rows[0].toObject()["rawScore"].isDouble()){stock=c["selected"].toArray()[0].toObject();break;}}stock["id"]="SH:stock:600001";stock["symbol"]="sh600001";auto bridge=std::make_shared<Host>(paths,Hooks{[cut]{return cut;},{}});int snapshots=0;LocalCandidateHost host;host.background=bridge;host.existingData=[stock]{return QJsonArray{stock};};host.snapshot=[&](const QSet<QString>&ids){++snapshots;check(ids==QSet<QString>{"SH:stock:600001"},"UI exact selected");return QJsonArray{stock};};LocalCandidateHooks clock;clock.now=[cut]{return cut;};QString v1file=temp.path()+"/v1.sqlite";LocalCandidatePage page(v1file,host,nullptr,clock);page.show();auto mode=page.findChild<QComboBox*>("candidateBackgroundMode");auto state=page.findChild<QLabel*>("candidateState");auto click=[&](const char*name){auto b=page.findChild<QPushButton*>(name);check(b&&b->isEnabled(),name);b->click();};check(mode->currentIndex()==0,"v1 remains default");click("candidateChooseVisible");click("candidateCalculate");waitFor([&]{return !page.saveState()["draftHash"].toString().isEmpty();});auto v1state=page.saveState();auto old=localCandidate::Store(v1file).readDraft(v1state["draftHash"].toString());check(old["model"]=="native-local-candidates/v1","technical calculation unchanged");mode->setCurrentIndex(1);click("candidateCalculate");check(!QFile::exists(paths.evidence)&&state->text().contains("账户"),"no implicit account selection or write");
+ click("candidateBackgroundAccounts");waitFor([&]{return page.findChild<QWidget*>("candidateBackgroundAccountPanel")!=nullptr;});
+ auto choices=page.findChild<QListWidget*>("candidateBackgroundAccountChoices");check(choices&&choices->count()==1,"inline account list");check(choices->item(0)->checkState()==Qt::Unchecked,"no default account choice");check(!QApplication::activeModalWidget(),"no modal account popup");choices->item(0)->setCheckState(Qt::Checked);click("candidateBackgroundAccountApply");check(page.saveState()["backgroundAccounts"].toArray().size()==1,"explicit account accepted");
+ click("candidateCalculate");waitFor([&]{return !page.saveState()["draftHash"].toString().isEmpty();});auto bgState=page.saveState();auto bundle=bridge->readDraft(bgState["draftHash"].toString());check(bundle["result"].toObject()["model"]=="native-local-candidates/v2-background","explicit v2 result");page.findChild<QLineEdit*>("candidateTitle")->setText("UI背景快照");click("candidateSave");waitFor([&]{return !page.saveState()["namedId"].toString().isEmpty()&&page.findChild<QPushButton*>("candidateCalculate")->isEnabled();});auto saved=page.saveState();page.hide();
+ auto broken=paths;broken.business=temp.path()+"/missing-business";broken.recent=temp.path()+"/missing-recent";broken.leaders=temp.path()+"/missing-leaders";auto replayHost=host;replayHost.background=std::make_shared<Host>(broken);int beforeReplay=snapshots;LocalCandidatePage reopened(v1file,replayHost,nullptr,clock);reopened.restoreState(saved);waitFor([&]{return reopened.findChild<QTableWidget*>("candidateResults")->rowCount()==1;});check(snapshots==beforeReplay&&!QFile::exists(broken.business),"history restores without live sources or recalculation");check(reopened.saveState()["namedId"]==saved["namedId"],"exact history anchor restored");reopened.restoreState(v1state);waitFor([&]{return reopened.saveState()["draftHash"]==v1state["draftHash"]&&reopened.findChild<QTableWidget*>("candidateResults")->rowCount()==1;});check(reopened.findChild<QComboBox*>("candidateBackgroundMode")->currentIndex()==0,"v1 restore path unchanged");
+ LocalCandidateHooks delayed=clock;delayed.beforeWork=[](const localCandidate::Cancel& c){while(!c())QThread::msleep(2);};LocalCandidatePage cancelled(v1file,host,nullptr,delayed);auto emptyState=saved;emptyState["namedId"]="";emptyState["draftHash"]="";cancelled.restoreState(emptyState);auto prior=bridge->head();cancelled.findChild<QPushButton*>("candidateCalculate")->click();cancelled.findChild<QPushButton*>("candidateCancel")->click();QApplication::processEvents();check(bridge->head()==prior&&cancelled.saveState()["draftHash"].toString().isEmpty(),"UI cancellation preserves prior draft and rejects stale completion");
+ QFile output(argv[4]);check(output.open(QIODevice::WriteOnly),"UI result output");output.write(QJsonDocument(QJsonObject{{"passed",true},{"checks",checks},{"scope","Isolated offscreen Qt page+bridge; root Window/device acceptance still pending"}}).toJson());QTextStream(stdout)<<"PASS Qt page integration checks="<<checks<<"\n";return 0;}catch(const std::exception&e){QTextStream(stderr)<<e.what()<<'\n';return 1;}}

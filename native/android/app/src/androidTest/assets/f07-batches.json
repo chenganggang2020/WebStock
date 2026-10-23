@@ -1,0 +1,2115 @@
+{
+  "schema": "f07-legacy-golden/v1",
+  "source": "services/externalResearchBatchService.js",
+  "sourceSha256": "c2b6e521bf5d872e01d2b74d689e6dcde27c282d247aeddf9198a2bf54faa968",
+  "picksSourceSha256": "8d3c2c584bd25d4180b5e75b3a74ee96d52c5db935513d085039c9eba93a7542",
+  "preparedAt": "2026-10-14T02:00:00.000Z",
+  "providerOrDbCalls": 0,
+  "valid": [
+    {
+      "name": "three-artifacts",
+      "raw": "{\n  \"schema\": \"webstock.external-research-batch/v1\",\n  \"source\": {\n    \"system\": \"ChatGPT\",\n    \"taskId\": \"daily-research\",\n    \"runId\": \"2026-10-14T09:00:00+08:00\",\n    \"generatedAt\": \"2026-10-14T01:05:00.123456789Z\",\n    \"model\": \"external-offline-fixture\"\n  },\n  \"revision\": 1,\n  \"asOf\": {\n    \"marketDate\": \"2026-10-14\",\n    \"observedAt\": \"2026-10-14T09:00:00+08:00\",\n    \"timezone\": \"Asia/Shanghai\"\n  },\n  \"automaticTrading\": false,\n  \"artifacts\": [\n    {\n      \"artifactId\": \"picks-1\",\n      \"kind\": \"research-picks\",\n      \"schema\": \"webstock.research-picks/v1\",\n      \"payload\": {\n        \"analysis\": \"离线受控原文，不是选股建议。\",\n        \"picks\": [\n          {\n            \"rank\": 1,\n            \"priority\": \"重点\",\n            \"code\": \"600000\",\n            \"name\": \"浦发银行\",\n            \"thesis\": \"保存原论点与风险。\",\n            \"risks\": [\n              \"未独立核验\"\n            ],\n            \"evidenceRefs\": [\n              \"https://example.org/source/a\"\n            ],\n            \"includeInTonghuashun\": true\n          },\n          {\n            \"code\": \"000001\",\n            \"name\": \"平安银行\",\n            \"thesis\": \"第二条原论点。\",\n            \"risks\": [\n              \"时点可能过期\"\n            ],\n            \"evidenceRefs\": [\n              \"https://example.org/source/b\"\n            ]\n          }\n        ]\n      }\n    },\n    {\n      \"artifactId\": \"hot-1\",\n      \"kind\": \"market-hotspots\",\n      \"schema\": \"webstock.market-hotspots/v1\",\n      \"payload\": {\n        \"summary\": \"热点原件\",\n        \"items\": [\n          {\n            \"name\": \"银行\",\n            \"thesis\": \"待核验\",\n            \"drivers\": [\n              \"原驱动\"\n            ],\n            \"risks\": [\n              \"原风险\"\n            ],\n            \"evidenceRefs\": [\n              \"https://example.org/source/a\"\n            ],\n            \"relatedCodes\": [\n              \"600000\"\n            ]\n          }\n        ]\n      }\n    },\n    {\n      \"artifactId\": \"chain-1\",\n      \"kind\": \"industry-chain-updates\",\n      \"schema\": \"webstock.industry-chain-updates/v1\",\n      \"payload\": {\n        \"summary\": \"产业链原件\",\n        \"chains\": [\n          {\n            \"name\": \"金融基础设施\",\n            \"thesis\": \"保留来源判断\",\n            \"stages\": [\n              \"应用\"\n            ],\n            \"catalysts\": [\n              \"尚待补证\"\n            ],\n            \"risks\": [\n              \"证据不足\"\n            ],\n            \"evidenceRefs\": [\n              \"https://example.org/source/c\"\n            ],\n            \"relatedCodes\": [\n              \"000001\"\n            ]\n          }\n        ]\n      }\n    }\n  ],\n  \"deliveries\": [\n    {\n      \"target\": \"webstock-research\",\n      \"required\": true,\n      \"artifactIds\": [\n        \"picks-1\",\n        \"hot-1\",\n        \"chain-1\"\n      ]\n    },\n    {\n      \"target\": \"tonghuashun-watchlist\",\n      \"policy\": {\n        \"group\": \"离线预览\"\n      }\n    }\n  ]\n}",
+      "expected": {
+        "normalized": {
+          "schema": "webstock.external-research-batch/v1",
+          "source": {
+            "system": "ChatGPT",
+            "taskId": "daily-research",
+            "runId": "2026-10-14T09:00:00+08:00",
+            "generatedAt": "2026-10-14T01:05:00.123456789Z",
+            "model": "external-offline-fixture"
+          },
+          "revision": 1,
+          "asOf": {
+            "marketDate": "2026-10-14",
+            "observedAt": "2026-10-14T09:00:00+08:00",
+            "timezone": "Asia/Shanghai"
+          },
+          "automaticTrading": false,
+          "artifacts": [
+            {
+              "artifactId": "picks-1",
+              "kind": "research-picks",
+              "schema": "webstock.research-picks/v1",
+              "payload": {
+                "analysis": "离线受控原文，不是选股建议。",
+                "picks": [
+                  {
+                    "rank": 1,
+                    "priority": "重点",
+                    "code": "600000",
+                    "name": "浦发银行",
+                    "thesis": "保存原论点与风险。",
+                    "risks": [
+                      "未独立核验"
+                    ],
+                    "evidenceRefs": [
+                      "https://example.org/source/a"
+                    ],
+                    "includeInTonghuashun": true
+                  },
+                  {
+                    "rank": 2,
+                    "priority": "",
+                    "code": "000001",
+                    "name": "平安银行",
+                    "thesis": "第二条原论点。",
+                    "risks": [
+                      "时点可能过期"
+                    ],
+                    "evidenceRefs": [
+                      "https://example.org/source/b"
+                    ],
+                    "includeInTonghuashun": false
+                  }
+                ]
+              }
+            },
+            {
+              "artifactId": "hot-1",
+              "kind": "market-hotspots",
+              "schema": "webstock.market-hotspots/v1",
+              "payload": {
+                "summary": "热点原件",
+                "items": [
+                  {
+                    "rank": 1,
+                    "name": "银行",
+                    "state": "",
+                    "thesis": "待核验",
+                    "drivers": [
+                      "原驱动"
+                    ],
+                    "risks": [
+                      "原风险"
+                    ],
+                    "evidenceRefs": [
+                      "https://example.org/source/a"
+                    ],
+                    "relatedCodes": [
+                      "600000"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "artifactId": "chain-1",
+              "kind": "industry-chain-updates",
+              "schema": "webstock.industry-chain-updates/v1",
+              "payload": {
+                "summary": "产业链原件",
+                "chains": [
+                  {
+                    "name": "金融基础设施",
+                    "state": "",
+                    "thesis": "保留来源判断",
+                    "stages": [
+                      "应用"
+                    ],
+                    "catalysts": [
+                      "尚待补证"
+                    ],
+                    "risks": [
+                      "证据不足"
+                    ],
+                    "evidenceRefs": [
+                      "https://example.org/source/c"
+                    ],
+                    "relatedCodes": [
+                      "000001"
+                    ]
+                  }
+                ]
+              }
+            }
+          ],
+          "deliveries": [
+            {
+              "target": "webstock-research",
+              "required": true,
+              "policy": {}
+            },
+            {
+              "target": "tonghuashun-watchlist",
+              "required": false,
+              "policy": {
+                "group": "离线预览"
+              }
+            }
+          ]
+        },
+        "batchKey": "22561d74c31099c954f1194441708bdeefd7845f2fe271bc4bce2c3df6c4dcfc",
+        "payloadHash": "69317a92f6ebc3df71e8a683c09e136bd389cd7be8485bec1b3c64aacd664512",
+        "picks": [
+          {
+            "rank": 1,
+            "priority": "重点",
+            "code": "600000",
+            "name": "浦发银行",
+            "thesis": "保存原论点与风险。",
+            "risks": [
+              "未独立核验"
+            ],
+            "evidenceRefs": [
+              "https://example.org/source/a"
+            ],
+            "includeInTonghuashun": true
+          },
+          {
+            "rank": 2,
+            "priority": "",
+            "code": "000001",
+            "name": "平安银行",
+            "thesis": "第二条原论点。",
+            "risks": [
+              "时点可能过期"
+            ],
+            "evidenceRefs": [
+              "https://example.org/source/b"
+            ],
+            "includeInTonghuashun": false
+          }
+        ],
+        "wantsTonghuashun": true
+      },
+      "expectedRun": {
+        "runType": "manual-chatgpt-stock-picks",
+        "modelId": "chatgpt-automation",
+        "status": "completed",
+        "title": "2026-10-14 ChatGPT 每日研究候选",
+        "result": "[\n  {\n    \"rank\": 1,\n    \"priority\": \"重点\",\n    \"code\": \"600000\",\n    \"name\": \"浦发银行\",\n    \"reason\": \"保存原论点与风险。\",\n    \"risk\": \"未独立核验\",\n    \"analysis\": \"证据：https://example.org/source/a\"\n  },\n  {\n    \"rank\": 2,\n    \"priority\": \"\",\n    \"code\": \"000001\",\n    \"name\": \"平安银行\",\n    \"reason\": \"第二条原论点。\",\n    \"risk\": \"时点可能过期\",\n    \"analysis\": \"证据：https://example.org/source/b\"\n  }\n]",
+        "evidence": [
+          "https://example.org/source/a",
+          "https://example.org/source/b"
+        ],
+        "request": {
+          "source": "external-chatgpt-batch",
+          "batchKey": "22561d74c31099c954f1194441708bdeefd7845f2fe271bc4bce2c3df6c4dcfc",
+          "generatedAt": "2026-10-14T01:05:00.123456789Z",
+          "model": "external-offline-fixture",
+          "importedAt": "2026-10-14T02:00:00.000Z",
+          "candidates": [
+            {
+              "code": "600000",
+              "name": "浦发银行",
+              "reason": "保存原论点与风险。",
+              "risk": "未独立核验",
+              "originalAnalysis": "证据：https://example.org/source/a",
+              "rank": 1,
+              "priority": "重点"
+            },
+            {
+              "code": "000001",
+              "name": "平安银行",
+              "reason": "第二条原论点。",
+              "risk": "时点可能过期",
+              "originalAnalysis": "证据：https://example.org/source/b",
+              "rank": 2
+            }
+          ],
+          "analysis": "离线受控原文，不是选股建议。",
+          "originalText": "[\n  {\n    \"rank\": 1,\n    \"priority\": \"重点\",\n    \"code\": \"600000\",\n    \"name\": \"浦发银行\",\n    \"reason\": \"保存原论点与风险。\",\n    \"risk\": \"未独立核验\",\n    \"analysis\": \"证据：https://example.org/source/a\"\n  },\n  {\n    \"rank\": 2,\n    \"priority\": \"\",\n    \"code\": \"000001\",\n    \"name\": \"平安银行\",\n    \"reason\": \"第二条原论点。\",\n    \"risk\": \"时点可能过期\",\n    \"analysis\": \"证据：https://example.org/source/b\"\n  }\n]",
+          "format": "structured-json",
+          "duplicateCount": 0,
+          "truncated": false,
+          "warnings": [
+            "外部 ChatGPT 产物，WebStock 未独立验证"
+          ],
+          "security": {
+            "trustedHtml": false,
+            "executable": false
+          },
+          "automaticTrading": false
+        },
+        "metrics": {
+          "candidateCount": 2,
+          "duplicateCount": 0
+        },
+        "createdAt": "2026-10-14T02:00:00.000Z"
+      }
+    },
+    {
+      "name": "picks-only",
+      "raw": "{\n  \"schema\": \"webstock.external-research-batch/v1\",\n  \"source\": {\n    \"system\": \"ChatGPT\",\n    \"taskId\": \"daily-research\",\n    \"runId\": \"2026-10-14T09:00:00+08:00\",\n    \"generatedAt\": \"2026-10-14T01:05:00.123456789Z\",\n    \"model\": \"external-offline-fixture\"\n  },\n  \"revision\": 1,\n  \"asOf\": {\n    \"marketDate\": \"2026-10-14\",\n    \"observedAt\": \"2026-10-14T09:00:00+08:00\",\n    \"timezone\": \"Asia/Shanghai\"\n  },\n  \"automaticTrading\": false,\n  \"artifacts\": [\n    {\n      \"artifactId\": \"picks-1\",\n      \"kind\": \"research-picks\",\n      \"schema\": \"webstock.research-picks/v1\",\n      \"payload\": {\n        \"analysis\": \"离线受控原文，不是选股建议。\",\n        \"picks\": [\n          {\n            \"rank\": 1,\n            \"priority\": \"重点\",\n            \"code\": \"600000\",\n            \"name\": \"浦发银行\",\n            \"thesis\": \"保存原论点与风险。\",\n            \"risks\": [\n              \"未独立核验\"\n            ],\n            \"evidenceRefs\": [\n              \"https://example.org/source/a\"\n            ],\n            \"includeInTonghuashun\": true\n          },\n          {\n            \"code\": \"000001\",\n            \"name\": \"平安银行\",\n            \"thesis\": \"第二条原论点。\",\n            \"risks\": [\n              \"时点可能过期\"\n            ],\n            \"evidenceRefs\": [\n              \"https://example.org/source/b\"\n            ]\n          }\n        ]\n      }\n    }\n  ],\n  \"deliveries\": [\n    {\n      \"target\": \"webstock-research\"\n    }\n  ]\n}",
+      "expected": {
+        "normalized": {
+          "schema": "webstock.external-research-batch/v1",
+          "source": {
+            "system": "ChatGPT",
+            "taskId": "daily-research",
+            "runId": "2026-10-14T09:00:00+08:00",
+            "generatedAt": "2026-10-14T01:05:00.123456789Z",
+            "model": "external-offline-fixture"
+          },
+          "revision": 1,
+          "asOf": {
+            "marketDate": "2026-10-14",
+            "observedAt": "2026-10-14T09:00:00+08:00",
+            "timezone": "Asia/Shanghai"
+          },
+          "automaticTrading": false,
+          "artifacts": [
+            {
+              "artifactId": "picks-1",
+              "kind": "research-picks",
+              "schema": "webstock.research-picks/v1",
+              "payload": {
+                "analysis": "离线受控原文，不是选股建议。",
+                "picks": [
+                  {
+                    "rank": 1,
+                    "priority": "重点",
+                    "code": "600000",
+                    "name": "浦发银行",
+                    "thesis": "保存原论点与风险。",
+                    "risks": [
+                      "未独立核验"
+                    ],
+                    "evidenceRefs": [
+                      "https://example.org/source/a"
+                    ],
+                    "includeInTonghuashun": true
+                  },
+                  {
+                    "rank": 2,
+                    "priority": "",
+                    "code": "000001",
+                    "name": "平安银行",
+                    "thesis": "第二条原论点。",
+                    "risks": [
+                      "时点可能过期"
+                    ],
+                    "evidenceRefs": [
+                      "https://example.org/source/b"
+                    ],
+                    "includeInTonghuashun": false
+                  }
+                ]
+              }
+            }
+          ],
+          "deliveries": [
+            {
+              "target": "webstock-research",
+              "required": false,
+              "policy": {}
+            }
+          ]
+        },
+        "batchKey": "22561d74c31099c954f1194441708bdeefd7845f2fe271bc4bce2c3df6c4dcfc",
+        "payloadHash": "a5b2967fe9b9891e969722574d375a2895b437db23065f7071f3c4ac7d66371c",
+        "picks": [
+          {
+            "rank": 1,
+            "priority": "重点",
+            "code": "600000",
+            "name": "浦发银行",
+            "thesis": "保存原论点与风险。",
+            "risks": [
+              "未独立核验"
+            ],
+            "evidenceRefs": [
+              "https://example.org/source/a"
+            ],
+            "includeInTonghuashun": true
+          },
+          {
+            "rank": 2,
+            "priority": "",
+            "code": "000001",
+            "name": "平安银行",
+            "thesis": "第二条原论点。",
+            "risks": [
+              "时点可能过期"
+            ],
+            "evidenceRefs": [
+              "https://example.org/source/b"
+            ],
+            "includeInTonghuashun": false
+          }
+        ],
+        "wantsTonghuashun": false
+      },
+      "expectedRun": {
+        "runType": "manual-chatgpt-stock-picks",
+        "modelId": "chatgpt-automation",
+        "status": "completed",
+        "title": "2026-10-14 ChatGPT 每日研究候选",
+        "result": "[\n  {\n    \"rank\": 1,\n    \"priority\": \"重点\",\n    \"code\": \"600000\",\n    \"name\": \"浦发银行\",\n    \"reason\": \"保存原论点与风险。\",\n    \"risk\": \"未独立核验\",\n    \"analysis\": \"证据：https://example.org/source/a\"\n  },\n  {\n    \"rank\": 2,\n    \"priority\": \"\",\n    \"code\": \"000001\",\n    \"name\": \"平安银行\",\n    \"reason\": \"第二条原论点。\",\n    \"risk\": \"时点可能过期\",\n    \"analysis\": \"证据：https://example.org/source/b\"\n  }\n]",
+        "evidence": [
+          "https://example.org/source/a",
+          "https://example.org/source/b"
+        ],
+        "request": {
+          "source": "external-chatgpt-batch",
+          "batchKey": "22561d74c31099c954f1194441708bdeefd7845f2fe271bc4bce2c3df6c4dcfc",
+          "generatedAt": "2026-10-14T01:05:00.123456789Z",
+          "model": "external-offline-fixture",
+          "importedAt": "2026-10-14T02:00:00.000Z",
+          "candidates": [
+            {
+              "code": "600000",
+              "name": "浦发银行",
+              "reason": "保存原论点与风险。",
+              "risk": "未独立核验",
+              "originalAnalysis": "证据：https://example.org/source/a",
+              "rank": 1,
+              "priority": "重点"
+            },
+            {
+              "code": "000001",
+              "name": "平安银行",
+              "reason": "第二条原论点。",
+              "risk": "时点可能过期",
+              "originalAnalysis": "证据：https://example.org/source/b",
+              "rank": 2
+            }
+          ],
+          "analysis": "离线受控原文，不是选股建议。",
+          "originalText": "[\n  {\n    \"rank\": 1,\n    \"priority\": \"重点\",\n    \"code\": \"600000\",\n    \"name\": \"浦发银行\",\n    \"reason\": \"保存原论点与风险。\",\n    \"risk\": \"未独立核验\",\n    \"analysis\": \"证据：https://example.org/source/a\"\n  },\n  {\n    \"rank\": 2,\n    \"priority\": \"\",\n    \"code\": \"000001\",\n    \"name\": \"平安银行\",\n    \"reason\": \"第二条原论点。\",\n    \"risk\": \"时点可能过期\",\n    \"analysis\": \"证据：https://example.org/source/b\"\n  }\n]",
+          "format": "structured-json",
+          "duplicateCount": 0,
+          "truncated": false,
+          "warnings": [
+            "外部 ChatGPT 产物，WebStock 未独立验证"
+          ],
+          "security": {
+            "trustedHtml": false,
+            "executable": false
+          },
+          "automaticTrading": false
+        },
+        "metrics": {
+          "candidateCount": 2,
+          "duplicateCount": 0
+        },
+        "createdAt": "2026-10-14T02:00:00.000Z"
+      }
+    },
+    {
+      "name": "reverse-order-default-artifact-id",
+      "raw": "{\n  \"schema\": \"webstock.external-research-batch/v1\",\n  \"source\": {\n    \"system\": \"ChatGPT\",\n    \"taskId\": \"daily-research\",\n    \"runId\": \"2026-10-14T09:00:00+08:00\",\n    \"generatedAt\": \"2026-10-14T01:05:00.123456789Z\",\n    \"model\": \"external-offline-fixture\"\n  },\n  \"revision\": 1,\n  \"asOf\": {\n    \"marketDate\": \"2026-10-14\",\n    \"observedAt\": \"2026-10-14T09:00:00+08:00\",\n    \"timezone\": \"Asia/Shanghai\"\n  },\n  \"automaticTrading\": false,\n  \"artifacts\": [\n    {\n      \"kind\": \"industry-chain-updates\",\n      \"schema\": \"webstock.industry-chain-updates/v1\",\n      \"payload\": {\n        \"summary\": \"产业链原件\",\n        \"chains\": [\n          {\n            \"name\": \"金融基础设施\",\n            \"thesis\": \"保留来源判断\",\n            \"stages\": [\n              \"应用\"\n            ],\n            \"catalysts\": [\n              \"尚待补证\"\n            ],\n            \"risks\": [\n              \"证据不足\"\n            ],\n            \"evidenceRefs\": [\n              \"https://example.org/source/c\"\n            ],\n            \"relatedCodes\": [\n              \"000001\"\n            ]\n          }\n        ]\n      }\n    },\n    {\n      \"kind\": \"market-hotspots\",\n      \"schema\": \"webstock.market-hotspots/v1\",\n      \"payload\": {\n        \"summary\": \"热点原件\",\n        \"items\": [\n          {\n            \"name\": \"银行\",\n            \"thesis\": \"待核验\",\n            \"drivers\": [\n              \"原驱动\"\n            ],\n            \"risks\": [\n              \"原风险\"\n            ],\n            \"evidenceRefs\": [\n              \"https://example.org/source/a\"\n            ],\n            \"relatedCodes\": [\n              \"600000\"\n            ]\n          }\n        ]\n      }\n    },\n    {\n      \"kind\": \"research-picks\",\n      \"schema\": \"webstock.research-picks/v1\",\n      \"payload\": {\n        \"analysis\": \"离线受控原文，不是选股建议。\",\n        \"picks\": [\n          {\n            \"rank\": 1,\n            \"priority\": \"重点\",\n            \"code\": \"600000\",\n            \"name\": \"浦发银行\",\n            \"thesis\": \"保存原论点与风险。\",\n            \"risks\": [\n              \"未独立核验\"\n            ],\n            \"evidenceRefs\": [\n              \"https://example.org/source/a\"\n            ],\n            \"includeInTonghuashun\": true\n          },\n          {\n            \"code\": \"000001\",\n            \"name\": \"平安银行\",\n            \"thesis\": \"第二条原论点。\",\n            \"risks\": [\n              \"时点可能过期\"\n            ],\n            \"evidenceRefs\": [\n              \"https://example.org/source/b\"\n            ]\n          }\n        ]\n      }\n    }\n  ],\n  \"deliveries\": [\n    {\n      \"target\": \"webstock-research\",\n      \"required\": true,\n      \"artifactIds\": [\n        \"picks-1\",\n        \"hot-1\",\n        \"chain-1\"\n      ]\n    },\n    {\n      \"target\": \"tonghuashun-watchlist\",\n      \"policy\": {\n        \"group\": \"离线预览\"\n      }\n    }\n  ]\n}",
+      "expected": {
+        "normalized": {
+          "schema": "webstock.external-research-batch/v1",
+          "source": {
+            "system": "ChatGPT",
+            "taskId": "daily-research",
+            "runId": "2026-10-14T09:00:00+08:00",
+            "generatedAt": "2026-10-14T01:05:00.123456789Z",
+            "model": "external-offline-fixture"
+          },
+          "revision": 1,
+          "asOf": {
+            "marketDate": "2026-10-14",
+            "observedAt": "2026-10-14T09:00:00+08:00",
+            "timezone": "Asia/Shanghai"
+          },
+          "automaticTrading": false,
+          "artifacts": [
+            {
+              "artifactId": "daily-picks",
+              "kind": "research-picks",
+              "schema": "webstock.research-picks/v1",
+              "payload": {
+                "analysis": "离线受控原文，不是选股建议。",
+                "picks": [
+                  {
+                    "rank": 1,
+                    "priority": "重点",
+                    "code": "600000",
+                    "name": "浦发银行",
+                    "thesis": "保存原论点与风险。",
+                    "risks": [
+                      "未独立核验"
+                    ],
+                    "evidenceRefs": [
+                      "https://example.org/source/a"
+                    ],
+                    "includeInTonghuashun": true
+                  },
+                  {
+                    "rank": 2,
+                    "priority": "",
+                    "code": "000001",
+                    "name": "平安银行",
+                    "thesis": "第二条原论点。",
+                    "risks": [
+                      "时点可能过期"
+                    ],
+                    "evidenceRefs": [
+                      "https://example.org/source/b"
+                    ],
+                    "includeInTonghuashun": false
+                  }
+                ]
+              }
+            },
+            {
+              "artifactId": "market-hotspots",
+              "kind": "market-hotspots",
+              "schema": "webstock.market-hotspots/v1",
+              "payload": {
+                "summary": "热点原件",
+                "items": [
+                  {
+                    "rank": 1,
+                    "name": "银行",
+                    "state": "",
+                    "thesis": "待核验",
+                    "drivers": [
+                      "原驱动"
+                    ],
+                    "risks": [
+                      "原风险"
+                    ],
+                    "evidenceRefs": [
+                      "https://example.org/source/a"
+                    ],
+                    "relatedCodes": [
+                      "600000"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "artifactId": "industry-chain-updates",
+              "kind": "industry-chain-updates",
+              "schema": "webstock.industry-chain-updates/v1",
+              "payload": {
+                "summary": "产业链原件",
+                "chains": [
+                  {
+                    "name": "金融基础设施",
+                    "state": "",
+                    "thesis": "保留来源判断",
+                    "stages": [
+                      "应用"
+                    ],
+                    "catalysts": [
+                      "尚待补证"
+                    ],
+                    "risks": [
+                      "证据不足"
+                    ],
+                    "evidenceRefs": [
+                      "https://example.org/source/c"
+                    ],
+                    "relatedCodes": [
+                      "000001"
+                    ]
+                  }
+                ]
+              }
+            }
+          ],
+          "deliveries": [
+            {
+              "target": "webstock-research",
+              "required": true,
+              "policy": {}
+            },
+            {
+              "target": "tonghuashun-watchlist",
+              "required": false,
+              "policy": {
+                "group": "离线预览"
+              }
+            }
+          ]
+        },
+        "batchKey": "22561d74c31099c954f1194441708bdeefd7845f2fe271bc4bce2c3df6c4dcfc",
+        "payloadHash": "dee6658d54ff549d6a19b47b1e362664fc03fba6a0d3d8372dad5ef9285141d6",
+        "picks": [
+          {
+            "rank": 1,
+            "priority": "重点",
+            "code": "600000",
+            "name": "浦发银行",
+            "thesis": "保存原论点与风险。",
+            "risks": [
+              "未独立核验"
+            ],
+            "evidenceRefs": [
+              "https://example.org/source/a"
+            ],
+            "includeInTonghuashun": true
+          },
+          {
+            "rank": 2,
+            "priority": "",
+            "code": "000001",
+            "name": "平安银行",
+            "thesis": "第二条原论点。",
+            "risks": [
+              "时点可能过期"
+            ],
+            "evidenceRefs": [
+              "https://example.org/source/b"
+            ],
+            "includeInTonghuashun": false
+          }
+        ],
+        "wantsTonghuashun": true
+      },
+      "expectedRun": {
+        "runType": "manual-chatgpt-stock-picks",
+        "modelId": "chatgpt-automation",
+        "status": "completed",
+        "title": "2026-10-14 ChatGPT 每日研究候选",
+        "result": "[\n  {\n    \"rank\": 1,\n    \"priority\": \"重点\",\n    \"code\": \"600000\",\n    \"name\": \"浦发银行\",\n    \"reason\": \"保存原论点与风险。\",\n    \"risk\": \"未独立核验\",\n    \"analysis\": \"证据：https://example.org/source/a\"\n  },\n  {\n    \"rank\": 2,\n    \"priority\": \"\",\n    \"code\": \"000001\",\n    \"name\": \"平安银行\",\n    \"reason\": \"第二条原论点。\",\n    \"risk\": \"时点可能过期\",\n    \"analysis\": \"证据：https://example.org/source/b\"\n  }\n]",
+        "evidence": [
+          "https://example.org/source/a",
+          "https://example.org/source/b"
+        ],
+        "request": {
+          "source": "external-chatgpt-batch",
+          "batchKey": "22561d74c31099c954f1194441708bdeefd7845f2fe271bc4bce2c3df6c4dcfc",
+          "generatedAt": "2026-10-14T01:05:00.123456789Z",
+          "model": "external-offline-fixture",
+          "importedAt": "2026-10-14T02:00:00.000Z",
+          "candidates": [
+            {
+              "code": "600000",
+              "name": "浦发银行",
+              "reason": "保存原论点与风险。",
+              "risk": "未独立核验",
+              "originalAnalysis": "证据：https://example.org/source/a",
+              "rank": 1,
+              "priority": "重点"
+            },
+            {
+              "code": "000001",
+              "name": "平安银行",
+              "reason": "第二条原论点。",
+              "risk": "时点可能过期",
+              "originalAnalysis": "证据：https://example.org/source/b",
+              "rank": 2
+            }
+          ],
+          "analysis": "离线受控原文，不是选股建议。",
+          "originalText": "[\n  {\n    \"rank\": 1,\n    \"priority\": \"重点\",\n    \"code\": \"600000\",\n    \"name\": \"浦发银行\",\n    \"reason\": \"保存原论点与风险。\",\n    \"risk\": \"未独立核验\",\n    \"analysis\": \"证据：https://example.org/source/a\"\n  },\n  {\n    \"rank\": 2,\n    \"priority\": \"\",\n    \"code\": \"000001\",\n    \"name\": \"平安银行\",\n    \"reason\": \"第二条原论点。\",\n    \"risk\": \"时点可能过期\",\n    \"analysis\": \"证据：https://example.org/source/b\"\n  }\n]",
+          "format": "structured-json",
+          "duplicateCount": 0,
+          "truncated": false,
+          "warnings": [
+            "外部 ChatGPT 产物，WebStock 未独立验证"
+          ],
+          "security": {
+            "trustedHtml": false,
+            "executable": false
+          },
+          "automaticTrading": false
+        },
+        "metrics": {
+          "candidateCount": 2,
+          "duplicateCount": 0
+        },
+        "createdAt": "2026-10-14T02:00:00.000Z"
+      }
+    },
+    {
+      "name": "unicode-whitespace",
+      "raw": "{\n  \"schema\": \"webstock.external-research-batch/v1\",\n  \"source\": {\n    \"system\": \"﻿ ChatGPT　\",\n    \"taskId\": \"daily-research\",\n    \"runId\": \"2026-10-14T09:00:00+08:00\",\n    \"generatedAt\": \"2026-10-14T01:05:00.123456789Z\",\n    \"model\": \"external-offline-fixture\"\n  },\n  \"revision\": 1,\n  \"asOf\": {\n    \"marketDate\": \"2026-10-14\",\n    \"observedAt\": \"2026-10-14T09:00:00+08:00\",\n    \"timezone\": \"Asia/Shanghai\"\n  },\n  \"automaticTrading\": false,\n  \"artifacts\": [\n    {\n      \"artifactId\": \"picks-1\",\n      \"kind\": \"research-picks\",\n      \"schema\": \"webstock.research-picks/v1\",\n      \"payload\": {\n        \"analysis\": \"离线受控原文，不是选股建议。\",\n        \"picks\": [\n          {\n            \"rank\": 1,\n            \"priority\": \"重点\",\n            \"code\": \"600000\",\n            \"name\": \"浦发银行\",\n            \"thesis\": \" 前文😀完整中文　\",\n            \"risks\": [\n              \"未独立核验\"\n            ],\n            \"evidenceRefs\": [\n              \"https://example.org/source/a\"\n            ],\n            \"includeInTonghuashun\": true\n          },\n          {\n            \"code\": \"000001\",\n            \"name\": \"平安银行\",\n            \"thesis\": \"第二条原论点。\",\n            \"risks\": [\n              \"时点可能过期\"\n            ],\n            \"evidenceRefs\": [\n              \"https://example.org/source/b\"\n            ]\n          }\n        ]\n      }\n    },\n    {\n      \"artifactId\": \"hot-1\",\n      \"kind\": \"market-hotspots\",\n      \"schema\": \"webstock.market-hotspots/v1\",\n      \"payload\": {\n        \"summary\": \"热点原件\",\n        \"items\": [\n          {\n            \"name\": \"银行\",\n            \"thesis\": \"待核验\",\n            \"drivers\": [\n              \"原驱动\"\n            ],\n            \"risks\": [\n              \"原风险\"\n            ],\n            \"evidenceRefs\": [\n              \"https://example.org/source/a\"\n            ],\n            \"relatedCodes\": [\n              \"600000\"\n            ]\n          }\n        ]\n      }\n    },\n    {\n      \"artifactId\": \"chain-1\",\n      \"kind\": \"industry-chain-updates\",\n      \"schema\": \"webstock.industry-chain-updates/v1\",\n      \"payload\": {\n        \"summary\": \"产业链原件\",\n        \"chains\": [\n          {\n            \"name\": \"金融基础设施\",\n            \"thesis\": \"保留来源判断\",\n            \"stages\": [\n              \"应用\"\n            ],\n            \"catalysts\": [\n              \"尚待补证\"\n            ],\n            \"risks\": [\n              \"证据不足\"\n            ],\n            \"evidenceRefs\": [\n              \"https://example.org/source/c\"\n            ],\n            \"relatedCodes\": [\n              \"000001\"\n            ]\n          }\n        ]\n      }\n    }\n  ],\n  \"deliveries\": [\n    {\n      \"target\": \"webstock-research\",\n      \"required\": true,\n      \"artifactIds\": [\n        \"picks-1\",\n        \"hot-1\",\n        \"chain-1\"\n      ]\n    },\n    {\n      \"target\": \"tonghuashun-watchlist\",\n      \"policy\": {\n        \"group\": \"离线预览\"\n      }\n    }\n  ]\n}",
+      "expected": {
+        "normalized": {
+          "schema": "webstock.external-research-batch/v1",
+          "source": {
+            "system": "ChatGPT",
+            "taskId": "daily-research",
+            "runId": "2026-10-14T09:00:00+08:00",
+            "generatedAt": "2026-10-14T01:05:00.123456789Z",
+            "model": "external-offline-fixture"
+          },
+          "revision": 1,
+          "asOf": {
+            "marketDate": "2026-10-14",
+            "observedAt": "2026-10-14T09:00:00+08:00",
+            "timezone": "Asia/Shanghai"
+          },
+          "automaticTrading": false,
+          "artifacts": [
+            {
+              "artifactId": "picks-1",
+              "kind": "research-picks",
+              "schema": "webstock.research-picks/v1",
+              "payload": {
+                "analysis": "离线受控原文，不是选股建议。",
+                "picks": [
+                  {
+                    "rank": 1,
+                    "priority": "重点",
+                    "code": "600000",
+                    "name": "浦发银行",
+                    "thesis": "前文😀完整中文",
+                    "risks": [
+                      "未独立核验"
+                    ],
+                    "evidenceRefs": [
+                      "https://example.org/source/a"
+                    ],
+                    "includeInTonghuashun": true
+                  },
+                  {
+                    "rank": 2,
+                    "priority": "",
+                    "code": "000001",
+                    "name": "平安银行",
+                    "thesis": "第二条原论点。",
+                    "risks": [
+                      "时点可能过期"
+                    ],
+                    "evidenceRefs": [
+                      "https://example.org/source/b"
+                    ],
+                    "includeInTonghuashun": false
+                  }
+                ]
+              }
+            },
+            {
+              "artifactId": "hot-1",
+              "kind": "market-hotspots",
+              "schema": "webstock.market-hotspots/v1",
+              "payload": {
+                "summary": "热点原件",
+                "items": [
+                  {
+                    "rank": 1,
+                    "name": "银行",
+                    "state": "",
+                    "thesis": "待核验",
+                    "drivers": [
+                      "原驱动"
+                    ],
+                    "risks": [
+                      "原风险"
+                    ],
+                    "evidenceRefs": [
+                      "https://example.org/source/a"
+                    ],
+                    "relatedCodes": [
+                      "600000"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "artifactId": "chain-1",
+              "kind": "industry-chain-updates",
+              "schema": "webstock.industry-chain-updates/v1",
+              "payload": {
+                "summary": "产业链原件",
+                "chains": [
+                  {
+                    "name": "金融基础设施",
+                    "state": "",
+                    "thesis": "保留来源判断",
+                    "stages": [
+                      "应用"
+                    ],
+                    "catalysts": [
+                      "尚待补证"
+                    ],
+                    "risks": [
+                      "证据不足"
+                    ],
+                    "evidenceRefs": [
+                      "https://example.org/source/c"
+                    ],
+                    "relatedCodes": [
+                      "000001"
+                    ]
+                  }
+                ]
+              }
+            }
+          ],
+          "deliveries": [
+            {
+              "target": "webstock-research",
+              "required": true,
+              "policy": {}
+            },
+            {
+              "target": "tonghuashun-watchlist",
+              "required": false,
+              "policy": {
+                "group": "离线预览"
+              }
+            }
+          ]
+        },
+        "batchKey": "22561d74c31099c954f1194441708bdeefd7845f2fe271bc4bce2c3df6c4dcfc",
+        "payloadHash": "bb174a76c637a8b0ca6945aef5f016a0c57499fa69b5dccf6ba6100c15a1a6f3",
+        "picks": [
+          {
+            "rank": 1,
+            "priority": "重点",
+            "code": "600000",
+            "name": "浦发银行",
+            "thesis": "前文😀完整中文",
+            "risks": [
+              "未独立核验"
+            ],
+            "evidenceRefs": [
+              "https://example.org/source/a"
+            ],
+            "includeInTonghuashun": true
+          },
+          {
+            "rank": 2,
+            "priority": "",
+            "code": "000001",
+            "name": "平安银行",
+            "thesis": "第二条原论点。",
+            "risks": [
+              "时点可能过期"
+            ],
+            "evidenceRefs": [
+              "https://example.org/source/b"
+            ],
+            "includeInTonghuashun": false
+          }
+        ],
+        "wantsTonghuashun": true
+      },
+      "expectedRun": {
+        "runType": "manual-chatgpt-stock-picks",
+        "modelId": "chatgpt-automation",
+        "status": "completed",
+        "title": "2026-10-14 ChatGPT 每日研究候选",
+        "result": "[\n  {\n    \"rank\": 1,\n    \"priority\": \"重点\",\n    \"code\": \"600000\",\n    \"name\": \"浦发银行\",\n    \"reason\": \"前文😀完整中文\",\n    \"risk\": \"未独立核验\",\n    \"analysis\": \"证据：https://example.org/source/a\"\n  },\n  {\n    \"rank\": 2,\n    \"priority\": \"\",\n    \"code\": \"000001\",\n    \"name\": \"平安银行\",\n    \"reason\": \"第二条原论点。\",\n    \"risk\": \"时点可能过期\",\n    \"analysis\": \"证据：https://example.org/source/b\"\n  }\n]",
+        "evidence": [
+          "https://example.org/source/a",
+          "https://example.org/source/b"
+        ],
+        "request": {
+          "source": "external-chatgpt-batch",
+          "batchKey": "22561d74c31099c954f1194441708bdeefd7845f2fe271bc4bce2c3df6c4dcfc",
+          "generatedAt": "2026-10-14T01:05:00.123456789Z",
+          "model": "external-offline-fixture",
+          "importedAt": "2026-10-14T02:00:00.000Z",
+          "candidates": [
+            {
+              "code": "600000",
+              "name": "浦发银行",
+              "reason": "前文😀完整中文",
+              "risk": "未独立核验",
+              "originalAnalysis": "证据：https://example.org/source/a",
+              "rank": 1,
+              "priority": "重点"
+            },
+            {
+              "code": "000001",
+              "name": "平安银行",
+              "reason": "第二条原论点。",
+              "risk": "时点可能过期",
+              "originalAnalysis": "证据：https://example.org/source/b",
+              "rank": 2
+            }
+          ],
+          "analysis": "离线受控原文，不是选股建议。",
+          "originalText": "[\n  {\n    \"rank\": 1,\n    \"priority\": \"重点\",\n    \"code\": \"600000\",\n    \"name\": \"浦发银行\",\n    \"reason\": \"前文😀完整中文\",\n    \"risk\": \"未独立核验\",\n    \"analysis\": \"证据：https://example.org/source/a\"\n  },\n  {\n    \"rank\": 2,\n    \"priority\": \"\",\n    \"code\": \"000001\",\n    \"name\": \"平安银行\",\n    \"reason\": \"第二条原论点。\",\n    \"risk\": \"时点可能过期\",\n    \"analysis\": \"证据：https://example.org/source/b\"\n  }\n]",
+          "format": "structured-json",
+          "duplicateCount": 0,
+          "truncated": false,
+          "warnings": [
+            "外部 ChatGPT 产物，WebStock 未独立验证"
+          ],
+          "security": {
+            "trustedHtml": false,
+            "executable": false
+          },
+          "automaticTrading": false
+        },
+        "metrics": {
+          "candidateCount": 2,
+          "duplicateCount": 0
+        },
+        "createdAt": "2026-10-14T02:00:00.000Z"
+      }
+    },
+    {
+      "name": "policy-ecmascript-numbers",
+      "raw": "{\n  \"schema\": \"webstock.external-research-batch/v1\",\n  \"source\": {\n    \"system\": \"ChatGPT\",\n    \"taskId\": \"daily-research\",\n    \"runId\": \"2026-10-14T09:00:00+08:00\",\n    \"generatedAt\": \"2026-10-14T01:05:00.123456789Z\",\n    \"model\": \"external-offline-fixture\"\n  },\n  \"revision\": 1e+21,\n  \"asOf\": {\n    \"marketDate\": \"2026-10-14\",\n    \"observedAt\": \"2026-10-14T09:00:00+08:00\",\n    \"timezone\": \"Asia/Shanghai\"\n  },\n  \"automaticTrading\": false,\n  \"artifacts\": [\n    {\n      \"artifactId\": \"picks-1\",\n      \"kind\": \"research-picks\",\n      \"schema\": \"webstock.research-picks/v1\",\n      \"payload\": {\n        \"analysis\": \"离线受控原文，不是选股建议。\",\n        \"picks\": [\n          {\n            \"rank\": 1,\n            \"priority\": \"重点\",\n            \"code\": \"600000\",\n            \"name\": \"浦发银行\",\n            \"thesis\": \"保存原论点与风险。\",\n            \"risks\": [\n              \"未独立核验\"\n            ],\n            \"evidenceRefs\": [\n              \"https://example.org/source/a\"\n            ],\n            \"includeInTonghuashun\": true\n          },\n          {\n            \"code\": \"000001\",\n            \"name\": \"平安银行\",\n            \"thesis\": \"第二条原论点。\",\n            \"risks\": [\n              \"时点可能过期\"\n            ],\n            \"evidenceRefs\": [\n              \"https://example.org/source/b\"\n            ]\n          }\n        ]\n      }\n    },\n    {\n      \"artifactId\": \"hot-1\",\n      \"kind\": \"market-hotspots\",\n      \"schema\": \"webstock.market-hotspots/v1\",\n      \"payload\": {\n        \"summary\": \"热点原件\",\n        \"items\": [\n          {\n            \"name\": \"银行\",\n            \"thesis\": \"待核验\",\n            \"drivers\": [\n              \"原驱动\"\n            ],\n            \"risks\": [\n              \"原风险\"\n            ],\n            \"evidenceRefs\": [\n              \"https://example.org/source/a\"\n            ],\n            \"relatedCodes\": [\n              \"600000\"\n            ]\n          }\n        ]\n      }\n    },\n    {\n      \"artifactId\": \"chain-1\",\n      \"kind\": \"industry-chain-updates\",\n      \"schema\": \"webstock.industry-chain-updates/v1\",\n      \"payload\": {\n        \"summary\": \"产业链原件\",\n        \"chains\": [\n          {\n            \"name\": \"金融基础设施\",\n            \"thesis\": \"保留来源判断\",\n            \"stages\": [\n              \"应用\"\n            ],\n            \"catalysts\": [\n              \"尚待补证\"\n            ],\n            \"risks\": [\n              \"证据不足\"\n            ],\n            \"evidenceRefs\": [\n              \"https://example.org/source/c\"\n            ],\n            \"relatedCodes\": [\n              \"000001\"\n            ]\n          }\n        ]\n      }\n    }\n  ],\n  \"deliveries\": [\n    {\n      \"target\": \"webstock-research\",\n      \"required\": true,\n      \"artifactIds\": [\n        \"picks-1\",\n        \"hot-1\",\n        \"chain-1\"\n      ],\n      \"policy\": {\n        \"2\": 1e-7,\n        \"10\": 0.000001,\n        \"z\": 0,\n        \"a\": 1e+21,\n        \"x\": 333333333.3333333,\n        \"emoji\": \"😀\",\n        \"nested\": {\n          \"1\": [\n            0.1,\n            1.2345678901234567\n          ],\n          \"8\": null,\n          \"__proto-safe__\": true\n        }\n      }\n    },\n    {\n      \"target\": \"tonghuashun-watchlist\",\n      \"policy\": {\n        \"group\": \"离线预览\"\n      }\n    }\n  ]\n}",
+      "expected": {
+        "normalized": {
+          "schema": "webstock.external-research-batch/v1",
+          "source": {
+            "system": "ChatGPT",
+            "taskId": "daily-research",
+            "runId": "2026-10-14T09:00:00+08:00",
+            "generatedAt": "2026-10-14T01:05:00.123456789Z",
+            "model": "external-offline-fixture"
+          },
+          "revision": 1e+21,
+          "asOf": {
+            "marketDate": "2026-10-14",
+            "observedAt": "2026-10-14T09:00:00+08:00",
+            "timezone": "Asia/Shanghai"
+          },
+          "automaticTrading": false,
+          "artifacts": [
+            {
+              "artifactId": "picks-1",
+              "kind": "research-picks",
+              "schema": "webstock.research-picks/v1",
+              "payload": {
+                "analysis": "离线受控原文，不是选股建议。",
+                "picks": [
+                  {
+                    "rank": 1,
+                    "priority": "重点",
+                    "code": "600000",
+                    "name": "浦发银行",
+                    "thesis": "保存原论点与风险。",
+                    "risks": [
+                      "未独立核验"
+                    ],
+                    "evidenceRefs": [
+                      "https://example.org/source/a"
+                    ],
+                    "includeInTonghuashun": true
+                  },
+                  {
+                    "rank": 2,
+                    "priority": "",
+                    "code": "000001",
+                    "name": "平安银行",
+                    "thesis": "第二条原论点。",
+                    "risks": [
+                      "时点可能过期"
+                    ],
+                    "evidenceRefs": [
+                      "https://example.org/source/b"
+                    ],
+                    "includeInTonghuashun": false
+                  }
+                ]
+              }
+            },
+            {
+              "artifactId": "hot-1",
+              "kind": "market-hotspots",
+              "schema": "webstock.market-hotspots/v1",
+              "payload": {
+                "summary": "热点原件",
+                "items": [
+                  {
+                    "rank": 1,
+                    "name": "银行",
+                    "state": "",
+                    "thesis": "待核验",
+                    "drivers": [
+                      "原驱动"
+                    ],
+                    "risks": [
+                      "原风险"
+                    ],
+                    "evidenceRefs": [
+                      "https://example.org/source/a"
+                    ],
+                    "relatedCodes": [
+                      "600000"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "artifactId": "chain-1",
+              "kind": "industry-chain-updates",
+              "schema": "webstock.industry-chain-updates/v1",
+              "payload": {
+                "summary": "产业链原件",
+                "chains": [
+                  {
+                    "name": "金融基础设施",
+                    "state": "",
+                    "thesis": "保留来源判断",
+                    "stages": [
+                      "应用"
+                    ],
+                    "catalysts": [
+                      "尚待补证"
+                    ],
+                    "risks": [
+                      "证据不足"
+                    ],
+                    "evidenceRefs": [
+                      "https://example.org/source/c"
+                    ],
+                    "relatedCodes": [
+                      "000001"
+                    ]
+                  }
+                ]
+              }
+            }
+          ],
+          "deliveries": [
+            {
+              "target": "webstock-research",
+              "required": true,
+              "policy": {
+                "2": 1e-7,
+                "10": 0.000001,
+                "z": 0,
+                "a": 1e+21,
+                "x": 333333333.3333333,
+                "emoji": "😀",
+                "nested": {
+                  "1": [
+                    0.1,
+                    1.2345678901234567
+                  ],
+                  "8": null,
+                  "__proto-safe__": true
+                }
+              }
+            },
+            {
+              "target": "tonghuashun-watchlist",
+              "required": false,
+              "policy": {
+                "group": "离线预览"
+              }
+            }
+          ]
+        },
+        "batchKey": "b81a5e139411c2ae9440537e3b5811b01347042521b33225b6b9756bfe38a37e",
+        "payloadHash": "097e9b8f344a723f91a737928d649e0f66685f395beeb29f3acc4055edeb76d0",
+        "picks": [
+          {
+            "rank": 1,
+            "priority": "重点",
+            "code": "600000",
+            "name": "浦发银行",
+            "thesis": "保存原论点与风险。",
+            "risks": [
+              "未独立核验"
+            ],
+            "evidenceRefs": [
+              "https://example.org/source/a"
+            ],
+            "includeInTonghuashun": true
+          },
+          {
+            "rank": 2,
+            "priority": "",
+            "code": "000001",
+            "name": "平安银行",
+            "thesis": "第二条原论点。",
+            "risks": [
+              "时点可能过期"
+            ],
+            "evidenceRefs": [
+              "https://example.org/source/b"
+            ],
+            "includeInTonghuashun": false
+          }
+        ],
+        "wantsTonghuashun": true
+      },
+      "expectedRun": {
+        "runType": "manual-chatgpt-stock-picks",
+        "modelId": "chatgpt-automation",
+        "status": "completed",
+        "title": "2026-10-14 ChatGPT 每日研究候选",
+        "result": "[\n  {\n    \"rank\": 1,\n    \"priority\": \"重点\",\n    \"code\": \"600000\",\n    \"name\": \"浦发银行\",\n    \"reason\": \"保存原论点与风险。\",\n    \"risk\": \"未独立核验\",\n    \"analysis\": \"证据：https://example.org/source/a\"\n  },\n  {\n    \"rank\": 2,\n    \"priority\": \"\",\n    \"code\": \"000001\",\n    \"name\": \"平安银行\",\n    \"reason\": \"第二条原论点。\",\n    \"risk\": \"时点可能过期\",\n    \"analysis\": \"证据：https://example.org/source/b\"\n  }\n]",
+        "evidence": [
+          "https://example.org/source/a",
+          "https://example.org/source/b"
+        ],
+        "request": {
+          "source": "external-chatgpt-batch",
+          "batchKey": "b81a5e139411c2ae9440537e3b5811b01347042521b33225b6b9756bfe38a37e",
+          "generatedAt": "2026-10-14T01:05:00.123456789Z",
+          "model": "external-offline-fixture",
+          "importedAt": "2026-10-14T02:00:00.000Z",
+          "candidates": [
+            {
+              "code": "600000",
+              "name": "浦发银行",
+              "reason": "保存原论点与风险。",
+              "risk": "未独立核验",
+              "originalAnalysis": "证据：https://example.org/source/a",
+              "rank": 1,
+              "priority": "重点"
+            },
+            {
+              "code": "000001",
+              "name": "平安银行",
+              "reason": "第二条原论点。",
+              "risk": "时点可能过期",
+              "originalAnalysis": "证据：https://example.org/source/b",
+              "rank": 2
+            }
+          ],
+          "analysis": "离线受控原文，不是选股建议。",
+          "originalText": "[\n  {\n    \"rank\": 1,\n    \"priority\": \"重点\",\n    \"code\": \"600000\",\n    \"name\": \"浦发银行\",\n    \"reason\": \"保存原论点与风险。\",\n    \"risk\": \"未独立核验\",\n    \"analysis\": \"证据：https://example.org/source/a\"\n  },\n  {\n    \"rank\": 2,\n    \"priority\": \"\",\n    \"code\": \"000001\",\n    \"name\": \"平安银行\",\n    \"reason\": \"第二条原论点。\",\n    \"risk\": \"时点可能过期\",\n    \"analysis\": \"证据：https://example.org/source/b\"\n  }\n]",
+          "format": "structured-json",
+          "duplicateCount": 0,
+          "truncated": false,
+          "warnings": [
+            "外部 ChatGPT 产物，WebStock 未独立验证"
+          ],
+          "security": {
+            "trustedHtml": false,
+            "executable": false
+          },
+          "automaticTrading": false
+        },
+        "metrics": {
+          "candidateCount": 2,
+          "duplicateCount": 0
+        },
+        "createdAt": "2026-10-14T02:00:00.000Z"
+      }
+    },
+    {
+      "name": "explicit-optionals",
+      "raw": "{\n  \"schema\": \"webstock.external-research-batch/v1\",\n  \"source\": {\n    \"system\": \"ChatGPT\",\n    \"taskId\": \"daily-research\",\n    \"runId\": \"2026-10-14T09:00:00+08:00\",\n    \"generatedAt\": \"2026-10-14T01:05:00.123456789Z\",\n    \"model\": \"external-offline-fixture\"\n  },\n  \"revision\": 1,\n  \"asOf\": {\n    \"marketDate\": \"2026-10-14\",\n    \"observedAt\": \"2026-10-14T09:00:00+08:00\",\n    \"timezone\": \"Asia/Shanghai\"\n  },\n  \"automaticTrading\": false,\n  \"artifacts\": [\n    {\n      \"artifactId\": \"picks-1\",\n      \"kind\": \"research-picks\",\n      \"schema\": \"webstock.research-picks/v1\",\n      \"payload\": {\n        \"analysis\": \"离线受控原文，不是选股建议。\",\n        \"picks\": [\n          {\n            \"rank\": 1,\n            \"priority\": \"重点\",\n            \"code\": \"600000\",\n            \"name\": \"浦发银行\",\n            \"thesis\": \"保存原论点与风险。\",\n            \"risks\": [\n              \"未独立核验\"\n            ],\n            \"evidenceRefs\": [\n              \"https://example.org/source/a\"\n            ],\n            \"includeInTonghuashun\": true\n          },\n          {\n            \"code\": \"000001\",\n            \"name\": \"平安银行\",\n            \"thesis\": \"第二条原论点。\",\n            \"risks\": [\n              \"时点可能过期\"\n            ],\n            \"evidenceRefs\": [\n              \"https://example.org/source/b\"\n            ],\n            \"priority\": \"观察\"\n          }\n        ]\n      }\n    },\n    {\n      \"artifactId\": \"hot-1\",\n      \"kind\": \"market-hotspots\",\n      \"schema\": \"webstock.market-hotspots/v1\",\n      \"payload\": {\n        \"summary\": \"热点原件\",\n        \"items\": [\n          {\n            \"name\": \"银行\",\n            \"thesis\": \"待核验\",\n            \"drivers\": [\n              \"原驱动\"\n            ],\n            \"risks\": [\n              \"原风险\"\n            ],\n            \"evidenceRefs\": [\n              \"https://example.org/source/a\"\n            ],\n            \"relatedCodes\": [\n              \"600000\"\n            ],\n            \"rank\": 25,\n            \"state\": \"待核\"\n          }\n        ]\n      }\n    },\n    {\n      \"artifactId\": \"chain-1\",\n      \"kind\": \"industry-chain-updates\",\n      \"schema\": \"webstock.industry-chain-updates/v1\",\n      \"payload\": {\n        \"summary\": \"产业链原件\",\n        \"chains\": [\n          {\n            \"name\": \"金融基础设施\",\n            \"thesis\": \"保留来源判断\",\n            \"stages\": [\n              \"应用\"\n            ],\n            \"catalysts\": [\n              \"尚待补证\"\n            ],\n            \"risks\": [\n              \"证据不足\"\n            ],\n            \"evidenceRefs\": [\n              \"https://example.org/source/c\"\n            ],\n            \"relatedCodes\": [\n              \"000001\"\n            ]\n          }\n        ]\n      }\n    }\n  ],\n  \"deliveries\": [\n    {\n      \"target\": \"webstock-research\",\n      \"required\": true,\n      \"artifactIds\": [\n        \"picks-1\",\n        \"hot-1\",\n        \"chain-1\"\n      ]\n    },\n    {\n      \"target\": \"tonghuashun-watchlist\",\n      \"policy\": {\n        \"group\": \"离线预览\"\n      }\n    }\n  ]\n}",
+      "expected": {
+        "normalized": {
+          "schema": "webstock.external-research-batch/v1",
+          "source": {
+            "system": "ChatGPT",
+            "taskId": "daily-research",
+            "runId": "2026-10-14T09:00:00+08:00",
+            "generatedAt": "2026-10-14T01:05:00.123456789Z",
+            "model": "external-offline-fixture"
+          },
+          "revision": 1,
+          "asOf": {
+            "marketDate": "2026-10-14",
+            "observedAt": "2026-10-14T09:00:00+08:00",
+            "timezone": "Asia/Shanghai"
+          },
+          "automaticTrading": false,
+          "artifacts": [
+            {
+              "artifactId": "picks-1",
+              "kind": "research-picks",
+              "schema": "webstock.research-picks/v1",
+              "payload": {
+                "analysis": "离线受控原文，不是选股建议。",
+                "picks": [
+                  {
+                    "rank": 1,
+                    "priority": "重点",
+                    "code": "600000",
+                    "name": "浦发银行",
+                    "thesis": "保存原论点与风险。",
+                    "risks": [
+                      "未独立核验"
+                    ],
+                    "evidenceRefs": [
+                      "https://example.org/source/a"
+                    ],
+                    "includeInTonghuashun": true
+                  },
+                  {
+                    "rank": 2,
+                    "priority": "观察",
+                    "code": "000001",
+                    "name": "平安银行",
+                    "thesis": "第二条原论点。",
+                    "risks": [
+                      "时点可能过期"
+                    ],
+                    "evidenceRefs": [
+                      "https://example.org/source/b"
+                    ],
+                    "includeInTonghuashun": false
+                  }
+                ]
+              }
+            },
+            {
+              "artifactId": "hot-1",
+              "kind": "market-hotspots",
+              "schema": "webstock.market-hotspots/v1",
+              "payload": {
+                "summary": "热点原件",
+                "items": [
+                  {
+                    "rank": 25,
+                    "name": "银行",
+                    "state": "待核",
+                    "thesis": "待核验",
+                    "drivers": [
+                      "原驱动"
+                    ],
+                    "risks": [
+                      "原风险"
+                    ],
+                    "evidenceRefs": [
+                      "https://example.org/source/a"
+                    ],
+                    "relatedCodes": [
+                      "600000"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "artifactId": "chain-1",
+              "kind": "industry-chain-updates",
+              "schema": "webstock.industry-chain-updates/v1",
+              "payload": {
+                "summary": "产业链原件",
+                "chains": [
+                  {
+                    "name": "金融基础设施",
+                    "state": "",
+                    "thesis": "保留来源判断",
+                    "stages": [
+                      "应用"
+                    ],
+                    "catalysts": [
+                      "尚待补证"
+                    ],
+                    "risks": [
+                      "证据不足"
+                    ],
+                    "evidenceRefs": [
+                      "https://example.org/source/c"
+                    ],
+                    "relatedCodes": [
+                      "000001"
+                    ]
+                  }
+                ]
+              }
+            }
+          ],
+          "deliveries": [
+            {
+              "target": "webstock-research",
+              "required": true,
+              "policy": {}
+            },
+            {
+              "target": "tonghuashun-watchlist",
+              "required": false,
+              "policy": {
+                "group": "离线预览"
+              }
+            }
+          ]
+        },
+        "batchKey": "22561d74c31099c954f1194441708bdeefd7845f2fe271bc4bce2c3df6c4dcfc",
+        "payloadHash": "29dbbf5dac2c29ae17158f005ec65174687e75344178447310da46cad21f2ba5",
+        "picks": [
+          {
+            "rank": 1,
+            "priority": "重点",
+            "code": "600000",
+            "name": "浦发银行",
+            "thesis": "保存原论点与风险。",
+            "risks": [
+              "未独立核验"
+            ],
+            "evidenceRefs": [
+              "https://example.org/source/a"
+            ],
+            "includeInTonghuashun": true
+          },
+          {
+            "rank": 2,
+            "priority": "观察",
+            "code": "000001",
+            "name": "平安银行",
+            "thesis": "第二条原论点。",
+            "risks": [
+              "时点可能过期"
+            ],
+            "evidenceRefs": [
+              "https://example.org/source/b"
+            ],
+            "includeInTonghuashun": false
+          }
+        ],
+        "wantsTonghuashun": true
+      },
+      "expectedRun": {
+        "runType": "manual-chatgpt-stock-picks",
+        "modelId": "chatgpt-automation",
+        "status": "completed",
+        "title": "2026-10-14 ChatGPT 每日研究候选",
+        "result": "[\n  {\n    \"rank\": 1,\n    \"priority\": \"重点\",\n    \"code\": \"600000\",\n    \"name\": \"浦发银行\",\n    \"reason\": \"保存原论点与风险。\",\n    \"risk\": \"未独立核验\",\n    \"analysis\": \"证据：https://example.org/source/a\"\n  },\n  {\n    \"rank\": 2,\n    \"priority\": \"观察\",\n    \"code\": \"000001\",\n    \"name\": \"平安银行\",\n    \"reason\": \"第二条原论点。\",\n    \"risk\": \"时点可能过期\",\n    \"analysis\": \"证据：https://example.org/source/b\"\n  }\n]",
+        "evidence": [
+          "https://example.org/source/a",
+          "https://example.org/source/b"
+        ],
+        "request": {
+          "source": "external-chatgpt-batch",
+          "batchKey": "22561d74c31099c954f1194441708bdeefd7845f2fe271bc4bce2c3df6c4dcfc",
+          "generatedAt": "2026-10-14T01:05:00.123456789Z",
+          "model": "external-offline-fixture",
+          "importedAt": "2026-10-14T02:00:00.000Z",
+          "candidates": [
+            {
+              "code": "600000",
+              "name": "浦发银行",
+              "reason": "保存原论点与风险。",
+              "risk": "未独立核验",
+              "originalAnalysis": "证据：https://example.org/source/a",
+              "rank": 1,
+              "priority": "重点"
+            },
+            {
+              "code": "000001",
+              "name": "平安银行",
+              "reason": "第二条原论点。",
+              "risk": "时点可能过期",
+              "originalAnalysis": "证据：https://example.org/source/b",
+              "rank": 2,
+              "priority": "观察"
+            }
+          ],
+          "analysis": "离线受控原文，不是选股建议。",
+          "originalText": "[\n  {\n    \"rank\": 1,\n    \"priority\": \"重点\",\n    \"code\": \"600000\",\n    \"name\": \"浦发银行\",\n    \"reason\": \"保存原论点与风险。\",\n    \"risk\": \"未独立核验\",\n    \"analysis\": \"证据：https://example.org/source/a\"\n  },\n  {\n    \"rank\": 2,\n    \"priority\": \"观察\",\n    \"code\": \"000001\",\n    \"name\": \"平安银行\",\n    \"reason\": \"第二条原论点。\",\n    \"risk\": \"时点可能过期\",\n    \"analysis\": \"证据：https://example.org/source/b\"\n  }\n]",
+          "format": "structured-json",
+          "duplicateCount": 0,
+          "truncated": false,
+          "warnings": [
+            "外部 ChatGPT 产物，WebStock 未独立验证"
+          ],
+          "security": {
+            "trustedHtml": false,
+            "executable": false
+          },
+          "automaticTrading": false
+        },
+        "metrics": {
+          "candidateCount": 2,
+          "duplicateCount": 0
+        },
+        "createdAt": "2026-10-14T02:00:00.000Z"
+      }
+    },
+    {
+      "name": "new-revision",
+      "raw": "{\n  \"schema\": \"webstock.external-research-batch/v1\",\n  \"source\": {\n    \"system\": \"ChatGPT\",\n    \"taskId\": \"daily-research\",\n    \"runId\": \"2026-10-14T09:00:00+08:00\",\n    \"generatedAt\": \"2026-10-14T01:05:00.123456789Z\",\n    \"model\": \"external-offline-fixture\"\n  },\n  \"revision\": 2,\n  \"asOf\": {\n    \"marketDate\": \"2026-10-14\",\n    \"observedAt\": \"2026-10-14T09:00:00+08:00\",\n    \"timezone\": \"Asia/Shanghai\"\n  },\n  \"automaticTrading\": false,\n  \"artifacts\": [\n    {\n      \"artifactId\": \"picks-1\",\n      \"kind\": \"research-picks\",\n      \"schema\": \"webstock.research-picks/v1\",\n      \"payload\": {\n        \"analysis\": \"离线受控原文，不是选股建议。\",\n        \"picks\": [\n          {\n            \"rank\": 1,\n            \"priority\": \"重点\",\n            \"code\": \"600000\",\n            \"name\": \"浦发银行\",\n            \"thesis\": \"修订后的论点\",\n            \"risks\": [\n              \"未独立核验\"\n            ],\n            \"evidenceRefs\": [\n              \"https://example.org/source/a\"\n            ],\n            \"includeInTonghuashun\": true\n          },\n          {\n            \"code\": \"000001\",\n            \"name\": \"平安银行\",\n            \"thesis\": \"第二条原论点。\",\n            \"risks\": [\n              \"时点可能过期\"\n            ],\n            \"evidenceRefs\": [\n              \"https://example.org/source/b\"\n            ]\n          }\n        ]\n      }\n    },\n    {\n      \"artifactId\": \"hot-1\",\n      \"kind\": \"market-hotspots\",\n      \"schema\": \"webstock.market-hotspots/v1\",\n      \"payload\": {\n        \"summary\": \"热点原件\",\n        \"items\": [\n          {\n            \"name\": \"银行\",\n            \"thesis\": \"待核验\",\n            \"drivers\": [\n              \"原驱动\"\n            ],\n            \"risks\": [\n              \"原风险\"\n            ],\n            \"evidenceRefs\": [\n              \"https://example.org/source/a\"\n            ],\n            \"relatedCodes\": [\n              \"600000\"\n            ]\n          }\n        ]\n      }\n    },\n    {\n      \"artifactId\": \"chain-1\",\n      \"kind\": \"industry-chain-updates\",\n      \"schema\": \"webstock.industry-chain-updates/v1\",\n      \"payload\": {\n        \"summary\": \"产业链原件\",\n        \"chains\": [\n          {\n            \"name\": \"金融基础设施\",\n            \"thesis\": \"保留来源判断\",\n            \"stages\": [\n              \"应用\"\n            ],\n            \"catalysts\": [\n              \"尚待补证\"\n            ],\n            \"risks\": [\n              \"证据不足\"\n            ],\n            \"evidenceRefs\": [\n              \"https://example.org/source/c\"\n            ],\n            \"relatedCodes\": [\n              \"000001\"\n            ]\n          }\n        ]\n      }\n    }\n  ],\n  \"deliveries\": [\n    {\n      \"target\": \"webstock-research\",\n      \"required\": true,\n      \"artifactIds\": [\n        \"picks-1\",\n        \"hot-1\",\n        \"chain-1\"\n      ]\n    },\n    {\n      \"target\": \"tonghuashun-watchlist\",\n      \"policy\": {\n        \"group\": \"离线预览\"\n      }\n    }\n  ]\n}",
+      "expected": {
+        "normalized": {
+          "schema": "webstock.external-research-batch/v1",
+          "source": {
+            "system": "ChatGPT",
+            "taskId": "daily-research",
+            "runId": "2026-10-14T09:00:00+08:00",
+            "generatedAt": "2026-10-14T01:05:00.123456789Z",
+            "model": "external-offline-fixture"
+          },
+          "revision": 2,
+          "asOf": {
+            "marketDate": "2026-10-14",
+            "observedAt": "2026-10-14T09:00:00+08:00",
+            "timezone": "Asia/Shanghai"
+          },
+          "automaticTrading": false,
+          "artifacts": [
+            {
+              "artifactId": "picks-1",
+              "kind": "research-picks",
+              "schema": "webstock.research-picks/v1",
+              "payload": {
+                "analysis": "离线受控原文，不是选股建议。",
+                "picks": [
+                  {
+                    "rank": 1,
+                    "priority": "重点",
+                    "code": "600000",
+                    "name": "浦发银行",
+                    "thesis": "修订后的论点",
+                    "risks": [
+                      "未独立核验"
+                    ],
+                    "evidenceRefs": [
+                      "https://example.org/source/a"
+                    ],
+                    "includeInTonghuashun": true
+                  },
+                  {
+                    "rank": 2,
+                    "priority": "",
+                    "code": "000001",
+                    "name": "平安银行",
+                    "thesis": "第二条原论点。",
+                    "risks": [
+                      "时点可能过期"
+                    ],
+                    "evidenceRefs": [
+                      "https://example.org/source/b"
+                    ],
+                    "includeInTonghuashun": false
+                  }
+                ]
+              }
+            },
+            {
+              "artifactId": "hot-1",
+              "kind": "market-hotspots",
+              "schema": "webstock.market-hotspots/v1",
+              "payload": {
+                "summary": "热点原件",
+                "items": [
+                  {
+                    "rank": 1,
+                    "name": "银行",
+                    "state": "",
+                    "thesis": "待核验",
+                    "drivers": [
+                      "原驱动"
+                    ],
+                    "risks": [
+                      "原风险"
+                    ],
+                    "evidenceRefs": [
+                      "https://example.org/source/a"
+                    ],
+                    "relatedCodes": [
+                      "600000"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "artifactId": "chain-1",
+              "kind": "industry-chain-updates",
+              "schema": "webstock.industry-chain-updates/v1",
+              "payload": {
+                "summary": "产业链原件",
+                "chains": [
+                  {
+                    "name": "金融基础设施",
+                    "state": "",
+                    "thesis": "保留来源判断",
+                    "stages": [
+                      "应用"
+                    ],
+                    "catalysts": [
+                      "尚待补证"
+                    ],
+                    "risks": [
+                      "证据不足"
+                    ],
+                    "evidenceRefs": [
+                      "https://example.org/source/c"
+                    ],
+                    "relatedCodes": [
+                      "000001"
+                    ]
+                  }
+                ]
+              }
+            }
+          ],
+          "deliveries": [
+            {
+              "target": "webstock-research",
+              "required": true,
+              "policy": {}
+            },
+            {
+              "target": "tonghuashun-watchlist",
+              "required": false,
+              "policy": {
+                "group": "离线预览"
+              }
+            }
+          ]
+        },
+        "batchKey": "09e62042c138255d199780abeff125bef975c6234d3abe28bb9baf8a79fc2498",
+        "payloadHash": "9313a6026ec994aea86481b761fe2044a24391feca4eca54569fd944796f79d6",
+        "picks": [
+          {
+            "rank": 1,
+            "priority": "重点",
+            "code": "600000",
+            "name": "浦发银行",
+            "thesis": "修订后的论点",
+            "risks": [
+              "未独立核验"
+            ],
+            "evidenceRefs": [
+              "https://example.org/source/a"
+            ],
+            "includeInTonghuashun": true
+          },
+          {
+            "rank": 2,
+            "priority": "",
+            "code": "000001",
+            "name": "平安银行",
+            "thesis": "第二条原论点。",
+            "risks": [
+              "时点可能过期"
+            ],
+            "evidenceRefs": [
+              "https://example.org/source/b"
+            ],
+            "includeInTonghuashun": false
+          }
+        ],
+        "wantsTonghuashun": true
+      },
+      "expectedRun": {
+        "runType": "manual-chatgpt-stock-picks",
+        "modelId": "chatgpt-automation",
+        "status": "completed",
+        "title": "2026-10-14 ChatGPT 每日研究候选",
+        "result": "[\n  {\n    \"rank\": 1,\n    \"priority\": \"重点\",\n    \"code\": \"600000\",\n    \"name\": \"浦发银行\",\n    \"reason\": \"修订后的论点\",\n    \"risk\": \"未独立核验\",\n    \"analysis\": \"证据：https://example.org/source/a\"\n  },\n  {\n    \"rank\": 2,\n    \"priority\": \"\",\n    \"code\": \"000001\",\n    \"name\": \"平安银行\",\n    \"reason\": \"第二条原论点。\",\n    \"risk\": \"时点可能过期\",\n    \"analysis\": \"证据：https://example.org/source/b\"\n  }\n]",
+        "evidence": [
+          "https://example.org/source/a",
+          "https://example.org/source/b"
+        ],
+        "request": {
+          "source": "external-chatgpt-batch",
+          "batchKey": "09e62042c138255d199780abeff125bef975c6234d3abe28bb9baf8a79fc2498",
+          "generatedAt": "2026-10-14T01:05:00.123456789Z",
+          "model": "external-offline-fixture",
+          "importedAt": "2026-10-14T02:00:00.000Z",
+          "candidates": [
+            {
+              "code": "600000",
+              "name": "浦发银行",
+              "reason": "修订后的论点",
+              "risk": "未独立核验",
+              "originalAnalysis": "证据：https://example.org/source/a",
+              "rank": 1,
+              "priority": "重点"
+            },
+            {
+              "code": "000001",
+              "name": "平安银行",
+              "reason": "第二条原论点。",
+              "risk": "时点可能过期",
+              "originalAnalysis": "证据：https://example.org/source/b",
+              "rank": 2
+            }
+          ],
+          "analysis": "离线受控原文，不是选股建议。",
+          "originalText": "[\n  {\n    \"rank\": 1,\n    \"priority\": \"重点\",\n    \"code\": \"600000\",\n    \"name\": \"浦发银行\",\n    \"reason\": \"修订后的论点\",\n    \"risk\": \"未独立核验\",\n    \"analysis\": \"证据：https://example.org/source/a\"\n  },\n  {\n    \"rank\": 2,\n    \"priority\": \"\",\n    \"code\": \"000001\",\n    \"name\": \"平安银行\",\n    \"reason\": \"第二条原论点。\",\n    \"risk\": \"时点可能过期\",\n    \"analysis\": \"证据：https://example.org/source/b\"\n  }\n]",
+          "format": "structured-json",
+          "duplicateCount": 0,
+          "truncated": false,
+          "warnings": [
+            "外部 ChatGPT 产物，WebStock 未独立验证"
+          ],
+          "security": {
+            "trustedHtml": false,
+            "executable": false
+          },
+          "automaticTrading": false
+        },
+        "metrics": {
+          "candidateCount": 2,
+          "duplicateCount": 0
+        },
+        "createdAt": "2026-10-14T02:00:00.000Z"
+      }
+    },
+    {
+      "name": "policy-prototype-key",
+      "raw": "{\n  \"schema\": \"webstock.external-research-batch/v1\",\n  \"source\": {\n    \"system\": \"ChatGPT\",\n    \"taskId\": \"daily-research\",\n    \"runId\": \"2026-10-14T09:00:00+08:00\",\n    \"generatedAt\": \"2026-10-14T01:05:00.123456789Z\",\n    \"model\": \"external-offline-fixture\"\n  },\n  \"revision\": 1,\n  \"asOf\": {\n    \"marketDate\": \"2026-10-14\",\n    \"observedAt\": \"2026-10-14T09:00:00+08:00\",\n    \"timezone\": \"Asia/Shanghai\"\n  },\n  \"automaticTrading\": false,\n  \"artifacts\": [\n    {\n      \"artifactId\": \"picks-1\",\n      \"kind\": \"research-picks\",\n      \"schema\": \"webstock.research-picks/v1\",\n      \"payload\": {\n        \"analysis\": \"离线受控原文，不是选股建议。\",\n        \"picks\": [\n          {\n            \"rank\": 1,\n            \"priority\": \"重点\",\n            \"code\": \"600000\",\n            \"name\": \"浦发银行\",\n            \"thesis\": \"保存原论点与风险。\",\n            \"risks\": [\n              \"未独立核验\"\n            ],\n            \"evidenceRefs\": [\n              \"https://example.org/source/a\"\n            ],\n            \"includeInTonghuashun\": true\n          },\n          {\n            \"code\": \"000001\",\n            \"name\": \"平安银行\",\n            \"thesis\": \"第二条原论点。\",\n            \"risks\": [\n              \"时点可能过期\"\n            ],\n            \"evidenceRefs\": [\n              \"https://example.org/source/b\"\n            ]\n          }\n        ]\n      }\n    },\n    {\n      \"artifactId\": \"hot-1\",\n      \"kind\": \"market-hotspots\",\n      \"schema\": \"webstock.market-hotspots/v1\",\n      \"payload\": {\n        \"summary\": \"热点原件\",\n        \"items\": [\n          {\n            \"name\": \"银行\",\n            \"thesis\": \"待核验\",\n            \"drivers\": [\n              \"原驱动\"\n            ],\n            \"risks\": [\n              \"原风险\"\n            ],\n            \"evidenceRefs\": [\n              \"https://example.org/source/a\"\n            ],\n            \"relatedCodes\": [\n              \"600000\"\n            ]\n          }\n        ]\n      }\n    },\n    {\n      \"artifactId\": \"chain-1\",\n      \"kind\": \"industry-chain-updates\",\n      \"schema\": \"webstock.industry-chain-updates/v1\",\n      \"payload\": {\n        \"summary\": \"产业链原件\",\n        \"chains\": [\n          {\n            \"name\": \"金融基础设施\",\n            \"thesis\": \"保留来源判断\",\n            \"stages\": [\n              \"应用\"\n            ],\n            \"catalysts\": [\n              \"尚待补证\"\n            ],\n            \"risks\": [\n              \"证据不足\"\n            ],\n            \"evidenceRefs\": [\n              \"https://example.org/source/c\"\n            ],\n            \"relatedCodes\": [\n              \"000001\"\n            ]\n          }\n        ]\n      }\n    }\n  ],\n  \"deliveries\": [\n    {\n      \"target\": \"webstock-research\",\n      \"required\": true,\n      \"artifactIds\": [\n        \"picks-1\",\n        \"hot-1\",\n        \"chain-1\"\n      ],\n      \"policy\": {\n        \"__proto__\": {\n          \"a\": 1\n        },\n        \"normal\": 2\n      }\n    },\n    {\n      \"target\": \"tonghuashun-watchlist\",\n      \"policy\": {\n        \"group\": \"离线预览\"\n      }\n    }\n  ]\n}",
+      "expected": {
+        "normalized": {
+          "schema": "webstock.external-research-batch/v1",
+          "source": {
+            "system": "ChatGPT",
+            "taskId": "daily-research",
+            "runId": "2026-10-14T09:00:00+08:00",
+            "generatedAt": "2026-10-14T01:05:00.123456789Z",
+            "model": "external-offline-fixture"
+          },
+          "revision": 1,
+          "asOf": {
+            "marketDate": "2026-10-14",
+            "observedAt": "2026-10-14T09:00:00+08:00",
+            "timezone": "Asia/Shanghai"
+          },
+          "automaticTrading": false,
+          "artifacts": [
+            {
+              "artifactId": "picks-1",
+              "kind": "research-picks",
+              "schema": "webstock.research-picks/v1",
+              "payload": {
+                "analysis": "离线受控原文，不是选股建议。",
+                "picks": [
+                  {
+                    "rank": 1,
+                    "priority": "重点",
+                    "code": "600000",
+                    "name": "浦发银行",
+                    "thesis": "保存原论点与风险。",
+                    "risks": [
+                      "未独立核验"
+                    ],
+                    "evidenceRefs": [
+                      "https://example.org/source/a"
+                    ],
+                    "includeInTonghuashun": true
+                  },
+                  {
+                    "rank": 2,
+                    "priority": "",
+                    "code": "000001",
+                    "name": "平安银行",
+                    "thesis": "第二条原论点。",
+                    "risks": [
+                      "时点可能过期"
+                    ],
+                    "evidenceRefs": [
+                      "https://example.org/source/b"
+                    ],
+                    "includeInTonghuashun": false
+                  }
+                ]
+              }
+            },
+            {
+              "artifactId": "hot-1",
+              "kind": "market-hotspots",
+              "schema": "webstock.market-hotspots/v1",
+              "payload": {
+                "summary": "热点原件",
+                "items": [
+                  {
+                    "rank": 1,
+                    "name": "银行",
+                    "state": "",
+                    "thesis": "待核验",
+                    "drivers": [
+                      "原驱动"
+                    ],
+                    "risks": [
+                      "原风险"
+                    ],
+                    "evidenceRefs": [
+                      "https://example.org/source/a"
+                    ],
+                    "relatedCodes": [
+                      "600000"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "artifactId": "chain-1",
+              "kind": "industry-chain-updates",
+              "schema": "webstock.industry-chain-updates/v1",
+              "payload": {
+                "summary": "产业链原件",
+                "chains": [
+                  {
+                    "name": "金融基础设施",
+                    "state": "",
+                    "thesis": "保留来源判断",
+                    "stages": [
+                      "应用"
+                    ],
+                    "catalysts": [
+                      "尚待补证"
+                    ],
+                    "risks": [
+                      "证据不足"
+                    ],
+                    "evidenceRefs": [
+                      "https://example.org/source/c"
+                    ],
+                    "relatedCodes": [
+                      "000001"
+                    ]
+                  }
+                ]
+              }
+            }
+          ],
+          "deliveries": [
+            {
+              "target": "webstock-research",
+              "required": true,
+              "policy": {
+                "__proto__": {
+                  "a": 1
+                },
+                "normal": 2
+              }
+            },
+            {
+              "target": "tonghuashun-watchlist",
+              "required": false,
+              "policy": {
+                "group": "离线预览"
+              }
+            }
+          ]
+        },
+        "batchKey": "22561d74c31099c954f1194441708bdeefd7845f2fe271bc4bce2c3df6c4dcfc",
+        "payloadHash": "52f7b4e7e205adc5b2adf48e157742076245d0c0257fc981e7f950a2db416b2e",
+        "picks": [
+          {
+            "rank": 1,
+            "priority": "重点",
+            "code": "600000",
+            "name": "浦发银行",
+            "thesis": "保存原论点与风险。",
+            "risks": [
+              "未独立核验"
+            ],
+            "evidenceRefs": [
+              "https://example.org/source/a"
+            ],
+            "includeInTonghuashun": true
+          },
+          {
+            "rank": 2,
+            "priority": "",
+            "code": "000001",
+            "name": "平安银行",
+            "thesis": "第二条原论点。",
+            "risks": [
+              "时点可能过期"
+            ],
+            "evidenceRefs": [
+              "https://example.org/source/b"
+            ],
+            "includeInTonghuashun": false
+          }
+        ],
+        "wantsTonghuashun": true
+      },
+      "expectedRun": {
+        "runType": "manual-chatgpt-stock-picks",
+        "modelId": "chatgpt-automation",
+        "status": "completed",
+        "title": "2026-10-14 ChatGPT 每日研究候选",
+        "result": "[\n  {\n    \"rank\": 1,\n    \"priority\": \"重点\",\n    \"code\": \"600000\",\n    \"name\": \"浦发银行\",\n    \"reason\": \"保存原论点与风险。\",\n    \"risk\": \"未独立核验\",\n    \"analysis\": \"证据：https://example.org/source/a\"\n  },\n  {\n    \"rank\": 2,\n    \"priority\": \"\",\n    \"code\": \"000001\",\n    \"name\": \"平安银行\",\n    \"reason\": \"第二条原论点。\",\n    \"risk\": \"时点可能过期\",\n    \"analysis\": \"证据：https://example.org/source/b\"\n  }\n]",
+        "evidence": [
+          "https://example.org/source/a",
+          "https://example.org/source/b"
+        ],
+        "request": {
+          "source": "external-chatgpt-batch",
+          "batchKey": "22561d74c31099c954f1194441708bdeefd7845f2fe271bc4bce2c3df6c4dcfc",
+          "generatedAt": "2026-10-14T01:05:00.123456789Z",
+          "model": "external-offline-fixture",
+          "importedAt": "2026-10-14T02:00:00.000Z",
+          "candidates": [
+            {
+              "code": "600000",
+              "name": "浦发银行",
+              "reason": "保存原论点与风险。",
+              "risk": "未独立核验",
+              "originalAnalysis": "证据：https://example.org/source/a",
+              "rank": 1,
+              "priority": "重点"
+            },
+            {
+              "code": "000001",
+              "name": "平安银行",
+              "reason": "第二条原论点。",
+              "risk": "时点可能过期",
+              "originalAnalysis": "证据：https://example.org/source/b",
+              "rank": 2
+            }
+          ],
+          "analysis": "离线受控原文，不是选股建议。",
+          "originalText": "[\n  {\n    \"rank\": 1,\n    \"priority\": \"重点\",\n    \"code\": \"600000\",\n    \"name\": \"浦发银行\",\n    \"reason\": \"保存原论点与风险。\",\n    \"risk\": \"未独立核验\",\n    \"analysis\": \"证据：https://example.org/source/a\"\n  },\n  {\n    \"rank\": 2,\n    \"priority\": \"\",\n    \"code\": \"000001\",\n    \"name\": \"平安银行\",\n    \"reason\": \"第二条原论点。\",\n    \"risk\": \"时点可能过期\",\n    \"analysis\": \"证据：https://example.org/source/b\"\n  }\n]",
+          "format": "structured-json",
+          "duplicateCount": 0,
+          "truncated": false,
+          "warnings": [
+            "外部 ChatGPT 产物，WebStock 未独立验证"
+          ],
+          "security": {
+            "trustedHtml": false,
+            "executable": false
+          },
+          "automaticTrading": false
+        },
+        "metrics": {
+          "candidateCount": 2,
+          "duplicateCount": 0
+        },
+        "createdAt": "2026-10-14T02:00:00.000Z"
+      }
+    },
+    {
+      "name": "policy-prototype-only",
+      "raw": "{\n  \"schema\": \"webstock.external-research-batch/v1\",\n  \"source\": {\n    \"system\": \"ChatGPT\",\n    \"taskId\": \"daily-research\",\n    \"runId\": \"2026-10-14T09:00:00+08:00\",\n    \"generatedAt\": \"2026-10-14T01:05:00.123456789Z\",\n    \"model\": \"external-offline-fixture\"\n  },\n  \"revision\": 1,\n  \"asOf\": {\n    \"marketDate\": \"2026-10-14\",\n    \"observedAt\": \"2026-10-14T09:00:00+08:00\",\n    \"timezone\": \"Asia/Shanghai\"\n  },\n  \"automaticTrading\": false,\n  \"artifacts\": [\n    {\n      \"artifactId\": \"picks-1\",\n      \"kind\": \"research-picks\",\n      \"schema\": \"webstock.research-picks/v1\",\n      \"payload\": {\n        \"analysis\": \"离线受控原文，不是选股建议。\",\n        \"picks\": [\n          {\n            \"rank\": 1,\n            \"priority\": \"重点\",\n            \"code\": \"600000\",\n            \"name\": \"浦发银行\",\n            \"thesis\": \"保存原论点与风险。\",\n            \"risks\": [\n              \"未独立核验\"\n            ],\n            \"evidenceRefs\": [\n              \"https://example.org/source/a\"\n            ],\n            \"includeInTonghuashun\": true\n          },\n          {\n            \"code\": \"000001\",\n            \"name\": \"平安银行\",\n            \"thesis\": \"第二条原论点。\",\n            \"risks\": [\n              \"时点可能过期\"\n            ],\n            \"evidenceRefs\": [\n              \"https://example.org/source/b\"\n            ]\n          }\n        ]\n      }\n    },\n    {\n      \"artifactId\": \"hot-1\",\n      \"kind\": \"market-hotspots\",\n      \"schema\": \"webstock.market-hotspots/v1\",\n      \"payload\": {\n        \"summary\": \"热点原件\",\n        \"items\": [\n          {\n            \"name\": \"银行\",\n            \"thesis\": \"待核验\",\n            \"drivers\": [\n              \"原驱动\"\n            ],\n            \"risks\": [\n              \"原风险\"\n            ],\n            \"evidenceRefs\": [\n              \"https://example.org/source/a\"\n            ],\n            \"relatedCodes\": [\n              \"600000\"\n            ]\n          }\n        ]\n      }\n    },\n    {\n      \"artifactId\": \"chain-1\",\n      \"kind\": \"industry-chain-updates\",\n      \"schema\": \"webstock.industry-chain-updates/v1\",\n      \"payload\": {\n        \"summary\": \"产业链原件\",\n        \"chains\": [\n          {\n            \"name\": \"金融基础设施\",\n            \"thesis\": \"保留来源判断\",\n            \"stages\": [\n              \"应用\"\n            ],\n            \"catalysts\": [\n              \"尚待补证\"\n            ],\n            \"risks\": [\n              \"证据不足\"\n            ],\n            \"evidenceRefs\": [\n              \"https://example.org/source/c\"\n            ],\n            \"relatedCodes\": [\n              \"000001\"\n            ]\n          }\n        ]\n      }\n    }\n  ],\n  \"deliveries\": [\n    {\n      \"target\": \"webstock-research\",\n      \"required\": true,\n      \"artifactIds\": [\n        \"picks-1\",\n        \"hot-1\",\n        \"chain-1\"\n      ],\n      \"policy\": {\n        \"__proto__\": {\n          \"a\": 1\n        }\n      }\n    },\n    {\n      \"target\": \"tonghuashun-watchlist\",\n      \"policy\": {\n        \"group\": \"离线预览\"\n      }\n    }\n  ]\n}",
+      "expected": {
+        "normalized": {
+          "schema": "webstock.external-research-batch/v1",
+          "source": {
+            "system": "ChatGPT",
+            "taskId": "daily-research",
+            "runId": "2026-10-14T09:00:00+08:00",
+            "generatedAt": "2026-10-14T01:05:00.123456789Z",
+            "model": "external-offline-fixture"
+          },
+          "revision": 1,
+          "asOf": {
+            "marketDate": "2026-10-14",
+            "observedAt": "2026-10-14T09:00:00+08:00",
+            "timezone": "Asia/Shanghai"
+          },
+          "automaticTrading": false,
+          "artifacts": [
+            {
+              "artifactId": "picks-1",
+              "kind": "research-picks",
+              "schema": "webstock.research-picks/v1",
+              "payload": {
+                "analysis": "离线受控原文，不是选股建议。",
+                "picks": [
+                  {
+                    "rank": 1,
+                    "priority": "重点",
+                    "code": "600000",
+                    "name": "浦发银行",
+                    "thesis": "保存原论点与风险。",
+                    "risks": [
+                      "未独立核验"
+                    ],
+                    "evidenceRefs": [
+                      "https://example.org/source/a"
+                    ],
+                    "includeInTonghuashun": true
+                  },
+                  {
+                    "rank": 2,
+                    "priority": "",
+                    "code": "000001",
+                    "name": "平安银行",
+                    "thesis": "第二条原论点。",
+                    "risks": [
+                      "时点可能过期"
+                    ],
+                    "evidenceRefs": [
+                      "https://example.org/source/b"
+                    ],
+                    "includeInTonghuashun": false
+                  }
+                ]
+              }
+            },
+            {
+              "artifactId": "hot-1",
+              "kind": "market-hotspots",
+              "schema": "webstock.market-hotspots/v1",
+              "payload": {
+                "summary": "热点原件",
+                "items": [
+                  {
+                    "rank": 1,
+                    "name": "银行",
+                    "state": "",
+                    "thesis": "待核验",
+                    "drivers": [
+                      "原驱动"
+                    ],
+                    "risks": [
+                      "原风险"
+                    ],
+                    "evidenceRefs": [
+                      "https://example.org/source/a"
+                    ],
+                    "relatedCodes": [
+                      "600000"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "artifactId": "chain-1",
+              "kind": "industry-chain-updates",
+              "schema": "webstock.industry-chain-updates/v1",
+              "payload": {
+                "summary": "产业链原件",
+                "chains": [
+                  {
+                    "name": "金融基础设施",
+                    "state": "",
+                    "thesis": "保留来源判断",
+                    "stages": [
+                      "应用"
+                    ],
+                    "catalysts": [
+                      "尚待补证"
+                    ],
+                    "risks": [
+                      "证据不足"
+                    ],
+                    "evidenceRefs": [
+                      "https://example.org/source/c"
+                    ],
+                    "relatedCodes": [
+                      "000001"
+                    ]
+                  }
+                ]
+              }
+            }
+          ],
+          "deliveries": [
+            {
+              "target": "webstock-research",
+              "required": true,
+              "policy": {
+                "__proto__": {
+                  "a": 1
+                }
+              }
+            },
+            {
+              "target": "tonghuashun-watchlist",
+              "required": false,
+              "policy": {
+                "group": "离线预览"
+              }
+            }
+          ]
+        },
+        "batchKey": "22561d74c31099c954f1194441708bdeefd7845f2fe271bc4bce2c3df6c4dcfc",
+        "payloadHash": "69317a92f6ebc3df71e8a683c09e136bd389cd7be8485bec1b3c64aacd664512",
+        "picks": [
+          {
+            "rank": 1,
+            "priority": "重点",
+            "code": "600000",
+            "name": "浦发银行",
+            "thesis": "保存原论点与风险。",
+            "risks": [
+              "未独立核验"
+            ],
+            "evidenceRefs": [
+              "https://example.org/source/a"
+            ],
+            "includeInTonghuashun": true
+          },
+          {
+            "rank": 2,
+            "priority": "",
+            "code": "000001",
+            "name": "平安银行",
+            "thesis": "第二条原论点。",
+            "risks": [
+              "时点可能过期"
+            ],
+            "evidenceRefs": [
+              "https://example.org/source/b"
+            ],
+            "includeInTonghuashun": false
+          }
+        ],
+        "wantsTonghuashun": true
+      },
+      "expectedRun": {
+        "runType": "manual-chatgpt-stock-picks",
+        "modelId": "chatgpt-automation",
+        "status": "completed",
+        "title": "2026-10-14 ChatGPT 每日研究候选",
+        "result": "[\n  {\n    \"rank\": 1,\n    \"priority\": \"重点\",\n    \"code\": \"600000\",\n    \"name\": \"浦发银行\",\n    \"reason\": \"保存原论点与风险。\",\n    \"risk\": \"未独立核验\",\n    \"analysis\": \"证据：https://example.org/source/a\"\n  },\n  {\n    \"rank\": 2,\n    \"priority\": \"\",\n    \"code\": \"000001\",\n    \"name\": \"平安银行\",\n    \"reason\": \"第二条原论点。\",\n    \"risk\": \"时点可能过期\",\n    \"analysis\": \"证据：https://example.org/source/b\"\n  }\n]",
+        "evidence": [
+          "https://example.org/source/a",
+          "https://example.org/source/b"
+        ],
+        "request": {
+          "source": "external-chatgpt-batch",
+          "batchKey": "22561d74c31099c954f1194441708bdeefd7845f2fe271bc4bce2c3df6c4dcfc",
+          "generatedAt": "2026-10-14T01:05:00.123456789Z",
+          "model": "external-offline-fixture",
+          "importedAt": "2026-10-14T02:00:00.000Z",
+          "candidates": [
+            {
+              "code": "600000",
+              "name": "浦发银行",
+              "reason": "保存原论点与风险。",
+              "risk": "未独立核验",
+              "originalAnalysis": "证据：https://example.org/source/a",
+              "rank": 1,
+              "priority": "重点"
+            },
+            {
+              "code": "000001",
+              "name": "平安银行",
+              "reason": "第二条原论点。",
+              "risk": "时点可能过期",
+              "originalAnalysis": "证据：https://example.org/source/b",
+              "rank": 2
+            }
+          ],
+          "analysis": "离线受控原文，不是选股建议。",
+          "originalText": "[\n  {\n    \"rank\": 1,\n    \"priority\": \"重点\",\n    \"code\": \"600000\",\n    \"name\": \"浦发银行\",\n    \"reason\": \"保存原论点与风险。\",\n    \"risk\": \"未独立核验\",\n    \"analysis\": \"证据：https://example.org/source/a\"\n  },\n  {\n    \"rank\": 2,\n    \"priority\": \"\",\n    \"code\": \"000001\",\n    \"name\": \"平安银行\",\n    \"reason\": \"第二条原论点。\",\n    \"risk\": \"时点可能过期\",\n    \"analysis\": \"证据：https://example.org/source/b\"\n  }\n]",
+          "format": "structured-json",
+          "duplicateCount": 0,
+          "truncated": false,
+          "warnings": [
+            "外部 ChatGPT 产物，WebStock 未独立验证"
+          ],
+          "security": {
+            "trustedHtml": false,
+            "executable": false
+          },
+          "automaticTrading": false
+        },
+        "metrics": {
+          "candidateCount": 2,
+          "duplicateCount": 0
+        },
+        "createdAt": "2026-10-14T02:00:00.000Z"
+      }
+    }
+  ],
+  "invalid": [
+    {
+      "name": "automatic-trading",
+      "raw": "{\"schema\":\"webstock.external-research-batch/v1\",\"source\":{\"system\":\"ChatGPT\",\"taskId\":\"daily-research\",\"runId\":\"2026-10-14T09:00:00+08:00\",\"generatedAt\":\"2026-10-14T01:05:00.123456789Z\",\"model\":\"external-offline-fixture\"},\"revision\":1,\"asOf\":{\"marketDate\":\"2026-10-14\",\"observedAt\":\"2026-10-14T09:00:00+08:00\",\"timezone\":\"Asia/Shanghai\"},\"automaticTrading\":true,\"artifacts\":[{\"artifactId\":\"picks-1\",\"kind\":\"research-picks\",\"schema\":\"webstock.research-picks/v1\",\"payload\":{\"analysis\":\"离线受控原文，不是选股建议。\",\"picks\":[{\"rank\":1,\"priority\":\"重点\",\"code\":\"600000\",\"name\":\"浦发银行\",\"thesis\":\"保存原论点与风险。\",\"risks\":[\"未独立核验\"],\"evidenceRefs\":[\"https://example.org/source/a\"],\"includeInTonghuashun\":true},{\"code\":\"000001\",\"name\":\"平安银行\",\"thesis\":\"第二条原论点。\",\"risks\":[\"时点可能过期\"],\"evidenceRefs\":[\"https://example.org/source/b\"]}]}},{\"artifactId\":\"hot-1\",\"kind\":\"market-hotspots\",\"schema\":\"webstock.market-hotspots/v1\",\"payload\":{\"summary\":\"热点原件\",\"items\":[{\"name\":\"银行\",\"thesis\":\"待核验\",\"drivers\":[\"原驱动\"],\"risks\":[\"原风险\"],\"evidenceRefs\":[\"https://example.org/source/a\"],\"relatedCodes\":[\"600000\"]}]}},{\"artifactId\":\"chain-1\",\"kind\":\"industry-chain-updates\",\"schema\":\"webstock.industry-chain-updates/v1\",\"payload\":{\"summary\":\"产业链原件\",\"chains\":[{\"name\":\"金融基础设施\",\"thesis\":\"保留来源判断\",\"stages\":[\"应用\"],\"catalysts\":[\"尚待补证\"],\"risks\":[\"证据不足\"],\"evidenceRefs\":[\"https://example.org/source/c\"],\"relatedCodes\":[\"000001\"]}]}}],\"deliveries\":[{\"target\":\"webstock-research\",\"required\":true,\"artifactIds\":[\"picks-1\",\"hot-1\",\"chain-1\"]},{\"target\":\"tonghuashun-watchlist\",\"policy\":{\"group\":\"离线预览\"}}]}",
+      "legacyReject": true,
+      "error": "automaticTrading 必须严格为 false"
+    },
+    {
+      "name": "duplicate-code",
+      "raw": "{\"schema\":\"webstock.external-research-batch/v1\",\"source\":{\"system\":\"ChatGPT\",\"taskId\":\"daily-research\",\"runId\":\"2026-10-14T09:00:00+08:00\",\"generatedAt\":\"2026-10-14T01:05:00.123456789Z\",\"model\":\"external-offline-fixture\"},\"revision\":1,\"asOf\":{\"marketDate\":\"2026-10-14\",\"observedAt\":\"2026-10-14T09:00:00+08:00\",\"timezone\":\"Asia/Shanghai\"},\"automaticTrading\":false,\"artifacts\":[{\"artifactId\":\"picks-1\",\"kind\":\"research-picks\",\"schema\":\"webstock.research-picks/v1\",\"payload\":{\"analysis\":\"离线受控原文，不是选股建议。\",\"picks\":[{\"rank\":1,\"priority\":\"重点\",\"code\":\"600000\",\"name\":\"浦发银行\",\"thesis\":\"保存原论点与风险。\",\"risks\":[\"未独立核验\"],\"evidenceRefs\":[\"https://example.org/source/a\"],\"includeInTonghuashun\":true},{\"code\":\"600000\",\"name\":\"平安银行\",\"thesis\":\"第二条原论点。\",\"risks\":[\"时点可能过期\"],\"evidenceRefs\":[\"https://example.org/source/b\"]}]}},{\"artifactId\":\"hot-1\",\"kind\":\"market-hotspots\",\"schema\":\"webstock.market-hotspots/v1\",\"payload\":{\"summary\":\"热点原件\",\"items\":[{\"name\":\"银行\",\"thesis\":\"待核验\",\"drivers\":[\"原驱动\"],\"risks\":[\"原风险\"],\"evidenceRefs\":[\"https://example.org/source/a\"],\"relatedCodes\":[\"600000\"]}]}},{\"artifactId\":\"chain-1\",\"kind\":\"industry-chain-updates\",\"schema\":\"webstock.industry-chain-updates/v1\",\"payload\":{\"summary\":\"产业链原件\",\"chains\":[{\"name\":\"金融基础设施\",\"thesis\":\"保留来源判断\",\"stages\":[\"应用\"],\"catalysts\":[\"尚待补证\"],\"risks\":[\"证据不足\"],\"evidenceRefs\":[\"https://example.org/source/c\"],\"relatedCodes\":[\"000001\"]}]}}],\"deliveries\":[{\"target\":\"webstock-research\",\"required\":true,\"artifactIds\":[\"picks-1\",\"hot-1\",\"chain-1\"]},{\"target\":\"tonghuashun-watchlist\",\"policy\":{\"group\":\"离线预览\"}}]}",
+      "legacyReject": true,
+      "error": "结构化候选代码不能重复"
+    },
+    {
+      "name": "duplicate-rank",
+      "raw": "{\"schema\":\"webstock.external-research-batch/v1\",\"source\":{\"system\":\"ChatGPT\",\"taskId\":\"daily-research\",\"runId\":\"2026-10-14T09:00:00+08:00\",\"generatedAt\":\"2026-10-14T01:05:00.123456789Z\",\"model\":\"external-offline-fixture\"},\"revision\":1,\"asOf\":{\"marketDate\":\"2026-10-14\",\"observedAt\":\"2026-10-14T09:00:00+08:00\",\"timezone\":\"Asia/Shanghai\"},\"automaticTrading\":false,\"artifacts\":[{\"artifactId\":\"picks-1\",\"kind\":\"research-picks\",\"schema\":\"webstock.research-picks/v1\",\"payload\":{\"analysis\":\"离线受控原文，不是选股建议。\",\"picks\":[{\"rank\":1,\"priority\":\"重点\",\"code\":\"600000\",\"name\":\"浦发银行\",\"thesis\":\"保存原论点与风险。\",\"risks\":[\"未独立核验\"],\"evidenceRefs\":[\"https://example.org/source/a\"],\"includeInTonghuashun\":true},{\"code\":\"000001\",\"name\":\"平安银行\",\"thesis\":\"第二条原论点。\",\"risks\":[\"时点可能过期\"],\"evidenceRefs\":[\"https://example.org/source/b\"],\"rank\":1}]}},{\"artifactId\":\"hot-1\",\"kind\":\"market-hotspots\",\"schema\":\"webstock.market-hotspots/v1\",\"payload\":{\"summary\":\"热点原件\",\"items\":[{\"name\":\"银行\",\"thesis\":\"待核验\",\"drivers\":[\"原驱动\"],\"risks\":[\"原风险\"],\"evidenceRefs\":[\"https://example.org/source/a\"],\"relatedCodes\":[\"600000\"]}]}},{\"artifactId\":\"chain-1\",\"kind\":\"industry-chain-updates\",\"schema\":\"webstock.industry-chain-updates/v1\",\"payload\":{\"summary\":\"产业链原件\",\"chains\":[{\"name\":\"金融基础设施\",\"thesis\":\"保留来源判断\",\"stages\":[\"应用\"],\"catalysts\":[\"尚待补证\"],\"risks\":[\"证据不足\"],\"evidenceRefs\":[\"https://example.org/source/c\"],\"relatedCodes\":[\"000001\"]}]}}],\"deliveries\":[{\"target\":\"webstock-research\",\"required\":true,\"artifactIds\":[\"picks-1\",\"hot-1\",\"chain-1\"]},{\"target\":\"tonghuashun-watchlist\",\"policy\":{\"group\":\"离线预览\"}}]}",
+      "legacyReject": true,
+      "error": "结构化候选 rank 不能重复"
+    },
+    {
+      "name": "missing-picks",
+      "raw": "{\"schema\":\"webstock.external-research-batch/v1\",\"source\":{\"system\":\"ChatGPT\",\"taskId\":\"daily-research\",\"runId\":\"2026-10-14T09:00:00+08:00\",\"generatedAt\":\"2026-10-14T01:05:00.123456789Z\",\"model\":\"external-offline-fixture\"},\"revision\":1,\"asOf\":{\"marketDate\":\"2026-10-14\",\"observedAt\":\"2026-10-14T09:00:00+08:00\",\"timezone\":\"Asia/Shanghai\"},\"automaticTrading\":false,\"artifacts\":[{\"artifactId\":\"hot-1\",\"kind\":\"market-hotspots\",\"schema\":\"webstock.market-hotspots/v1\",\"payload\":{\"summary\":\"热点原件\",\"items\":[{\"name\":\"银行\",\"thesis\":\"待核验\",\"drivers\":[\"原驱动\"],\"risks\":[\"原风险\"],\"evidenceRefs\":[\"https://example.org/source/a\"],\"relatedCodes\":[\"600000\"]}]}},{\"artifactId\":\"chain-1\",\"kind\":\"industry-chain-updates\",\"schema\":\"webstock.industry-chain-updates/v1\",\"payload\":{\"summary\":\"产业链原件\",\"chains\":[{\"name\":\"金融基础设施\",\"thesis\":\"保留来源判断\",\"stages\":[\"应用\"],\"catalysts\":[\"尚待补证\"],\"risks\":[\"证据不足\"],\"evidenceRefs\":[\"https://example.org/source/c\"],\"relatedCodes\":[\"000001\"]}]}}],\"deliveries\":[{\"target\":\"webstock-research\",\"required\":true,\"artifactIds\":[\"picks-1\",\"hot-1\",\"chain-1\"]},{\"target\":\"tonghuashun-watchlist\",\"policy\":{\"group\":\"离线预览\"}}]}",
+      "legacyReject": true,
+      "error": "批次必须且只能包含一个 webstock.research-picks/v1 候选产物"
+    },
+    {
+      "name": "duplicate-artifact-kind",
+      "raw": "{\"schema\":\"webstock.external-research-batch/v1\",\"source\":{\"system\":\"ChatGPT\",\"taskId\":\"daily-research\",\"runId\":\"2026-10-14T09:00:00+08:00\",\"generatedAt\":\"2026-10-14T01:05:00.123456789Z\",\"model\":\"external-offline-fixture\"},\"revision\":1,\"asOf\":{\"marketDate\":\"2026-10-14\",\"observedAt\":\"2026-10-14T09:00:00+08:00\",\"timezone\":\"Asia/Shanghai\"},\"automaticTrading\":false,\"artifacts\":[{\"artifactId\":\"picks-1\",\"kind\":\"research-picks\",\"schema\":\"webstock.research-picks/v1\",\"payload\":{\"analysis\":\"离线受控原文，不是选股建议。\",\"picks\":[{\"rank\":1,\"priority\":\"重点\",\"code\":\"600000\",\"name\":\"浦发银行\",\"thesis\":\"保存原论点与风险。\",\"risks\":[\"未独立核验\"],\"evidenceRefs\":[\"https://example.org/source/a\"],\"includeInTonghuashun\":true},{\"code\":\"000001\",\"name\":\"平安银行\",\"thesis\":\"第二条原论点。\",\"risks\":[\"时点可能过期\"],\"evidenceRefs\":[\"https://example.org/source/b\"]}]}},{\"artifactId\":\"hot-1\",\"kind\":\"market-hotspots\",\"schema\":\"webstock.market-hotspots/v1\",\"payload\":{\"summary\":\"热点原件\",\"items\":[{\"name\":\"银行\",\"thesis\":\"待核验\",\"drivers\":[\"原驱动\"],\"risks\":[\"原风险\"],\"evidenceRefs\":[\"https://example.org/source/a\"],\"relatedCodes\":[\"600000\"]}]}},{\"artifactId\":\"hot-1\",\"kind\":\"market-hotspots\",\"schema\":\"webstock.market-hotspots/v1\",\"payload\":{\"summary\":\"热点原件\",\"items\":[{\"name\":\"银行\",\"thesis\":\"待核验\",\"drivers\":[\"原驱动\"],\"risks\":[\"原风险\"],\"evidenceRefs\":[\"https://example.org/source/a\"],\"relatedCodes\":[\"600000\"]}]}}],\"deliveries\":[{\"target\":\"webstock-research\",\"required\":true,\"artifactIds\":[\"picks-1\",\"hot-1\",\"chain-1\"]},{\"target\":\"tonghuashun-watchlist\",\"policy\":{\"group\":\"离线预览\"}}]}",
+      "legacyReject": true,
+      "error": "同类研究产物不能重复"
+    },
+    {
+      "name": "unknown-root",
+      "raw": "{\"schema\":\"webstock.external-research-batch/v1\",\"source\":{\"system\":\"ChatGPT\",\"taskId\":\"daily-research\",\"runId\":\"2026-10-14T09:00:00+08:00\",\"generatedAt\":\"2026-10-14T01:05:00.123456789Z\",\"model\":\"external-offline-fixture\"},\"revision\":1,\"asOf\":{\"marketDate\":\"2026-10-14\",\"observedAt\":\"2026-10-14T09:00:00+08:00\",\"timezone\":\"Asia/Shanghai\"},\"automaticTrading\":false,\"artifacts\":[{\"artifactId\":\"picks-1\",\"kind\":\"research-picks\",\"schema\":\"webstock.research-picks/v1\",\"payload\":{\"analysis\":\"离线受控原文，不是选股建议。\",\"picks\":[{\"rank\":1,\"priority\":\"重点\",\"code\":\"600000\",\"name\":\"浦发银行\",\"thesis\":\"保存原论点与风险。\",\"risks\":[\"未独立核验\"],\"evidenceRefs\":[\"https://example.org/source/a\"],\"includeInTonghuashun\":true},{\"code\":\"000001\",\"name\":\"平安银行\",\"thesis\":\"第二条原论点。\",\"risks\":[\"时点可能过期\"],\"evidenceRefs\":[\"https://example.org/source/b\"]}]}},{\"artifactId\":\"hot-1\",\"kind\":\"market-hotspots\",\"schema\":\"webstock.market-hotspots/v1\",\"payload\":{\"summary\":\"热点原件\",\"items\":[{\"name\":\"银行\",\"thesis\":\"待核验\",\"drivers\":[\"原驱动\"],\"risks\":[\"原风险\"],\"evidenceRefs\":[\"https://example.org/source/a\"],\"relatedCodes\":[\"600000\"]}]}},{\"artifactId\":\"chain-1\",\"kind\":\"industry-chain-updates\",\"schema\":\"webstock.industry-chain-updates/v1\",\"payload\":{\"summary\":\"产业链原件\",\"chains\":[{\"name\":\"金融基础设施\",\"thesis\":\"保留来源判断\",\"stages\":[\"应用\"],\"catalysts\":[\"尚待补证\"],\"risks\":[\"证据不足\"],\"evidenceRefs\":[\"https://example.org/source/c\"],\"relatedCodes\":[\"000001\"]}]}}],\"deliveries\":[{\"target\":\"webstock-research\",\"required\":true,\"artifactIds\":[\"picks-1\",\"hot-1\",\"chain-1\"]},{\"target\":\"tonghuashun-watchlist\",\"policy\":{\"group\":\"离线预览\"}}],\"other\":1}",
+      "legacyReject": true,
+      "error": "研究批次存在未知顶层字段：other"
+    },
+    {
+      "name": "unsafe-evidence-scheme",
+      "raw": "{\"schema\":\"webstock.external-research-batch/v1\",\"source\":{\"system\":\"ChatGPT\",\"taskId\":\"daily-research\",\"runId\":\"2026-10-14T09:00:00+08:00\",\"generatedAt\":\"2026-10-14T01:05:00.123456789Z\",\"model\":\"external-offline-fixture\"},\"revision\":1,\"asOf\":{\"marketDate\":\"2026-10-14\",\"observedAt\":\"2026-10-14T09:00:00+08:00\",\"timezone\":\"Asia/Shanghai\"},\"automaticTrading\":false,\"artifacts\":[{\"artifactId\":\"picks-1\",\"kind\":\"research-picks\",\"schema\":\"webstock.research-picks/v1\",\"payload\":{\"analysis\":\"离线受控原文，不是选股建议。\",\"picks\":[{\"rank\":1,\"priority\":\"重点\",\"code\":\"600000\",\"name\":\"浦发银行\",\"thesis\":\"保存原论点与风险。\",\"risks\":[\"未独立核验\"],\"evidenceRefs\":[\"file:///source\"],\"includeInTonghuashun\":true},{\"code\":\"000001\",\"name\":\"平安银行\",\"thesis\":\"第二条原论点。\",\"risks\":[\"时点可能过期\"],\"evidenceRefs\":[\"https://example.org/source/b\"]}]}},{\"artifactId\":\"hot-1\",\"kind\":\"market-hotspots\",\"schema\":\"webstock.market-hotspots/v1\",\"payload\":{\"summary\":\"热点原件\",\"items\":[{\"name\":\"银行\",\"thesis\":\"待核验\",\"drivers\":[\"原驱动\"],\"risks\":[\"原风险\"],\"evidenceRefs\":[\"https://example.org/source/a\"],\"relatedCodes\":[\"600000\"]}]}},{\"artifactId\":\"chain-1\",\"kind\":\"industry-chain-updates\",\"schema\":\"webstock.industry-chain-updates/v1\",\"payload\":{\"summary\":\"产业链原件\",\"chains\":[{\"name\":\"金融基础设施\",\"thesis\":\"保留来源判断\",\"stages\":[\"应用\"],\"catalysts\":[\"尚待补证\"],\"risks\":[\"证据不足\"],\"evidenceRefs\":[\"https://example.org/source/c\"],\"relatedCodes\":[\"000001\"]}]}}],\"deliveries\":[{\"target\":\"webstock-research\",\"required\":true,\"artifactIds\":[\"picks-1\",\"hot-1\",\"chain-1\"]},{\"target\":\"tonghuashun-watchlist\",\"policy\":{\"group\":\"离线预览\"}}]}",
+      "legacyReject": true,
+      "error": "候选 evidenceRefs 必须是完整的 http/https 来源链接"
+    },
+    {
+      "name": "no-local-delivery",
+      "raw": "{\"schema\":\"webstock.external-research-batch/v1\",\"source\":{\"system\":\"ChatGPT\",\"taskId\":\"daily-research\",\"runId\":\"2026-10-14T09:00:00+08:00\",\"generatedAt\":\"2026-10-14T01:05:00.123456789Z\",\"model\":\"external-offline-fixture\"},\"revision\":1,\"asOf\":{\"marketDate\":\"2026-10-14\",\"observedAt\":\"2026-10-14T09:00:00+08:00\",\"timezone\":\"Asia/Shanghai\"},\"automaticTrading\":false,\"artifacts\":[{\"artifactId\":\"picks-1\",\"kind\":\"research-picks\",\"schema\":\"webstock.research-picks/v1\",\"payload\":{\"analysis\":\"离线受控原文，不是选股建议。\",\"picks\":[{\"rank\":1,\"priority\":\"重点\",\"code\":\"600000\",\"name\":\"浦发银行\",\"thesis\":\"保存原论点与风险。\",\"risks\":[\"未独立核验\"],\"evidenceRefs\":[\"https://example.org/source/a\"],\"includeInTonghuashun\":true},{\"code\":\"000001\",\"name\":\"平安银行\",\"thesis\":\"第二条原论点。\",\"risks\":[\"时点可能过期\"],\"evidenceRefs\":[\"https://example.org/source/b\"]}]}},{\"artifactId\":\"hot-1\",\"kind\":\"market-hotspots\",\"schema\":\"webstock.market-hotspots/v1\",\"payload\":{\"summary\":\"热点原件\",\"items\":[{\"name\":\"银行\",\"thesis\":\"待核验\",\"drivers\":[\"原驱动\"],\"risks\":[\"原风险\"],\"evidenceRefs\":[\"https://example.org/source/a\"],\"relatedCodes\":[\"600000\"]}]}},{\"artifactId\":\"chain-1\",\"kind\":\"industry-chain-updates\",\"schema\":\"webstock.industry-chain-updates/v1\",\"payload\":{\"summary\":\"产业链原件\",\"chains\":[{\"name\":\"金融基础设施\",\"thesis\":\"保留来源判断\",\"stages\":[\"应用\"],\"catalysts\":[\"尚待补证\"],\"risks\":[\"证据不足\"],\"evidenceRefs\":[\"https://example.org/source/c\"],\"relatedCodes\":[\"000001\"]}]}}],\"deliveries\":[{\"target\":\"tonghuashun-watchlist\",\"policy\":{\"group\":\"离线预览\"}}]}",
+      "legacyReject": true,
+      "error": "批次必须投递到 webstock-research"
+    },
+    {
+      "name": "no-external-pick",
+      "raw": "{\"schema\":\"webstock.external-research-batch/v1\",\"source\":{\"system\":\"ChatGPT\",\"taskId\":\"daily-research\",\"runId\":\"2026-10-14T09:00:00+08:00\",\"generatedAt\":\"2026-10-14T01:05:00.123456789Z\",\"model\":\"external-offline-fixture\"},\"revision\":1,\"asOf\":{\"marketDate\":\"2026-10-14\",\"observedAt\":\"2026-10-14T09:00:00+08:00\",\"timezone\":\"Asia/Shanghai\"},\"automaticTrading\":false,\"artifacts\":[{\"artifactId\":\"picks-1\",\"kind\":\"research-picks\",\"schema\":\"webstock.research-picks/v1\",\"payload\":{\"analysis\":\"离线受控原文，不是选股建议。\",\"picks\":[{\"rank\":1,\"priority\":\"重点\",\"code\":\"600000\",\"name\":\"浦发银行\",\"thesis\":\"保存原论点与风险。\",\"risks\":[\"未独立核验\"],\"evidenceRefs\":[\"https://example.org/source/a\"],\"includeInTonghuashun\":false},{\"code\":\"000001\",\"name\":\"平安银行\",\"thesis\":\"第二条原论点。\",\"risks\":[\"时点可能过期\"],\"evidenceRefs\":[\"https://example.org/source/b\"]}]}},{\"artifactId\":\"hot-1\",\"kind\":\"market-hotspots\",\"schema\":\"webstock.market-hotspots/v1\",\"payload\":{\"summary\":\"热点原件\",\"items\":[{\"name\":\"银行\",\"thesis\":\"待核验\",\"drivers\":[\"原驱动\"],\"risks\":[\"原风险\"],\"evidenceRefs\":[\"https://example.org/source/a\"],\"relatedCodes\":[\"600000\"]}]}},{\"artifactId\":\"chain-1\",\"kind\":\"industry-chain-updates\",\"schema\":\"webstock.industry-chain-updates/v1\",\"payload\":{\"summary\":\"产业链原件\",\"chains\":[{\"name\":\"金融基础设施\",\"thesis\":\"保留来源判断\",\"stages\":[\"应用\"],\"catalysts\":[\"尚待补证\"],\"risks\":[\"证据不足\"],\"evidenceRefs\":[\"https://example.org/source/c\"],\"relatedCodes\":[\"000001\"]}]}}],\"deliveries\":[{\"target\":\"webstock-research\",\"required\":true,\"artifactIds\":[\"picks-1\",\"hot-1\",\"chain-1\"]},{\"target\":\"tonghuashun-watchlist\",\"policy\":{\"group\":\"离线预览\"}}]}",
+      "legacyReject": true,
+      "error": "同花顺投递必须包含至少一只候选"
+    },
+    {
+      "name": "invalid-related-code",
+      "raw": "{\"schema\":\"webstock.external-research-batch/v1\",\"source\":{\"system\":\"ChatGPT\",\"taskId\":\"daily-research\",\"runId\":\"2026-10-14T09:00:00+08:00\",\"generatedAt\":\"2026-10-14T01:05:00.123456789Z\",\"model\":\"external-offline-fixture\"},\"revision\":1,\"asOf\":{\"marketDate\":\"2026-10-14\",\"observedAt\":\"2026-10-14T09:00:00+08:00\",\"timezone\":\"Asia/Shanghai\"},\"automaticTrading\":false,\"artifacts\":[{\"artifactId\":\"picks-1\",\"kind\":\"research-picks\",\"schema\":\"webstock.research-picks/v1\",\"payload\":{\"analysis\":\"离线受控原文，不是选股建议。\",\"picks\":[{\"rank\":1,\"priority\":\"重点\",\"code\":\"600000\",\"name\":\"浦发银行\",\"thesis\":\"保存原论点与风险。\",\"risks\":[\"未独立核验\"],\"evidenceRefs\":[\"https://example.org/source/a\"],\"includeInTonghuashun\":true},{\"code\":\"000001\",\"name\":\"平安银行\",\"thesis\":\"第二条原论点。\",\"risks\":[\"时点可能过期\"],\"evidenceRefs\":[\"https://example.org/source/b\"]}]}},{\"artifactId\":\"hot-1\",\"kind\":\"market-hotspots\",\"schema\":\"webstock.market-hotspots/v1\",\"payload\":{\"summary\":\"热点原件\",\"items\":[{\"name\":\"银行\",\"thesis\":\"待核验\",\"drivers\":[\"原驱动\"],\"risks\":[\"原风险\"],\"evidenceRefs\":[\"https://example.org/source/a\"],\"relatedCodes\":[\"bad\"]}]}},{\"artifactId\":\"chain-1\",\"kind\":\"industry-chain-updates\",\"schema\":\"webstock.industry-chain-updates/v1\",\"payload\":{\"summary\":\"产业链原件\",\"chains\":[{\"name\":\"金融基础设施\",\"thesis\":\"保留来源判断\",\"stages\":[\"应用\"],\"catalysts\":[\"尚待补证\"],\"risks\":[\"证据不足\"],\"evidenceRefs\":[\"https://example.org/source/c\"],\"relatedCodes\":[\"000001\"]}]}}],\"deliveries\":[{\"target\":\"webstock-research\",\"required\":true,\"artifactIds\":[\"picks-1\",\"hot-1\",\"chain-1\"]},{\"target\":\"tonghuashun-watchlist\",\"policy\":{\"group\":\"离线预览\"}}]}",
+      "legacyReject": false,
+      "error": null
+    },
+    {
+      "name": "would-truncate-list",
+      "raw": "{\"schema\":\"webstock.external-research-batch/v1\",\"source\":{\"system\":\"ChatGPT\",\"taskId\":\"daily-research\",\"runId\":\"2026-10-14T09:00:00+08:00\",\"generatedAt\":\"2026-10-14T01:05:00.123456789Z\",\"model\":\"external-offline-fixture\"},\"revision\":1,\"asOf\":{\"marketDate\":\"2026-10-14\",\"observedAt\":\"2026-10-14T09:00:00+08:00\",\"timezone\":\"Asia/Shanghai\"},\"automaticTrading\":false,\"artifacts\":[{\"artifactId\":\"picks-1\",\"kind\":\"research-picks\",\"schema\":\"webstock.research-picks/v1\",\"payload\":{\"analysis\":\"离线受控原文，不是选股建议。\",\"picks\":[{\"rank\":1,\"priority\":\"重点\",\"code\":\"600000\",\"name\":\"浦发银行\",\"thesis\":\"保存原论点与风险。\",\"risks\":[\"未独立核验\"],\"evidenceRefs\":[\"https://example.org/source/a\"],\"includeInTonghuashun\":true},{\"code\":\"000001\",\"name\":\"平安银行\",\"thesis\":\"第二条原论点。\",\"risks\":[\"时点可能过期\"],\"evidenceRefs\":[\"https://example.org/source/b\"]}]}},{\"artifactId\":\"hot-1\",\"kind\":\"market-hotspots\",\"schema\":\"webstock.market-hotspots/v1\",\"payload\":{\"summary\":\"热点原件\",\"items\":[{\"name\":\"银行\",\"thesis\":\"待核验\",\"drivers\":[\"原文\",\"原文\",\"原文\",\"原文\",\"原文\",\"原文\",\"原文\",\"原文\",\"原文\",\"原文\",\"原文\",\"原文\",\"原文\",\"原文\",\"原文\",\"原文\",\"原文\",\"原文\",\"原文\",\"原文\",\"原文\",\"原文\",\"原文\",\"原文\",\"原文\",\"原文\",\"原文\",\"原文\",\"原文\",\"原文\",\"原文\"],\"risks\":[\"原风险\"],\"evidenceRefs\":[\"https://example.org/source/a\"],\"relatedCodes\":[\"600000\"]}]}},{\"artifactId\":\"chain-1\",\"kind\":\"industry-chain-updates\",\"schema\":\"webstock.industry-chain-updates/v1\",\"payload\":{\"summary\":\"产业链原件\",\"chains\":[{\"name\":\"金融基础设施\",\"thesis\":\"保留来源判断\",\"stages\":[\"应用\"],\"catalysts\":[\"尚待补证\"],\"risks\":[\"证据不足\"],\"evidenceRefs\":[\"https://example.org/source/c\"],\"relatedCodes\":[\"000001\"]}]}}],\"deliveries\":[{\"target\":\"webstock-research\",\"required\":true,\"artifactIds\":[\"picks-1\",\"hot-1\",\"chain-1\"]},{\"target\":\"tonghuashun-watchlist\",\"policy\":{\"group\":\"离线预览\"}}]}",
+      "legacyReject": false,
+      "error": null
+    },
+    {
+      "name": "would-truncate-text",
+      "raw": "{\"schema\":\"webstock.external-research-batch/v1\",\"source\":{\"system\":\"ChatGPT\",\"taskId\":\"daily-research\",\"runId\":\"2026-10-14T09:00:00+08:00\",\"generatedAt\":\"2026-10-14T01:05:00.123456789Z\",\"model\":\"external-offline-fixture\"},\"revision\":1,\"asOf\":{\"marketDate\":\"2026-10-14\",\"observedAt\":\"2026-10-14T09:00:00+08:00\",\"timezone\":\"Asia/Shanghai\"},\"automaticTrading\":false,\"artifacts\":[{\"artifactId\":\"picks-1\",\"kind\":\"research-picks\",\"schema\":\"webstock.research-picks/v1\",\"payload\":{\"analysis\":\"离线受控原文，不是选股建议。\",\"picks\":[{\"rank\":1,\"priority\":\"重点\",\"code\":\"600000\",\"name\":\"浦发银行\",\"thesis\":\"长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长\",\"risks\":[\"未独立核验\"],\"evidenceRefs\":[\"https://example.org/source/a\"],\"includeInTonghuashun\":true},{\"code\":\"000001\",\"name\":\"平安银行\",\"thesis\":\"第二条原论点。\",\"risks\":[\"时点可能过期\"],\"evidenceRefs\":[\"https://example.org/source/b\"]}]}},{\"artifactId\":\"hot-1\",\"kind\":\"market-hotspots\",\"schema\":\"webstock.market-hotspots/v1\",\"payload\":{\"summary\":\"热点原件\",\"items\":[{\"name\":\"银行\",\"thesis\":\"待核验\",\"drivers\":[\"原驱动\"],\"risks\":[\"原风险\"],\"evidenceRefs\":[\"https://example.org/source/a\"],\"relatedCodes\":[\"600000\"]}]}},{\"artifactId\":\"chain-1\",\"kind\":\"industry-chain-updates\",\"schema\":\"webstock.industry-chain-updates/v1\",\"payload\":{\"summary\":\"产业链原件\",\"chains\":[{\"name\":\"金融基础设施\",\"thesis\":\"保留来源判断\",\"stages\":[\"应用\"],\"catalysts\":[\"尚待补证\"],\"risks\":[\"证据不足\"],\"evidenceRefs\":[\"https://example.org/source/c\"],\"relatedCodes\":[\"000001\"]}]}}],\"deliveries\":[{\"target\":\"webstock-research\",\"required\":true,\"artifactIds\":[\"picks-1\",\"hot-1\",\"chain-1\"]},{\"target\":\"tonghuashun-watchlist\",\"policy\":{\"group\":\"离线预览\"}}]}",
+      "legacyReject": false,
+      "error": null
+    },
+    {
+      "name": "nested-unknown",
+      "raw": "{\"schema\":\"webstock.external-research-batch/v1\",\"source\":{\"system\":\"ChatGPT\",\"taskId\":\"daily-research\",\"runId\":\"2026-10-14T09:00:00+08:00\",\"generatedAt\":\"2026-10-14T01:05:00.123456789Z\",\"model\":\"external-offline-fixture\",\"extra\":\"保留不能静默删\"},\"revision\":1,\"asOf\":{\"marketDate\":\"2026-10-14\",\"observedAt\":\"2026-10-14T09:00:00+08:00\",\"timezone\":\"Asia/Shanghai\"},\"automaticTrading\":false,\"artifacts\":[{\"artifactId\":\"picks-1\",\"kind\":\"research-picks\",\"schema\":\"webstock.research-picks/v1\",\"payload\":{\"analysis\":\"离线受控原文，不是选股建议。\",\"picks\":[{\"rank\":1,\"priority\":\"重点\",\"code\":\"600000\",\"name\":\"浦发银行\",\"thesis\":\"保存原论点与风险。\",\"risks\":[\"未独立核验\"],\"evidenceRefs\":[\"https://example.org/source/a\"],\"includeInTonghuashun\":true},{\"code\":\"000001\",\"name\":\"平安银行\",\"thesis\":\"第二条原论点。\",\"risks\":[\"时点可能过期\"],\"evidenceRefs\":[\"https://example.org/source/b\"]}]}},{\"artifactId\":\"hot-1\",\"kind\":\"market-hotspots\",\"schema\":\"webstock.market-hotspots/v1\",\"payload\":{\"summary\":\"热点原件\",\"items\":[{\"name\":\"银行\",\"thesis\":\"待核验\",\"drivers\":[\"原驱动\"],\"risks\":[\"原风险\"],\"evidenceRefs\":[\"https://example.org/source/a\"],\"relatedCodes\":[\"600000\"]}]}},{\"artifactId\":\"chain-1\",\"kind\":\"industry-chain-updates\",\"schema\":\"webstock.industry-chain-updates/v1\",\"payload\":{\"summary\":\"产业链原件\",\"chains\":[{\"name\":\"金融基础设施\",\"thesis\":\"保留来源判断\",\"stages\":[\"应用\"],\"catalysts\":[\"尚待补证\"],\"risks\":[\"证据不足\"],\"evidenceRefs\":[\"https://example.org/source/c\"],\"relatedCodes\":[\"000001\"]}]}}],\"deliveries\":[{\"target\":\"webstock-research\",\"required\":true,\"artifactIds\":[\"picks-1\",\"hot-1\",\"chain-1\"]},{\"target\":\"tonghuashun-watchlist\",\"policy\":{\"group\":\"离线预览\"}}]}",
+      "legacyReject": false,
+      "error": null
+    },
+    {
+      "name": "string-revision",
+      "raw": "{\"schema\":\"webstock.external-research-batch/v1\",\"source\":{\"system\":\"ChatGPT\",\"taskId\":\"daily-research\",\"runId\":\"2026-10-14T09:00:00+08:00\",\"generatedAt\":\"2026-10-14T01:05:00.123456789Z\",\"model\":\"external-offline-fixture\"},\"revision\":\"1\",\"asOf\":{\"marketDate\":\"2026-10-14\",\"observedAt\":\"2026-10-14T09:00:00+08:00\",\"timezone\":\"Asia/Shanghai\"},\"automaticTrading\":false,\"artifacts\":[{\"artifactId\":\"picks-1\",\"kind\":\"research-picks\",\"schema\":\"webstock.research-picks/v1\",\"payload\":{\"analysis\":\"离线受控原文，不是选股建议。\",\"picks\":[{\"rank\":1,\"priority\":\"重点\",\"code\":\"600000\",\"name\":\"浦发银行\",\"thesis\":\"保存原论点与风险。\",\"risks\":[\"未独立核验\"],\"evidenceRefs\":[\"https://example.org/source/a\"],\"includeInTonghuashun\":true},{\"code\":\"000001\",\"name\":\"平安银行\",\"thesis\":\"第二条原论点。\",\"risks\":[\"时点可能过期\"],\"evidenceRefs\":[\"https://example.org/source/b\"]}]}},{\"artifactId\":\"hot-1\",\"kind\":\"market-hotspots\",\"schema\":\"webstock.market-hotspots/v1\",\"payload\":{\"summary\":\"热点原件\",\"items\":[{\"name\":\"银行\",\"thesis\":\"待核验\",\"drivers\":[\"原驱动\"],\"risks\":[\"原风险\"],\"evidenceRefs\":[\"https://example.org/source/a\"],\"relatedCodes\":[\"600000\"]}]}},{\"artifactId\":\"chain-1\",\"kind\":\"industry-chain-updates\",\"schema\":\"webstock.industry-chain-updates/v1\",\"payload\":{\"summary\":\"产业链原件\",\"chains\":[{\"name\":\"金融基础设施\",\"thesis\":\"保留来源判断\",\"stages\":[\"应用\"],\"catalysts\":[\"尚待补证\"],\"risks\":[\"证据不足\"],\"evidenceRefs\":[\"https://example.org/source/c\"],\"relatedCodes\":[\"000001\"]}]}}],\"deliveries\":[{\"target\":\"webstock-research\",\"required\":true,\"artifactIds\":[\"picks-1\",\"hot-1\",\"chain-1\"]},{\"target\":\"tonghuashun-watchlist\",\"policy\":{\"group\":\"离线预览\"}}]}",
+      "legacyReject": false,
+      "error": null
+    },
+    {
+      "name": "invalid-generated-time",
+      "raw": "{\"schema\":\"webstock.external-research-batch/v1\",\"source\":{\"system\":\"ChatGPT\",\"taskId\":\"daily-research\",\"runId\":\"2026-10-14T09:00:00+08:00\",\"generatedAt\":\"not-a-time\",\"model\":\"external-offline-fixture\"},\"revision\":1,\"asOf\":{\"marketDate\":\"2026-10-14\",\"observedAt\":\"2026-10-14T09:00:00+08:00\",\"timezone\":\"Asia/Shanghai\"},\"automaticTrading\":false,\"artifacts\":[{\"artifactId\":\"picks-1\",\"kind\":\"research-picks\",\"schema\":\"webstock.research-picks/v1\",\"payload\":{\"analysis\":\"离线受控原文，不是选股建议。\",\"picks\":[{\"rank\":1,\"priority\":\"重点\",\"code\":\"600000\",\"name\":\"浦发银行\",\"thesis\":\"保存原论点与风险。\",\"risks\":[\"未独立核验\"],\"evidenceRefs\":[\"https://example.org/source/a\"],\"includeInTonghuashun\":true},{\"code\":\"000001\",\"name\":\"平安银行\",\"thesis\":\"第二条原论点。\",\"risks\":[\"时点可能过期\"],\"evidenceRefs\":[\"https://example.org/source/b\"]}]}},{\"artifactId\":\"hot-1\",\"kind\":\"market-hotspots\",\"schema\":\"webstock.market-hotspots/v1\",\"payload\":{\"summary\":\"热点原件\",\"items\":[{\"name\":\"银行\",\"thesis\":\"待核验\",\"drivers\":[\"原驱动\"],\"risks\":[\"原风险\"],\"evidenceRefs\":[\"https://example.org/source/a\"],\"relatedCodes\":[\"600000\"]}]}},{\"artifactId\":\"chain-1\",\"kind\":\"industry-chain-updates\",\"schema\":\"webstock.industry-chain-updates/v1\",\"payload\":{\"summary\":\"产业链原件\",\"chains\":[{\"name\":\"金融基础设施\",\"thesis\":\"保留来源判断\",\"stages\":[\"应用\"],\"catalysts\":[\"尚待补证\"],\"risks\":[\"证据不足\"],\"evidenceRefs\":[\"https://example.org/source/c\"],\"relatedCodes\":[\"000001\"]}]}}],\"deliveries\":[{\"target\":\"webstock-research\",\"required\":true,\"artifactIds\":[\"picks-1\",\"hot-1\",\"chain-1\"]},{\"target\":\"tonghuashun-watchlist\",\"policy\":{\"group\":\"离线预览\"}}]}",
+      "legacyReject": false,
+      "error": null
+    },
+    {
+      "name": "wrong-boolean-type",
+      "raw": "{\"schema\":\"webstock.external-research-batch/v1\",\"source\":{\"system\":\"ChatGPT\",\"taskId\":\"daily-research\",\"runId\":\"2026-10-14T09:00:00+08:00\",\"generatedAt\":\"2026-10-14T01:05:00.123456789Z\",\"model\":\"external-offline-fixture\"},\"revision\":1,\"asOf\":{\"marketDate\":\"2026-10-14\",\"observedAt\":\"2026-10-14T09:00:00+08:00\",\"timezone\":\"Asia/Shanghai\"},\"automaticTrading\":false,\"artifacts\":[{\"artifactId\":\"picks-1\",\"kind\":\"research-picks\",\"schema\":\"webstock.research-picks/v1\",\"payload\":{\"analysis\":\"离线受控原文，不是选股建议。\",\"picks\":[{\"rank\":1,\"priority\":\"重点\",\"code\":\"600000\",\"name\":\"浦发银行\",\"thesis\":\"保存原论点与风险。\",\"risks\":[\"未独立核验\"],\"evidenceRefs\":[\"https://example.org/source/a\"],\"includeInTonghuashun\":\"true\"},{\"code\":\"000001\",\"name\":\"平安银行\",\"thesis\":\"第二条原论点。\",\"risks\":[\"时点可能过期\"],\"evidenceRefs\":[\"https://example.org/source/b\"]}]}},{\"artifactId\":\"hot-1\",\"kind\":\"market-hotspots\",\"schema\":\"webstock.market-hotspots/v1\",\"payload\":{\"summary\":\"热点原件\",\"items\":[{\"name\":\"银行\",\"thesis\":\"待核验\",\"drivers\":[\"原驱动\"],\"risks\":[\"原风险\"],\"evidenceRefs\":[\"https://example.org/source/a\"],\"relatedCodes\":[\"600000\"]}]}},{\"artifactId\":\"chain-1\",\"kind\":\"industry-chain-updates\",\"schema\":\"webstock.industry-chain-updates/v1\",\"payload\":{\"summary\":\"产业链原件\",\"chains\":[{\"name\":\"金融基础设施\",\"thesis\":\"保留来源判断\",\"stages\":[\"应用\"],\"catalysts\":[\"尚待补证\"],\"risks\":[\"证据不足\"],\"evidenceRefs\":[\"https://example.org/source/c\"],\"relatedCodes\":[\"000001\"]}]}}],\"deliveries\":[{\"target\":\"webstock-research\",\"required\":true,\"artifactIds\":[\"picks-1\",\"hot-1\",\"chain-1\"]},{\"target\":\"tonghuashun-watchlist\",\"policy\":{\"group\":\"离线预览\"}}]}",
+      "legacyReject": false,
+      "error": "同花顺投递必须包含至少一只候选"
+    },
+    {
+      "name": "bad-priority",
+      "raw": "{\"schema\":\"webstock.external-research-batch/v1\",\"source\":{\"system\":\"ChatGPT\",\"taskId\":\"daily-research\",\"runId\":\"2026-10-14T09:00:00+08:00\",\"generatedAt\":\"2026-10-14T01:05:00.123456789Z\",\"model\":\"external-offline-fixture\"},\"revision\":1,\"asOf\":{\"marketDate\":\"2026-10-14\",\"observedAt\":\"2026-10-14T09:00:00+08:00\",\"timezone\":\"Asia/Shanghai\"},\"automaticTrading\":false,\"artifacts\":[{\"artifactId\":\"picks-1\",\"kind\":\"research-picks\",\"schema\":\"webstock.research-picks/v1\",\"payload\":{\"analysis\":\"离线受控原文，不是选股建议。\",\"picks\":[{\"rank\":1,\"priority\":\"unknown\",\"code\":\"600000\",\"name\":\"浦发银行\",\"thesis\":\"保存原论点与风险。\",\"risks\":[\"未独立核验\"],\"evidenceRefs\":[\"https://example.org/source/a\"],\"includeInTonghuashun\":true},{\"code\":\"000001\",\"name\":\"平安银行\",\"thesis\":\"第二条原论点。\",\"risks\":[\"时点可能过期\"],\"evidenceRefs\":[\"https://example.org/source/b\"]}]}},{\"artifactId\":\"hot-1\",\"kind\":\"market-hotspots\",\"schema\":\"webstock.market-hotspots/v1\",\"payload\":{\"summary\":\"热点原件\",\"items\":[{\"name\":\"银行\",\"thesis\":\"待核验\",\"drivers\":[\"原驱动\"],\"risks\":[\"原风险\"],\"evidenceRefs\":[\"https://example.org/source/a\"],\"relatedCodes\":[\"600000\"]}]}},{\"artifactId\":\"chain-1\",\"kind\":\"industry-chain-updates\",\"schema\":\"webstock.industry-chain-updates/v1\",\"payload\":{\"summary\":\"产业链原件\",\"chains\":[{\"name\":\"金融基础设施\",\"thesis\":\"保留来源判断\",\"stages\":[\"应用\"],\"catalysts\":[\"尚待补证\"],\"risks\":[\"证据不足\"],\"evidenceRefs\":[\"https://example.org/source/c\"],\"relatedCodes\":[\"000001\"]}]}}],\"deliveries\":[{\"target\":\"webstock-research\",\"required\":true,\"artifactIds\":[\"picks-1\",\"hot-1\",\"chain-1\"]},{\"target\":\"tonghuashun-watchlist\",\"policy\":{\"group\":\"离线预览\"}}]}",
+      "legacyReject": false,
+      "error": null
+    },
+    {
+      "name": "empty-risk",
+      "raw": "{\"schema\":\"webstock.external-research-batch/v1\",\"source\":{\"system\":\"ChatGPT\",\"taskId\":\"daily-research\",\"runId\":\"2026-10-14T09:00:00+08:00\",\"generatedAt\":\"2026-10-14T01:05:00.123456789Z\",\"model\":\"external-offline-fixture\"},\"revision\":1,\"asOf\":{\"marketDate\":\"2026-10-14\",\"observedAt\":\"2026-10-14T09:00:00+08:00\",\"timezone\":\"Asia/Shanghai\"},\"automaticTrading\":false,\"artifacts\":[{\"artifactId\":\"picks-1\",\"kind\":\"research-picks\",\"schema\":\"webstock.research-picks/v1\",\"payload\":{\"analysis\":\"离线受控原文，不是选股建议。\",\"picks\":[{\"rank\":1,\"priority\":\"重点\",\"code\":\"600000\",\"name\":\"浦发银行\",\"thesis\":\"保存原论点与风险。\",\"risks\":[\"未独立核验\",\" \"],\"evidenceRefs\":[\"https://example.org/source/a\"],\"includeInTonghuashun\":true},{\"code\":\"000001\",\"name\":\"平安银行\",\"thesis\":\"第二条原论点。\",\"risks\":[\"时点可能过期\"],\"evidenceRefs\":[\"https://example.org/source/b\"]}]}},{\"artifactId\":\"hot-1\",\"kind\":\"market-hotspots\",\"schema\":\"webstock.market-hotspots/v1\",\"payload\":{\"summary\":\"热点原件\",\"items\":[{\"name\":\"银行\",\"thesis\":\"待核验\",\"drivers\":[\"原驱动\"],\"risks\":[\"原风险\"],\"evidenceRefs\":[\"https://example.org/source/a\"],\"relatedCodes\":[\"600000\"]}]}},{\"artifactId\":\"chain-1\",\"kind\":\"industry-chain-updates\",\"schema\":\"webstock.industry-chain-updates/v1\",\"payload\":{\"summary\":\"产业链原件\",\"chains\":[{\"name\":\"金融基础设施\",\"thesis\":\"保留来源判断\",\"stages\":[\"应用\"],\"catalysts\":[\"尚待补证\"],\"risks\":[\"证据不足\"],\"evidenceRefs\":[\"https://example.org/source/c\"],\"relatedCodes\":[\"000001\"]}]}}],\"deliveries\":[{\"target\":\"webstock-research\",\"required\":true,\"artifactIds\":[\"picks-1\",\"hot-1\",\"chain-1\"]},{\"target\":\"tonghuashun-watchlist\",\"policy\":{\"group\":\"离线预览\"}}]}",
+      "legacyReject": false,
+      "error": null
+    },
+    {
+      "name": "empty-url-host",
+      "raw": "{\"schema\":\"webstock.external-research-batch/v1\",\"source\":{\"system\":\"ChatGPT\",\"taskId\":\"daily-research\",\"runId\":\"2026-10-14T09:00:00+08:00\",\"generatedAt\":\"2026-10-14T01:05:00.123456789Z\",\"model\":\"external-offline-fixture\"},\"revision\":1,\"asOf\":{\"marketDate\":\"2026-10-14\",\"observedAt\":\"2026-10-14T09:00:00+08:00\",\"timezone\":\"Asia/Shanghai\"},\"automaticTrading\":false,\"artifacts\":[{\"artifactId\":\"picks-1\",\"kind\":\"research-picks\",\"schema\":\"webstock.research-picks/v1\",\"payload\":{\"analysis\":\"离线受控原文，不是选股建议。\",\"picks\":[{\"rank\":1,\"priority\":\"重点\",\"code\":\"600000\",\"name\":\"浦发银行\",\"thesis\":\"保存原论点与风险。\",\"risks\":[\"未独立核验\"],\"evidenceRefs\":[\"https://:80/source\"],\"includeInTonghuashun\":true},{\"code\":\"000001\",\"name\":\"平安银行\",\"thesis\":\"第二条原论点。\",\"risks\":[\"时点可能过期\"],\"evidenceRefs\":[\"https://example.org/source/b\"]}]}},{\"artifactId\":\"hot-1\",\"kind\":\"market-hotspots\",\"schema\":\"webstock.market-hotspots/v1\",\"payload\":{\"summary\":\"热点原件\",\"items\":[{\"name\":\"银行\",\"thesis\":\"待核验\",\"drivers\":[\"原驱动\"],\"risks\":[\"原风险\"],\"evidenceRefs\":[\"https://example.org/source/a\"],\"relatedCodes\":[\"600000\"]}]}},{\"artifactId\":\"chain-1\",\"kind\":\"industry-chain-updates\",\"schema\":\"webstock.industry-chain-updates/v1\",\"payload\":{\"summary\":\"产业链原件\",\"chains\":[{\"name\":\"金融基础设施\",\"thesis\":\"保留来源判断\",\"stages\":[\"应用\"],\"catalysts\":[\"尚待补证\"],\"risks\":[\"证据不足\"],\"evidenceRefs\":[\"https://example.org/source/c\"],\"relatedCodes\":[\"000001\"]}]}}],\"deliveries\":[{\"target\":\"webstock-research\",\"required\":true,\"artifactIds\":[\"picks-1\",\"hot-1\",\"chain-1\"]},{\"target\":\"tonghuashun-watchlist\",\"policy\":{\"group\":\"离线预览\"}}]}",
+      "legacyReject": false,
+      "error": "候选 evidenceRefs 必须是完整的 http/https 来源链接"
+    },
+    {
+      "name": "url-port-overflow",
+      "raw": "{\"schema\":\"webstock.external-research-batch/v1\",\"source\":{\"system\":\"ChatGPT\",\"taskId\":\"daily-research\",\"runId\":\"2026-10-14T09:00:00+08:00\",\"generatedAt\":\"2026-10-14T01:05:00.123456789Z\",\"model\":\"external-offline-fixture\"},\"revision\":1,\"asOf\":{\"marketDate\":\"2026-10-14\",\"observedAt\":\"2026-10-14T09:00:00+08:00\",\"timezone\":\"Asia/Shanghai\"},\"automaticTrading\":false,\"artifacts\":[{\"artifactId\":\"picks-1\",\"kind\":\"research-picks\",\"schema\":\"webstock.research-picks/v1\",\"payload\":{\"analysis\":\"离线受控原文，不是选股建议。\",\"picks\":[{\"rank\":1,\"priority\":\"重点\",\"code\":\"600000\",\"name\":\"浦发银行\",\"thesis\":\"保存原论点与风险。\",\"risks\":[\"未独立核验\"],\"evidenceRefs\":[\"https://example.org:65536/source\"],\"includeInTonghuashun\":true},{\"code\":\"000001\",\"name\":\"平安银行\",\"thesis\":\"第二条原论点。\",\"risks\":[\"时点可能过期\"],\"evidenceRefs\":[\"https://example.org/source/b\"]}]}},{\"artifactId\":\"hot-1\",\"kind\":\"market-hotspots\",\"schema\":\"webstock.market-hotspots/v1\",\"payload\":{\"summary\":\"热点原件\",\"items\":[{\"name\":\"银行\",\"thesis\":\"待核验\",\"drivers\":[\"原驱动\"],\"risks\":[\"原风险\"],\"evidenceRefs\":[\"https://example.org/source/a\"],\"relatedCodes\":[\"600000\"]}]}},{\"artifactId\":\"chain-1\",\"kind\":\"industry-chain-updates\",\"schema\":\"webstock.industry-chain-updates/v1\",\"payload\":{\"summary\":\"产业链原件\",\"chains\":[{\"name\":\"金融基础设施\",\"thesis\":\"保留来源判断\",\"stages\":[\"应用\"],\"catalysts\":[\"尚待补证\"],\"risks\":[\"证据不足\"],\"evidenceRefs\":[\"https://example.org/source/c\"],\"relatedCodes\":[\"000001\"]}]}}],\"deliveries\":[{\"target\":\"webstock-research\",\"required\":true,\"artifactIds\":[\"picks-1\",\"hot-1\",\"chain-1\"]},{\"target\":\"tonghuashun-watchlist\",\"policy\":{\"group\":\"离线预览\"}}]}",
+      "legacyReject": false,
+      "error": "候选 evidenceRefs 必须是完整的 http/https 来源链接"
+    },
+    {
+      "name": "url-userinfo",
+      "raw": "{\"schema\":\"webstock.external-research-batch/v1\",\"source\":{\"system\":\"ChatGPT\",\"taskId\":\"daily-research\",\"runId\":\"2026-10-14T09:00:00+08:00\",\"generatedAt\":\"2026-10-14T01:05:00.123456789Z\",\"model\":\"external-offline-fixture\"},\"revision\":1,\"asOf\":{\"marketDate\":\"2026-10-14\",\"observedAt\":\"2026-10-14T09:00:00+08:00\",\"timezone\":\"Asia/Shanghai\"},\"automaticTrading\":false,\"artifacts\":[{\"artifactId\":\"picks-1\",\"kind\":\"research-picks\",\"schema\":\"webstock.research-picks/v1\",\"payload\":{\"analysis\":\"离线受控原文，不是选股建议。\",\"picks\":[{\"rank\":1,\"priority\":\"重点\",\"code\":\"600000\",\"name\":\"浦发银行\",\"thesis\":\"保存原论点与风险。\",\"risks\":[\"未独立核验\"],\"evidenceRefs\":[\"https://name:secret@example.org/source\"],\"includeInTonghuashun\":true},{\"code\":\"000001\",\"name\":\"平安银行\",\"thesis\":\"第二条原论点。\",\"risks\":[\"时点可能过期\"],\"evidenceRefs\":[\"https://example.org/source/b\"]}]}},{\"artifactId\":\"hot-1\",\"kind\":\"market-hotspots\",\"schema\":\"webstock.market-hotspots/v1\",\"payload\":{\"summary\":\"热点原件\",\"items\":[{\"name\":\"银行\",\"thesis\":\"待核验\",\"drivers\":[\"原驱动\"],\"risks\":[\"原风险\"],\"evidenceRefs\":[\"https://example.org/source/a\"],\"relatedCodes\":[\"600000\"]}]}},{\"artifactId\":\"chain-1\",\"kind\":\"industry-chain-updates\",\"schema\":\"webstock.industry-chain-updates/v1\",\"payload\":{\"summary\":\"产业链原件\",\"chains\":[{\"name\":\"金融基础设施\",\"thesis\":\"保留来源判断\",\"stages\":[\"应用\"],\"catalysts\":[\"尚待补证\"],\"risks\":[\"证据不足\"],\"evidenceRefs\":[\"https://example.org/source/c\"],\"relatedCodes\":[\"000001\"]}]}}],\"deliveries\":[{\"target\":\"webstock-research\",\"required\":true,\"artifactIds\":[\"picks-1\",\"hot-1\",\"chain-1\"]},{\"target\":\"tonghuashun-watchlist\",\"policy\":{\"group\":\"离线预览\"}}]}",
+      "legacyReject": false,
+      "error": null
+    },
+    {
+      "name": "duplicate-json-key",
+      "raw": "{\"schema\":\"webstock.external-research-batch/v1\",\"source\":{\"system\":\"ChatGPT\",\"taskId\":\"daily-research\",\"runId\":\"2026-10-14T09:00:00+08:00\",\"generatedAt\":\"2026-10-14T01:05:00.123456789Z\",\"model\":\"external-offline-fixture\"},\"revision\":1,\"revision\":2,\"asOf\":{\"marketDate\":\"2026-10-14\",\"observedAt\":\"2026-10-14T09:00:00+08:00\",\"timezone\":\"Asia/Shanghai\"},\"automaticTrading\":false,\"artifacts\":[{\"artifactId\":\"picks-1\",\"kind\":\"research-picks\",\"schema\":\"webstock.research-picks/v1\",\"payload\":{\"analysis\":\"离线受控原文，不是选股建议。\",\"picks\":[{\"rank\":1,\"priority\":\"重点\",\"code\":\"600000\",\"name\":\"浦发银行\",\"thesis\":\"保存原论点与风险。\",\"risks\":[\"未独立核验\"],\"evidenceRefs\":[\"https://example.org/source/a\"],\"includeInTonghuashun\":true},{\"code\":\"000001\",\"name\":\"平安银行\",\"thesis\":\"第二条原论点。\",\"risks\":[\"时点可能过期\"],\"evidenceRefs\":[\"https://example.org/source/b\"]}]}},{\"artifactId\":\"hot-1\",\"kind\":\"market-hotspots\",\"schema\":\"webstock.market-hotspots/v1\",\"payload\":{\"summary\":\"热点原件\",\"items\":[{\"name\":\"银行\",\"thesis\":\"待核验\",\"drivers\":[\"原驱动\"],\"risks\":[\"原风险\"],\"evidenceRefs\":[\"https://example.org/source/a\"],\"relatedCodes\":[\"600000\"]}]}},{\"artifactId\":\"chain-1\",\"kind\":\"industry-chain-updates\",\"schema\":\"webstock.industry-chain-updates/v1\",\"payload\":{\"summary\":\"产业链原件\",\"chains\":[{\"name\":\"金融基础设施\",\"thesis\":\"保留来源判断\",\"stages\":[\"应用\"],\"catalysts\":[\"尚待补证\"],\"risks\":[\"证据不足\"],\"evidenceRefs\":[\"https://example.org/source/c\"],\"relatedCodes\":[\"000001\"]}]}}],\"deliveries\":[{\"target\":\"webstock-research\",\"required\":true,\"artifactIds\":[\"picks-1\",\"hot-1\",\"chain-1\"]},{\"target\":\"tonghuashun-watchlist\",\"policy\":{\"group\":\"离线预览\"}}]}",
+      "legacyReject": false
+    },
+    {
+      "name": "truncated-json",
+      "raw": "{\"schema\":\"webstock.external-research-batch/v1\",\"source\":{\"system\":\"ChatGPT\",\"taskId\":\"daily-research\",\"runId\":\"2026-10-14T09:00:00+08:00\",\"generatedAt\":\"2026-10-14T01:05:00.123456789Z\",\"model\":\"external-offline-fixture\"},\"revision\":1,\"asOf\":{\"marketDate\":\"2026-10-14\",\"observedAt\":\"2026-10-14T09:00:00+08:00\",\"timezone\":\"Asia/Shanghai\"},\"automaticTrading\":false,\"artifacts\":[{\"artifactId\":\"picks-1\",\"kind\":\"research-picks\",\"schema\":\"webstock.research-picks/v1\",\"payload\":{\"analysis\":\"离线受控原文，不是选股建议。\",\"picks\":[{\"rank\":1,\"priority\":\"重点\",\"code\":\"600000\",\"name\":\"浦发银行\",\"thesis\":\"保存原论点与风险。\",\"risks\":[\"未独立核验\"],\"evidenceRefs\":[\"https://example.org/source/a\"],\"includeInTonghuashun\":true},{\"code\":\"000001\",\"name\":\"平安银行\",\"thesis\":\"第二条原论点。\",\"risks\":[\"时点可能过期\"],\"evidenceRefs\":[\"https://example.org/source/b\"]}]}},{\"artifactId\":\"hot-1\",\"kind\":\"market-hotspots\",\"schema\":\"webstock.market-hotspots/v1\",\"payload\":{\"summary\":\"热点原件\",\"items\":[{\"name\":\"银行\",\"thesis\":\"待核验\",\"drivers\":[\"原驱动\"],\"risks\":[\"原风险\"],\"evidenceRefs\":[\"https://example.org/source/a\"],\"relatedCodes\":[\"600000\"]}]}},{\"artifactId\":\"chain-1\",\"kind\":\"industry-chain-updates\",\"schema\":\"webstock.industry-chain-updates/v1\",\"payload\":{\"summary\":\"产业链原件\",\"chains\":[{\"name\":\"金融基础设施\",\"thesis\":\"保留来源判断\",\"stages\":[\"应用\"],\"catalysts\":[\"尚待补证\"],\"risks\":[\"证据不足\"],\"evidenceRefs\":[\"https://example.org/source/c\"],\"relatedCodes\":[\"000001\"]}]}}],\"deliveries\":[{\"target\":\"webstock-research\",\"required\":true,\"artifactIds\":[\"picks-1\",\"hot-1\",\"chain-1\"]},{\"target\":\"tonghuashun-watchlist\",\"policy\":{\"group\":\"离线预览\"",
+      "legacyReject": false
+    }
+  ]
+}

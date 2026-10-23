@@ -1,0 +1,366 @@
+{
+  "schemaVersion": 1,
+  "columns": [
+    "case",
+    "contract",
+    "kdjPeriod",
+    "rsiPeriod",
+    "cciPeriod",
+    "index",
+    "time",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "valid",
+    "closed",
+    "k",
+    "d",
+    "j",
+    "rsi",
+    "cci",
+    "obv",
+    "kdjReady"
+  ],
+  "nullLiteral": "null",
+  "numericTolerance": 1e-8,
+  "oracle": {
+    "path": "js/modules/indicators.js",
+    "sha256": "f43b5456d039171fd1bbe8da065317610236d808d0571b2e9597ca1e8b97a3ca",
+    "execution": "isolated Node vm; no business modules"
+  },
+  "generator": {
+    "path": "native/tests/generate_legacy_indicators.cjs",
+    "sha256": "41ac584568d36d71212b4ec2bce568338a0125a1b41ec37e22872bc02bb455a9"
+  },
+  "fixtureSha256": "b161df6216d240121f77f1247fd2a834f2ceee938b295226a544f8ab911ce5c5",
+  "rows": 1427,
+  "contracts": {
+    "legacy-chart-v1": "Exact existing chart formulas on finite valid ordered bars. KDJ 9 fixed smoothing 3/3; simple rolling RSI 14 (flat=100); CCI 14 with intermediate toFixed(4); OBV starts at first volume.",
+    "native-gap-v1": "Explicit validity/time/previous-unclosed mask, then run the same oracle independently per segment. Invalid volume resets only OBV. Last unclosed value may preview, never implies signal confirmation."
+  },
+  "safetyOutsideFixture": "Non-finite arithmetic result becomes missing and restarts only that indicator on the following valid row; tested directly in C++.",
+  "inputPolicy": {
+    "prices": "one consistent supplied OHLC basis; no adjustment inside indicators",
+    "adjustment": "synthetic-unadjusted",
+    "volumeUnit": "supplied unit, fixture uses lots; no shares/lots conversion",
+    "timeUnit": "milliseconds; strictly increasing, no inferred gap from duration"
+  },
+  "readiness": "KDJ ready means N valid rows, not closed/confirmed. RSI/CCI missing until N rows. OBV cumulative from segment start, not visible-window start.",
+  "excluded": [
+    "VWAP (amount/unit/adjustment contract pending)",
+    "MACD/ATR/EMA/SMA/RVOL/sequential changes",
+    "UI/parameter persistence/native device acceptance"
+  ],
+  "cases": [
+    {
+      "id": "default-mixed",
+      "contract": "legacy-chart-v1",
+      "rows": 48,
+      "periods": [
+        9,
+        14,
+        14
+      ],
+      "note": ""
+    },
+    {
+      "id": "mixed-n3",
+      "contract": "legacy-chart-v1",
+      "rows": 6,
+      "periods": [
+        3,
+        3,
+        3
+      ],
+      "note": "Independent hand-checked anchor."
+    },
+    {
+      "id": "flat-n3",
+      "contract": "legacy-chart-v1",
+      "rows": 5,
+      "periods": [
+        3,
+        3,
+        3
+      ],
+      "note": ""
+    },
+    {
+      "id": "rising",
+      "contract": "legacy-chart-v1",
+      "rows": 30,
+      "periods": [
+        9,
+        14,
+        14
+      ],
+      "note": ""
+    },
+    {
+      "id": "falling",
+      "contract": "legacy-chart-v1",
+      "rows": 30,
+      "periods": [
+        9,
+        14,
+        14
+      ],
+      "note": ""
+    },
+    {
+      "id": "period-one",
+      "contract": "legacy-chart-v1",
+      "rows": 5,
+      "periods": [
+        1,
+        1,
+        1
+      ],
+      "note": ""
+    },
+    {
+      "id": "short-warmup",
+      "contract": "legacy-chart-v1",
+      "rows": 2,
+      "periods": [
+        3,
+        3,
+        3
+      ],
+      "note": ""
+    },
+    {
+      "id": "warmup-boundary",
+      "contract": "legacy-chart-v1",
+      "rows": 4,
+      "periods": [
+        3,
+        3,
+        3
+      ],
+      "note": ""
+    },
+    {
+      "id": "kdj-overshoot",
+      "contract": "legacy-chart-v1",
+      "rows": 10,
+      "periods": [
+        3,
+        3,
+        3
+      ],
+      "note": ""
+    },
+    {
+      "id": "cci-rounding",
+      "contract": "legacy-chart-v1",
+      "rows": 73,
+      "periods": [
+        9,
+        14,
+        14
+      ],
+      "note": ""
+    },
+    {
+      "id": "cci-tiny-deviation",
+      "contract": "legacy-chart-v1",
+      "rows": 5,
+      "periods": [
+        3,
+        3,
+        3
+      ],
+      "note": ""
+    },
+    {
+      "id": "obv-zero-equal-negative",
+      "contract": "legacy-chart-v1",
+      "rows": 7,
+      "periods": [
+        3,
+        3,
+        3
+      ],
+      "note": ""
+    },
+    {
+      "id": "obv-large",
+      "contract": "legacy-chart-v1",
+      "rows": 6,
+      "periods": [
+        3,
+        3,
+        3
+      ],
+      "note": ""
+    },
+    {
+      "id": "seeded-random",
+      "contract": "legacy-chart-v1",
+      "rows": 520,
+      "periods": [
+        9,
+        14,
+        14
+      ],
+      "note": ""
+    },
+    {
+      "id": "period-500",
+      "contract": "legacy-chart-v1",
+      "rows": 520,
+      "periods": [
+        500,
+        500,
+        500
+      ],
+      "note": ""
+    },
+    {
+      "id": "gap-valid-flag",
+      "contract": "native-gap-v1",
+      "rows": 12,
+      "periods": [
+        3,
+        3,
+        3
+      ],
+      "note": ""
+    },
+    {
+      "id": "gap-price-missing",
+      "contract": "native-gap-v1",
+      "rows": 12,
+      "periods": [
+        3,
+        3,
+        3
+      ],
+      "note": ""
+    },
+    {
+      "id": "gap-ohlc-invalid",
+      "contract": "native-gap-v1",
+      "rows": 12,
+      "periods": [
+        3,
+        3,
+        3
+      ],
+      "note": ""
+    },
+    {
+      "id": "gap-nonpositive",
+      "contract": "native-gap-v1",
+      "rows": 12,
+      "periods": [
+        3,
+        3,
+        3
+      ],
+      "note": ""
+    },
+    {
+      "id": "gap-duplicate-time",
+      "contract": "native-gap-v1",
+      "rows": 12,
+      "periods": [
+        3,
+        3,
+        3
+      ],
+      "note": ""
+    },
+    {
+      "id": "gap-backward-time",
+      "contract": "native-gap-v1",
+      "rows": 12,
+      "periods": [
+        3,
+        3,
+        3
+      ],
+      "note": ""
+    },
+    {
+      "id": "gap-time-missing",
+      "contract": "native-gap-v1",
+      "rows": 12,
+      "periods": [
+        3,
+        3,
+        3
+      ],
+      "note": ""
+    },
+    {
+      "id": "gap-volume-missing",
+      "contract": "native-gap-v1",
+      "rows": 12,
+      "periods": [
+        3,
+        3,
+        3
+      ],
+      "note": "Volume invalidates OBV only."
+    },
+    {
+      "id": "gap-volume-negative",
+      "contract": "native-gap-v1",
+      "rows": 12,
+      "periods": [
+        3,
+        3,
+        3
+      ],
+      "note": "Volume invalidates OBV only."
+    },
+    {
+      "id": "provisional-tail",
+      "contract": "native-gap-v1",
+      "rows": 12,
+      "periods": [
+        3,
+        3,
+        3
+      ],
+      "note": "Value may preview; readiness is not confirmation."
+    },
+    {
+      "id": "provisional-followed",
+      "contract": "native-gap-v1",
+      "rows": 12,
+      "periods": [
+        3,
+        3,
+        3
+      ],
+      "note": "Following row suppressed, matching market::closes; then restart."
+    },
+    {
+      "id": "provisional-consecutive",
+      "contract": "native-gap-v1",
+      "rows": 12,
+      "periods": [
+        3,
+        3,
+        3
+      ],
+      "note": ""
+    },
+    {
+      "id": "ordinary-session-gap",
+      "contract": "native-gap-v1",
+      "rows": 12,
+      "periods": [
+        3,
+        3,
+        3
+      ],
+      "note": "Time distance alone does not create a gap."
+    }
+  ]
+}

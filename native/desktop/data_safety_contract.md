@@ -1,0 +1,37 @@
+# DataSafety operational scope and ownership
+
+Old P040 in index.html has only three static assurances: no broker password storage, no real broker trades, OpenAI keys local/env and excluded from repository. Its export/import actions in settings.js and 15-table backupService.js contract are P038. Existing native BusinessPages/MainActivity already provide export, preview, before-snapshot and transactional merge. This slice adds requested approved-path diagnostics, integrity inspection and isolated restore planning; it does not implement another production restore/export service or fabricate universal privacy/encryption settings.
+
+## Actual consumers
+
+Private saved policy: `maxPreviewMiB` 1–25/default16 is checked before file parsing and Qt file loading; Android host uses `maxPreviewBytes()` before SAF reading and the model independently enforces it. `requireExternalChecksum` defaultfalse prevents eligible handoff without a supplied external SHA256 when enabled. Supplied checksum mismatch is always rejected. `allowPartialBusinessBackup` defaultfalse blocks old four-kind native backups until explicitly enabled. These values are consumed by each preview and rechecked before handoff; changing them invalidates the previous plan. Controls are module-specific input/plan guards, not application-wide privacy switches.
+
+## Location and cache diagnostics
+
+Host explicitly supplies approved `{id,role,label,path,source,format,tables,backupIncluded,asOf}` entries. No recursive directory discovery, configuration, session, environment, credential, proxy, signature or permission reads/changes occur. File/directory existence, regular-file size and modified time are measured; directory total size remains unknown. Source/asOf are host-provided provenance, checkedAt is inspection time, filesystem time is never called a market-data time. Cached resources/independent module stores outside seven-kind business export are identified separately by the supplied backupIncluded flag.
+
+Selected SQLite diagnostics open with READONLY (Qt also query_only), run quick_check and count only explicitly declared safe table names. No row payloads or credential-table values are queried. Missing files are never created. Bad/missing tables report unavailable/null counts rather than zero. Physical quick_check success is not full application/schema compatibility or data-source freshness. Leaf symlinks are refused; approved path provenance and directory policy remain host-owned.
+
+## Integrity, planning and isolation
+
+SHA256 is computed from the exact original bytes. Android byte[] SAF API preserves bytes and validates strict UTF8/JSON; String API explicitly hashes UTF8 pasted text. External digest format/mismatch is checked; self-computed SHA identifies content and is not independent proof of origin. Unknown or credential-bearing backup structures are refused before staging, and credential key names in paste drafts are blocked without echoing their values.
+
+native-business-v1 is limited to accounts/trades/docs/reports/topics/relations/collections plus recognized envelope fields. Core four arrays are mandatory; missing optional three remain explicit partial coverage. Each array requires object rows, unique stable text IDs and at most10000 rows. New/duplicate/same-ID conflict counts are computed against the current seven-kind snapshot. incoming is always forced keep-existing. This is not a full-software backup: watchlist, market caches, separate module databases, media/runtime models and keys remain outside this payload.
+
+Compatibility uses the real existing BusinessStore restore/ledger validators against a fresh isolated store only: before snapshot first, then incoming. Qt uses an owned QTemporaryDir and a fresh filename. Android uses a fresh cache child with canonical target checks and an isolated ContextWrapper overriding BOTH getDatabasePath and openOrCreateDatabase overloads; actual opened database path is verified before restore. Cleanup targets only that fresh target and its known SQLite sidecars. No production/root BusinessStore.restore call exists. Isolation changes imported job runtime fields according to the existing validator; this is a compatibility check, not a promised production runtime-state reconstruction.
+
+Legacy WebStock v1–8 tables are inspected for supported structure, coverage, item bounds5000 and available stable-ID duplication. v8 must contain all15 required tables; wrapped unknown tables are rejected. Legacy field semantics/conversion are explicitly unvalidated and legacy JSON is never marked native-restorable. No silent conversion, ID inference or 15-table production replacement is attempted.
+
+## Handoff and recovery
+
+Only successful isolated native validation plus policy gates permits explicit routing into the existing P038 preview/backup-first-confirmation flow. Before routing the module rereads exact staged bytes, compares current baseline/policy hashes and revalidates in isolation. Plan has backupBeforeRequired=true, automaticApply=false, restorePolicy=keep-existing. Root must retain fresh-baseline checks, explicit user approval, before-snapshot and transactional apply. This callback does not authorize automatic restore.
+
+State SQLite application_id0x44534631/version1 is independent (`BusinessStore.filePath()+.data-safety.sqlite` on Qt; host-provided independent File on Android). Private policy/draft/diagnostic/plan metadata have CAS revisions. Source bytes are a separate BLOB, atomically staged with the plan summary; Android bounded chunks avoid CursorWindow limits. Canceled selection and invalid preview preserve the previous validated plan/source. Explicit cancellation clears only the module's pending plan/source. Input/checksum and completed staged plan recover after recreation. Explicit shared-state reload is available after CAS refusal. Long checks run on a local worker, never an agent or network job; no automatic follow-up runs are scheduled. Internal readers preserve main controls/scroll; no business QDialog/AlertDialog.
+
+## Export privacy
+
+`data-safety-check-v1` is a diagnostic/plan-summary receipt, not a data backup. A field whitelist excludes incoming, raw bytes, before snapshots, business originals and unknown private fields even when called with a full plan. Diagnostics also use a known metadata whitelist. Tests include a synthetic private marker in incoming/raw/diagnostic extras and assert it is absent from receipt serialization. Full original bytes are readable only via the explicit private-source reader, never placed in the exported summary. No auto upload, broker order, paid model call or credential migration exists.
+
+## Verification boundary
+
+Dedicated model/SQLite checks cover policy consumption, checksum mismatch/missing requirement, partial gating, real isolated validator, unchanged source business snapshot, missing-file noncreation, readonly actual table counts, stale CAS, source-byte identity, legacy coverage, credential refusal, receipt exclusion and Java/Qt entire normalized plan equality. Supplied Android instrumentation adds genuine isolated SQLite/context-path and lifecycle/theme/internal-back checks. Standalone SDK compile/model and offscreen Qt checks do not establish root integration, Android device execution, full regression, large-production-data performance or full-software restore. Root owns Main/Window/BusinessPages/BusinessStore/Flow/CMake/Gradle/version/migration status/shared builds/5564. All earlier module freezes remain unchanged.

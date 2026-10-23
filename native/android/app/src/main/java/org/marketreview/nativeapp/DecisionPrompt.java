@@ -1,0 +1,6 @@
+package org.marketreview.nativeapp;
+import org.json.*;
+/** Text extracted from the original decisionPacketService buildPrompt and handoffFormat. */
+final class DecisionPrompt {
+ static String build(JSONObject packet)throws Exception{JSONObject content=new JSONObject();for(String k:new String[]{"generatedAt","dataSources","candidates","portfolioContext","dataGaps","evidence"})content.put(k,packet.get(k));return "你是一名负责复核的 A 股研究主管。请审查下面的 WebStock 决策包，完成一次量化、产业证据、反方观点和组合风险合并分析。\n\n工作规则：\n- 模型原始分数不能跨模型直接比较，只能使用每个来源内的排名和来源数。\n- “探索性”结果不能写成已验证策略；数据缺口必须保留。\n- 每条外部事实必须引用提供的 evidenceId；没有证据时写“待补证”，不能补写来源不明的事实。\n- 主动寻找模型排序分歧、资讯与专家观点冲突、集中暴露和失效条件。\n- 不调用券商、不输出自动下单指令。价格或盘口缺失时不得虚构。\n\n"+"研究问题："+packet.getString("question")+"\n风险偏好："+packet.getString("riskProfile")+"\n\n决策包 JSON：\n"+content.toString(2)+"\n\n请输出：\n## 研究结论\n明确最值得继续研究、等待确认和暂时排除的候选。\n\n## 四角色复核\n分别给出量化审查、产业与公司证据、反方/冲突、组合与风险四部分结论。\n\n## 候选审查表\n列出代码、名称、来源共识、支持证据、反证、数据缺口、确认条件、失效条件和研究优先级。\n\n## 纸面组合输入\n只给出适合进入纸面组合草稿的候选及理由，不给真实下单指令。\n\n## 下一步补证\n按优先级列出需要补充的财报、公告、资讯、盘口、行业或点时点数据。\n\n## WebStock 一键复制输出要求\n请在回答最后输出一个可直接复制回 WebStock 的结果块。\n要求：不要把边界标记放进代码块；边界标记必须单独占一行；块内使用 Markdown；内容要短、清楚、可复盘。\n\n格式必须严格如下：\nWEBSTOCK_RESULT_START\n# AI 研究决策包复核结果\n- 研究结论：继续研究 / 等待确认 / 暂时排除。\n- 四角色复核：量化、产业证据、反方冲突、组合风险。\n- 候选审查：代码、证据编号、确认条件、失效条件、数据缺口。\n- 纸面组合输入：仅列候选和研究理由，不生成真实订单。\n- 下一步补证：按优先级列出待核验数据。\nWEBSTOCK_RESULT_END";}
+}

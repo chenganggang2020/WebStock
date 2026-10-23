@@ -1,0 +1,1 @@
+<RCC><qresource prefix="/"><file alias="stock-icon.png">../icons/stock-user-red-v3-512.png</file><file alias="review-data.json">../contracts/review-data.json</file><file alias="douyin-snapshot.js">douyin-snapshot.js</file><file alias="migration-status.json">../MIGRATION-STATUS.json</file></qresource></RCC>

@@ -309,7 +309,10 @@ def train_master_model(
     np.random.seed(int(seed))
     torch.manual_seed(int(seed))
     torch.use_deterministic_algorithms(True, warn_only=True)
-    torch.set_num_threads(min(max(os.cpu_count() or 2, 1), 8))
+    thread_limit = int(os.environ.get("WEBSTOCK_QUANT_THREADS", str(min(max(os.cpu_count() or 2, 1), 8))))
+    if not 1 <= thread_limit <= 8:
+        raise ValueError("WEBSTOCK_QUANT_THREADS must be between 1 and 8")
+    torch.set_num_threads(thread_limit)
     device = torch.device(device_name)
     model = MarketGuidedStockTransformer(
         stock_feature_count=stock_feature_count,

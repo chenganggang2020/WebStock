@@ -1,5 +1,52 @@
 # Change Journal
 
+## 2026-10-19 — Fixed-geometry and cross-page chart audit requested
+
+- User's installed-window screenshots show loading/ready and different symbols shifting chart/readout geometry. Static review confirms data-dependent axisWidth, empty-paint early returns, content-driven labels, separate GlobalPlot drag behavior and selected-point reset on refresh. No runtime code change or installed-window replay is claimed in this audit step.
+- Added docs/review/STOCK-UI-AUDIT-20261019.md with UI01–UI10, evidence levels, fixed frame/data-state separation, market-aware shared viewport interaction and concrete geometry/lifecycle acceptance criteria. Native Qt/Java is the current product; root Electron source is legacy comparison, not the installed executable.
+- User authorized a source-only GitHub snapshot and review in their named existing ChatGPT conversation. Preserve checkout/index, data/media/login material and backups; publish on an isolated review branch, not main. Exclude production data/screenshots and generated binaries. Tool-access failure must remain an explicit pending review, not a fabricated external result.
+
+## 2026-10-19 — Q01–Q06 chart and visible-market refresh repair deployed
+
+- Fixed explicit-qfq monthly history rejection and the dependent yearly chart path without changing source prices or default raw-transaction validation. Fixed seconds loading/completion/cancel state and old-save acknowledgements overwriting newer requests; existing viewport survives state-only updates.
+- Comparison/board/ETF/futures visible pages now sustain nonoverlapping automatic updates, back off on failure and preserve historical readers. Automatic ETF updates do not prune saved observations; unchanged futures updates do not duplicate history. Exact-symbol single-source Tencent index history includes today's forming bar, with honest Sina fallback and older-series refusal.
+- Five affected top action regions use a small wrapping layout, preserving all controls and permanent main/submenu navigation. Focused checks:13 calendar,2 race,8 current-index,18 refresh,18 geometry; Qt suites5 feed/5 actual host/11 market data/10 refresh/4 Tencent host/6 old history/8 overview, counts include setup/cleanup where applicable. Four real monthly responses and eight live index histories checked; screenshots inspected. Not all-feature/manual/ARM or30-minute acceptance.
+- Built1267 native inputs with zero build-time hash differences; installed EXE8F0A402AD328FBF5A1BFB4D2FA8279F7F1A9E4FDD36E1607B4D36A0AF68A5ED6. Normally closed Stock under explicit authorization, backed up old EXE and27 DB/settings files;10767 original data files SHA unchanged. Independent57-program-file ZIP verified. G:/Stock/data retained; old jobs/paused stress test not started.
+- Evidence: output/native-q01-q06-20261019/REVIEW.md and installed-verification.json. Q01–Q06 progress6/6; other project progress is not implied.
+
+## 2026-10-17 — E3 working-set corrections accepted, final acceptance pending
+
+- E2's actual combined-host stalls and memory growth remain failed evidence. Scoped changes now retain only backup choice metadata and the selected company profile, move eligible collection polling to bounded thread-owned reads, reuse the unchanged date regex per thread, and retain market-overview list metadata with selected complete detail. No schema, FULL/CAS/receipt, raw original or historical-ID semantics were relaxed.
+- Full 4.2MB overview import exposed a separate 180s text layout stall; existing complete-buffer/32KiB editor projection now serves this page too. Private 12 lightweight and7 text body checks pass, including edit-during-preview cancellation, invalid restore preserving drafts, and same-page CAS conflicts. These are not unified app acceptance.
+- Root verified31 packages/5519 inputs; one historical external pointer resolved to identical frozen bytes rather than changing its expected hash. First unified build's invalid const-char-pointer label addition remains preserved; only explicit QString typing changed, independently reviewed. The new unified build, backup Window and four fresh final suites remain required before Stock deployment. Installed3/8 and formal data untouched at this checkpoint.
+
+## 2026-10-16 — P03 single snapshot, background search and bounded rendering deployed
+
+- Actual Window on the previous immutable data backup blocked2771.45ms opening business search. Three full Store loads plus catalog merge, search and all-row widget creation ran on GUI. Preserved original RED log.
+- Kept original complete Store validation in one Snapshot API; moved catalog/search to bounded shared reader pool, separated reload/query generations, preserved failed/hidden/destroyed callbacks and original selection. GUI now displays100 rows/page without truncating6998 total results. Shared two-reader pool also serves P01 funds; no schema, journal mode, data, network or old-task changes.
+- P03 final7 business cases+init/cleanup=9 pass; shared queue1+2=3 pass; affected funds5+2=7 pass; navigation4+2=6 pass. Real cold10.6418ms; complete results1843.22ms;60 warm round trips p9535.0485ms, max36.1866ms, heartbeat103.595ms. 200 existing funds/menu switches p9589.6802ms, maximum96.5062ms. Failed test premises and launcher error retained in report; did not weaken runtime validation, fuzzy search or timing thresholds.
+- Source diff reviewed across correctness/readability/architecture/security/performance; screenshot and shared-library identity checked. 1156 build inputs: runtime unchanged after app build, only test source evolved; final manifest reconciled. Installed EXE `EBBF73322F300E9280A5C9F7A305A3D4EC9E1371D9463930607420F4DB7C8010` at `D:/Stock/Stock.exe` after closed-process check,10736-file independent backup and pre/post data SHA zero differences. Old program retained `D:/Stock/Stock.before-responsive-20261016T0710008147Z.exe`. Ordinary window/old tasks not launched.
+- Evidence: `output/native-responsive-p03-20261016/REPORT.md`, `verification.json`, `deployment-summary.json`. Progress3/8. NextP04: person method versions, backup catalog, quant/material cold paths; P05–P08 remain. No claim of all64 real-data capacity,30-minute soak, ARM, real provider collection or global absence of UI stalls.
+
+## 2026-10-16 — Route B first batch P01/P02 implemented and deployed
+
+- User approved B and confirmed normal Stock exit. Preserved existing source/data and original evidence; no schema or journal-mode changes, no old jobs, no real credentials or quant edits.
+- Reproduced hidden funds locking (885.552ms), 5s-lock entry (5002.73ms), theme propagation (341.986ms/1559 events) and navigation widget recreation before fixing. Funds uses background read-only snapshots with target/generation/lifetime guards; latest feed data is used independently of the main quote coalescer. Theme/nav updates now depend on actual changes.
+- Final focused 12, Store 10 and navigation 6 tests passed, counts include init/cleanup. 200 real-backup warm menu switches p95 92.114ms/max134.179ms, heartbeat max158.08ms; 5s-lock funds entry13.4676ms and heartbeat31.4902ms. New snapshots preserve raw data, source dates, history/replay and configuration/drafts.
+- Intermediate fixture, assertion, compilation and wait-premise failures are preserved and explained in `output/native-responsive-design-20261016/REPORT.md`; tests were not substituted for production/data acceptance.
+- Program replaced only after 10736-file data backup and matching before/after SHA. New installed SHA `B5379916D0A4094EF8729AD9A62752289B5FC02B092C3CAE2A208BFF16B180F0`; prior EXE retained as `D:/Stock/Stock.before-responsive-20261016T0628294317Z.exe`, full data backup in the new deployment directory. Ordinary window/old tasks not launched.
+- Progress is 2/8, not global completion. Next P03 validated directory/profile snapshot and P04 cold-page preparation; P05/P06 queue/detail work and P07/P08 final combined acceptance remain.
+
+## 2026-10-16 — Native responsiveness design before implementation
+
+Status: proposed design only; no runtime source, production database, installed EXE or automation changed.
+
+- Compared official TradingView Advanced Charts, MetaTrader 5, Sierra Chart and historical Tonghuashun documentation with current native code and the preserved menu-hang evidence. Public contracts are distinguished from unknown proprietary implementation.
+- Proposed retaining Qt/SQLite, first fixing hidden funds-page SQL and unchanged-theme propagation, then snapshot reuse, cold-page work, bounded persistence and selective list/chart updates. P01–P08 have explicit acceptance and deployment states in `native/PERFORMANCE-ARCHITECTURE-PLAN.md`.
+- Added proposed ADR-008; marked the August project context as legacy so its Electron/companion topology is not mistaken for current native Stock.
+- Existing defect-reproduction results are a baseline, not proof of a fix. This turn performs documentation/link and whitespace checks only; runtime tests and package replacement require the subsequent implementation.
+- Preserve unrelated quant edits, original data/media, durable validation, receipts and all frozen packages. Await review of route B before changing runtime behavior.
+
 ## 2026-08-11 - Permanent Douyin Archive, Incremental Planning And AI Packets
 
 ### Decision

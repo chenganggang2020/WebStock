@@ -8,13 +8,6 @@ import traceback
 from datetime import datetime, timezone
 from pathlib import Path
 
-from .collector import collect_dataset
-from .expert_backtest import run_expert_backtest
-from .factor_lab import run_factor_lab
-from .master_model import run_master_baseline
-from .model import run_lightgbm_baseline
-from .signal_scan import run_signal_scan
-from .strategy_lab import ExecutionAssumptions, run_strategy_lab
 
 
 def _emit(prefix, payload):
@@ -103,6 +96,7 @@ def _positive_numbers(value, label):
 
 
 def _collect(args, dataset_id=None):
+    from .collector import collect_dataset
     workspace = Path(args.workspace).resolve()
     dataset_id = _safe_id(dataset_id or args.dataset_id, "dataset id")
     dataset_dir = workspace / "datasets" / dataset_id
@@ -160,6 +154,7 @@ def _run(args, dataset_dir=None, run_id=None):
         "emit": emit_event,
     }
     if args.model == "master":
+        from .master_model import run_master_baseline
         result_path, result = run_master_baseline(
             **common,
             lookback=args.master_lookback,
@@ -175,6 +170,7 @@ def _run(args, dataset_dir=None, run_id=None):
             max_instruments=args.master_max_instruments,
         )
     else:
+        from .model import run_lightgbm_baseline
         result_path, result = run_lightgbm_baseline(
             **common,
             num_boost_round=args.num_boost_round,
@@ -195,6 +191,7 @@ def command_run(args):
 
 
 def command_factor_lab(args):
+    from .factor_lab import run_factor_lab
     workspace = Path(args.workspace).resolve()
     dataset_id = _safe_id(args.dataset_id, "dataset id")
     run_id = _safe_id(args.run_id or "factor-lab-" + datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ"), "run id")
@@ -226,6 +223,7 @@ def command_factor_lab(args):
 
 
 def command_strategy_lab(args):
+    from .strategy_lab import ExecutionAssumptions, run_strategy_lab
     workspace = Path(args.workspace).resolve()
     dataset_id = _safe_id(args.dataset_id, "dataset id")
     run_id = _safe_id(args.run_id or "strategy-lab-" + datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ"), "run id")
@@ -285,6 +283,7 @@ def command_strategy_lab(args):
 
 
 def command_signal_scan(args):
+    from .signal_scan import run_signal_scan
     workspace = Path(args.workspace).resolve()
     dataset_id = _safe_id(args.dataset_id, "dataset id")
     run_id = _safe_id(
@@ -334,6 +333,7 @@ def command_signal_scan(args):
 
 
 def command_expert_backtest(args):
+    from .expert_backtest import run_expert_backtest
     workspace = Path(args.workspace).resolve()
     dataset_id = _safe_id(args.dataset_id, "dataset id")
     run_id = _safe_id(args.run_id or "expert-backtest-" + datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ"), "run id")

@@ -1,0 +1,1334 @@
+{
+  "schema": "scenario-tools/v1",
+  "source": {
+    "model": "js/modules/compoundLabModel.js",
+    "ui": "js/modules/compoundLab.js",
+    "entry": "index.html:1223-1435",
+    "tests": [
+      "test/compoundLabModel.test.js",
+      "test/compoundLabView.test.js",
+      "test/compoundLabState.test.js"
+    ]
+  },
+  "api": {
+    "java": "ScenarioTools.evaluate(String module, JSONObject input) -> JSONObject",
+    "cpp": "scenario::evaluate(const std::string& module,const scenario::Value& input) -> scenario::Value",
+    "envelope": "{model,module,title,boundary,result}; throws on invalid/missing mandatory input; inputs are not mutated; no file/network/database access",
+    "defaults": "Only UI defaults listed here; model defaults only lotSize=100,riskBufferPerShare=0,shocks=[-5,-10,-20],levels=[]. No automatic default for cash/assets/probabilities/records.",
+    "limits": "numbers must be finite JSON numbers (not text/bool/null); abs<=1e15; record arrays<=10000; scalar sequences as per tool; finite output required; no infinity converted to zero"
+  },
+  "recordSchemas": {
+    "positions": "code/name optional display identity; marketValue>=0 or costValue>=0 required (fallback explicitly tagged); currentPrice/quantity/stopPrice optional for coverage. Preserve supplied full id/market; never infer or fetch.",
+    "snapshots": "snapshotDate or snapshotAt ISO YYYY-MM-DD; totalAssets or totalValue>0. Duplicate date last supplied wins, sorted by date. Invalid rows excluded explicitly, not zero.",
+    "closedPositions": "realizedPnl finite; missing PnL excluded explicitly, not flat. firstTradeDate/lastTradeDate optional valid ISO dates for holding days.",
+    "trades": "fee,tax both finite>=0 for known cost; missing components make recordedCosts=null, with missing count.",
+    "levels": "same exact code as position; autoD2,alertLow optional positive values. No external source lookup."
+  },
+  "tools": [
+    {
+      "auditId": "P043",
+      "id": "target",
+      "title": "目标路径",
+      "group": "goal",
+      "inputs": [
+        "initialCapital",
+        "targetCapital",
+        "years",
+        "monthlyContribution"
+      ],
+      "uiDefaults": {
+        "years": 5,
+        "monthlyContribution": 2000
+      },
+      "legacyFunction": "projectCompoundPlan+solveRequiredAnnualRate",
+      "outputs": [
+        "months",
+        "annualRatePercent",
+        "monthlyRatePercent",
+        "totalContributions",
+        "finalAssets",
+        "investmentGain",
+        "points"
+      ],
+      "boundary": "月末追加投入；反求固定有效年化，非收益预测。",
+      "principle": "月末投入复利递推，以二分法反求固定有效年化。",
+      "fields": [
+        {
+          "key": "initialCapital",
+          "label": "初始本金（元）",
+          "kind": "number",
+          "columns": []
+        },
+        {
+          "key": "targetCapital",
+          "label": "目标资产（元）",
+          "kind": "number",
+          "columns": []
+        },
+        {
+          "key": "years",
+          "label": "期限（年）",
+          "kind": "number",
+          "columns": []
+        },
+        {
+          "key": "monthlyContribution",
+          "label": "每月末投入（元）",
+          "kind": "number",
+          "columns": []
+        }
+      ]
+    },
+    {
+      "auditId": "P044",
+      "id": "recovery",
+      "title": "回撤修复时间",
+      "group": "goal",
+      "inputs": [
+        "drawdownPercent",
+        "annualRatePercent"
+      ],
+      "uiDefaults": {
+        "drawdownPercent": 20,
+        "annualRatePercent": 12
+      },
+      "legacyFunction": "calculateRecoveryTime",
+      "outputs": [
+        "reachable",
+        "exactMonths",
+        "wholeMonths",
+        "requiredMultiplier",
+        "monthlyRatePercent"
+      ],
+      "boundary": "固定有效年化情景；非正收益不能修复正回撤，无预计市场日期。",
+      "principle": "按有效月率和恢复资产倍数求修复期。",
+      "fields": [
+        {
+          "key": "drawdownPercent",
+          "label": "回撤幅度（%）",
+          "kind": "number",
+          "columns": []
+        },
+        {
+          "key": "annualRatePercent",
+          "label": "固定有效年化（%）",
+          "kind": "number",
+          "columns": []
+        }
+      ]
+    },
+    {
+      "auditId": "P045",
+      "id": "cashBuffer",
+      "title": "现金缓冲垫",
+      "group": "goal",
+      "inputs": [
+        "cash",
+        "monthlyEssential",
+        "reserveMonths"
+      ],
+      "uiDefaults": {
+        "monthlyEssential": 6000,
+        "reserveMonths": 6
+      },
+      "legacyFunction": "analyzeCashBuffer",
+      "outputs": [
+        "coverageMonths",
+        "requiredReserve",
+        "reserveGap",
+        "shortfall",
+        "deployableCash"
+      ],
+      "boundary": "现金由用户确认，不自动把证券现金当家庭储备。",
+      "principle": "确认现金减必要支出乘储备月数。",
+      "fields": [
+        {
+          "key": "cash",
+          "label": "确认现金（元）",
+          "kind": "number",
+          "columns": []
+        },
+        {
+          "key": "monthlyEssential",
+          "label": "每月必要支出（元）",
+          "kind": "number",
+          "columns": []
+        },
+        {
+          "key": "reserveMonths",
+          "label": "储备月数（月）",
+          "kind": "number",
+          "columns": []
+        }
+      ]
+    },
+    {
+      "auditId": "P046",
+      "id": "stagedAverage",
+      "title": "分批建仓均价",
+      "group": "goal",
+      "inputs": [
+        "cash",
+        "prices",
+        "weights",
+        "lotSize"
+      ],
+      "uiDefaults": {
+        "prices": [
+          10,
+          8
+        ],
+        "weights": [
+          50,
+          50
+        ],
+        "lotSize": 100
+      },
+      "legacyFunction": "calculateStagedAverage",
+      "outputs": [
+        "stages",
+        "totalQuantity",
+        "totalSpent",
+        "averagePrice",
+        "remainingCash",
+        "lotSize"
+      ],
+      "boundary": "2–10阶段，权重合计100%；各阶段独立向下按手取整，不含费用滑点。",
+      "principle": "按阶段权重分配现金，并按整手向下取数量。",
+      "fields": [
+        {
+          "key": "cash",
+          "label": "确认现金（元）",
+          "kind": "number",
+          "columns": []
+        },
+        {
+          "key": "prices",
+          "label": "各阶段价格（元/股）",
+          "kind": "sequence",
+          "columns": []
+        },
+        {
+          "key": "weights",
+          "label": "各阶段权重（%，合计100）",
+          "kind": "sequence",
+          "columns": []
+        },
+        {
+          "key": "lotSize",
+          "label": "每手数量（股）",
+          "kind": "number",
+          "columns": []
+        }
+      ]
+    },
+    {
+      "auditId": "P047",
+      "id": "breakEven",
+      "title": "保本退出价",
+      "group": "goal",
+      "inputs": [
+        "costBasis",
+        "quantity",
+        "fixedExitCost",
+        "exitRatePercent"
+      ],
+      "uiDefaults": {
+        "fixedExitCost": 5,
+        "exitRatePercent": 0.05
+      },
+      "legacyFunction": "calculateBreakEvenExit",
+      "outputs": [
+        "breakEvenPrice",
+        "costBasisPerShare",
+        "requiredRisePercent",
+        "exitRatePercent"
+      ],
+      "boundary": "仅覆盖用户输入费用；不内置券商或未来税率。",
+      "principle": "成本及固定费用除以数量和扣费比例。",
+      "fields": [
+        {
+          "key": "costBasis",
+          "label": "总成本（元）",
+          "kind": "number",
+          "columns": []
+        },
+        {
+          "key": "quantity",
+          "label": "数量（股）",
+          "kind": "number",
+          "columns": []
+        },
+        {
+          "key": "fixedExitCost",
+          "label": "固定退出费用（元）",
+          "kind": "number",
+          "columns": []
+        },
+        {
+          "key": "exitRatePercent",
+          "label": "退出费率（%）",
+          "kind": "number",
+          "columns": []
+        }
+      ]
+    },
+    {
+      "auditId": "P048",
+      "id": "risk",
+      "title": "风险画像",
+      "group": "portfolio",
+      "inputs": [
+        "positions",
+        "cashBalance"
+      ],
+      "uiDefaults": {},
+      "legacyFunction": "analyzeConcentration",
+      "outputs": [
+        "totalAssets",
+        "equityValue",
+        "cashBalance",
+        "cashPercent",
+        "top1Percent",
+        "top3Percent",
+        "hhi",
+        "positionCount",
+        "level",
+        "positions"
+      ],
+      "boundary": "Top1/3按总资产；HHI按股票内归一化；市值缺失才用已有成本并明确标注。",
+      "principle": "按输入估值计算占比和HHI集中度。",
+      "fields": [
+        {
+          "key": "positions",
+          "label": "持仓记录",
+          "kind": "records",
+          "columns": [
+            "code",
+            "name",
+            "marketValue",
+            "costValue",
+            "currentPrice",
+            "quantity",
+            "stopPrice",
+            "id",
+            "market"
+          ]
+        },
+        {
+          "key": "cashBalance",
+          "label": "确认现金余额（元）",
+          "kind": "number",
+          "columns": []
+        }
+      ]
+    },
+    {
+      "auditId": "P049",
+      "id": "drawdown",
+      "title": "资产峰谷",
+      "group": "portfolio",
+      "inputs": [
+        "snapshots"
+      ],
+      "uiDefaults": {},
+      "legacyFunction": "analyzeSnapshotDrawdown",
+      "outputs": [
+        "ready",
+        "reason",
+        "cashFlowAdjusted",
+        "metricLabel",
+        "snapshotCount",
+        "spanDays",
+        "maximumDrawdownPercent",
+        "recoveryPercent",
+        "currentAssets",
+        "highWaterAssets",
+        "snapshots"
+      ],
+      "boundary": "至少3个不同日期且跨度30天才有充分性；未剔除出入金，不是投资回撤。",
+      "principle": "不同日期快照排序后计算总资产峰谷降幅，未剔除资金流。",
+      "fields": [
+        {
+          "key": "snapshots",
+          "label": "资产快照",
+          "kind": "records",
+          "columns": [
+            "snapshotDate",
+            "totalAssets"
+          ]
+        }
+      ]
+    },
+    {
+      "auditId": "P050",
+      "id": "rebalance",
+      "title": "再平衡沙盘",
+      "group": "portfolio",
+      "inputs": [
+        "positions",
+        "cashBalance",
+        "maxWeightPercent",
+        "lotSize"
+      ],
+      "uiDefaults": {
+        "maxWeightPercent": 30,
+        "lotSize": 100
+      },
+      "legacyFunction": "buildRebalanceDraft",
+      "outputs": [
+        "totalAssets",
+        "maxWeightPercent",
+        "lotSize",
+        "items"
+      ],
+      "boundary": "只计算超限差额；数量向下取手并不超过持仓，缺价格不生成数量，不下单。",
+      "principle": "超过单股权重上限的金额按价格整手折算。",
+      "fields": [
+        {
+          "key": "positions",
+          "label": "持仓记录",
+          "kind": "records",
+          "columns": [
+            "code",
+            "name",
+            "marketValue",
+            "costValue",
+            "currentPrice",
+            "quantity",
+            "stopPrice",
+            "id",
+            "market"
+          ]
+        },
+        {
+          "key": "cashBalance",
+          "label": "确认现金余额（元）",
+          "kind": "number",
+          "columns": []
+        },
+        {
+          "key": "maxWeightPercent",
+          "label": "单股权重上限（%）",
+          "kind": "number",
+          "columns": []
+        },
+        {
+          "key": "lotSize",
+          "label": "每手数量（股）",
+          "kind": "number",
+          "columns": []
+        }
+      ]
+    },
+    {
+      "auditId": "P051",
+      "id": "stress",
+      "title": "压力测试",
+      "group": "portfolio",
+      "inputs": [
+        "positions",
+        "cashBalance",
+        "shocks"
+      ],
+      "uiDefaults": {
+        "shocks": [
+          -5,
+          -10,
+          -20
+        ]
+      },
+      "legacyFunction": "runStressScenarios",
+      "outputs": [
+        "scenarios"
+      ],
+      "boundary": "所有股票同比冲击、现金不变；单因子情景不是VaR，无个股相关性模型。",
+      "principle": "持仓统一受到给定涨跌幅冲击，现金不变。",
+      "fields": [
+        {
+          "key": "positions",
+          "label": "持仓记录",
+          "kind": "records",
+          "columns": [
+            "code",
+            "name",
+            "marketValue",
+            "costValue",
+            "currentPrice",
+            "quantity",
+            "stopPrice",
+            "id",
+            "market"
+          ]
+        },
+        {
+          "key": "cashBalance",
+          "label": "确认现金余额（元）",
+          "kind": "number",
+          "columns": []
+        },
+        {
+          "key": "shocks",
+          "label": "压力涨跌幅（%）",
+          "kind": "sequence",
+          "columns": []
+        }
+      ]
+    },
+    {
+      "auditId": "P052",
+      "id": "stopExposure",
+      "title": "止损风险暴露",
+      "group": "portfolio",
+      "inputs": [
+        "positions",
+        "levels",
+        "totalAssets"
+      ],
+      "uiDefaults": {
+        "levels": []
+      },
+      "legacyFunction": "analyzeStopExposure",
+      "outputs": [
+        "knownRiskAmount",
+        "knownRiskPercent",
+        "positionCoveragePercent",
+        "valueCoveragePercent",
+        "coveredCount",
+        "totalPositionCount",
+        "missingCodes",
+        "breachedCodes",
+        "rows"
+      ],
+      "boundary": "止损优先持仓输入→D2→下破预警；未覆盖/已触及不视为零风险，不含跳空。",
+      "principle": "只对有价格、数量与止损参考的持仓计算覆盖及风险。",
+      "fields": [
+        {
+          "key": "positions",
+          "label": "持仓记录",
+          "kind": "records",
+          "columns": [
+            "code",
+            "name",
+            "marketValue",
+            "costValue",
+            "currentPrice",
+            "quantity",
+            "stopPrice",
+            "id",
+            "market"
+          ]
+        },
+        {
+          "key": "levels",
+          "label": "同代码止损参考",
+          "kind": "records",
+          "columns": [
+            "code",
+            "autoD2",
+            "alertLow"
+          ]
+        },
+        {
+          "key": "totalAssets",
+          "label": "总资产（元）",
+          "kind": "number",
+          "columns": []
+        }
+      ]
+    },
+    {
+      "auditId": "P053",
+      "id": "ledger",
+      "title": "交易账本分析",
+      "group": "trade",
+      "inputs": [
+        "closedPositions",
+        "trades"
+      ],
+      "uiDefaults": {},
+      "legacyFunction": "analyzeClosedPositions",
+      "outputs": [
+        "ready",
+        "reason",
+        "sampleCount",
+        "winCount",
+        "lossCount",
+        "breakEvenCount",
+        "winRatePercent",
+        "averageWin",
+        "averageLoss",
+        "payoffRatio",
+        "profitFactor",
+        "expectancy",
+        "averageHoldingDays",
+        "recordedCosts",
+        "sampleUnit"
+      ],
+      "boundary": "按股票全历史汇总，不是独立开平仓周期；空样本不给胜率；缺费用不给零总费用。",
+      "principle": "已结束持仓为样本单位；费用缺项保留未知。",
+      "fields": [
+        {
+          "key": "closedPositions",
+          "label": "已结束持仓样本",
+          "kind": "records",
+          "columns": [
+            "realizedPnl",
+            "firstTradeDate",
+            "lastTradeDate"
+          ]
+        },
+        {
+          "key": "trades",
+          "label": "成交费用记录",
+          "kind": "records",
+          "columns": [
+            "fee",
+            "tax"
+          ]
+        }
+      ]
+    },
+    {
+      "auditId": "P054",
+      "id": "cost",
+      "title": "成本侵蚀",
+      "group": "trade",
+      "inputs": [
+        "initialCapital",
+        "annualTurnoverPercent",
+        "effectiveFeeRatePercent",
+        "years"
+      ],
+      "uiDefaults": {
+        "annualTurnoverPercent": 200,
+        "effectiveFeeRatePercent": 0.1,
+        "years": 5
+      },
+      "legacyFunction": "estimateCostDrag",
+      "outputs": [
+        "annualDragPercent",
+        "remainingCapital",
+        "cumulativeCost",
+        "assumption"
+      ],
+      "boundary": "固定本金简化换手费用；不含收益、滑点和税制变化。",
+      "principle": "固定年换手和有效费率形成逐年成本侵蚀。",
+      "fields": [
+        {
+          "key": "initialCapital",
+          "label": "初始本金（元）",
+          "kind": "number",
+          "columns": []
+        },
+        {
+          "key": "annualTurnoverPercent",
+          "label": "年换手（%）",
+          "kind": "number",
+          "columns": []
+        },
+        {
+          "key": "effectiveFeeRatePercent",
+          "label": "有效费用率（%）",
+          "kind": "number",
+          "columns": []
+        },
+        {
+          "key": "years",
+          "label": "期限（年）",
+          "kind": "number",
+          "columns": []
+        }
+      ]
+    },
+    {
+      "auditId": "P055",
+      "id": "positionSize",
+      "title": "风险预算仓位",
+      "group": "trade",
+      "inputs": [
+        "equity",
+        "availableCash",
+        "riskPercent",
+        "entryPrice",
+        "stopPrice",
+        "maxPositionPercent",
+        "riskBufferPerShare",
+        "lotSize"
+      ],
+      "uiDefaults": {
+        "riskPercent": 1,
+        "entryPrice": 20,
+        "stopPrice": 18,
+        "maxPositionPercent": 20,
+        "riskBufferPerShare": 0,
+        "lotSize": 100
+      },
+      "legacyFunction": "calculatePositionSize",
+      "outputs": [
+        "riskBudget",
+        "riskPerShare",
+        "capitalBudget",
+        "riskLimitedQuantity",
+        "capitalLimitedQuantity",
+        "quantity",
+        "positionValue",
+        "actualRisk",
+        "positionWeightPercent",
+        "bindingConstraint"
+      ],
+      "boundary": "风险预算、现金、仓位上限三约束；止损并不保证成交，非委托。",
+      "principle": "风险预算与可用资金预算分别约束，取较小整手数量。",
+      "fields": [
+        {
+          "key": "equity",
+          "label": "资产基数（元）",
+          "kind": "number",
+          "columns": []
+        },
+        {
+          "key": "availableCash",
+          "label": "可用现金（元）",
+          "kind": "number",
+          "columns": []
+        },
+        {
+          "key": "riskPercent",
+          "label": "单次风险预算（%）",
+          "kind": "number",
+          "columns": []
+        },
+        {
+          "key": "entryPrice",
+          "label": "入场价（元/股）",
+          "kind": "number",
+          "columns": []
+        },
+        {
+          "key": "stopPrice",
+          "label": "止损价（元/股）",
+          "kind": "number",
+          "columns": []
+        },
+        {
+          "key": "maxPositionPercent",
+          "label": "仓位上限（%）",
+          "kind": "number",
+          "columns": []
+        },
+        {
+          "key": "riskBufferPerShare",
+          "label": "每股风险缓冲（元/股）",
+          "kind": "number",
+          "columns": []
+        },
+        {
+          "key": "lotSize",
+          "label": "每手数量（股）",
+          "kind": "number",
+          "columns": []
+        }
+      ]
+    },
+    {
+      "auditId": "P056",
+      "id": "riskReward",
+      "title": "盈亏比门槛",
+      "group": "trade",
+      "inputs": [
+        "entryPrice",
+        "stopPrice",
+        "targetPrice",
+        "roundTripCostPerShare"
+      ],
+      "uiDefaults": {
+        "entryPrice": 20,
+        "stopPrice": 18,
+        "targetPrice": 26,
+        "roundTripCostPerShare": 0.1
+      },
+      "legacyFunction": "analyzeRiskReward",
+      "outputs": [
+        "netRiskPerShare",
+        "netRewardPerShare",
+        "rewardRiskRatio",
+        "breakEvenWinRatePercent",
+        "stopLossPercent",
+        "targetGainPercent"
+      ],
+      "boundary": "目标和止损均为用户情景，不保证胜率或目标兑现。",
+      "principle": "每股净回报与净风险的比值推导保本胜率。",
+      "fields": [
+        {
+          "key": "entryPrice",
+          "label": "入场价（元/股）",
+          "kind": "number",
+          "columns": []
+        },
+        {
+          "key": "stopPrice",
+          "label": "止损价（元/股）",
+          "kind": "number",
+          "columns": []
+        },
+        {
+          "key": "targetPrice",
+          "label": "目标价（元/股）",
+          "kind": "number",
+          "columns": []
+        },
+        {
+          "key": "roundTripCostPerShare",
+          "label": "每股往返费用（元/股）",
+          "kind": "number",
+          "columns": []
+        }
+      ]
+    },
+    {
+      "auditId": "P057",
+      "id": "expectancy",
+      "title": "期望值",
+      "group": "trade",
+      "inputs": [
+        "winRatePercent",
+        "lossRatePercent",
+        "averageWin",
+        "averageLoss"
+      ],
+      "uiDefaults": {
+        "winRatePercent": 40,
+        "lossRatePercent": 60,
+        "averageWin": 300,
+        "averageLoss": 100
+      },
+      "legacyFunction": "analyzeExpectancy",
+      "outputs": [
+        "expectedValue",
+        "profitFactor",
+        "breakEvenWinRatePercent",
+        "conditionalBreakEvenWinRatePercent",
+        "flatRatePercent",
+        "assumption"
+      ],
+      "boundary": "概率完全由用户输入，未计结果=100-胜-负；不做样本外保证。",
+      "principle": "盈利、亏损及持平概率加权得到每次期望。",
+      "fields": [
+        {
+          "key": "winRatePercent",
+          "label": "胜率（%）",
+          "kind": "number",
+          "columns": []
+        },
+        {
+          "key": "lossRatePercent",
+          "label": "亏损率（%）",
+          "kind": "number",
+          "columns": []
+        },
+        {
+          "key": "averageWin",
+          "label": "平均盈利（元）",
+          "kind": "number",
+          "columns": []
+        },
+        {
+          "key": "averageLoss",
+          "label": "平均亏损绝对值（元）",
+          "kind": "number",
+          "columns": []
+        }
+      ]
+    },
+    {
+      "auditId": "P058",
+      "id": "readiness",
+      "title": "方法验证",
+      "group": "research",
+      "inputs": [
+        "snapshots",
+        "closedPositions",
+        "positions",
+        "trades"
+      ],
+      "uiDefaults": {},
+      "legacyFunction": "assessDataReadiness",
+      "outputs": [
+        "targetPath",
+        "snapshotHistory",
+        "tradeLedger",
+        "currentPortfolio",
+        "commentMethods"
+      ],
+      "boundary": "仅数据与方法门禁，不自动回测或验证收益；旧评论为2026-08-24的120顶层+52回复抽样，非全量1463。",
+      "principle": "逐项检查输入数据是否满足各方法最小样本条件。",
+      "fields": [
+        {
+          "key": "snapshots",
+          "label": "资产快照",
+          "kind": "records",
+          "columns": [
+            "snapshotDate",
+            "totalAssets"
+          ]
+        },
+        {
+          "key": "closedPositions",
+          "label": "已结束持仓样本",
+          "kind": "records",
+          "columns": [
+            "realizedPnl",
+            "firstTradeDate",
+            "lastTradeDate"
+          ]
+        },
+        {
+          "key": "positions",
+          "label": "持仓记录",
+          "kind": "records",
+          "columns": [
+            "code",
+            "name",
+            "marketValue",
+            "costValue",
+            "currentPrice",
+            "quantity",
+            "stopPrice",
+            "id",
+            "market"
+          ]
+        },
+        {
+          "key": "trades",
+          "label": "成交费用记录",
+          "kind": "records",
+          "columns": [
+            "fee",
+            "tax"
+          ]
+        }
+      ]
+    },
+    {
+      "auditId": "P059",
+      "id": "lossPath",
+      "title": "连续亏损路径",
+      "group": "research",
+      "inputs": [
+        "initialEquity",
+        "riskPercent",
+        "consecutiveLosses"
+      ],
+      "uiDefaults": {
+        "riskPercent": 2,
+        "consecutiveLosses": 5
+      },
+      "legacyFunction": "calculateLossPath",
+      "outputs": [
+        "initialEquity",
+        "finalEquity",
+        "drawdownPercent",
+        "recoveryPercent",
+        "points"
+      ],
+      "boundary": "每次按当前权益固定比例损失，0–1000步，不预测发生时间或独立性。",
+      "principle": "每次亏损按当时权益固定比例扣减。",
+      "fields": [
+        {
+          "key": "initialEquity",
+          "label": "初始权益（元）",
+          "kind": "number",
+          "columns": []
+        },
+        {
+          "key": "riskPercent",
+          "label": "单次风险预算（%）",
+          "kind": "number",
+          "columns": []
+        },
+        {
+          "key": "consecutiveLosses",
+          "label": "连续亏损次数（次）",
+          "kind": "number",
+          "columns": []
+        }
+      ]
+    },
+    {
+      "auditId": "P060",
+      "id": "lossRun",
+      "title": "IID连亏实验",
+      "group": "research",
+      "inputs": [
+        "winRatePercent",
+        "trialCount",
+        "streakLength"
+      ],
+      "uiDefaults": {
+        "winRatePercent": 50,
+        "trialCount": 5,
+        "streakLength": 2
+      },
+      "legacyFunction": "calculateLossRunExperiment",
+      "outputs": [
+        "nextStreakProbabilityPercent",
+        "atLeastOneStreakProbabilityPercent",
+        "assumption",
+        "trialCount",
+        "streakLength"
+      ],
+      "boundary": "精确动态规划，N≤5000、K≤100；IID恒定胜率假设。不是MonteCarlo，不使用随机seed。",
+      "principle": "IID假设下精确动态规划计算至少一次连亏，非随机模拟。",
+      "fields": [
+        {
+          "key": "winRatePercent",
+          "label": "胜率（%）",
+          "kind": "number",
+          "columns": []
+        },
+        {
+          "key": "trialCount",
+          "label": "独立试验次数（次）",
+          "kind": "number",
+          "columns": []
+        },
+        {
+          "key": "streakLength",
+          "label": "连续亏损长度（次）",
+          "kind": "number",
+          "columns": []
+        }
+      ]
+    },
+    {
+      "auditId": "P061",
+      "id": "pnlDistribution",
+      "title": "盈亏分布",
+      "group": "research",
+      "inputs": [
+        "values"
+      ],
+      "uiDefaults": {},
+      "legacyFunction": "analyzePnlDistribution",
+      "outputs": [
+        "sampleCount",
+        "mean",
+        "median",
+        "q1",
+        "q3",
+        "iqr",
+        "sampleStandardDeviation",
+        "winCount",
+        "lossCount",
+        "flatCount",
+        "minimum",
+        "maximum",
+        "quantileMethod"
+      ],
+      "boundary": "1–500个真实提供样本；R7分位数、n-1样本标准差；不外推未来分布。",
+      "principle": "按样本排序线性插值分位数，标准差分母n−1。",
+      "fields": [
+        {
+          "key": "values",
+          "label": "盈亏样本（元）",
+          "kind": "sequence",
+          "columns": []
+        }
+      ]
+    },
+    {
+      "auditId": "P062",
+      "id": "equityPath",
+      "title": "样本权益路径",
+      "group": "research",
+      "inputs": [
+        "initialCapital",
+        "pnlValues"
+      ],
+      "uiDefaults": {},
+      "legacyFunction": "buildSampleEquityPath",
+      "outputs": [
+        "initialCapital",
+        "finalCapital",
+        "netPnl",
+        "maximumDrawdownPercent",
+        "longestUnderwaterSpan",
+        "underwaterObservationCount",
+        "capitalDepleted",
+        "points"
+      ],
+      "boundary": "按输入时间顺序累计1–500个盈亏；水下跨度含修复步，不随机造未来路径。",
+      "principle": "保持输入顺序逐步累加盈亏，并计算峰下状态。",
+      "fields": [
+        {
+          "key": "initialCapital",
+          "label": "初始本金（元）",
+          "kind": "number",
+          "columns": []
+        },
+        {
+          "key": "pnlValues",
+          "label": "按原顺序盈亏（元）",
+          "kind": "sequence",
+          "columns": []
+        }
+      ]
+    }
+  ],
+  "methodEvidence": {
+    "observedAt": "2026-08-24",
+    "coverage": "旧代码保存的120条顶层评论+52回复抽样，不是全部1463条；本轮未重新登录核验",
+    "gates": [
+      "BOLL+MACD+RSI：自报79%且一年1–2次，三年后不能跨股票通用，需规则与跨股样本外验证",
+      "胜率+盈亏比：自报54.7%/3.8:1十年，无原始清单不能验证",
+      "前视/幸存者/实盘过拟合：滚动训练验证测试，禁止未来数据",
+      "牛熊震荡分段报告，不用总胜率掩盖失效",
+      "分钟数据不足不做长期结论，首期只提醒",
+      "模拟与实盘分账，记录滑点/未成交/延迟",
+      "AI只产可审查规则，不无数据炒股",
+      "固定收盘/影线止损、仓位、撮合及退出语义"
+    ]
+  },
+  "ui": {
+    "groups": [
+      "目标与预算",
+      "组合与风险",
+      "交易测算",
+      "样本与方法"
+    ],
+    "labels": {
+      "initialCapital": "初始本金（元）",
+      "targetCapital": "目标资产（元）",
+      "years": "期限（年）",
+      "monthlyContribution": "每月末投入（元）",
+      "drawdownPercent": "回撤幅度（%）",
+      "annualRatePercent": "固定有效年化（%）",
+      "cash": "确认现金（元）",
+      "monthlyEssential": "每月必要支出（元）",
+      "reserveMonths": "储备月数（月）",
+      "prices": "各阶段价格（元/股）",
+      "weights": "各阶段权重（%，合计100）",
+      "lotSize": "每手数量（股）",
+      "costBasis": "总成本（元）",
+      "quantity": "数量（股）",
+      "fixedExitCost": "固定退出费用（元）",
+      "exitRatePercent": "退出费率（%）",
+      "positions": "持仓记录",
+      "cashBalance": "确认现金余额（元）",
+      "snapshots": "资产快照",
+      "maxWeightPercent": "单股权重上限（%）",
+      "shocks": "压力涨跌幅（%）",
+      "levels": "同代码止损参考",
+      "totalAssets": "总资产（元）",
+      "closedPositions": "已结束持仓样本",
+      "trades": "成交费用记录",
+      "annualTurnoverPercent": "年换手（%）",
+      "effectiveFeeRatePercent": "有效费用率（%）",
+      "equity": "资产基数（元）",
+      "availableCash": "可用现金（元）",
+      "riskPercent": "单次风险预算（%）",
+      "entryPrice": "入场价（元/股）",
+      "stopPrice": "止损价（元/股）",
+      "maxPositionPercent": "仓位上限（%）",
+      "riskBufferPerShare": "每股风险缓冲（元/股）",
+      "targetPrice": "目标价（元/股）",
+      "roundTripCostPerShare": "每股往返费用（元/股）",
+      "winRatePercent": "胜率（%）",
+      "lossRatePercent": "亏损率（%）",
+      "averageWin": "平均盈利（元）",
+      "averageLoss": "平均亏损绝对值（元）",
+      "initialEquity": "初始权益（元）",
+      "consecutiveLosses": "连续亏损次数（次）",
+      "trialCount": "独立试验次数（次）",
+      "streakLength": "连续亏损长度（次）",
+      "values": "盈亏样本（元）",
+      "pnlValues": "按原顺序盈亏（元）",
+      "code": "原始代码",
+      "name": "名称",
+      "marketValue": "市值（元，可缺）",
+      "costValue": "成本值（元，可缺）",
+      "currentPrice": "现价（元/股，可缺）",
+      "autoD2": "D2参考价（元/股，可缺）",
+      "alertLow": "止损参考价（元/股，可缺）",
+      "snapshotDate": "日期（YYYY-MM-DD）",
+      "realizedPnl": "已实现盈亏（元，可缺）",
+      "firstTradeDate": "首次成交日期（可缺）",
+      "lastTradeDate": "末次成交日期（可缺）",
+      "fee": "手续费（元，可缺）",
+      "tax": "税费（元，可缺）",
+      "months": "月份数（月）",
+      "monthlyRatePercent": "有效月率（%）",
+      "totalContributions": "累计投入（元）",
+      "finalAssets": "期末资产（元）",
+      "investmentGain": "情景收益（元）",
+      "points": "路径明细",
+      "month": "月份（月）",
+      "assets": "资产（元）",
+      "contributions": "累计投入（元）",
+      "reachable": "是否可修复",
+      "exactMonths": "精确修复月数（月）",
+      "wholeMonths": "完整修复月数（月）",
+      "requiredMultiplier": "所需资产倍数（倍）",
+      "coverageMonths": "现金覆盖（月）",
+      "requiredReserve": "所需储备（元）",
+      "reserveGap": "储备差额（元）",
+      "shortfall": "储备缺口（元）",
+      "deployableCash": "储备以外现金（元）",
+      "stages": "分批明细",
+      "index": "序号",
+      "price": "价格（元/股）",
+      "weightPercent": "权重（%）",
+      "allocatedCash": "分配现金（元）",
+      "spent": "使用金额（元）",
+      "unspentAllocation": "剩余分配（元）",
+      "totalQuantity": "总数量（股）",
+      "totalSpent": "总支出（元）",
+      "averagePrice": "平均价（元/股）",
+      "remainingCash": "剩余现金（元）",
+      "breakEvenPrice": "保本退出价（元/股）",
+      "costBasisPerShare": "每股成本（元/股）",
+      "requiredRisePercent": "所需涨幅（%）",
+      "equityValue": "持仓资产（元）",
+      "cashPercent": "现金占比（%）",
+      "top1Percent": "最大持仓占比（%）",
+      "top3Percent": "前三持仓占比（%）",
+      "hhi": "集中度HHI",
+      "positionCount": "有效持仓数（条）",
+      "level": "风险分级",
+      "value": "采用估值（元）",
+      "valueSource": "估值来源",
+      "equityWeightPercent": "持仓内权重（%）",
+      "ready": "样本是否充足",
+      "reason": "原因",
+      "cashFlowAdjusted": "是否剔除资金流",
+      "metricLabel": "指标口径",
+      "snapshotCount": "不同日期快照（条）",
+      "spanDays": "日期跨度（天）",
+      "maximumDrawdownPercent": "最大峰谷降幅（%）",
+      "recoveryPercent": "修复所需涨幅（%）",
+      "currentAssets": "末次资产（元）",
+      "highWaterAssets": "峰值资产（元）",
+      "excludedCount": "排除无效记录（条）",
+      "items": "纸面调整明细",
+      "currentWeightPercent": "当前权重（%）",
+      "maximumWeightPercent": "上限权重（%）",
+      "excessValue": "超额金额（元）",
+      "referencePrice": "参考价（元/股）",
+      "paperQuantity": "纸面数量（股）",
+      "actionable": "是否可测算整手数量",
+      "quantityKnown": "数量是否已知",
+      "note": "说明",
+      "scenarios": "压力情景",
+      "shockPercent": "涨跌幅（%）",
+      "lossAmount": "损失（元）",
+      "portfolioLossPercent": "组合损失（%）",
+      "knownRiskAmount": "已知风险金额（元）",
+      "knownRiskPercent": "已知风险占比（%）",
+      "positionCoveragePercent": "持仓覆盖（%）",
+      "valueCoveragePercent": "估值覆盖（%）",
+      "coveredCount": "可计算持仓（条）",
+      "totalPositionCount": "持仓总数（条）",
+      "missingCodes": "缺失代码",
+      "breachedCodes": "已跌破代码",
+      "rows": "明细",
+      "sampleCount": "样本数（条）",
+      "winCount": "盈利数（条）",
+      "lossCount": "亏损数（条）",
+      "breakEvenCount": "持平数（条）",
+      "payoffRatio": "盈亏比（倍）",
+      "profitFactor": "利润因子（倍）",
+      "expectancy": "单样本期望（元）",
+      "averageHoldingDays": "平均持有（天）",
+      "recordedCosts": "已记录费用（元）",
+      "sampleUnit": "样本单位",
+      "annualDragPercent": "年费用侵蚀（%）",
+      "remainingCapital": "期末剩余本金（元）",
+      "cumulativeCost": "累计费用侵蚀（元）",
+      "assumption": "计算假设",
+      "riskBudget": "风险预算（元）",
+      "riskPerShare": "每股风险（元/股）",
+      "capitalBudget": "资金预算（元）",
+      "riskLimitedQuantity": "风险限制数量（股）",
+      "capitalLimitedQuantity": "资金限制数量（股）",
+      "positionValue": "仓位金额（元）",
+      "actualRisk": "实际风险（元）",
+      "positionWeightPercent": "资产仓位（%）",
+      "bindingConstraint": "约束来源",
+      "netRiskPerShare": "每股净风险（元/股）",
+      "netRewardPerShare": "每股净回报（元/股）",
+      "rewardRiskRatio": "回报风险比（倍）",
+      "breakEvenWinRatePercent": "保本胜率（%）",
+      "stopLossPercent": "止损幅度（%）",
+      "targetGainPercent": "目标涨幅（%）",
+      "expectedValue": "每次期望（元）",
+      "conditionalBreakEvenWinRatePercent": "条件保本胜率（%）",
+      "flatRatePercent": "持平率（%）",
+      "targetPath": "目标路径数据条件",
+      "snapshotHistory": "快照历史数据条件",
+      "tradeLedger": "账本数据条件",
+      "currentPortfolio": "当前组合数据条件",
+      "commentMethods": "方法说明",
+      "finalEquity": "最终权益（元）",
+      "lossIndex": "亏损序号（次）",
+      "nextStreakProbabilityPercent": "接下来连续亏损概率（%）",
+      "atLeastOneStreakProbabilityPercent": "至少出现一次连亏概率（%）",
+      "mean": "平均值（元）",
+      "median": "中位数（元）",
+      "q1": "下四分位（元）",
+      "q3": "上四分位（元）",
+      "iqr": "四分位距（元）",
+      "sampleStandardDeviation": "样本标准差（元）",
+      "flatCount": "持平数（条）",
+      "minimum": "最小值（元）",
+      "maximum": "最大值（元）",
+      "quantileMethod": "分位数方法",
+      "finalCapital": "最终本金（元）",
+      "netPnl": "累计盈亏（元）",
+      "longestUnderwaterSpan": "最长峰下跨度（样本步数）",
+      "underwaterObservationCount": "峰下观测数（条）",
+      "capitalDepleted": "是否耗尽本金",
+      "detail": "条件说明",
+      "lossPercent": "资产损失（%）",
+      "pnl": "盈亏（元）",
+      "riskAmount": "风险金额（元）",
+      "source": "参考来源",
+      "status": "数据状态",
+      "step": "样本步骤",
+      "id": "完整身份（可缺）",
+      "market": "市场（可缺）"
+    },
+    "textKeys": [
+      "code",
+      "name",
+      "snapshotDate",
+      "firstTradeDate",
+      "lastTradeDate",
+      "id",
+      "market"
+    ],
+    "stateSchema": "scenario-drafts/v1",
+    "maxDraftBytes": 1048576,
+    "resultPolicy": "drafts only; explicit calculate; edits invalidate result; empty record cells omitted; no account imports",
+    "maxRecordRows": 200,
+    "valueLabels": {
+      "high": "高",
+      "medium": "中",
+      "balanced": "均衡",
+      "unavailable": "样本不足",
+      "marketValue": "输入市值",
+      "costValue-fallback": "输入成本回退",
+      "risk": "风险预算",
+      "capital": "资金预算",
+      "constant-effective-annual-rate": "固定有效年化",
+      "independent-identically-distributed": "独立同分布IID",
+      "user-confirmed-cash-and-essential-spending": "用户确认现金和必要支出",
+      "user-entered-outcome-rates": "用户输入结果概率",
+      "position-input": "输入持仓参考",
+      "risk-budget": "风险预算",
+      "capital-budget": "资金预算",
+      "ready": "条件满足",
+      "limited": "样本有限",
+      "validation-required": "需要验证"
+    }
+  }
+}

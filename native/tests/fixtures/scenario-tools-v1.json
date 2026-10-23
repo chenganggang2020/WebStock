@@ -1,0 +1,2710 @@
+{
+  "source": "unmodified compoundLabModel.js",
+  "seed": 20261012,
+  "cases": [
+    {
+      "name": "target",
+      "module": "target",
+      "input": {
+        "initialCapital": 100000,
+        "targetCapital": 300000,
+        "years": 5,
+        "monthlyContribution": 2000
+      },
+      "expected": {
+        "months": 60,
+        "annualRatePercent": 8.686653,
+        "monthlyRatePercent": 0.696572,
+        "totalContributions": 220000,
+        "finalAssets": 300000,
+        "investmentGain": 80000,
+        "points": [
+          {
+            "month": 0,
+            "assets": 100000,
+            "contributions": 100000,
+            "investmentGain": 0
+          },
+          {
+            "month": 1,
+            "assets": 102696.57,
+            "contributions": 102000,
+            "investmentGain": 696.57
+          },
+          {
+            "month": 2,
+            "assets": 105411.93,
+            "contributions": 104000,
+            "investmentGain": 1411.93
+          },
+          {
+            "month": 3,
+            "assets": 108146.2,
+            "contributions": 106000,
+            "investmentGain": 2146.2
+          },
+          {
+            "month": 4,
+            "assets": 110899.51,
+            "contributions": 108000,
+            "investmentGain": 2899.51
+          },
+          {
+            "month": 5,
+            "assets": 113672.01,
+            "contributions": 110000,
+            "investmentGain": 3672.01
+          },
+          {
+            "month": 6,
+            "assets": 116463.81,
+            "contributions": 112000,
+            "investmentGain": 4463.81
+          },
+          {
+            "month": 7,
+            "assets": 119275.07,
+            "contributions": 114000,
+            "investmentGain": 5275.07
+          },
+          {
+            "month": 8,
+            "assets": 122105.9,
+            "contributions": 116000,
+            "investmentGain": 6105.9
+          },
+          {
+            "month": 9,
+            "assets": 124956.46,
+            "contributions": 118000,
+            "investmentGain": 6956.46
+          },
+          {
+            "month": 10,
+            "assets": 127826.87,
+            "contributions": 120000,
+            "investmentGain": 7826.87
+          },
+          {
+            "month": 11,
+            "assets": 130717.28,
+            "contributions": 122000,
+            "investmentGain": 8717.28
+          },
+          {
+            "month": 12,
+            "assets": 133627.82,
+            "contributions": 124000,
+            "investmentGain": 9627.82
+          },
+          {
+            "month": 13,
+            "assets": 136558.63,
+            "contributions": 126000,
+            "investmentGain": 10558.63
+          },
+          {
+            "month": 14,
+            "assets": 139509.86,
+            "contributions": 128000,
+            "investmentGain": 11509.86
+          },
+          {
+            "month": 15,
+            "assets": 142481.64,
+            "contributions": 130000,
+            "investmentGain": 12481.64
+          },
+          {
+            "month": 16,
+            "assets": 145474.13,
+            "contributions": 132000,
+            "investmentGain": 13474.13
+          },
+          {
+            "month": 17,
+            "assets": 148487.46,
+            "contributions": 134000,
+            "investmentGain": 14487.46
+          },
+          {
+            "month": 18,
+            "assets": 151521.78,
+            "contributions": 136000,
+            "investmentGain": 15521.78
+          },
+          {
+            "month": 19,
+            "assets": 154577.24,
+            "contributions": 138000,
+            "investmentGain": 16577.24
+          },
+          {
+            "month": 20,
+            "assets": 157653.98,
+            "contributions": 140000,
+            "investmentGain": 17653.98
+          },
+          {
+            "month": 21,
+            "assets": 160752.16,
+            "contributions": 142000,
+            "investmentGain": 18752.16
+          },
+          {
+            "month": 22,
+            "assets": 163871.91,
+            "contributions": 144000,
+            "investmentGain": 19871.91
+          },
+          {
+            "month": 23,
+            "assets": 167013.39,
+            "contributions": 146000,
+            "investmentGain": 21013.39
+          },
+          {
+            "month": 24,
+            "assets": 170176.76,
+            "contributions": 148000,
+            "investmentGain": 22176.76
+          },
+          {
+            "month": 25,
+            "assets": 173362.17,
+            "contributions": 150000,
+            "investmentGain": 23362.17
+          },
+          {
+            "month": 26,
+            "assets": 176569.76,
+            "contributions": 152000,
+            "investmentGain": 24569.76
+          },
+          {
+            "month": 27,
+            "assets": 179799.69,
+            "contributions": 154000,
+            "investmentGain": 25799.69
+          },
+          {
+            "month": 28,
+            "assets": 183052.13,
+            "contributions": 156000,
+            "investmentGain": 27052.13
+          },
+          {
+            "month": 29,
+            "assets": 186327.21,
+            "contributions": 158000,
+            "investmentGain": 28327.21
+          },
+          {
+            "month": 30,
+            "assets": 189625.12,
+            "contributions": 160000,
+            "investmentGain": 29625.12
+          },
+          {
+            "month": 31,
+            "assets": 192945.99,
+            "contributions": 162000,
+            "investmentGain": 30945.99
+          },
+          {
+            "month": 32,
+            "assets": 196290,
+            "contributions": 164000,
+            "investmentGain": 32290
+          },
+          {
+            "month": 33,
+            "assets": 199657.3,
+            "contributions": 166000,
+            "investmentGain": 33657.3
+          },
+          {
+            "month": 34,
+            "assets": 203048.06,
+            "contributions": 168000,
+            "investmentGain": 35048.06
+          },
+          {
+            "month": 35,
+            "assets": 206462.43,
+            "contributions": 170000,
+            "investmentGain": 36462.43
+          },
+          {
+            "month": 36,
+            "assets": 209900.59,
+            "contributions": 172000,
+            "investmentGain": 37900.59
+          },
+          {
+            "month": 37,
+            "assets": 213362.7,
+            "contributions": 174000,
+            "investmentGain": 39362.7
+          },
+          {
+            "month": 38,
+            "assets": 216848.92,
+            "contributions": 176000,
+            "investmentGain": 40848.92
+          },
+          {
+            "month": 39,
+            "assets": 220359.43,
+            "contributions": 178000,
+            "investmentGain": 42359.43
+          },
+          {
+            "month": 40,
+            "assets": 223894.39,
+            "contributions": 180000,
+            "investmentGain": 43894.39
+          },
+          {
+            "month": 41,
+            "assets": 227453.98,
+            "contributions": 182000,
+            "investmentGain": 45453.98
+          },
+          {
+            "month": 42,
+            "assets": 231038.36,
+            "contributions": 184000,
+            "investmentGain": 47038.36
+          },
+          {
+            "month": 43,
+            "assets": 234647.7,
+            "contributions": 186000,
+            "investmentGain": 48647.7
+          },
+          {
+            "month": 44,
+            "assets": 238282.19,
+            "contributions": 188000,
+            "investmentGain": 50282.19
+          },
+          {
+            "month": 45,
+            "assets": 241942,
+            "contributions": 190000,
+            "investmentGain": 51942
+          },
+          {
+            "month": 46,
+            "assets": 245627.3,
+            "contributions": 192000,
+            "investmentGain": 53627.3
+          },
+          {
+            "month": 47,
+            "assets": 249338.27,
+            "contributions": 194000,
+            "investmentGain": 55338.27
+          },
+          {
+            "month": 48,
+            "assets": 253075.09,
+            "contributions": 196000,
+            "investmentGain": 57075.09
+          },
+          {
+            "month": 49,
+            "assets": 256837.94,
+            "contributions": 198000,
+            "investmentGain": 58837.94
+          },
+          {
+            "month": 50,
+            "assets": 260627,
+            "contributions": 200000,
+            "investmentGain": 60627
+          },
+          {
+            "month": 51,
+            "assets": 264442.45,
+            "contributions": 202000,
+            "investmentGain": 62442.45
+          },
+          {
+            "month": 52,
+            "assets": 268284.48,
+            "contributions": 204000,
+            "investmentGain": 64284.48
+          },
+          {
+            "month": 53,
+            "assets": 272153.28,
+            "contributions": 206000,
+            "investmentGain": 66153.28
+          },
+          {
+            "month": 54,
+            "assets": 276049.02,
+            "contributions": 208000,
+            "investmentGain": 68049.02
+          },
+          {
+            "month": 55,
+            "assets": 279971.9,
+            "contributions": 210000,
+            "investmentGain": 69971.9
+          },
+          {
+            "month": 56,
+            "assets": 283922.1,
+            "contributions": 212000,
+            "investmentGain": 71922.1
+          },
+          {
+            "month": 57,
+            "assets": 287899.82,
+            "contributions": 214000,
+            "investmentGain": 73899.82
+          },
+          {
+            "month": 58,
+            "assets": 291905.25,
+            "contributions": 216000,
+            "investmentGain": 75905.25
+          },
+          {
+            "month": 59,
+            "assets": 295938.58,
+            "contributions": 218000,
+            "investmentGain": 77938.58
+          },
+          {
+            "month": 60,
+            "assets": 300000,
+            "contributions": 220000,
+            "investmentGain": 80000
+          }
+        ]
+      }
+    },
+    {
+      "name": "recovery",
+      "module": "recovery",
+      "input": {
+        "drawdownPercent": 20,
+        "annualRatePercent": 12
+      },
+      "expected": {
+        "reachable": true,
+        "exactMonths": 23.627933,
+        "wholeMonths": 24,
+        "requiredMultiplier": 1.25,
+        "monthlyRatePercent": 0.948879,
+        "assumption": "constant-effective-annual-rate"
+      }
+    },
+    {
+      "name": "cashBuffer",
+      "module": "cashBuffer",
+      "input": {
+        "cash": 30000,
+        "monthlyEssential": 6000,
+        "reserveMonths": 6
+      },
+      "expected": {
+        "coverageMonths": 5,
+        "requiredReserve": 36000,
+        "reserveGap": -6000,
+        "shortfall": 6000,
+        "deployableCash": 0,
+        "assumption": "user-confirmed-cash-and-essential-spending"
+      }
+    },
+    {
+      "name": "stagedAverage",
+      "module": "stagedAverage",
+      "input": {
+        "cash": 100000,
+        "prices": [
+          10,
+          8
+        ],
+        "weights": [
+          50,
+          50
+        ],
+        "lotSize": 100
+      },
+      "expected": {
+        "stages": [
+          {
+            "index": 1,
+            "price": 10,
+            "weightPercent": 50,
+            "allocatedCash": 50000,
+            "quantity": 5000,
+            "spent": 50000,
+            "unspentAllocation": 0
+          },
+          {
+            "index": 2,
+            "price": 8,
+            "weightPercent": 50,
+            "allocatedCash": 50000,
+            "quantity": 6200,
+            "spent": 49600,
+            "unspentAllocation": 400
+          }
+        ],
+        "totalQuantity": 11200,
+        "totalSpent": 99600,
+        "averagePrice": 8.892857,
+        "remainingCash": 400,
+        "lotSize": 100
+      }
+    },
+    {
+      "name": "breakEven",
+      "module": "breakEven",
+      "input": {
+        "costBasis": 10005,
+        "quantity": 1000,
+        "fixedExitCost": 5,
+        "exitRatePercent": 0.05
+      },
+      "expected": {
+        "breakEvenPrice": 10.015008,
+        "costBasisPerShare": 10.005,
+        "requiredRisePercent": 0.100025,
+        "exitRatePercent": 0.05
+      }
+    },
+    {
+      "name": "risk",
+      "module": "risk",
+      "input": {
+        "positions": [
+          {
+            "code": "600001",
+            "name": "甲",
+            "marketValue": 60000,
+            "currentPrice": 60,
+            "quantity": 1000,
+            "stopPrice": 55
+          },
+          {
+            "code": "000001",
+            "name": "乙",
+            "marketValue": 30000,
+            "currentPrice": 30,
+            "quantity": 1000,
+            "stopPrice": 27
+          }
+        ],
+        "cashBalance": 10000
+      },
+      "expected": {
+        "totalAssets": 100000,
+        "equityValue": 90000,
+        "cashBalance": 10000,
+        "cashPercent": 10,
+        "top1Percent": 60,
+        "top3Percent": 90,
+        "hhi": 5555.56,
+        "positionCount": 2,
+        "level": "high",
+        "positions": [
+          {
+            "code": "600001",
+            "name": "甲",
+            "marketValue": 60000,
+            "currentPrice": 60,
+            "quantity": 1000,
+            "stopPrice": 55,
+            "value": 60000,
+            "weightPercent": 60,
+            "equityWeightPercent": 66.67
+          },
+          {
+            "code": "000001",
+            "name": "乙",
+            "marketValue": 30000,
+            "currentPrice": 30,
+            "quantity": 1000,
+            "stopPrice": 27,
+            "value": 30000,
+            "weightPercent": 30,
+            "equityWeightPercent": 33.33
+          }
+        ]
+      }
+    },
+    {
+      "name": "drawdown",
+      "module": "drawdown",
+      "input": {
+        "snapshots": [
+          {
+            "snapshotDate": "2026-01-01",
+            "totalAssets": 100000
+          },
+          {
+            "snapshotDate": "2026-02-01",
+            "totalAssets": 120000
+          },
+          {
+            "snapshotDate": "2026-03-01",
+            "totalAssets": 90000
+          },
+          {
+            "snapshotDate": "2026-04-01",
+            "totalAssets": 110000
+          }
+        ]
+      },
+      "expected": {
+        "ready": true,
+        "reason": "",
+        "cashFlowAdjusted": false,
+        "metricLabel": "总资产峰谷降幅（未剔除外部资金流）",
+        "snapshotCount": 4,
+        "spanDays": 90,
+        "maximumDrawdownPercent": 25,
+        "recoveryPercent": 33.33,
+        "currentAssets": 110000,
+        "highWaterAssets": 120000,
+        "snapshots": [
+          {
+            "snapshotDate": "2026-01-01",
+            "totalAssets": 100000
+          },
+          {
+            "snapshotDate": "2026-02-01",
+            "totalAssets": 120000
+          },
+          {
+            "snapshotDate": "2026-03-01",
+            "totalAssets": 90000
+          },
+          {
+            "snapshotDate": "2026-04-01",
+            "totalAssets": 110000
+          }
+        ]
+      }
+    },
+    {
+      "name": "rebalance",
+      "module": "rebalance",
+      "input": {
+        "positions": [
+          {
+            "code": "600001",
+            "name": "甲",
+            "marketValue": 60000,
+            "currentPrice": 60,
+            "quantity": 1000,
+            "stopPrice": 55
+          },
+          {
+            "code": "000001",
+            "name": "乙",
+            "marketValue": 30000,
+            "currentPrice": 30,
+            "quantity": 1000,
+            "stopPrice": 27
+          }
+        ],
+        "cashBalance": 10000,
+        "maxWeightPercent": 30,
+        "lotSize": 100
+      },
+      "expected": {
+        "totalAssets": 100000,
+        "maxWeightPercent": 30,
+        "lotSize": 100,
+        "items": [
+          {
+            "code": "600001",
+            "name": "甲",
+            "currentWeightPercent": 60,
+            "maximumWeightPercent": 30,
+            "excessValue": 30000,
+            "referencePrice": 60,
+            "paperQuantity": 500,
+            "actionable": true,
+            "note": "纸面测算，不会提交订单"
+          }
+        ]
+      }
+    },
+    {
+      "name": "stress",
+      "module": "stress",
+      "input": {
+        "positions": [
+          {
+            "code": "600001",
+            "name": "甲",
+            "marketValue": 60000,
+            "currentPrice": 60,
+            "quantity": 1000,
+            "stopPrice": 55
+          },
+          {
+            "code": "000001",
+            "name": "乙",
+            "marketValue": 30000,
+            "currentPrice": 30,
+            "quantity": 1000,
+            "stopPrice": 27
+          }
+        ],
+        "cashBalance": 10000,
+        "shocks": [
+          -5,
+          -10,
+          -20
+        ]
+      },
+      "expected": {
+        "scenarios": [
+          {
+            "shockPercent": -5,
+            "equityValue": 85500,
+            "totalAssets": 95500,
+            "lossAmount": -4500,
+            "lossPercent": -4.5
+          },
+          {
+            "shockPercent": -10,
+            "equityValue": 81000,
+            "totalAssets": 91000,
+            "lossAmount": -9000,
+            "lossPercent": -9
+          },
+          {
+            "shockPercent": -20,
+            "equityValue": 72000,
+            "totalAssets": 82000,
+            "lossAmount": -18000,
+            "lossPercent": -18
+          }
+        ]
+      }
+    },
+    {
+      "name": "stopExposure",
+      "module": "stopExposure",
+      "input": {
+        "positions": [
+          {
+            "code": "600001",
+            "name": "甲",
+            "marketValue": 60000,
+            "currentPrice": 60,
+            "quantity": 1000,
+            "stopPrice": 55
+          },
+          {
+            "code": "000001",
+            "name": "乙",
+            "marketValue": 30000,
+            "currentPrice": 30,
+            "quantity": 1000,
+            "stopPrice": 27
+          }
+        ],
+        "levels": [],
+        "totalAssets": 100000
+      },
+      "expected": {
+        "knownRiskAmount": 8000,
+        "knownRiskPercent": 8,
+        "positionCoveragePercent": 100,
+        "valueCoveragePercent": 100,
+        "coveredCount": 2,
+        "totalPositionCount": 2,
+        "missingCodes": [],
+        "breachedCodes": [],
+        "rows": [
+          {
+            "code": "600001",
+            "name": "甲",
+            "currentPrice": 60,
+            "stopPrice": 55,
+            "source": "position-input",
+            "quantity": 1000,
+            "riskAmount": 5000,
+            "riskPercent": 5
+          },
+          {
+            "code": "000001",
+            "name": "乙",
+            "currentPrice": 30,
+            "stopPrice": 27,
+            "source": "position-input",
+            "quantity": 1000,
+            "riskAmount": 3000,
+            "riskPercent": 3
+          }
+        ]
+      }
+    },
+    {
+      "name": "ledger",
+      "module": "ledger",
+      "input": {
+        "closedPositions": [
+          {
+            "realizedPnl": 1000,
+            "firstTradeDate": "2026-01-01",
+            "lastTradeDate": "2026-01-03"
+          },
+          {
+            "realizedPnl": 500,
+            "firstTradeDate": "2026-01-01",
+            "lastTradeDate": "2026-01-04"
+          },
+          {
+            "realizedPnl": -300,
+            "firstTradeDate": "2026-01-01",
+            "lastTradeDate": "2026-01-05"
+          },
+          {
+            "realizedPnl": 0,
+            "firstTradeDate": "2026-01-01",
+            "lastTradeDate": "2026-01-06"
+          }
+        ],
+        "trades": [
+          {
+            "fee": 10,
+            "tax": 5
+          }
+        ]
+      },
+      "expected": {
+        "ready": true,
+        "reason": "样本较少，仅用于描述，不代表稳定胜率",
+        "sampleCount": 4,
+        "winCount": 2,
+        "lossCount": 1,
+        "breakEvenCount": 1,
+        "winRatePercent": 50,
+        "averageWin": 750,
+        "averageLoss": 300,
+        "payoffRatio": 2.5,
+        "profitFactor": 5,
+        "expectancy": 300,
+        "averageHoldingDays": 3.5,
+        "recordedCosts": 15,
+        "sampleUnit": "按股票全历史汇总"
+      }
+    },
+    {
+      "name": "cost",
+      "module": "cost",
+      "input": {
+        "initialCapital": 100000,
+        "annualTurnoverPercent": 200,
+        "effectiveFeeRatePercent": 0.1,
+        "years": 5
+      },
+      "expected": {
+        "annualDragPercent": 0.2,
+        "remainingCapital": 99003.99,
+        "cumulativeCost": 996.01,
+        "assumption": "固定本金路径下的简化换手费用估算，不含收益、滑点与税制变化"
+      }
+    },
+    {
+      "name": "positionSize",
+      "module": "positionSize",
+      "input": {
+        "equity": 100000,
+        "availableCash": 100000,
+        "riskPercent": 1,
+        "entryPrice": 20,
+        "stopPrice": 18,
+        "maxPositionPercent": 20,
+        "riskBufferPerShare": 0,
+        "lotSize": 100
+      },
+      "expected": {
+        "riskBudget": 1000,
+        "riskPerShare": 2,
+        "capitalBudget": 20000,
+        "riskLimitedQuantity": 500,
+        "capitalLimitedQuantity": 1000,
+        "quantity": 500,
+        "positionValue": 10000,
+        "actualRisk": 1000,
+        "positionWeightPercent": 10,
+        "bindingConstraint": "risk-budget"
+      }
+    },
+    {
+      "name": "riskReward",
+      "module": "riskReward",
+      "input": {
+        "entryPrice": 20,
+        "stopPrice": 18,
+        "targetPrice": 26,
+        "roundTripCostPerShare": 0.1
+      },
+      "expected": {
+        "netRiskPerShare": 2.1,
+        "netRewardPerShare": 5.9,
+        "rewardRiskRatio": 2.809524,
+        "breakEvenWinRatePercent": 26.25,
+        "stopLossPercent": 10,
+        "targetGainPercent": 30
+      }
+    },
+    {
+      "name": "expectancy",
+      "module": "expectancy",
+      "input": {
+        "winRatePercent": 40,
+        "lossRatePercent": 60,
+        "averageWin": 300,
+        "averageLoss": 100
+      },
+      "expected": {
+        "expectedValue": 60,
+        "profitFactor": 2,
+        "breakEvenWinRatePercent": 25,
+        "conditionalBreakEvenWinRatePercent": 25,
+        "flatRatePercent": 0,
+        "assumption": "user-entered-outcome-rates"
+      }
+    },
+    {
+      "name": "readiness",
+      "module": "readiness",
+      "input": {
+        "snapshots": [
+          {
+            "snapshotDate": "2026-01-01",
+            "totalAssets": 100000
+          },
+          {
+            "snapshotDate": "2026-02-01",
+            "totalAssets": 120000
+          },
+          {
+            "snapshotDate": "2026-03-01",
+            "totalAssets": 90000
+          },
+          {
+            "snapshotDate": "2026-04-01",
+            "totalAssets": 110000
+          }
+        ],
+        "closedPositions": [
+          {
+            "realizedPnl": 1000,
+            "firstTradeDate": "2026-01-01",
+            "lastTradeDate": "2026-01-03"
+          },
+          {
+            "realizedPnl": 500,
+            "firstTradeDate": "2026-01-01",
+            "lastTradeDate": "2026-01-04"
+          },
+          {
+            "realizedPnl": -300,
+            "firstTradeDate": "2026-01-01",
+            "lastTradeDate": "2026-01-05"
+          },
+          {
+            "realizedPnl": 0,
+            "firstTradeDate": "2026-01-01",
+            "lastTradeDate": "2026-01-06"
+          }
+        ],
+        "positions": [
+          {
+            "code": "600001",
+            "name": "甲",
+            "marketValue": 60000,
+            "currentPrice": 60,
+            "quantity": 1000,
+            "stopPrice": 55
+          },
+          {
+            "code": "000001",
+            "name": "乙",
+            "marketValue": 30000,
+            "currentPrice": 30,
+            "quantity": 1000,
+            "stopPrice": 27
+          }
+        ],
+        "trades": [
+          {
+            "fee": 10,
+            "tax": 5
+          }
+        ]
+      },
+      "expected": {
+        "targetPath": {
+          "status": "ready",
+          "detail": "确定性数学计算，可立即使用；不是收益预测"
+        },
+        "snapshotHistory": {
+          "status": "ready",
+          "detail": "4 个快照，跨度 90 天；未剔除外部资金流"
+        },
+        "tradeLedger": {
+          "status": "limited",
+          "detail": "4 个已关闭股票汇总 · 1 条交易记录"
+        },
+        "currentPortfolio": {
+          "status": "ready",
+          "detail": "2 只当前持仓"
+        },
+        "commentMethods": {
+          "status": "validation-required",
+          "detail": "评论只作为方法线索；需明确标的、方向、时间与退出规则后才能回测"
+        }
+      }
+    },
+    {
+      "name": "lossPath",
+      "module": "lossPath",
+      "input": {
+        "initialEquity": 100000,
+        "riskPercent": 2,
+        "consecutiveLosses": 5
+      },
+      "expected": {
+        "initialEquity": 100000,
+        "finalEquity": 90392.08,
+        "drawdownPercent": 9.61,
+        "recoveryPercent": 10.63,
+        "points": [
+          {
+            "step": 0,
+            "equity": 100000,
+            "lossAmount": 0
+          },
+          {
+            "step": 1,
+            "equity": 98000,
+            "lossAmount": 2000
+          },
+          {
+            "step": 2,
+            "equity": 96040,
+            "lossAmount": 1960
+          },
+          {
+            "step": 3,
+            "equity": 94119.2,
+            "lossAmount": 1920.8
+          },
+          {
+            "step": 4,
+            "equity": 92236.82,
+            "lossAmount": 1882.38
+          },
+          {
+            "step": 5,
+            "equity": 90392.08,
+            "lossAmount": 1844.74
+          }
+        ]
+      }
+    },
+    {
+      "name": "lossRun",
+      "module": "lossRun",
+      "input": {
+        "winRatePercent": 50,
+        "trialCount": 5,
+        "streakLength": 2
+      },
+      "expected": {
+        "nextStreakProbabilityPercent": 25,
+        "atLeastOneStreakProbabilityPercent": 59.375,
+        "assumption": "independent-identically-distributed",
+        "trialCount": 5,
+        "streakLength": 2
+      }
+    },
+    {
+      "name": "pnlDistribution",
+      "module": "pnlDistribution",
+      "input": {
+        "values": [
+          -200,
+          -100,
+          0,
+          100,
+          500
+        ]
+      },
+      "expected": {
+        "sampleCount": 5,
+        "mean": 60,
+        "median": 0,
+        "q1": -100,
+        "q3": 100,
+        "iqr": 200,
+        "sampleStandardDeviation": 270.185122,
+        "winCount": 2,
+        "lossCount": 2,
+        "flatCount": 1,
+        "minimum": -200,
+        "maximum": 500,
+        "quantileMethod": "R7"
+      }
+    },
+    {
+      "name": "equityPath",
+      "module": "equityPath",
+      "input": {
+        "initialCapital": 10000,
+        "pnlValues": [
+          1000,
+          -500,
+          -1000,
+          2000
+        ]
+      },
+      "expected": {
+        "initialCapital": 10000,
+        "finalCapital": 11500,
+        "netPnl": 1500,
+        "maximumDrawdownPercent": 13.636364,
+        "longestUnderwaterSpan": 3,
+        "underwaterObservationCount": 2,
+        "capitalDepleted": false,
+        "points": [
+          {
+            "step": 0,
+            "pnl": 0,
+            "equity": 10000,
+            "drawdownPercent": 0
+          },
+          {
+            "step": 1,
+            "pnl": 1000,
+            "equity": 11000,
+            "drawdownPercent": 0
+          },
+          {
+            "step": 2,
+            "pnl": -500,
+            "equity": 10500,
+            "drawdownPercent": 4.545455
+          },
+          {
+            "step": 3,
+            "pnl": -1000,
+            "equity": 9500,
+            "drawdownPercent": 13.636364
+          },
+          {
+            "step": 4,
+            "pnl": 2000,
+            "equity": 11500,
+            "drawdownPercent": 0
+          }
+        ]
+      }
+    },
+    {
+      "name": "lossRun-seed-0",
+      "module": "lossRun",
+      "input": {
+        "winRatePercent": 44.640017736237496,
+        "trialCount": 22,
+        "streakLength": 3
+      },
+      "expected": {
+        "nextStreakProbabilityPercent": 16.966327,
+        "atLeastOneStreakProbabilityPercent": 89.939301,
+        "assumption": "independent-identically-distributed",
+        "trialCount": 22,
+        "streakLength": 3
+      }
+    },
+    {
+      "name": "distribution-seed-0",
+      "module": "pnlDistribution",
+      "input": {
+        "values": [
+          301.8
+        ]
+      },
+      "expected": {
+        "sampleCount": 1,
+        "mean": 301.8,
+        "median": 301.8,
+        "q1": 301.8,
+        "q3": 301.8,
+        "iqr": 0,
+        "sampleStandardDeviation": null,
+        "winCount": 1,
+        "lossCount": 0,
+        "flatCount": 0,
+        "minimum": 301.8,
+        "maximum": 301.8,
+        "quantileMethod": "R7"
+      }
+    },
+    {
+      "name": "equity-seed-0",
+      "module": "equityPath",
+      "input": {
+        "initialCapital": 10000,
+        "pnlValues": [
+          -269.7
+        ]
+      },
+      "expected": {
+        "initialCapital": 10000,
+        "finalCapital": 9730.3,
+        "netPnl": -269.7,
+        "maximumDrawdownPercent": 2.697,
+        "longestUnderwaterSpan": 1,
+        "underwaterObservationCount": 1,
+        "capitalDepleted": false,
+        "points": [
+          {
+            "step": 0,
+            "pnl": 0,
+            "equity": 10000,
+            "drawdownPercent": 0
+          },
+          {
+            "step": 1,
+            "pnl": -269.7,
+            "equity": 9730.3,
+            "drawdownPercent": 2.697
+          }
+        ]
+      }
+    },
+    {
+      "name": "lossRun-seed-1",
+      "module": "lossRun",
+      "input": {
+        "winRatePercent": 47.51383619848639,
+        "trialCount": 50,
+        "streakLength": 7
+      },
+      "expected": {
+        "nextStreakProbabilityPercent": 1.097271,
+        "atLeastOneStreakProbabilityPercent": 21.66031,
+        "assumption": "independent-identically-distributed",
+        "trialCount": 50,
+        "streakLength": 7
+      }
+    },
+    {
+      "name": "distribution-seed-1",
+      "module": "pnlDistribution",
+      "input": {
+        "values": [
+          530.5,
+          -201
+        ]
+      },
+      "expected": {
+        "sampleCount": 2,
+        "mean": 164.75,
+        "median": 164.75,
+        "q1": -18.125,
+        "q3": 347.625,
+        "iqr": 365.75,
+        "sampleStandardDeviation": 517.24861,
+        "winCount": 1,
+        "lossCount": 1,
+        "flatCount": 0,
+        "minimum": -201,
+        "maximum": 530.5,
+        "quantileMethod": "R7"
+      }
+    },
+    {
+      "name": "equity-seed-1",
+      "module": "equityPath",
+      "input": {
+        "initialCapital": 10000,
+        "pnlValues": [
+          102.6,
+          -173.3
+        ]
+      },
+      "expected": {
+        "initialCapital": 10000,
+        "finalCapital": 9929.3,
+        "netPnl": -70.7,
+        "maximumDrawdownPercent": 1.7154,
+        "longestUnderwaterSpan": 1,
+        "underwaterObservationCount": 1,
+        "capitalDepleted": false,
+        "points": [
+          {
+            "step": 0,
+            "pnl": 0,
+            "equity": 10000,
+            "drawdownPercent": 0
+          },
+          {
+            "step": 1,
+            "pnl": 102.6,
+            "equity": 10102.6,
+            "drawdownPercent": 0
+          },
+          {
+            "step": 2,
+            "pnl": -173.3,
+            "equity": 9929.3,
+            "drawdownPercent": 1.7154
+          }
+        ]
+      }
+    },
+    {
+      "name": "lossRun-seed-2",
+      "module": "lossRun",
+      "input": {
+        "winRatePercent": 83.73624192317948,
+        "trialCount": 10,
+        "streakLength": 5
+      },
+      "expected": {
+        "nextStreakProbabilityPercent": 0.011379,
+        "atLeastOneStreakProbabilityPercent": 0.059021,
+        "assumption": "independent-identically-distributed",
+        "trialCount": 10,
+        "streakLength": 5
+      }
+    },
+    {
+      "name": "distribution-seed-2",
+      "module": "pnlDistribution",
+      "input": {
+        "values": [
+          46.5,
+          -359.4,
+          -393.6
+        ]
+      },
+      "expected": {
+        "sampleCount": 3,
+        "mean": -235.5,
+        "median": -359.4,
+        "q1": -376.5,
+        "q3": -156.45,
+        "iqr": 220.05,
+        "sampleStandardDeviation": 244.817095,
+        "winCount": 1,
+        "lossCount": 2,
+        "flatCount": 0,
+        "minimum": -393.6,
+        "maximum": 46.5,
+        "quantileMethod": "R7"
+      }
+    },
+    {
+      "name": "equity-seed-2",
+      "module": "equityPath",
+      "input": {
+        "initialCapital": 10000,
+        "pnlValues": [
+          202.2,
+          113.8,
+          -289.7
+        ]
+      },
+      "expected": {
+        "initialCapital": 10000,
+        "finalCapital": 10026.3,
+        "netPnl": 26.3,
+        "maximumDrawdownPercent": 2.808259,
+        "longestUnderwaterSpan": 1,
+        "underwaterObservationCount": 1,
+        "capitalDepleted": false,
+        "points": [
+          {
+            "step": 0,
+            "pnl": 0,
+            "equity": 10000,
+            "drawdownPercent": 0
+          },
+          {
+            "step": 1,
+            "pnl": 202.2,
+            "equity": 10202.2,
+            "drawdownPercent": 0
+          },
+          {
+            "step": 2,
+            "pnl": 113.8,
+            "equity": 10316,
+            "drawdownPercent": 0
+          },
+          {
+            "step": 3,
+            "pnl": -289.7,
+            "equity": 10026.3,
+            "drawdownPercent": 2.808259
+          }
+        ]
+      }
+    },
+    {
+      "name": "lossRun-seed-3",
+      "module": "lossRun",
+      "input": {
+        "winRatePercent": 37.94608986470848,
+        "trialCount": 1,
+        "streakLength": 5
+      },
+      "expected": {
+        "nextStreakProbabilityPercent": 9.201227,
+        "atLeastOneStreakProbabilityPercent": 0,
+        "assumption": "independent-identically-distributed",
+        "trialCount": 1,
+        "streakLength": 5
+      }
+    },
+    {
+      "name": "distribution-seed-3",
+      "module": "pnlDistribution",
+      "input": {
+        "values": [
+          249.6,
+          597.7,
+          30,
+          588.8
+        ]
+      },
+      "expected": {
+        "sampleCount": 4,
+        "mean": 366.525,
+        "median": 419.2,
+        "q1": 194.7,
+        "q3": 591.025,
+        "iqr": 396.325,
+        "sampleStandardDeviation": 276.748133,
+        "winCount": 4,
+        "lossCount": 0,
+        "flatCount": 0,
+        "minimum": 30,
+        "maximum": 597.7,
+        "quantileMethod": "R7"
+      }
+    },
+    {
+      "name": "equity-seed-3",
+      "module": "equityPath",
+      "input": {
+        "initialCapital": 10000,
+        "pnlValues": [
+          -56.8,
+          500,
+          -245.1,
+          -490.3
+        ]
+      },
+      "expected": {
+        "initialCapital": 10000,
+        "finalCapital": 9707.8,
+        "netPnl": -292.2,
+        "maximumDrawdownPercent": 7.041903,
+        "longestUnderwaterSpan": 2,
+        "underwaterObservationCount": 3,
+        "capitalDepleted": false,
+        "points": [
+          {
+            "step": 0,
+            "pnl": 0,
+            "equity": 10000,
+            "drawdownPercent": 0
+          },
+          {
+            "step": 1,
+            "pnl": -56.8,
+            "equity": 9943.2,
+            "drawdownPercent": 0.568
+          },
+          {
+            "step": 2,
+            "pnl": 500,
+            "equity": 10443.2,
+            "drawdownPercent": 0
+          },
+          {
+            "step": 3,
+            "pnl": -245.1,
+            "equity": 10198.1,
+            "drawdownPercent": 2.346982
+          },
+          {
+            "step": 4,
+            "pnl": -490.3,
+            "equity": 9707.8,
+            "drawdownPercent": 7.041903
+          }
+        ]
+      }
+    },
+    {
+      "name": "lossRun-seed-4",
+      "module": "lossRun",
+      "input": {
+        "winRatePercent": 84.03762406436726,
+        "trialCount": 9,
+        "streakLength": 8
+      },
+      "expected": {
+        "nextStreakProbabilityPercent": 0.000042,
+        "atLeastOneStreakProbabilityPercent": 0.000078,
+        "assumption": "independent-identically-distributed",
+        "trialCount": 9,
+        "streakLength": 8
+      }
+    },
+    {
+      "name": "distribution-seed-4",
+      "module": "pnlDistribution",
+      "input": {
+        "values": [
+          -271.2,
+          115.6,
+          222.2,
+          -188.6,
+          227.1
+        ]
+      },
+      "expected": {
+        "sampleCount": 5,
+        "mean": 21.02,
+        "median": 115.6,
+        "q1": -188.6,
+        "q3": 222.2,
+        "iqr": 410.8,
+        "sampleStandardDeviation": 235.170581,
+        "winCount": 3,
+        "lossCount": 2,
+        "flatCount": 0,
+        "minimum": -271.2,
+        "maximum": 227.1,
+        "quantileMethod": "R7"
+      }
+    },
+    {
+      "name": "equity-seed-4",
+      "module": "equityPath",
+      "input": {
+        "initialCapital": 10000,
+        "pnlValues": [
+          341.6,
+          411.9,
+          394.1,
+          -496.7,
+          138.1
+        ]
+      },
+      "expected": {
+        "initialCapital": 10000,
+        "finalCapital": 10789,
+        "netPnl": 789,
+        "maximumDrawdownPercent": 4.455668,
+        "longestUnderwaterSpan": 2,
+        "underwaterObservationCount": 2,
+        "capitalDepleted": false,
+        "points": [
+          {
+            "step": 0,
+            "pnl": 0,
+            "equity": 10000,
+            "drawdownPercent": 0
+          },
+          {
+            "step": 1,
+            "pnl": 341.6,
+            "equity": 10341.6,
+            "drawdownPercent": 0
+          },
+          {
+            "step": 2,
+            "pnl": 411.9,
+            "equity": 10753.5,
+            "drawdownPercent": 0
+          },
+          {
+            "step": 3,
+            "pnl": 394.1,
+            "equity": 11147.6,
+            "drawdownPercent": 0
+          },
+          {
+            "step": 4,
+            "pnl": -496.7,
+            "equity": 10650.9,
+            "drawdownPercent": 4.455668
+          },
+          {
+            "step": 5,
+            "pnl": 138.1,
+            "equity": 10789,
+            "drawdownPercent": 3.216836
+          }
+        ]
+      }
+    },
+    {
+      "name": "lossRun-seed-5",
+      "module": "lossRun",
+      "input": {
+        "winRatePercent": 39.18712500948459,
+        "trialCount": 38,
+        "streakLength": 1
+      },
+      "expected": {
+        "nextStreakProbabilityPercent": 60.812875,
+        "atLeastOneStreakProbabilityPercent": 100,
+        "assumption": "independent-identically-distributed",
+        "trialCount": 38,
+        "streakLength": 1
+      }
+    },
+    {
+      "name": "distribution-seed-5",
+      "module": "pnlDistribution",
+      "input": {
+        "values": [
+          63.6,
+          508.6,
+          579,
+          -172.6,
+          485.5,
+          349.8
+        ]
+      },
+      "expected": {
+        "sampleCount": 6,
+        "mean": 302.316667,
+        "median": 417.65,
+        "q1": 135.15,
+        "q3": 502.825,
+        "iqr": 367.675,
+        "sampleStandardDeviation": 295.786669,
+        "winCount": 5,
+        "lossCount": 1,
+        "flatCount": 0,
+        "minimum": -172.6,
+        "maximum": 579,
+        "quantileMethod": "R7"
+      }
+    },
+    {
+      "name": "equity-seed-5",
+      "module": "equityPath",
+      "input": {
+        "initialCapital": 10000,
+        "pnlValues": [
+          208.8,
+          45.7,
+          -146.5,
+          -274.9,
+          -263.1,
+          228.2
+        ]
+      },
+      "expected": {
+        "initialCapital": 10000,
+        "finalCapital": 9798.2,
+        "netPnl": -201.8,
+        "maximumDrawdownPercent": 6.675118,
+        "longestUnderwaterSpan": 4,
+        "underwaterObservationCount": 4,
+        "capitalDepleted": false,
+        "points": [
+          {
+            "step": 0,
+            "pnl": 0,
+            "equity": 10000,
+            "drawdownPercent": 0
+          },
+          {
+            "step": 1,
+            "pnl": 208.8,
+            "equity": 10208.8,
+            "drawdownPercent": 0
+          },
+          {
+            "step": 2,
+            "pnl": 45.7,
+            "equity": 10254.5,
+            "drawdownPercent": 0
+          },
+          {
+            "step": 3,
+            "pnl": -146.5,
+            "equity": 10108,
+            "drawdownPercent": 1.428641
+          },
+          {
+            "step": 4,
+            "pnl": -274.9,
+            "equity": 9833.1,
+            "drawdownPercent": 4.109415
+          },
+          {
+            "step": 5,
+            "pnl": -263.1,
+            "equity": 9570,
+            "drawdownPercent": 6.675118
+          },
+          {
+            "step": 6,
+            "pnl": 228.2,
+            "equity": 9798.2,
+            "drawdownPercent": 4.449754
+          }
+        ]
+      }
+    },
+    {
+      "name": "lossRun-seed-6",
+      "module": "lossRun",
+      "input": {
+        "winRatePercent": 81.98817221214995,
+        "trialCount": 6,
+        "streakLength": 4
+      },
+      "expected": {
+        "nextStreakProbabilityPercent": 0.105252,
+        "atLeastOneStreakProbabilityPercent": 0.277841,
+        "assumption": "independent-identically-distributed",
+        "trialCount": 6,
+        "streakLength": 4
+      }
+    },
+    {
+      "name": "distribution-seed-6",
+      "module": "pnlDistribution",
+      "input": {
+        "values": [
+          139.4,
+          345.8,
+          277.8,
+          370.3,
+          323.1,
+          -11.6,
+          -363.8
+        ]
+      },
+      "expected": {
+        "sampleCount": 7,
+        "mean": 154.428571,
+        "median": 277.8,
+        "q1": 63.9,
+        "q3": 334.45,
+        "iqr": 270.55,
+        "sampleStandardDeviation": 265.595637,
+        "winCount": 5,
+        "lossCount": 2,
+        "flatCount": 0,
+        "minimum": -363.8,
+        "maximum": 370.3,
+        "quantileMethod": "R7"
+      }
+    },
+    {
+      "name": "equity-seed-6",
+      "module": "equityPath",
+      "input": {
+        "initialCapital": 10000,
+        "pnlValues": [
+          -77,
+          89,
+          2,
+          327.6,
+          -415.6,
+          -489.2,
+          -148.4
+        ]
+      },
+      "expected": {
+        "initialCapital": 10000,
+        "finalCapital": 9288.4,
+        "netPnl": -711.6,
+        "maximumDrawdownPercent": 10.184111,
+        "longestUnderwaterSpan": 3,
+        "underwaterObservationCount": 4,
+        "capitalDepleted": false,
+        "points": [
+          {
+            "step": 0,
+            "pnl": 0,
+            "equity": 10000,
+            "drawdownPercent": 0
+          },
+          {
+            "step": 1,
+            "pnl": -77,
+            "equity": 9923,
+            "drawdownPercent": 0.77
+          },
+          {
+            "step": 2,
+            "pnl": 89,
+            "equity": 10012,
+            "drawdownPercent": 0
+          },
+          {
+            "step": 3,
+            "pnl": 2,
+            "equity": 10014,
+            "drawdownPercent": 0
+          },
+          {
+            "step": 4,
+            "pnl": 327.6,
+            "equity": 10341.6,
+            "drawdownPercent": 0
+          },
+          {
+            "step": 5,
+            "pnl": -415.6,
+            "equity": 9926,
+            "drawdownPercent": 4.018721
+          },
+          {
+            "step": 6,
+            "pnl": -489.2,
+            "equity": 9436.8,
+            "drawdownPercent": 8.74913
+          },
+          {
+            "step": 7,
+            "pnl": -148.4,
+            "equity": 9288.4,
+            "drawdownPercent": 10.184111
+          }
+        ]
+      }
+    },
+    {
+      "name": "lossRun-seed-7",
+      "module": "lossRun",
+      "input": {
+        "winRatePercent": 61.53184455353767,
+        "trialCount": 60,
+        "streakLength": 7
+      },
+      "expected": {
+        "nextStreakProbabilityPercent": 0.124655,
+        "atLeastOneStreakProbabilityPercent": 4.125062,
+        "assumption": "independent-identically-distributed",
+        "trialCount": 60,
+        "streakLength": 7
+      }
+    },
+    {
+      "name": "distribution-seed-7",
+      "module": "pnlDistribution",
+      "input": {
+        "values": [
+          -225.1,
+          418.7,
+          580.1,
+          174.9,
+          84.3,
+          -40.6,
+          49.6,
+          432.5
+        ]
+      },
+      "expected": {
+        "sampleCount": 8,
+        "mean": 184.3,
+        "median": 129.6,
+        "q1": 27.05,
+        "q3": 422.15,
+        "iqr": 395.1,
+        "sampleStandardDeviation": 272.455779,
+        "winCount": 6,
+        "lossCount": 2,
+        "flatCount": 0,
+        "minimum": -225.1,
+        "maximum": 580.1,
+        "quantileMethod": "R7"
+      }
+    },
+    {
+      "name": "equity-seed-7",
+      "module": "equityPath",
+      "input": {
+        "initialCapital": 10000,
+        "pnlValues": [
+          -364.1,
+          -471.7,
+          -491.3,
+          0,
+          -194.1,
+          455.9,
+          -151.5,
+          -153.7
+        ]
+      },
+      "expected": {
+        "initialCapital": 10000,
+        "finalCapital": 8629.5,
+        "netPnl": -1370.5,
+        "maximumDrawdownPercent": 15.212,
+        "longestUnderwaterSpan": 8,
+        "underwaterObservationCount": 8,
+        "capitalDepleted": false,
+        "points": [
+          {
+            "step": 0,
+            "pnl": 0,
+            "equity": 10000,
+            "drawdownPercent": 0
+          },
+          {
+            "step": 1,
+            "pnl": -364.1,
+            "equity": 9635.9,
+            "drawdownPercent": 3.641
+          },
+          {
+            "step": 2,
+            "pnl": -471.7,
+            "equity": 9164.2,
+            "drawdownPercent": 8.358
+          },
+          {
+            "step": 3,
+            "pnl": -491.3,
+            "equity": 8672.9,
+            "drawdownPercent": 13.271
+          },
+          {
+            "step": 4,
+            "pnl": 0,
+            "equity": 8672.9,
+            "drawdownPercent": 13.271
+          },
+          {
+            "step": 5,
+            "pnl": -194.1,
+            "equity": 8478.8,
+            "drawdownPercent": 15.212
+          },
+          {
+            "step": 6,
+            "pnl": 455.9,
+            "equity": 8934.7,
+            "drawdownPercent": 10.653
+          },
+          {
+            "step": 7,
+            "pnl": -151.5,
+            "equity": 8783.2,
+            "drawdownPercent": 12.168
+          },
+          {
+            "step": 8,
+            "pnl": -153.7,
+            "equity": 8629.5,
+            "drawdownPercent": 13.705
+          }
+        ]
+      }
+    },
+    {
+      "name": "lossRun-seed-8",
+      "module": "lossRun",
+      "input": {
+        "winRatePercent": 73.78066501347348,
+        "trialCount": 32,
+        "streakLength": 4
+      },
+      "expected": {
+        "nextStreakProbabilityPercent": 0.472592,
+        "atLeastOneStreakProbabilityPercent": 9.866462,
+        "assumption": "independent-identically-distributed",
+        "trialCount": 32,
+        "streakLength": 4
+      }
+    },
+    {
+      "name": "distribution-seed-8",
+      "module": "pnlDistribution",
+      "input": {
+        "values": [
+          -200,
+          -312.8,
+          -399.1,
+          227.1,
+          112.9,
+          298.9,
+          -32.2,
+          -309.2,
+          559.2
+        ]
+      },
+      "expected": {
+        "sampleCount": 9,
+        "mean": -6.133333,
+        "median": -32.2,
+        "q1": -309.2,
+        "q3": 227.1,
+        "iqr": 536.3,
+        "sampleStandardDeviation": 327.832701,
+        "winCount": 4,
+        "lossCount": 5,
+        "flatCount": 0,
+        "minimum": -399.1,
+        "maximum": 559.2,
+        "quantileMethod": "R7"
+      }
+    },
+    {
+      "name": "equity-seed-8",
+      "module": "equityPath",
+      "input": {
+        "initialCapital": 10000,
+        "pnlValues": [
+          382.8,
+          -133.4,
+          -307.6,
+          -475.7,
+          -346.8,
+          146.7,
+          470.3,
+          285.9,
+          127.7
+        ]
+      },
+      "expected": {
+        "initialCapital": 10000,
+        "finalCapital": 10149.9,
+        "netPnl": 149.9,
+        "maximumDrawdownPercent": 12.169164,
+        "longestUnderwaterSpan": 8,
+        "underwaterObservationCount": 8,
+        "capitalDepleted": false,
+        "points": [
+          {
+            "step": 0,
+            "pnl": 0,
+            "equity": 10000,
+            "drawdownPercent": 0
+          },
+          {
+            "step": 1,
+            "pnl": 382.8,
+            "equity": 10382.8,
+            "drawdownPercent": 0
+          },
+          {
+            "step": 2,
+            "pnl": -133.4,
+            "equity": 10249.4,
+            "drawdownPercent": 1.284817
+          },
+          {
+            "step": 3,
+            "pnl": -307.6,
+            "equity": 9941.8,
+            "drawdownPercent": 4.247409
+          },
+          {
+            "step": 4,
+            "pnl": -475.7,
+            "equity": 9466.1,
+            "drawdownPercent": 8.829025
+          },
+          {
+            "step": 5,
+            "pnl": -346.8,
+            "equity": 9119.3,
+            "drawdownPercent": 12.169164
+          },
+          {
+            "step": 6,
+            "pnl": 146.7,
+            "equity": 9266,
+            "drawdownPercent": 10.756251
+          },
+          {
+            "step": 7,
+            "pnl": 470.3,
+            "equity": 9736.3,
+            "drawdownPercent": 6.226644
+          },
+          {
+            "step": 8,
+            "pnl": 285.9,
+            "equity": 10022.2,
+            "drawdownPercent": 3.473052
+          },
+          {
+            "step": 9,
+            "pnl": 127.7,
+            "equity": 10149.9,
+            "drawdownPercent": 2.243133
+          }
+        ]
+      }
+    },
+    {
+      "name": "lossRun-seed-9",
+      "module": "lossRun",
+      "input": {
+        "winRatePercent": 46.226889179088175,
+        "trialCount": 6,
+        "streakLength": 3
+      },
+      "expected": {
+        "nextStreakProbabilityPercent": 15.54875,
+        "atLeastOneStreakProbabilityPercent": 37.111861,
+        "assumption": "independent-identically-distributed",
+        "trialCount": 6,
+        "streakLength": 3
+      }
+    },
+    {
+      "name": "distribution-seed-9",
+      "module": "pnlDistribution",
+      "input": {
+        "values": [
+          -108.2,
+          30.4,
+          82.8,
+          178.3,
+          -105.2,
+          -129.9,
+          -112.3,
+          -138.9,
+          269.8,
+          55.6
+        ]
+      },
+      "expected": {
+        "sampleCount": 10,
+        "mean": 2.24,
+        "median": -37.4,
+        "q1": -111.275,
+        "q3": 76,
+        "iqr": 187.275,
+        "sampleStandardDeviation": 144.128378,
+        "winCount": 5,
+        "lossCount": 5,
+        "flatCount": 0,
+        "minimum": -138.9,
+        "maximum": 269.8,
+        "quantileMethod": "R7"
+      }
+    },
+    {
+      "name": "equity-seed-9",
+      "module": "equityPath",
+      "input": {
+        "initialCapital": 10000,
+        "pnlValues": [
+          -54.2,
+          103.2,
+          -384.2,
+          -243.6,
+          379.3,
+          311.5,
+          235.1,
+          157,
+          470.8,
+          -213.3
+        ]
+      },
+      "expected": {
+        "initialCapital": 10000,
+        "finalCapital": 10761.6,
+        "netPnl": 761.6,
+        "maximumDrawdownPercent": 6.247388,
+        "longestUnderwaterSpan": 4,
+        "underwaterObservationCount": 5,
+        "capitalDepleted": false,
+        "points": [
+          {
+            "step": 0,
+            "pnl": 0,
+            "equity": 10000,
+            "drawdownPercent": 0
+          },
+          {
+            "step": 1,
+            "pnl": -54.2,
+            "equity": 9945.8,
+            "drawdownPercent": 0.542
+          },
+          {
+            "step": 2,
+            "pnl": 103.2,
+            "equity": 10049,
+            "drawdownPercent": 0
+          },
+          {
+            "step": 3,
+            "pnl": -384.2,
+            "equity": 9664.8,
+            "drawdownPercent": 3.823266
+          },
+          {
+            "step": 4,
+            "pnl": -243.6,
+            "equity": 9421.2,
+            "drawdownPercent": 6.247388
+          },
+          {
+            "step": 5,
+            "pnl": 379.3,
+            "equity": 9800.5,
+            "drawdownPercent": 2.472883
+          },
+          {
+            "step": 6,
+            "pnl": 311.5,
+            "equity": 10112,
+            "drawdownPercent": 0
+          },
+          {
+            "step": 7,
+            "pnl": 235.1,
+            "equity": 10347.1,
+            "drawdownPercent": 0
+          },
+          {
+            "step": 8,
+            "pnl": 157,
+            "equity": 10504.1,
+            "drawdownPercent": 0
+          },
+          {
+            "step": 9,
+            "pnl": 470.8,
+            "equity": 10974.9,
+            "drawdownPercent": 0
+          },
+          {
+            "step": 10,
+            "pnl": -213.3,
+            "equity": 10761.6,
+            "drawdownPercent": 1.943526
+          }
+        ]
+      }
+    },
+    {
+      "name": "lossRun-seed-10",
+      "module": "lossRun",
+      "input": {
+        "winRatePercent": 82.8155388101004,
+        "trialCount": 1,
+        "streakLength": 1
+      },
+      "expected": {
+        "nextStreakProbabilityPercent": 17.184461,
+        "atLeastOneStreakProbabilityPercent": 17.184461,
+        "assumption": "independent-identically-distributed",
+        "trialCount": 1,
+        "streakLength": 1
+      }
+    },
+    {
+      "name": "distribution-seed-10",
+      "module": "pnlDistribution",
+      "input": {
+        "values": [
+          38.5,
+          -7.2,
+          105.3,
+          455,
+          -82,
+          -197.2,
+          362.3,
+          9.5,
+          121.1,
+          231.8,
+          -242.6
+        ]
+      },
+      "expected": {
+        "sampleCount": 11,
+        "mean": 72.227273,
+        "median": 38.5,
+        "q1": -44.6,
+        "q3": 176.45,
+        "iqr": 221.05,
+        "sampleStandardDeviation": 215.980833,
+        "winCount": 7,
+        "lossCount": 4,
+        "flatCount": 0,
+        "minimum": -242.6,
+        "maximum": 455,
+        "quantileMethod": "R7"
+      }
+    },
+    {
+      "name": "equity-seed-10",
+      "module": "equityPath",
+      "input": {
+        "initialCapital": 10000,
+        "pnlValues": [
+          37.1,
+          -434.7,
+          -412.1,
+          180.5,
+          -426.7,
+          -307.2,
+          -285.4,
+          -80.3,
+          114.3,
+          -195.6,
+          -255.9
+        ]
+      },
+      "expected": {
+        "initialCapital": 10000,
+        "finalCapital": 7934,
+        "netPnl": -2066,
+        "maximumDrawdownPercent": 20.953263,
+        "longestUnderwaterSpan": 10,
+        "underwaterObservationCount": 10,
+        "capitalDepleted": false,
+        "points": [
+          {
+            "step": 0,
+            "pnl": 0,
+            "equity": 10000,
+            "drawdownPercent": 0
+          },
+          {
+            "step": 1,
+            "pnl": 37.1,
+            "equity": 10037.1,
+            "drawdownPercent": 0
+          },
+          {
+            "step": 2,
+            "pnl": -434.7,
+            "equity": 9602.4,
+            "drawdownPercent": 4.330932
+          },
+          {
+            "step": 3,
+            "pnl": -412.1,
+            "equity": 9190.3,
+            "drawdownPercent": 8.4367
+          },
+          {
+            "step": 4,
+            "pnl": 180.5,
+            "equity": 9370.8,
+            "drawdownPercent": 6.638372
+          },
+          {
+            "step": 5,
+            "pnl": -426.7,
+            "equity": 8944.1,
+            "drawdownPercent": 10.8896
+          },
+          {
+            "step": 6,
+            "pnl": -307.2,
+            "equity": 8636.9,
+            "drawdownPercent": 13.950245
+          },
+          {
+            "step": 7,
+            "pnl": -285.4,
+            "equity": 8351.5,
+            "drawdownPercent": 16.793695
+          },
+          {
+            "step": 8,
+            "pnl": -80.3,
+            "equity": 8271.2,
+            "drawdownPercent": 17.593727
+          },
+          {
+            "step": 9,
+            "pnl": 114.3,
+            "equity": 8385.5,
+            "drawdownPercent": 16.454952
+          },
+          {
+            "step": 10,
+            "pnl": -195.6,
+            "equity": 8189.9,
+            "drawdownPercent": 18.403722
+          },
+          {
+            "step": 11,
+            "pnl": -255.9,
+            "equity": 7934,
+            "drawdownPercent": 20.953263
+          }
+        ]
+      }
+    },
+    {
+      "name": "lossRun-seed-11",
+      "module": "lossRun",
+      "input": {
+        "winRatePercent": 94.60355664137751,
+        "trialCount": 8,
+        "streakLength": 4
+      },
+      "expected": {
+        "nextStreakProbabilityPercent": 0.000848,
+        "atLeastOneStreakProbabilityPercent": 0.004057,
+        "assumption": "independent-identically-distributed",
+        "trialCount": 8,
+        "streakLength": 4
+      }
+    },
+    {
+      "name": "distribution-seed-11",
+      "module": "pnlDistribution",
+      "input": {
+        "values": [
+          29.2,
+          123,
+          522.8,
+          -140.6,
+          295.5,
+          529.9,
+          376.7,
+          328.1,
+          503.5,
+          310.6,
+          -219.8,
+          556.9
+        ]
+      },
+      "expected": {
+        "sampleCount": 12,
+        "mean": 267.983333,
+        "median": 319.35,
+        "q1": 99.55,
+        "q3": 508.325,
+        "iqr": 408.775,
+        "sampleStandardDeviation": 265.15691,
+        "winCount": 10,
+        "lossCount": 2,
+        "flatCount": 0,
+        "minimum": -219.8,
+        "maximum": 556.9,
+        "quantileMethod": "R7"
+      }
+    },
+    {
+      "name": "equity-seed-11",
+      "module": "equityPath",
+      "input": {
+        "initialCapital": 10000,
+        "pnlValues": [
+          -138.2,
+          -58.3,
+          -478.6,
+          -95.4,
+          -17.8,
+          138.8,
+          -309.6,
+          391.2,
+          216.4,
+          282.3,
+          382.3,
+          -371.9
+        ]
+      },
+      "expected": {
+        "initialCapital": 10000,
+        "finalCapital": 9941.2,
+        "netPnl": -58.8,
+        "maximumDrawdownPercent": 9.591,
+        "longestUnderwaterSpan": 11,
+        "underwaterObservationCount": 11,
+        "capitalDepleted": false,
+        "points": [
+          {
+            "step": 0,
+            "pnl": 0,
+            "equity": 10000,
+            "drawdownPercent": 0
+          },
+          {
+            "step": 1,
+            "pnl": -138.2,
+            "equity": 9861.8,
+            "drawdownPercent": 1.382
+          },
+          {
+            "step": 2,
+            "pnl": -58.3,
+            "equity": 9803.5,
+            "drawdownPercent": 1.965
+          },
+          {
+            "step": 3,
+            "pnl": -478.6,
+            "equity": 9324.9,
+            "drawdownPercent": 6.751
+          },
+          {
+            "step": 4,
+            "pnl": -95.4,
+            "equity": 9229.5,
+            "drawdownPercent": 7.705
+          },
+          {
+            "step": 5,
+            "pnl": -17.8,
+            "equity": 9211.7,
+            "drawdownPercent": 7.883
+          },
+          {
+            "step": 6,
+            "pnl": 138.8,
+            "equity": 9350.5,
+            "drawdownPercent": 6.495
+          },
+          {
+            "step": 7,
+            "pnl": -309.6,
+            "equity": 9040.9,
+            "drawdownPercent": 9.591
+          },
+          {
+            "step": 8,
+            "pnl": 391.2,
+            "equity": 9432.1,
+            "drawdownPercent": 5.679
+          },
+          {
+            "step": 9,
+            "pnl": 216.4,
+            "equity": 9648.5,
+            "drawdownPercent": 3.515
+          },
+          {
+            "step": 10,
+            "pnl": 282.3,
+            "equity": 9930.8,
+            "drawdownPercent": 0.692
+          },
+          {
+            "step": 11,
+            "pnl": 382.3,
+            "equity": 10313.1,
+            "drawdownPercent": 0
+          },
+          {
+            "step": 12,
+            "pnl": -371.9,
+            "equity": 9941.2,
+            "drawdownPercent": 3.606093
+          }
+        ]
+      }
+    },
+    {
+      "name": "recovery-zero",
+      "module": "recovery",
+      "input": {
+        "drawdownPercent": 0,
+        "annualRatePercent": 0
+      },
+      "expected": {
+        "reachable": true,
+        "exactMonths": 0,
+        "wholeMonths": 0,
+        "requiredMultiplier": 1,
+        "assumption": "constant-effective-annual-rate"
+      }
+    },
+    {
+      "name": "recovery-unreachable",
+      "module": "recovery",
+      "input": {
+        "drawdownPercent": 20,
+        "annualRatePercent": 0
+      },
+      "expected": {
+        "reachable": false,
+        "exactMonths": null,
+        "wholeMonths": null,
+        "requiredMultiplier": 1.25,
+        "assumption": "constant-effective-annual-rate"
+      }
+    },
+    {
+      "name": "streak-longer",
+      "module": "lossRun",
+      "input": {
+        "winRatePercent": 0,
+        "trialCount": 5,
+        "streakLength": 6
+      },
+      "expected": {
+        "nextStreakProbabilityPercent": 100,
+        "atLeastOneStreakProbabilityPercent": 0,
+        "assumption": "independent-identically-distributed",
+        "trialCount": 5,
+        "streakLength": 6
+      }
+    },
+    {
+      "name": "streak-no-loss",
+      "module": "lossRun",
+      "input": {
+        "winRatePercent": 100,
+        "trialCount": 5000,
+        "streakLength": 100
+      },
+      "expected": {
+        "nextStreakProbabilityPercent": 0,
+        "atLeastOneStreakProbabilityPercent": 0,
+        "assumption": "independent-identically-distributed",
+        "trialCount": 5000,
+        "streakLength": 100
+      }
+    },
+    {
+      "name": "empty-snapshot",
+      "module": "drawdown",
+      "input": {
+        "snapshots": []
+      },
+      "expected": {
+        "ready": false,
+        "reason": "至少需要 3 个不同日期的账户快照",
+        "cashFlowAdjusted": false,
+        "metricLabel": "总资产峰谷降幅（未剔除外部资金流）",
+        "snapshotCount": 0,
+        "spanDays": 0,
+        "maximumDrawdownPercent": null,
+        "recoveryPercent": null,
+        "currentAssets": null,
+        "highWaterAssets": null,
+        "snapshots": []
+      }
+    },
+    {
+      "name": "empty-ledger",
+      "module": "ledger",
+      "input": {
+        "closedPositions": [],
+        "trades": []
+      },
+      "expected": {
+        "ready": false,
+        "reason": "尚无已关闭股票样本",
+        "sampleCount": 0,
+        "winRatePercent": null,
+        "averageWin": null,
+        "averageLoss": null,
+        "payoffRatio": null,
+        "profitFactor": null,
+        "expectancy": null,
+        "averageHoldingDays": null,
+        "recordedCosts": 0,
+        "sampleUnit": "按股票全历史汇总"
+      }
+    },
+    {
+      "name": "all-cash",
+      "module": "risk",
+      "input": {
+        "positions": [],
+        "cashBalance": 1000
+      },
+      "expected": {
+        "totalAssets": 1000,
+        "equityValue": 0,
+        "cashBalance": 1000,
+        "cashPercent": 100,
+        "top1Percent": 0,
+        "top3Percent": 0,
+        "hhi": null,
+        "positionCount": 0,
+        "level": "unavailable",
+        "positions": []
+      }
+    },
+    {
+      "name": "no-lot",
+      "module": "stagedAverage",
+      "input": {
+        "cash": 1,
+        "prices": [
+          10,
+          8
+        ],
+        "weights": [
+          50,
+          50
+        ]
+      },
+      "expected": {
+        "stages": [
+          {
+            "index": 1,
+            "price": 10,
+            "weightPercent": 50,
+            "allocatedCash": 0.5,
+            "quantity": 0,
+            "spent": 0,
+            "unspentAllocation": 0.5
+          },
+          {
+            "index": 2,
+            "price": 8,
+            "weightPercent": 50,
+            "allocatedCash": 0.5,
+            "quantity": 0,
+            "spent": 0,
+            "unspentAllocation": 0.5
+          }
+        ],
+        "totalQuantity": 0,
+        "totalSpent": 0,
+        "averagePrice": null,
+        "remainingCash": 1,
+        "lotSize": 100
+      }
+    },
+    {
+      "name": "flat-outcome",
+      "module": "expectancy",
+      "input": {
+        "winRatePercent": 40,
+        "lossRatePercent": 50,
+        "averageWin": 300,
+        "averageLoss": 100
+      },
+      "expected": {
+        "expectedValue": 70,
+        "profitFactor": 2.4,
+        "breakEvenWinRatePercent": 22.5,
+        "conditionalBreakEvenWinRatePercent": 25,
+        "flatRatePercent": 10,
+        "assumption": "user-entered-outcome-rates"
+      }
+    }
+  ]
+}

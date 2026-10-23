@@ -75,16 +75,16 @@ def _initialize_qlib(workspace):
     import qlib
     from mlflow.tracking import MlflowClient
 
-    runtime_dir = Path(workspace) / "qlib-runtime"
+    runtime_dir = Path(os.environ["WEBSTOCK_QUANT_TRACKING_DIR"]) if os.environ.get("WEBSTOCK_QUANT_NATIVE") == "1" and os.environ.get("WEBSTOCK_QUANT_TRACKING_DIR") else Path(workspace) / "qlib-runtime"
     runtime_dir.mkdir(parents=True, exist_ok=True)
-    tracking_uri = "sqlite:///" + str(runtime_dir / "mlflow.db").replace("\\", "/")
+    tracking_uri = "sqlite:///" + str(runtime_dir / "mlflow.db").removeprefix("\\\\?\\").replace("\\", "/")
     artifact_dir = runtime_dir / "mlruns"
     artifact_dir.mkdir(parents=True, exist_ok=True)
     client = MlflowClient(tracking_uri=tracking_uri)
     if client.get_experiment_by_name("webstock-quant") is None:
-        client.create_experiment("webstock-quant", artifact_location=artifact_dir.resolve().as_uri())
+        client.create_experiment("webstock-quant", artifact_location=Path(str(artifact_dir.resolve()).removeprefix("\\\\?\\")).as_uri())
     qlib.init(
-        provider_uri=str(runtime_dir),
+        provider_uri=str(runtime_dir).removeprefix("\\\\?\\"),
         exp_manager={
             "class": "MLflowExpManager",
             "module_path": "qlib.workflow.expm",
@@ -95,6 +95,9 @@ def _initialize_qlib(workspace):
 
 def _new_model(seed, num_boost_round, early_stopping_rounds):
     from qlib.contrib.model.gbdt import LGBModel
+    thread_limit = int(os.environ.get("WEBSTOCK_QUANT_THREADS", str(min(max(os.cpu_count() or 2, 1), 8))))
+    if not 1 <= thread_limit <= 8:
+        raise ValueError("WEBSTOCK_QUANT_THREADS must be between 1 and 8")
 
     return LGBModel(
         loss="mse",
@@ -109,7 +112,7 @@ def _new_model(seed, num_boost_round, early_stopping_rounds):
         bagging_freq=1,
         lambda_l1=0.05,
         lambda_l2=0.1,
-        num_threads=min(max(os.cpu_count() or 2, 1), 8),
+        num_threads=thread_limit,
         deterministic=True,
         force_col_wise=True,
         seed=int(seed),
@@ -171,6 +174,8 @@ def run_lightgbm_baseline(
         raise ValueError(f"not enough trading dates for rolling validation; at least {required_days} are required")
 
     Path(workspace).mkdir(parents=True, exist_ok=True)
+    if emit:
+        emit({"stage": "runtime", "message": "正在初始化本机训练记录；首次创建可能较慢"})
     _initialize_qlib(workspace)
     from qlib.workflow import R
 

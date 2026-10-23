@@ -1,0 +1,15 @@
+#pragma once
+#include "quant_research_model.hpp"
+#include "chart.hpp"
+#include <QDateTime>
+
+namespace quantParquet {
+inline bool isChart(const QJsonObject& p){return p.value("schema")=="quant-parquet-chart/v1";}
+inline QJsonObject chartPacket(const QJsonObject& p){
+ need(isChart(p),"不是Parquet日线");auto d=p.value("dataset").toObject();need(d.contains("parquetSelectionEvidence"),"日线缺少Parquet来源凭据");quantResearch::readBars(d);auto bindings=d.value("parquetSelectionEvidence").toObject().value("identities").toArray();need(bindings.size()==1,"主图必须明确选择一只证券");auto b=bindings[0].toObject();need(p.value("id")==b.value("id")&&p.value("name")==b.value("name")&&p.value("code")==b.value("code")&&p.value("market")==b.value("market")&&p.value("rows")==d.value("bars")&&p.value("period")=="day"&&p.value("asOf")==d.value("asOf")&&p.value("adjustmentMode")==d.value("adjustmentMode")&&p.value("volumeUnit")==d.value("volumeUnit"),"主图证券/日频/来源口径不一致");return p;
+}
+inline QString chartCaption(const QJsonObject& p){chartPacket(p);auto scope=p.value("dataset").toObject().value("parquetSelectionEvidence").toObject().value("selection").toObject();return QString("旧Parquet日线 · %1 · %2 至 %3 · %4 · asOf %5 · %6行 · 成交量原始单位未核实 · 非今日报价").arg(p.value("id").toString(),scope.value("start").toString(),scope.value("end").toString(),p.value("adjustmentMode").toString(),p.value("asOf").toString()).arg(p.value("rows").toArray().size());}
+inline QJsonArray chartRows(const QJsonObject& p){chartPacket(p);QJsonArray rows;for(auto value:p.value("rows").toArray()){auto r=value.toObject();auto date=r.value("date").toString();r["time"]=double(QDateTime(QDate::fromString(date,Qt::ISODate),QTime(0,0),QTimeZone::UTC).toMSecsSinceEpoch());r["label"]=date;r["valid"]=true;r["closed"]=true;rows.append(r);}return rows;}
+inline QJsonObject chartInstrument(QJsonObject current,const QJsonObject& p){need(current.value("id")==p.value("id"),"日线不得覆盖其他证券");current["day"]=chartRows(p);current["dayMeta"]=QJsonObject{{"legacyHistorical",true},{"marketState","historical"},{"source","legacy-parquet-selection"},{"instrumentId",p.value("id")},{"period","day"},{"asOf",p.value("asOf")},{"adjustmentMode",p.value("adjustmentMode")},{"volumeUnit",p.value("volumeUnit")},{"previousClose",QJsonValue::Null}};current["quote"]=QJsonObject{};return current;}
+inline void showChart(Chart* chart,const QJsonObject& p){need(chart,"原Chart不存在");auto rows=chartRows(p);std::vector<market::Bar> bars;QStringList labels;for(auto value:rows){auto r=value.toObject();bars.push_back({r.value("time").toDouble(),r.value("open").toDouble(),r.value("high").toDouble(),r.value("low").toDouble(),r.value("close").toDouble(),r.value("volume").toDouble(),true,true});labels<<r.value("label").toString();}chart->periodName=chartCaption(p);chart->previousClose=0;chart->volumeLabel="成交量 · 原始单位未核实 · 未换算";chart->priceDecimals=4;chart->annotationRows=rows;chart->annotationMeta=chartInstrument({{"id",p.value("id")}},p).value("dayMeta").toObject();chart->vwapRows=rows;chart->vwapMeta=chart->annotationMeta;chart->vwapPeriod="day";chart->setSeries(bars,labels,false);}
+}

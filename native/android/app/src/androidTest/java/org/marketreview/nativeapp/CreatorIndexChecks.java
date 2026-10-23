@@ -1,0 +1,66 @@
+package org.marketreview.nativeapp;
+import org.json.*;
+import android.widget.*;
+import android.os.SystemClock;
+
+final class CreatorIndexChecks {
+  static void progress(FlowInstrumentation f,String value){android.os.Bundle b=new android.os.Bundle();b.putString("stream","Creator index: "+value+"\n");f.sendStatus(0,b);}
+  static final String BODY="作者认为光模块使用光芯片，相关技术路线仍需公告与实际收入交叉验证，不能据此认定供货关系。";
+  static JSONObject edge(String topic,String polarity)throws Exception{return new JSONObject().put("topic",topic).put("from","光模块").put("to","光芯片").put("relation","使用").put("quote",BODY).put("polarity",polarity);}
+  static JSONObject add(BusinessStore s,String id,String author,JSONArray edges,String root,String at)throws Exception{
+    s.save("collections",new JSONObject().put("id",id).put("title",id).put("channel","同名作者").put("sourceProfile",author).put("sourceRootId",root).put("sourceRevisionAt",at).put("text",BODY).put("status","completed")
+      .put("asrResult",new JSONObject().put("text",BODY).put("durationSeconds",10).put("segments",new JSONArray().put(new JSONObject().put("start",0).put("end",10).put("text",BODY)))));
+    s.saveCreatorAnalysis(id,CollectionQuality.bodyHash(BODY),"","测试观点，非实证",edges);return CreatorChecks.record(s,id);
+  }
+  static void models(FlowInstrumentation f)throws Exception{
+    try(BusinessStore s=new BusinessStore(f.getTargetContext(),"creator-index-"+java.util.UUID.randomUUID()+".sqlite")){
+      String a="https://www.douyin.com/user/author_A",b="https://www.douyin.com/user/author_B";JSONArray e=new JSONArray().put(edge("光通信","supports"));
+      add(s,"one",a,e,"","");add(s,"two",a,new JSONArray(),"","");add(s,"three",b,e,"","");add(s,"unknown1","",e,"","");add(s,"unknown2","",e,"","");
+      JSONObject updated=add(s,"one-v2",a,new JSONArray().put(edge("光通信","contradicts")),"one","2026-10-12T03:00:00Z");
+      JSONObject index=CreatorIndex.build(s.read("collections"),"","",()->false),c=index.getJSONObject("counts");
+      f.check(index.getJSONArray("authors").length()==4&&c.getInt("documents")==6&&c.getInt("works")==5&&c.getInt("superseded")==1&&c.getInt("analyzed")==5,"identity dedup and latest source version parity");
+      index=CreatorIndex.build(s.read("collections"),"douyin:author_A","",()->false);f.check(index.getJSONObject("counts").getInt("empty")==1&&index.getJSONArray("relations").length()==1,"empty analysis distinct from pending");
+      JSONObject r=index.getJSONArray("relations").getJSONObject(0);f.check(r.getString("documentId").equals("one-v2")&&r.getJSONObject("edge").getString("polarity").equals("contradicts")&&!r.getString("analysisId").isEmpty(),"immutable opposite claim in latest work");
+      updated.put("text",BODY+"更正");s.save("collections",updated);index=CreatorIndex.build(s.read("collections"),"douyin:author_A","",()->false);f.check(index.getJSONArray("relations").length()==0&&index.getJSONObject("counts").getInt("blocked")==1,"bad latest cannot fall back to old");
+      boolean stopped=false;try{CreatorIndex.build(s.read("collections"),"","",()->true);}catch(Exception ex){stopped=true;}f.check(stopped,"cancelled index stops");
+      JSONObject unknown=add(s,"root","",e,"",""),revision=add(s,"rev","",e,"root","2026-10-12T03:00:00Z");
+      index=CreatorIndex.build(new JSONArray().put(unknown).put(revision),"","",()->false);f.check(index.getJSONObject("counts").getInt("works")==1&&index.getJSONArray("relations").length()==1,"unknown author's source versions deduplicated by root");
+      unknown.put("channel","不同的作者");f.check(CreatorIndex.build(new JSONArray().put(unknown),"","",()->false).getJSONObject("counts").getInt("blocked")==1,"unknown author's name change cannot reattribute");unknown.put("channel","同名作者");
+      JSONObject old=new JSONObject(unknown.toString());old.getJSONArray("creatorAnalyses").getJSONObject(0).remove("sourceIdentity");f.check(CreatorIndex.build(new JSONArray().put(old),"","",()->false).getJSONObject("counts").getInt("blocked")==1&&CreatorAnalysis.current(old).length()>0,"old identity-less analyses remain readable but excluded from index");
+      observed(unknown,"初版","2026-10-12T03:02:00Z");observed(revision,"修订版","2026-10-12T03:01:00Z");index=CreatorIndex.build(new JSONArray().put(unknown).put(revision),"","",()->false);f.check(index.getJSONArray("relations").getJSONObject(0).getString("documentId").equals("root"),"content return uses latest capture not creation time");
+      revision.put("sourceFingerprint","invalid");f.check(CreatorIndex.build(new JSONArray().put(unknown).put(revision),"","",()->false).getJSONObject("counts").getInt("blocked")==2,"bad capture identity blocks whole work");
+      JSONObject stable=CreatorChecks.record(s,"three");stable.put("channel","作者新名字");index=CreatorIndex.build(new JSONArray().put(stable),"","",()->false);f.check(index.getJSONObject("counts").getInt("analyzed")==1&&index.getJSONArray("authors").getJSONObject(0).getJSONArray("aliases").length()==2,"stable author rename preserves old alias and attribution");
+    }
+  }
+  static void observed(JSONObject row,String title,String at)throws Exception{JSONObject metadata=new JSONObject().put("title",title).put("description","内容").put("capturedAt",at).put("coverage","visible_page_only");row.put("sourceMetadata",metadata).put("sourceFingerprint",SourceCapture.fingerprint(metadata));}
+  static void real(FlowInstrumentation f)throws Exception{
+    java.io.File file=new java.io.File(f.getTargetContext().getExternalFilesDir(null),"asr-review/quality-real-business.json");JSONObject bundle=new JSONObject(new String(java.nio.file.Files.readAllBytes(file.toPath()),java.nio.charset.StandardCharsets.UTF_8));
+    try(BusinessStore store=new BusinessStore(f.getTargetContext(),"creator-real-"+java.util.UUID.randomUUID()+".sqlite")){
+      store.restore(bundle);JSONObject result=CreatorIndex.build(store.read("collections"),"","",()->false);JSONObject counts=result.getJSONObject("counts");f.check(counts.getInt("documents")==985&&counts.getInt("analyzed")==0&&result.getJSONArray("relations").length()==0,"actual old manuscripts no invented graph analysis");f.check(counts.getInt("pending")+counts.getInt("blocked")==985,"full 985 old manuscripts classified");
+      JSONObject expected=new JSONObject(new String(java.nio.file.Files.readAllBytes(new java.io.File(file.getParentFile(),"actual-old-index-counts.json").toPath()),java.nio.charset.StandardCharsets.UTF_8));java.util.Iterator<String> keys=expected.keys();while(keys.hasNext()){String key=keys.next();f.check(expected.getInt(key)==counts.getInt(key),"C++/Java actual old index parity: "+key);}
+      final CreatorPanel[] panel={null};f.ui(()->{BusinessScreen screen=new BusinessScreen(f.activity,"creator",store);panel[0]=screen.creator;f.activity.showPage("business:creator","作者观点 / 关系图",screen);screen.creator.show(3);});await(f,"文稿 985");f.ui(()->((Spinner)f.activity.getWindow().getDecorView().findViewWithTag("creatorIndexMode")).setSelection(1));for(int n=0;n<9;n++)f.click("下一页");
+      f.ui(()->{try{ListView list=panel[0].index.list;f.check(list.getCount()==85,"actual last page retained");String id=panel[0].index.visible.getJSONObject(0).getString("id"),body="";JSONArray rows=bundle.getJSONArray("collections");for(int n=0;n<rows.length();n++)if(rows.getJSONObject(n).getString("id").equals(id))body=rows.getJSONObject(n).optString("text");list.performItemClick(list.getChildAt(0),0,0);f.check(panel[0].id.equals(id)&&panel[0].source.getText().toString().equals(body),"actual raw source opened by exact identity");}catch(Exception e){throw new RuntimeException(e);}});f.click("作者汇总");f.shot("android-actual-old-index");
+    }
+  }
+  static void run(FlowInstrumentation f)throws Exception{
+    models(f);progress(f,"model checks complete");String id="index-ui-"+java.util.UUID.randomUUID();JSONArray edges=new JSONArray();for(int n=0;n<101;n++)edges.put(edge(n==100?"光器件":"光通信",n==100?"contradicts":"supports").put("uncertainty",Integer.toString(n)));
+    String author="author_INDEX_"+java.util.UUID.randomUUID();add(f.activity.businessStore,id,"https://www.douyin.com/user/"+author,edges,"","");
+    final CreatorPanel[] panel={null};f.ui(()->{try{f.activity.openBusiness("creator");panel[0]=((BusinessScreen)f.activity.getWindow().getDecorView().findViewWithTag("creatorDocuments").getParent().getParent()).creator;panel[0].load(id);}catch(Exception e){throw new RuntimeException(e);}f.check(f.activity.getWindow().getDecorView().findViewWithTag("creatorIndexRows")!=null,"cross document list is native and reachable");});
+    f.click("作者汇总");await(f,"就绪");progress(f,"native index opened");
+    f.ui(()->{Spinner authors=f.activity.getWindow().getDecorView().findViewWithTag("creatorIndexAuthor");for(int i=0;i<authors.getCount();i++)if(authors.getItemAtPosition(i).toString().contains("douyin:"+author))authors.setSelection(i);});await(f,"引文 101 条");
+    f.ui(()->f.check(((ListView)f.activity.getWindow().getDecorView().findViewWithTag("creatorIndexRows")).getCount()==100,"first page size 100"));f.click("下一页");
+    panel[0]=CreatorChecks.recreate(f);await(f,"引文 101 条");f.ui(()->f.check(panel[0].index.page==1&&panel[0].index.list.getCount()==1,"second page survives delayed Spinner events on recreation"));
+    f.ui(()->{ListView list=f.activity.getWindow().getDecorView().findViewWithTag("creatorIndexRows");f.check(list.getCount()==1,"last page not truncated");panel[0].p.inputs.get("creatorUncertainty").setText("未保存草稿");list.performItemClick(list.getChildAt(0),0,0);f.check(panel[0].p.value("creatorUncertainty").equals("未保存草稿")&&panel[0].versionId.isEmpty(),"index navigation protects draft");f.check(panel[0].p.state.getVisibility()==android.view.View.VISIBLE&&panel[0].p.state.getText().toString().contains("草稿"),"index draft error is visible");});
+    f.click("放弃关系草稿");f.ui(()->{ListView list=f.activity.getWindow().getDecorView().findViewWithTag("creatorIndexRows");list.performItemClick(list.getChildAt(0),0,0);f.check(panel[0].p.value("creatorUncertainty").equals("100")&&!panel[0].save.isEnabled()&&panel[0].selected==100,"indexed quote opens exact read-only snapshot");});
+    f.shot("android-index-evidence");progress(f,"exact evidence and draft guard complete");f.click("作者汇总");f.ui(()->{Spinner topic=f.activity.getWindow().getDecorView().findViewWithTag("creatorIndexTopic");for(int i=0;i<topic.getCount();i++)if(topic.getItemAtPosition(i).toString().equals("光器件"))topic.setSelection(i);});await(f,"引文 1 条");
+    panel[0]=CreatorChecks.recreate(f);await(f,"引文 1 条");f.ui(()->f.check(panel[0].view==3,"index tab restored without large Bundle"));f.shot("android-index-author-topic");
+    f.ui(()->f.activity.setRequestedOrientation(android.content.pm.ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE));
+    try{SourceChecks.waitFor(f,()->panel[0].index.getWidth()>panel[0].index.getHeight(),5000,"index landscape");f.shot("android-index-landscape");f.ui(()->f.check(panel[0].index.list.getHeight()>=f.activity.dp(80)&&panel[0].index.list.getCount()==1,"landscape index retains result area and filter: list="+panel[0].index.list.getHeight()+", minimum="+f.activity.dp(80)+", rows="+panel[0].index.list.getCount()+", panel="+panel[0].index.getWidth()+"x"+panel[0].index.getHeight()+", wide="+panel[0].index.wide));}
+    finally{f.ui(()->f.activity.setRequestedOrientation(android.content.pm.ActivityInfo.SCREEN_ORIENTATION_PORTRAIT));}
+    try{SourceChecks.waitFor(f,()->!panel[0].index.wide,5000,"index portrait restored");}catch(AssertionError e){f.shot("android-index-portrait-failure");throw new AssertionError("portrait return failed: wide="+panel[0].index.wide+", resources="+panel[0].index.getResources().getConfiguration().orientation+", size="+panel[0].index.getWidth()+"x"+panel[0].index.getHeight(),e);}progress(f,"rotation complete");
+    f.ui(()->{panel[0].index.topicKey="光通信";panel[0].index.refresh(false);panel[0].index.topicKey="光器件";panel[0].index.refresh(false);});await(f,"引文 1 条");
+    f.ui(()->f.activity.findViewById(R.id.theme).performClick());f.shot("android-index-dark");
+    f.ui(()->{int color=((TextView)panel[0].index.list.getChildAt(0)).getCurrentTextColor();f.check(f.activity.darkTheme()&&android.graphics.Color.red(color)>180&&android.graphics.Color.green(color)>180&&android.graphics.Color.blue(color)>180,"dark index text remains readable");f.check(panel[0].index.previous.getBackgroundTintList().getDefaultColor()==0xff26394f,"business dark button must not keep light background");f.check(panel[0].index.list.getCount()==1&&panel[0].index.topicKey.equals("光器件"),"rapid filtering keeps latest result");if(android.os.Build.VERSION.SDK_INT>=30)f.check((f.activity.getWindow().getInsetsController().getSystemBarsAppearance()&android.view.WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS)==0,"dark status icons use light foreground");});
+  }
+  static void await(FlowInstrumentation f,String text)throws Exception{long end=SystemClock.elapsedRealtime()+10000;boolean[] found={false};while(SystemClock.elapsedRealtime()<end){f.ui(()->{TextView state=f.activity.getWindow().getDecorView().findViewWithTag("creatorIndexCounts");found[0]=state!=null&&state.getText().toString().contains(text);});if(found[0])return;Thread.sleep(50);}throw new AssertionError("index did not reach "+text);}
+}

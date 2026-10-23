@@ -1,0 +1,59 @@
+{
+  "schema": "native-paper-monitor-host-snapshot/v1",
+  "accounts": [
+    {
+      "id": "paper-1",
+      "name": "纸面测试",
+      "type": "paper",
+      "cashBalance": 100000,
+      "cashSource": "manual",
+      "cashVerification": "unverified",
+      "cashEditedAt": "2026-10-12T03:00:00Z",
+      "legacyOriginal": {
+        "fixture": true
+      }
+    },
+    {
+      "id": "other",
+      "name": "另一账户",
+      "type": "ledger"
+    }
+  ],
+  "trades": [
+    {
+      "id": "t1",
+      "accountId": "paper-1",
+      "instrumentId": "SH:stock:600000",
+      "date": "2026-10-13",
+      "side": "buy",
+      "quantity": 1000,
+      "price": 10,
+      "fee": 5,
+      "tax": 0,
+      "name": "构造示例股票"
+    }
+  ],
+  "instruments": [
+    {
+      "id": "SH:stock:600000",
+      "symbol": "sh600000",
+      "name": "构造示例股票",
+      "quote": {
+        "name": "构造报价",
+        "price": 10,
+        "tradeDate": "2026-10-14",
+        "tradeTime": "09:59:30",
+        "source": "新浪公开报价",
+        "checkedAt": "2026-10-14T01:59:32Z",
+        "cached": false
+      }
+    }
+  ],
+  "readEvidence": {
+    "accountsComplete": true,
+    "tradesComplete": true,
+    "coherent": true,
+    "source": "constructed-full-local-snapshot",
+    "capturedAt": "2026-10-14T10:00:00+08:00"
+  }
+}
