@@ -12,6 +12,8 @@ def long_values(frames, selected):
 
 
 def calculate(name,b,p):
+    from fundamental_research import OPERATIONS, calculate as fundamentals
+    if name in OPERATIONS:return fundamentals(name,b,p)
     close=wide(b,"close");selected=wide(b,"member").eq(1)
     returns=close.pct_change(fill_method=None)
     n=int(p.get("period",20))

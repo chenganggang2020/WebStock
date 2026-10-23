@@ -1,0 +1,192 @@
+{
+  "schema": "webstock.plugin.native-acceptance.v1",
+  "runs": [
+    {
+      "pluginId": "org.webstock.panel-research",
+      "operationId": "reported-valuation",
+      "version": "0.12.0",
+      "status": "verified",
+      "runId": "plugin-76a26b71-3a51-46c7-b993-f1ac57c2f0e0",
+      "resultSha256": "a8166332b719f56976ffbe7781f089b09d7eee4223180ca18d472280748ba0a7",
+      "bars": 320,
+      "inputSha256": "b41c4c2bbda15dfc258119e4802ed19a7c86e1f4c70bfa68ee3a531ac979f10f",
+      "inputName": "reported-valuation.csv",
+      "tables": [
+        {
+          "id": "fundamental-features",
+          "rows": 220
+        }
+      ]
+    },
+    {
+      "pluginId": "org.webstock.panel-research",
+      "operationId": "reported-profitability",
+      "version": "0.12.0",
+      "status": "verified",
+      "runId": "plugin-f8f32d4c-5e87-4947-b67e-5dd38ef6463c",
+      "resultSha256": "70545a42f35231803c0335bec083aa415e05358a3816c16424a1ac12f2de7efa",
+      "bars": 320,
+      "inputSha256": "c624132a1b8b4f3d44bc445425cd3ef12af8799f9feafcfa8c71b07d639e66e0",
+      "inputName": "reported-profitability.csv",
+      "tables": [
+        {
+          "id": "fundamental-features",
+          "rows": 220
+        }
+      ]
+    },
+    {
+      "pluginId": "org.webstock.panel-research",
+      "operationId": "reported-quality",
+      "version": "0.12.0",
+      "status": "verified",
+      "runId": "plugin-6e362111-ffeb-4714-b532-43f916c2b6d9",
+      "resultSha256": "74a4a085db8d9c1fdf3f9e39595e18ca7d7fd474c25fecb4a260deb163648fbc",
+      "bars": 320,
+      "inputSha256": "5d0126818254377603182fcce01d734086c76b4310f7981c8230cef1f4858fcb",
+      "inputName": "reported-quality.csv",
+      "tables": [
+        {
+          "id": "fundamental-features",
+          "rows": 220
+        }
+      ]
+    },
+    {
+      "pluginId": "org.webstock.panel-research",
+      "operationId": "investment-accrual",
+      "version": "0.12.0",
+      "status": "verified",
+      "runId": "plugin-e33a77e6-cca4-4293-b323-609081635290",
+      "resultSha256": "c314bb3347a705036bc9aa08eaeea3d0cd8ee7292ee975cc24addf0314b3e5b3",
+      "bars": 320,
+      "inputSha256": "ecbd7158b3824240fad2d569be05a1ccde52724f34771e3b860f0cf52e7c0fb3",
+      "inputName": "investment-accrual.csv",
+      "tables": [
+        {
+          "id": "fundamental-features",
+          "rows": 220
+        }
+      ]
+    },
+    {
+      "pluginId": "org.webstock.panel-research",
+      "operationId": "low-risk-ranks",
+      "version": "0.12.0",
+      "status": "verified",
+      "runId": "plugin-f67d8c80-d39d-44f6-ad51-db8dc2ac2702",
+      "resultSha256": "d4d57b38f1568e3d668315941976bec1348781bc5eaf82450296072c2e10ad3f",
+      "bars": 320,
+      "inputSha256": "d4a32cce97e5c1d500dbb4ea690adbbf2211571bdf08cbfec00d4c4616430d36",
+      "inputName": "low-risk-ranks.csv",
+      "tables": [
+        {
+          "id": "fundamental-features",
+          "rows": 220
+        }
+      ]
+    },
+    {
+      "pluginId": "org.webstock.panel-research",
+      "operationId": "size-ranks",
+      "version": "0.12.0",
+      "status": "verified",
+      "runId": "plugin-f3ac0556-2044-4c66-b07c-85af4fd4373d",
+      "resultSha256": "1b56ec82db16ccd8e3a66cf3564b6ac312b12a713c345ef794c913b1f02b15b2",
+      "bars": 320,
+      "inputSha256": "5fda1afbdae3c159f1208f798426213f6a7652958f6b60c9e91417eedc7e32a7",
+      "inputName": "size-ranks.csv",
+      "tables": [
+        {
+          "id": "fundamental-features",
+          "rows": 220
+        }
+      ]
+    },
+    {
+      "pluginId": "org.webstock.panel-research",
+      "operationId": "reported-dividends",
+      "version": "0.12.0",
+      "status": "verified",
+      "runId": "plugin-67292cc2-b299-47cf-a812-b3e61c67211a",
+      "resultSha256": "d630c9e581ff6ced00622c150eee56af2f559e5e7976c7994cc04e162fc33d3b",
+      "bars": 320,
+      "inputSha256": "8a581c534790448bf9ffba7b00a79f22252e2125e93623f4d79fc673fa77acad",
+      "inputName": "reported-dividends.csv",
+      "tables": [
+        {
+          "id": "fundamental-features",
+          "rows": 220
+        }
+      ]
+    },
+    {
+      "pluginId": "org.webstock.panel-research",
+      "operationId": "piotroski-fscore",
+      "version": "0.12.0",
+      "status": "verified",
+      "runId": "plugin-77a5a623-cdb5-4faa-b27d-81f116f1d809",
+      "resultSha256": "60757aca5d320e3ed235b9f90c3ba45938263c91f8997d86e3b653d90fc12a0c",
+      "bars": 320,
+      "inputSha256": "886cedf84905d752dd500b6b8628016c966440041af0efe713a3a50e18c631e8",
+      "inputName": "piotroski-fscore.csv",
+      "tables": [
+        {
+          "id": "fundamental-features",
+          "rows": 220
+        }
+      ]
+    },
+    {
+      "pluginId": "org.webstock.panel-research",
+      "operationId": "earnings-surprise",
+      "version": "0.12.0",
+      "status": "verified",
+      "runId": "plugin-f65d7447-4370-45f7-a35a-cd62afa22796",
+      "resultSha256": "8d245edddc00887159713c91c974afaf0998c0d6c135541f7d00d11e933276f1",
+      "bars": 320,
+      "inputSha256": "e03335bde5136169960b4165c247ae2ea56a34698b847d49208e20d533de809c",
+      "inputName": "earnings-surprise.csv",
+      "tables": [
+        {
+          "id": "fundamental-features",
+          "rows": 220
+        }
+      ]
+    },
+    {
+      "pluginId": "org.webstock.panel-research",
+      "operationId": "forecast-revision",
+      "version": "0.12.0",
+      "status": "verified",
+      "runId": "plugin-6e50ba60-e2a4-4948-a7d2-7f64067789b0",
+      "resultSha256": "6614687a8465e9e497e7121611abdd3eb84345292a321541bcf55b630a6d7193",
+      "bars": 320,
+      "inputSha256": "fabbbefc1312ee31a374f72d3656f663e660a791459ed45bd42218ad9f47ceaf",
+      "inputName": "forecast-revision.csv",
+      "tables": [
+        {
+          "id": "fundamental-features",
+          "rows": 220
+        }
+      ]
+    },
+    {
+      "pluginId": "org.webstock.panel-research",
+      "operationId": "share-capital-events",
+      "version": "0.12.0",
+      "status": "verified",
+      "runId": "plugin-f809780d-3029-433c-898b-2febab0ba26e",
+      "resultSha256": "61145f647501e11ec3af5724a2b1800f27038436f99821736df18778ddf5a8e3",
+      "bars": 320,
+      "inputSha256": "72b276a8ebe75f6c9be807f7e9133638e82ba357acfd213da8d152602cc1e119",
+      "inputName": "share-capital-events.csv",
+      "tables": [
+        {
+          "id": "fundamental-features",
+          "rows": 220
+        }
+      ]
+    }
+  ]
+}

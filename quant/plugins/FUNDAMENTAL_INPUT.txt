@@ -1,0 +1,49 @@
+财务与事件研究输入 v1
+
+沿用 PANEL_INPUT.txt 的历史多证券CSV。每个数值字段必须同时提供 <字段>_knownat，带明确UTC偏移，且不晚于该行time。不从今天的数据填历史。
+下列字段只需为所选功能提供，不必把全部功能的字段放在一份文件；仍受64列限制。各原始字段及来源时间保留在冻结输入和结果包中。
+测试样本由 tests/test_fundamental_research.py --write-fixtures <新目录> 生成，是明确标记的合成数据，不用于收益研究。
+
+年度财报统一约定：
+financialunit 必须为 currency-unit，金额已经换成与面板currency一致的基本货币单位（元/美元等），不能直接混用千元或万元。
+fiscalend_y0 是本次已披露年度的期末日期，y1、y2…依次为前一年。必须YYYY-MM-DD且连续年度相隔300至430日；不把短季报、改变会计年度的不可比报表冒充完整年度。
+本契约把日期视为完整UTC自然日；期末日下一天零时之前，不接受“已完成该期”的财务事实。实际knownat仍须为披露可用时间，不是期末日。
+xxx_y0 为该完整年度或该年度期末值，xxx_y1 为前一年。每个字段均有独立_knownat，不把期末时间代替发布时间。前期重述数据可在重述公开后使用，但不能伪造早期可用时间。
+以下是明确年度口径，不冒充自动TTM。输出报告期及陈旧天数；输入来源仍须证明会计范围、单位、历史版本及数据许可。
+
+reported-valuation：fiscalend_y0；marketcap；netincome_y0,bookequity_y0,cfo_y0,interestdebt_y0,preferredstock_y0,minorityinterest_y0,cash_y0,ebitda_y0。
+E/P、B/P、CF/P均用年度报表金额/决策时点市值，负的分子保留；PE/PB仅在盈利/权益为正时显示。EV=市值+有息债务+优先股+少数股东权益-现金，EV/EBITDA两者必须为正。债务/优先股/少数权益/现金不得缺省为0。
+
+reported-profitability：fiscalend_y0/y1；assets_y0/y1,bookequity_y0/y1,netincome_y0,sales_y0,grossprofit_y0,operatingprofit_y0。
+ROA用平均资产，ROE用正的平均权益，利润率分别为净利润/毛利/营业利润除销售额。零收入留空。
+
+reported-quality：fiscalend_y0…y5；assets_y0…y5,netincome_y0…y4,liabilities_y0。
+WebStock质量v1：当期利润/期初资产、过去5年上述ROA总体标准差的负值、总负债/期末资产的负值；三项在当前历史成分中平均排名，再等权平均。它有明确公式，未宣称等同QMJ或MSCI方法，也未自动行业中性化。
+
+investment-accrual：fiscalend_y0/y1；assets_y0/y1,netincome_y0,cfo_y0,capex_y0。
+资产增长=资产0/资产1-1；投资强度=现金资本开支/期初资产；应计=(净利润-经营现金流)/平均资产。现金含量在净利润正时为经营现金流/净利润。资本开支按现金流出正值输入；不自动剔除并购。
+
+reported-dividends：fiscalend_y0；marketcap,cashdividends_paid_y0,netincome_y0,cfo_y0。
+分子为年度实际支付的普通股现金股利，非预案或预测。股利/当前市值为已报告年度股息率；支付率分别除正的盈利/现金流。
+
+piotroski-fscore：fiscalend_y0/y1/y2；assets_y0/y1/y2,income_before_extra_y0/y1,cfo_y0,longtermdebt_includingcurrent_y0/y1,currentassets_y0/y1,currentliabilities_y0/y1,sales_y0/y1,grossprofit_y0/y1,equity_issued_y0。
+income_before_extra为非经常/非常项之前的原研究定义利润，来源须说明对应会计口径。长期债须含其中流动部分。equity_issued_y0只能显式为0或1，表示是否发行普通股，不能拿净股数变化代替。
+九项信号：正ROA、正CFO、ROA改善、CFO大于上述利润、长期债/平均资产下降、流动比率改善、无发行普通股、毛利率改善、资产周转率改善。改善均严格比较，平值不计改善。
+ROA用期初资产，债务用平均资产。原论文2.3.3节的周转率正文为期初资产，表1脚注为平均资产；参数turnoverAssets明确选择beginning或average，默认beginning，结果中记录参数，不把二者混淆。
+实现九项计算不代表复现原论文投资组合或A股收益。
+
+low-risk-ranks：仅基础面板及指定基准。窗口简单收益标准差乘sqrt(annualBars)，Beta用同窗收益协方差/基准方差；分别给负波动、负有符号Beta、负绝对Beta的截面排名。
+size-ranks：marketcap,freefloatmarketcap。均为已知的同币种市值金额，后者不得超过前者；不以复权价格乘未经调整股数估算。排名越大，规模越大。
+
+earnings-surprise：earningsperiod（YYYY-MM-DD）,eps_actual,eps_consensus,eps_consensus_std。
+EPS采用同一期间/股数/会计口径；实际值_knownat须晚于完整报告期，一致预期及其标准差的_knownat必须严格早于实际披露。输出实际减预期、差/预期绝对值、差/预测分歧标准差；后两者零分母留空，不冒充季节性SUE。
+forecast-revision：forecastperiod（允许未来年度）,forecast_old,forecast_new。两值指向同一预测期与口径，old_knownat < new_knownat <= time；输出差值和差/旧值绝对值。分析师覆盖更替仍需数据源说明。
+
+share-capital-events：capitalperiod_start/end（YYYY-MM-DD）,shares_begin,shares_end,splitfactor,shares_issued,shares_repurchased,repurchase_announced,other_share_changes。
+期末汇总_knownat不得早于完整区间结束。先将期初股数乘拆并股比例，再加发行、减实际回购、加其他变更；后面三项均应换成期末可比股数。结果显示股数对账差额、扣拆并股后的变化及实际回购/预案，不把预案算成执行。
+
+方法核对的一手资料：
+https://www.ivey.uwo.ca/media/3775523/value_investing_the_use_of_historical_financial_statement_information.pdf
+https://mba.tuck.dartmouth.edu/pages/Faculty/ken.french/Data_Library/six_portfolios_me_op.html
+https://mba.tuck.dartmouth.edu/pages/Faculty/ken.french/Data_Library/six_portfolios_me_inv.html
+这里没有复制上述论文的收益结论；本产品明确选定的资产分母、年度、时间和缺失值规则以上文为准。

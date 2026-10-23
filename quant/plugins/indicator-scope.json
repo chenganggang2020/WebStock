@@ -1339,9 +1339,11 @@
       "overlap": "多种估值比率不是完全独立证据。",
       "evidence": "有实证文献；需本地复验",
       "refs": "https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/data_library/f-f_5_factors_2x3.html\nhttps://www.nber.org/papers/w24458",
-      "status": "pending",
-      "implementations": [],
-      "implementationNote": "未完成；不以目录条目或近似名称充当实现。"
+      "status": "formula_implemented_and_tested",
+      "implementations": [
+        "panel-research:reported-valuation"
+      ],
+      "implementationNote": "已报告年度E/P、B/P、CF/P及完整EV组成；负盈利、负权益及非正倍数分母明确处理。 逐值可用时间和报告期检查；合成手算/前缀与原生宿主已验证，真实PIT数据来源未认证。"
     },
     {
       "id": 75,
@@ -1355,9 +1357,11 @@
       "overlap": "与质量复合因子部分重复。",
       "evidence": "有实证文献；需本地复验",
       "refs": "https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/data_library/f-f_5_factors_2x3.html\nhttps://www.msci.com/indexes/group/quality-indexes",
-      "status": "pending",
-      "implementations": [],
-      "implementationNote": "未完成；不以目录条目或近似名称充当实现。"
+      "status": "formula_implemented_and_tested",
+      "implementations": [
+        "panel-research:reported-profitability"
+      ],
+      "implementationNote": "平均资产ROA、平均权益ROE和净/毛/营业利润率，保留报告陈旧程度。 逐值可用时间和报告期检查；合成手算/前缀与原生宿主已验证，真实PIT数据来源未认证。"
     },
     {
       "id": 76,
@@ -1371,9 +1375,11 @@
       "overlap": "不得把质量分数等同财务安全保证。",
       "evidence": "有实证文献；需本地复验",
       "refs": "https://www.aqr.com/Insights/Datasets/Quality-Minus-Junk-Factors-Monthly\nhttps://www.msci.com/indexes/group/quality-indexes",
-      "status": "pending",
-      "implementations": [],
-      "implementationNote": "未完成；不以目录条目或近似名称充当实现。"
+      "status": "formula_implemented_and_tested",
+      "implementations": [
+        "panel-research:reported-quality"
+      ],
+      "implementationNote": "WebStock质量v1：盈利、5年盈利波动和负债比率的等权截面排名；不声称复制QMJ/MSCI。 逐值可用时间和报告期检查；合成手算/前缀与原生宿主已验证，真实PIT数据来源未认证。"
     },
     {
       "id": 77,
@@ -1387,9 +1393,11 @@
       "overlap": "与 FF CMA 相关；不是“低增长必好”。",
       "evidence": "有实证文献；需本地复验",
       "refs": "https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/data_library/f-f_5_factors_2x3.html",
-      "status": "pending",
-      "implementations": [],
-      "implementationNote": "未完成；不以目录条目或近似名称充当实现。"
+      "status": "formula_implemented_and_tested",
+      "implementations": [
+        "panel-research:investment-accrual"
+      ],
+      "implementationNote": "相邻完整年度资产增长、资本开支/期初资产；不自动剔除并购。 逐值可用时间和报告期检查；合成手算/前缀与原生宿主已验证，真实PIT数据来源未认证。"
     },
     {
       "id": 78,
@@ -1403,9 +1411,11 @@
       "overlap": "与质量、盈利因子相关。",
       "evidence": "学术复现库线索；具体公式待选",
       "refs": "https://www.openassetpricing.com/data/",
-      "status": "pending",
-      "implementations": [],
-      "implementationNote": "未完成；不以目录条目或近似名称充当实现。"
+      "status": "formula_implemented_and_tested",
+      "implementations": [
+        "panel-research:investment-accrual"
+      ],
+      "implementationNote": "现金流表法利润减CFO/平均资产及正盈利现金含量；区别于资产负债表法。 逐值可用时间和报告期检查；合成手算/前缀与原生宿主已验证，真实PIT数据来源未认证。"
     },
     {
       "id": 79,
@@ -1419,9 +1429,11 @@
       "overlap": "与行业、价值、质量暴露相关。",
       "evidence": "有实证文献；需本地复验",
       "refs": "https://www.aqr.com/Insights/Datasets\nhttps://www.msci.com/indexes/factor-indexes/msci-factor-indexes",
-      "status": "pending",
-      "implementations": [],
-      "implementationNote": "未完成；不以目录条目或近似名称充当实现。"
+      "status": "formula_implemented_and_tested",
+      "implementations": [
+        "panel-research:low-risk-ranks"
+      ],
+      "implementationNote": "波动、有符号Beta、绝对Beta分别排名，不混为同一个低风险分数。 逐值可用时间和报告期检查；合成手算/前缀与原生宿主已验证，真实PIT数据来源未认证。"
     },
     {
       "id": 80,
@@ -1435,9 +1447,11 @@
       "overlap": "常与流动性、风险和行业混合。",
       "evidence": "有实证文献；需本地复验",
       "refs": "https://www.nber.org/papers/w24458\nhttps://mba.tuck.dartmouth.edu/pages/faculty/ken.french/data_library/f-f_5_factors_2x3.html",
-      "status": "pending",
-      "implementations": [],
-      "implementationNote": "未完成；不以目录条目或近似名称充当实现。"
+      "status": "formula_implemented_and_tested",
+      "implementations": [
+        "panel-research:size-ranks"
+      ],
+      "implementationNote": "真实声明总市值和流通市值的对数/分位，拒绝流通市值超过总值。 逐值可用时间和报告期检查；合成手算/前缀与原生宿主已验证，真实PIT数据来源未认证。"
     },
     {
       "id": 81,
@@ -1451,9 +1465,11 @@
       "overlap": "与价值、质量相关。",
       "evidence": "指数方法存在；本地有效性未验",
       "refs": "https://www.msci.com/indexes/factor-indexes/msci-factor-indexes",
-      "status": "pending",
-      "implementations": [],
-      "implementationNote": "未完成；不以目录条目或近似名称充当实现。"
+      "status": "formula_implemented_and_tested",
+      "implementations": [
+        "panel-research:reported-dividends"
+      ],
+      "implementationNote": "年度已支付普通股现金股利相对当前市值、盈利和CFO；非预案或预测。 逐值可用时间和报告期检查；合成手算/前缀与原生宿主已验证，真实PIT数据来源未认证。"
     },
     {
       "id": 82,
@@ -1467,9 +1483,11 @@
       "overlap": "不是所有股票通用的上涨概率。",
       "evidence": "原作者研究索引；九项实现待复核",
       "refs": "https://www.gsb.stanford.edu/faculty-research/faculty/joseph-d-piotroski",
-      "status": "pending",
-      "implementations": [],
-      "implementationNote": "未完成；不以目录条目或近似名称充当实现。"
+      "status": "formula_implemented_and_tested",
+      "implementations": [
+        "panel-research:piotroski-fscore"
+      ],
+      "implementationNote": "九项二元财务信号；显式普通股发行事件。ROA期初资产、债务平均资产，周转率期初/平均口径作为参数记录原文差异。 逐值可用时间和报告期检查；合成手算/前缀与原生宿主已验证，真实PIT数据来源未认证。"
     },
     {
       "id": 83,
@@ -1483,9 +1501,12 @@
       "overlap": "与价格动量相关但输入来源新增。",
       "evidence": "有实证文献；需本地复验",
       "refs": "https://www.spglobal.com/content/dam/spglobal/mi/en/documents/general/what-does-earnings-guidance-tell-us-listen-when-management-announces-good-news.pdf\nhttps://www.openassetpricing.com/data/",
-      "status": "pending",
-      "implementations": [],
-      "implementationNote": "未完成；不以目录条目或近似名称充当实现。"
+      "status": "formula_implemented_and_tested",
+      "implementations": [
+        "panel-research:earnings-surprise",
+        "panel-research:forecast-revision"
+      ],
+      "implementationNote": "同一期事前EPS预期与实际披露差值；同一预测期的两次快照修正。禁止披露后预期冒充事前。 逐值可用时间和报告期检查；合成手算/前缀与原生宿主已验证，真实PIT数据来源未认证。"
     },
     {
       "id": 84,
@@ -1499,9 +1520,11 @@
       "overlap": "与规模、投资及财务质量相关。",
       "evidence": "学术复现库线索；事件规则待核",
       "refs": "https://www.openassetpricing.com/data/\nhttps://quant.10jqka.com.cn/view/dataplatform",
-      "status": "pending",
-      "implementations": [],
-      "implementationNote": "未完成；不以目录条目或近似名称充当实现。"
+      "status": "formula_implemented_and_tested",
+      "implementations": [
+        "panel-research:share-capital-events"
+      ],
+      "implementationNote": "拆并股调整后的发行、已实施回购、其他变更和股数对账；预案与执行区分。 逐值可用时间和报告期检查；合成手算/前缀与原生宿主已验证，真实PIT数据来源未认证。"
     },
     {
       "id": 85,

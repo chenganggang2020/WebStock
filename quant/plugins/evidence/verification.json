@@ -77,6 +77,23 @@
       "passed": 3,
       "failed": 0,
       "skipped": 0
+    },
+    "fundamentals": {
+      "passed": 9,
+      "failed": 0,
+      "operations": 11,
+      "fixtureKind": "synthetic-test",
+      "checks": [
+        "reported period versus actual available time",
+        "year versus quarter mismatch rejection",
+        "negative earnings convention",
+        "nine explicit F-score conditions",
+        "beginning versus average assets",
+        "pre-announcement consensus",
+        "split and completed buyback reconciliation",
+        "separate signed and absolute Beta",
+        "five annual observations and historical size ranks"
+      ]
     }
   },
   "integrationRuns": [
@@ -259,5 +276,6 @@
   "nativePanelAcceptance": [
     "native-panel-0.11.0.json",
     "native-panel-0.11.1.json"
-  ]
+  ],
+  "nativeFundamentalAcceptance": "native-fundamentals-0.12.0.json"
 }

@@ -9,9 +9,9 @@
     "indicatorFamilies": 110,
     "source": "indicator-scope.json",
     "indicatorReadiness": {
-      "formula_implemented_and_tested": 69,
+      "formula_implemented_and_tested": 80,
       "partial": 5,
-      "pending": 36
+      "pending": 25
     },
     "installedPackages": 21
   },
@@ -295,7 +295,7 @@
     },
     {
       "id": "indicator-coverage",
-      "status": "201_talib_functions_47_core_and_9_panel_operations_verified",
+      "status": "201_talib_functions_47_core_and_20_panel_operations_verified",
       "note": "Function counts are not catalogue-family completion counts."
     },
     {
@@ -305,7 +305,7 @@
     },
     {
       "id": "historical-panel-input",
-      "status": "typed_panel_input_and_9_operations_verified_in_native_widget",
+      "status": "typed_panel_input_and_20_operations_verified_in_cpp_host",
       "checks": [
         "explicit-offset availability and membership",
         "historical universe count",
@@ -316,5 +316,5 @@
       "limits": "Synthetic four-security fixture verifies mathematics and lifecycle; provider PIT provenance and real full-market history not certified."
     }
   ],
-  "latestPackageVersion": "0.11.1"
+  "latestPackageVersion": "0.12.0"
 }
