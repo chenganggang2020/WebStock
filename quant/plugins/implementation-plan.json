@@ -11,9 +11,10 @@
     "indicatorReadiness": {
       "formula_implemented_and_tested": 98,
       "partial": 2,
-      "pending": 10
+      "source_interface_implemented_and_tested": 7,
+      "pending": 3
     },
-    "installedPackages": 28
+    "installedPackages": 29
   },
   "completionDefinition": [
     "All 19 projects have runnable installed adapters with declared capabilities, inputs, versions and actual results.",
@@ -299,8 +300,8 @@
     },
     {
       "id": "indicator-coverage",
-      "status": "201_talib_49_core_20_panel_5_event_6_learning_9_statistical_3_deep_3_portfolio_risk_operations_verified__3_factor_model_operations_verified__1_public_v3_rating_conditions_operation_verified",
-      "note": "Function counts are not catalogue-family completion counts."
+      "status": "201_talib_49_core_20_panel_5_event_6_learning_9_statistical_3_deep_3_portfolio_risk_operations_verified__3_factor_model_operations_verified__1_public_v3_rating_conditions_operation_verified__7_external_source_interfaces_verified",
+      "note": "Function counts differ from family counts; source interfaces are tracked separately from reproduced formulas."
     },
     {
       "id": "all-engine-coverage",
@@ -418,7 +419,22 @@
         "native full-window execution and history"
       ],
       "limits": "No verified numerical parity with Pine built-ins/live TradingView screener; local seed, warmup and zero-divisor conventions are explicit."
+    },
+    {
+      "id": "external-research-observations",
+      "status": "seven_source_interfaces_verified_in_cpp_host_and_full_window",
+      "checks": [
+        "strict source and revision input contract",
+        "same-timestamp sequence prefixes",
+        "old-period revisions never backfill",
+        "withdrawals never fall back to earlier observation",
+        "declared-age stale states",
+        "current-vintage prior-window differences and sample Z",
+        "native acknowledgement and archive roundtrip",
+        "LF-canonical immutable package source bytes"
+      ],
+      "limits": "Source interfaces, not supplier formula reproduction, automated source acquisition, sentiment-model training or certified point-in-time provenance."
     }
   ],
-  "latestPackageVersion": "0.20.1"
+  "latestPackageVersion": "0.21.0"
 }

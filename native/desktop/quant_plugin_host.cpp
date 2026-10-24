@@ -110,7 +110,7 @@ QJsonObject validateManifest(const QJsonObject& m) {
         require(QRegularExpression("^[a-z][a-z0-9_-]{0,80}$").match(id).hasMatch() && !names.contains(id), "重复或无效功能身份");
         names.insert(id);
         require(!op.value("title").toString().isEmpty() && !op.value("formulaVersion").toString().isEmpty() &&
-                QStringList{"ohlcv-single-csv","market-panel-csv","market-events-csv","portfolio-equity-csv","parameters-only"}.contains(op.value("inputKind").toString()) && QStringList{"indicator","backtest","data"}.contains(op.value("outputKind").toString()) &&
+                QStringList{"ohlcv-single-csv","market-panel-csv","market-events-csv","portfolio-equity-csv","research-observations-csv","parameters-only"}.contains(op.value("inputKind").toString()) && QStringList{"indicator","backtest","data"}.contains(op.value("outputKind").toString()) &&
                 op.value("parameters").isArray() && op.value("parameters").toArray().size() <= 32, "功能定义不完整");
         QSet<QString> fields;
         for (auto p : op.value("parameters").toArray()) {
@@ -307,7 +307,9 @@ void Job::start(const QString& pluginId,const QString& operationId,const QString
     const bool panel=op.value("inputKind")=="market-panel-csv";
     const bool events=op.value("inputKind")=="market-events-csv";
     const bool portfolio=op.value("inputKind")=="portfolio-equity-csv";
-    if(portfolio)require(policy.value("knownValuationsOnly")==true,"请确认权益、费用与出入金为当时可知的估值记录");
+    const bool observations=op.value("inputKind")=="research-observations-csv";
+    if(observations)require(policy.value("knownObservationsOnly")==true,"请确认数据发布及修订在各记录时点已经可知");
+    else if(portfolio)require(policy.value("knownValuationsOnly")==true,"请确认权益、费用与出入金为当时可知的估值记录");
     else if(events)require(policy.value("knownEventsOnly")==true,"请确认输入为已发生且当时可知的成交或盘口事件");
     else if(!query)require(policy.value("closedBarsOnly")==true && (panel||QStringList{"unknown","unadjusted","forward","backward"}.contains(policy.value("adjustment").toString())),"请明确已完成K线及价格口径");
     auto input=query?QJsonDocument(QJsonObject{{"schema","webstock.plugin.query.v1"},{"operationId",operationId},{"parameters",args}}).toJson():read(inputCsv,16*1024*1024);
@@ -330,6 +332,8 @@ void Job::start(const QString& pluginId,const QString& operationId,const QString
     if(events){frozen.remove("closedBarsOnly");frozen["kind"]="market-events-csv";frozen["adjustment"]="raw";frozen["timezone"]="explicit-offset-per-row";frozen["volumeUnit"]="share";}
     if(portfolio){frozen.remove("closedBarsOnly");frozen.remove("knownEventsOnly");frozen.remove("adjustment");frozen.remove("volumeUnit");frozen["kind"]="portfolio-equity-csv";frozen["timezone"]="explicit-offset-per-row";frozen["currency"]="declared-in-input";}
     else frozen.remove("knownValuationsOnly");
+    if(observations){frozen.remove("closedBarsOnly");frozen.remove("knownEventsOnly");frozen.remove("adjustment");frozen.remove("volumeUnit");frozen["kind"]="research-observations-csv";frozen["timezone"]="explicit-offset-per-row";frozen["unit"]="declared-per-series";}
+    else frozen.remove("knownObservationsOnly");
     frozen["path"]=inputFile;frozen["sha256"]=hash(input);frozen["originalName"]=query?"query.json":QFileInfo(inputCsv).fileName();
     QJsonObject request{{"schema","webstock.plugin.request.v1"},{"runId",id},{"pluginId",pluginId},{"operationId",operationId},
                         {"manifestSha256",hash(manifest)},{"input",frozen},{"parameters",args},{"automaticTrading",false}};

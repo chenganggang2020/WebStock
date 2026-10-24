@@ -18,14 +18,16 @@ def number(key, default, minimum=2, maximum=10000, title=None, kind=None):
 
 
 def save_package(output, manifest, sources):
-    content = {name: (HERE/source).read_bytes() for name, source in sources.items()}
+    # Packages contain UTF-8 Python/text sources. Canonical LF bytes make the
+    # immutable package independent of Git core.autocrlf on the build machine.
+    content = {name: (HERE/source).read_text(encoding="utf-8").replace('\r\n','\n').replace('\r','\n').encode('utf-8') for name, source in sources.items()}
     manifest.update(schema="webstock.plugin.manifest.v1", protocolVersion=1,
-                    entrypoint="worker.py", runtime="python", version="0.20.1",
+                    entrypoint="worker.py", runtime="python", version="0.21.0",
                     files={name: hashlib.sha256(raw).hexdigest() for name,raw in content.items()})
     package = {"schema": "webstock.plugin.package.v1", "manifest": manifest,
                "files": {name: base64.b64encode(raw).decode("ascii") for name,raw in content.items()}}
     destination = output / (manifest["id"]+"-"+manifest["version"]+".wspkg")
-    destination.write_text(json.dumps(package, ensure_ascii=False, indent=2),encoding="utf-8")
+    destination.write_text(json.dumps(package, ensure_ascii=False, indent=2),encoding="utf-8",newline="\n")
     return {"pluginId":manifest["id"], "file":destination.name, "operations":len(manifest["operations"]),
             "sha256":hashlib.sha256(destination.read_bytes()).hexdigest()}
 
@@ -366,6 +368,21 @@ def main():
             "description":"公开v3条件逐项移植，显示分组、26项投票和底层数值；本地预热/零分母口径，未验证Pine逐点一致性。见TECHNICAL_RATINGS.txt。"}]},
         {"worker.py":"worker.py","technical_ratings.py":"technical_ratings.py","TECHNICAL_RATINGS.txt":"TECHNICAL_RATINGS.txt",
          "MPL-2.0.txt":"MPL-2.0.txt","THIRD_PARTY_NOTICES.txt":"THIRD_PARTY_NOTICES.txt"}))
+    observations=[]
+    for key,title in {'money-flow':'资金流 / DDE外部值','margin':'融资融券披露值','holdings':'机构 / 内幕人 / 大宗披露值',
+                      'news':'新闻情绪外部分数','macro':'宏观实时版本','demark':'DeMARK外部输出','vendor-score':'供应商外部评分'}.items():
+        fields=[{"id":"seriesId","title":"所选数据序列ID","type":"text","format":"text","minLength":1,"maxLength":64,"default":"primary"},
+                number("maxAgeDays",365.,0.,36500.,title="观察期最大年龄（天）")]
+        if key not in ('news','demark','vendor-score'):fields.extend([
+            {"id":"transformation","title":"明确计算口径","type":"choice","default":"level","choices":["level","change","prior-z"]},
+            number("priorWindow",20,2,1000,title="Z分数此前观察期数")])
+        observations.append({"id":key+'-vintages',"title":title+' · 修订回放',"formulaVersion":"webstock-"+key+'-vintages-v1',
+            "parameters":fields,"inputKind":"research-observations-csv","outputKind":"indicator",
+            "description":"真实运行的外部数据接口，保留发布时间、修订和撤回；不复现供应商未知公式。见OBSERVATION_INPUT.txt。"})
+    records.append(save_package(args.output,{"id":"org.webstock.external-observations","name":"WebStock 外部研究数据与修订","license":"Project source terms; input data retains provider terms",
+        "source":"https://github.com/chenganggang2020/WebStock","distributions":["numpy","pandas"],"operations":observations},
+        {"worker.py":"worker.py","external_observations.py":"external_observations.py","observation_contract.py":"observation_contract.py","panel_contract.py":"panel_contract.py",
+         "OBSERVATION_INPUT.txt":"OBSERVATION_INPUT.txt","THIRD_PARTY_NOTICES.txt":"THIRD_PARTY_NOTICES.txt"}))
     (args.output/"index.json").write_text(json.dumps(records,ensure_ascii=False,indent=2),encoding="utf-8")
     print(json.dumps(records,ensure_ascii=False))
 

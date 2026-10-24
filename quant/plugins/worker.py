@@ -143,6 +143,9 @@ def validate_parameters(operation, supplied):
 
 
 def compute(manifest, operation, frame, parameters):
+    if manifest["id"] == "org.webstock.external-observations":
+        from external_observations import calculate
+        return calculate(operation["id"],frame,parameters)
     if manifest["id"] == "org.webstock.technical-ratings":
         from technical_ratings import calculate
         return calculate(frame)
@@ -263,6 +266,9 @@ def main():
     if query:
         if read_json(source)!={"schema":"webstock.plugin.query.v1","operationId":operation["id"],"parameters":parameters}:
             raise ValueError("Frozen query differs from parameters")
+    elif operation["inputKind"]=="research-observations-csv":
+        if request["input"].get("knownObservationsOnly") is not True or request["input"].get("kind")!="research-observations-csv":
+            raise ValueError("Known observation acknowledgement and input kind required")
     elif operation["inputKind"]=="portfolio-equity-csv":
         if request["input"].get("knownValuationsOnly") is not True or request["input"].get("kind")!="portfolio-equity-csv":
             raise ValueError("Known valuation acknowledgement and input kind required")
@@ -274,6 +280,9 @@ def main():
     print(json.dumps({"event": "progress", "message": "核验完成，正在计算", "percent": 15}), flush=True)
     if query:
         frame=None
+    elif operation["inputKind"]=="research-observations-csv":
+        from observation_contract import load_observations
+        frame=load_observations(source)
     elif operation["inputKind"]=="market-panel-csv":
         from panel_contract import load_panel
         frame=load_panel(source)

@@ -13,7 +13,8 @@ param(
     [string]$EconometricCsv,
     [string]$PortfolioCsv,
     [string]$IntradayCsv,
-    [string]$FactorCsv
+    [string]$FactorCsv,
+    [string]$ObservationExamples
 )
 $ErrorActionPreference = 'Stop'
 if (Test-Path -LiteralPath $Destination) { throw 'Destination exists; use a new preview directory.' }
@@ -43,6 +44,11 @@ if ($EconometricCsv) { Copy-Item -LiteralPath $EconometricCsv -Destination (Join
 if ($PortfolioCsv) { Copy-Item -LiteralPath $PortfolioCsv -Destination (Join-Path $taskRelease 'synthetic-portfolio-equity.csv') }
 if ($IntradayCsv) { Copy-Item -LiteralPath $IntradayCsv -Destination (Join-Path $taskRelease 'synthetic-intraday-sessions.csv') }
 if ($FactorCsv) { Copy-Item -LiteralPath $FactorCsv -Destination (Join-Path $taskRelease 'synthetic-factor-panel.csv') }
+if ($ObservationExamples) {
+    $taskObservations = Join-Path $taskRelease 'synthetic-observation-tests'
+    New-Item -ItemType Directory -Path $taskObservations | Out-Null
+    Get-ChildItem -LiteralPath $ObservationExamples -Filter '*.csv' -File | ForEach-Object { Copy-Item -LiteralPath $_.FullName -Destination $taskObservations }
+}
 if ($FundamentalExamples) {
     $taskExamples = Join-Path $taskRelease 'synthetic-fundamental-tests'
     New-Item -ItemType Directory -Path $taskExamples | Out-Null
@@ -69,6 +75,7 @@ WebStock 量化插件本机预览版
 补充指标中的盘中同时刻相对量选择synthetic-intraday-sessions.csv（合成会话分钟线），字段见SESSION_EXECUTION.txt。
 因子合成插件中PCA选择historical-fixture.csv；截面评分及排名组合选择synthetic-factor-panel.csv，公式见FACTOR_MODELS.txt。
 Technical Ratings v3条件插件可选historical-fixture.csv；它使用明确的本地数值口径，尚未验证与TradingView网站逐点一致。
+外部研究数据插件选择synthetic-observation-tests内对应功能文件；均为合成数据，演示发布/修订/撤回，非供应商公式复现。
 
 本预览使用本目录内独立data，不修改原安装版的账户与数据库。
 移动整个目录后，需要把stock-data-root.json的directory更新到移动后的data绝对路径。
@@ -94,6 +101,7 @@ Copy-Item -LiteralPath (Join-Path $taskRepo 'quant\plugins\PORTFOLIO_RISK.txt') 
 Copy-Item -LiteralPath (Join-Path $taskRepo 'quant\plugins\SESSION_EXECUTION.txt') -Destination $taskRelease
 Copy-Item -LiteralPath (Join-Path $taskRepo 'quant\plugins\FACTOR_MODELS.txt') -Destination $taskRelease
 Copy-Item -LiteralPath (Join-Path $taskRepo 'quant\plugins\TECHNICAL_RATINGS.txt') -Destination $taskRelease
+Copy-Item -LiteralPath (Join-Path $taskRepo 'quant\plugins\OBSERVATION_INPUT.txt') -Destination $taskRelease
 Copy-Item -LiteralPath (Join-Path $taskRepo 'quant\plugins\MPL-2.0.txt') -Destination $taskRelease
 $taskSetup = Join-Path $taskRelease 'runtime-setup'
 New-Item -ItemType Directory -Path $taskSetup | Out-Null

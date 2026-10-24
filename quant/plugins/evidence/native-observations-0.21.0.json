@@ -1,0 +1,229 @@
+{
+  "schema": "webstock.plugin.native-acceptance.v1",
+  "runs": [
+    {
+      "pluginId": "org.webstock.external-observations",
+      "operationId": "money-flow-vintages",
+      "version": "0.21.0",
+      "status": "verified",
+      "runId": "plugin-9f303b07-54c7-4246-98d9-d2da7920f7ed",
+      "resultSha256": "87fc279bbdfe5867168ec09630fec7df58e5c2eab30bb45202f0865ef4f7abf2",
+      "bars": 85,
+      "inputSha256": "6daed87a686059c87c9fa82e2c583745982290b8de131042e186a14ed54e9371",
+      "inputName": "money-flow-vintages.csv",
+      "tables": [
+        {
+          "id": "indicators",
+          "rows": 85
+        },
+        {
+          "id": "release-audit",
+          "rows": 85
+        }
+      ],
+      "inputSemantics": {
+        "family": "money-flow",
+        "selectedSeries": "primary",
+        "observationOrder": "time-then-strict-global-sequence",
+        "pointInTimeProvenanceCertified": false,
+        "proprietaryFormulaReproduced": false,
+        "revisionPolicy": "apply on arrival; never rewrite earlier output; latest withdrawal never falls back",
+        "transformation": "level",
+        "priorWindow": 20,
+        "maxAgeDays": 365.0
+      }
+    },
+    {
+      "pluginId": "org.webstock.external-observations",
+      "operationId": "margin-vintages",
+      "version": "0.21.0",
+      "status": "verified",
+      "runId": "plugin-f63bd35a-b777-4d09-990d-e5c8bb57f139",
+      "resultSha256": "61b3c9288564b541ebc4030b7fb2795f1f5fed2f95bdf629230818123ec02f87",
+      "bars": 85,
+      "inputSha256": "a2115701ef951a39b98c52b21285b834b3ba1589f58a555994efdf7e4d74cefb",
+      "inputName": "margin-vintages.csv",
+      "tables": [
+        {
+          "id": "indicators",
+          "rows": 85
+        },
+        {
+          "id": "release-audit",
+          "rows": 85
+        }
+      ],
+      "inputSemantics": {
+        "family": "margin",
+        "selectedSeries": "primary",
+        "observationOrder": "time-then-strict-global-sequence",
+        "pointInTimeProvenanceCertified": false,
+        "proprietaryFormulaReproduced": false,
+        "revisionPolicy": "apply on arrival; never rewrite earlier output; latest withdrawal never falls back",
+        "transformation": "level",
+        "priorWindow": 20,
+        "maxAgeDays": 365.0
+      }
+    },
+    {
+      "pluginId": "org.webstock.external-observations",
+      "operationId": "holdings-vintages",
+      "version": "0.21.0",
+      "status": "verified",
+      "runId": "plugin-e521fa18-104e-48e0-ae87-8b1bcb7aa32d",
+      "resultSha256": "7cb984a3a93e4da4fdca7b17cac22e960ae5090f00a0fe5416516b9a706a3de1",
+      "bars": 85,
+      "inputSha256": "3a4cd4c6154e20cec56a9a2c6f3cc14136f8ea5cbdafcbe3a2135b05c28569b3",
+      "inputName": "holdings-vintages.csv",
+      "tables": [
+        {
+          "id": "indicators",
+          "rows": 85
+        },
+        {
+          "id": "release-audit",
+          "rows": 85
+        }
+      ],
+      "inputSemantics": {
+        "family": "holdings",
+        "selectedSeries": "primary",
+        "observationOrder": "time-then-strict-global-sequence",
+        "pointInTimeProvenanceCertified": false,
+        "proprietaryFormulaReproduced": false,
+        "revisionPolicy": "apply on arrival; never rewrite earlier output; latest withdrawal never falls back",
+        "transformation": "level",
+        "priorWindow": 20,
+        "maxAgeDays": 365.0
+      }
+    },
+    {
+      "pluginId": "org.webstock.external-observations",
+      "operationId": "news-vintages",
+      "version": "0.21.0",
+      "status": "verified",
+      "runId": "plugin-e4174167-e2c4-440b-9efa-d9d6977f0bc1",
+      "resultSha256": "e2b192827ede974637eaa0430f896a02b620da5678ac980cdfe2bba99240a677",
+      "bars": 85,
+      "inputSha256": "786334eb983104d74df5474404d7c8cd373dbd1365d5fe3bfff01d71fefd536f",
+      "inputName": "news-vintages.csv",
+      "tables": [
+        {
+          "id": "indicators",
+          "rows": 85
+        },
+        {
+          "id": "release-audit",
+          "rows": 85
+        }
+      ],
+      "inputSemantics": {
+        "family": "news",
+        "selectedSeries": "primary",
+        "observationOrder": "time-then-strict-global-sequence",
+        "pointInTimeProvenanceCertified": false,
+        "proprietaryFormulaReproduced": false,
+        "revisionPolicy": "apply on arrival; never rewrite earlier output; latest withdrawal never falls back",
+        "transformation": "level",
+        "priorWindow": 20,
+        "maxAgeDays": 365.0
+      }
+    },
+    {
+      "pluginId": "org.webstock.external-observations",
+      "operationId": "macro-vintages",
+      "version": "0.21.0",
+      "status": "verified",
+      "runId": "plugin-8105cb91-0182-460b-8ad1-de65a8cdc978",
+      "resultSha256": "b53523a5da32ed3ec77f73a793f72616ffdb2a484f7b8adfdc146058eb156e10",
+      "bars": 85,
+      "inputSha256": "914079e5cdadf50612f4727a2ca78e8942b8d92636e8b350598618f895377235",
+      "inputName": "macro-vintages.csv",
+      "tables": [
+        {
+          "id": "indicators",
+          "rows": 85
+        },
+        {
+          "id": "release-audit",
+          "rows": 85
+        }
+      ],
+      "inputSemantics": {
+        "family": "macro",
+        "selectedSeries": "primary",
+        "observationOrder": "time-then-strict-global-sequence",
+        "pointInTimeProvenanceCertified": false,
+        "proprietaryFormulaReproduced": false,
+        "revisionPolicy": "apply on arrival; never rewrite earlier output; latest withdrawal never falls back",
+        "transformation": "level",
+        "priorWindow": 20,
+        "maxAgeDays": 365.0
+      }
+    },
+    {
+      "pluginId": "org.webstock.external-observations",
+      "operationId": "demark-vintages",
+      "version": "0.21.0",
+      "status": "verified",
+      "runId": "plugin-d77753d8-ade7-4b11-94f5-b6cc2c0278cb",
+      "resultSha256": "bea982d81f41ab5320a2bb94faa0fe01a21aeef0e6f7d909288721b6e51c873a",
+      "bars": 85,
+      "inputSha256": "badc1876bc8b8052fe13facf71811c789930841de34a076c799177342b8d3992",
+      "inputName": "demark-vintages.csv",
+      "tables": [
+        {
+          "id": "indicators",
+          "rows": 85
+        },
+        {
+          "id": "release-audit",
+          "rows": 85
+        }
+      ],
+      "inputSemantics": {
+        "family": "demark",
+        "selectedSeries": "primary",
+        "observationOrder": "time-then-strict-global-sequence",
+        "pointInTimeProvenanceCertified": false,
+        "proprietaryFormulaReproduced": false,
+        "revisionPolicy": "apply on arrival; never rewrite earlier output; latest withdrawal never falls back",
+        "transformation": "level",
+        "priorWindow": 20,
+        "maxAgeDays": 365.0
+      }
+    },
+    {
+      "pluginId": "org.webstock.external-observations",
+      "operationId": "vendor-score-vintages",
+      "version": "0.21.0",
+      "status": "verified",
+      "runId": "plugin-bf1c73a8-769e-4806-9cf1-6dd74786af81",
+      "resultSha256": "fd0595aa99fe8067c474796fa6ca1bd7b2deb58175432224b1b87804257b837b",
+      "bars": 85,
+      "inputSha256": "73721fa4b5512472084cfc2539c17777df96c5f6ad07835de96c9cc2b96700a7",
+      "inputName": "vendor-score-vintages.csv",
+      "tables": [
+        {
+          "id": "indicators",
+          "rows": 85
+        },
+        {
+          "id": "release-audit",
+          "rows": 85
+        }
+      ],
+      "inputSemantics": {
+        "family": "vendor-score",
+        "selectedSeries": "primary",
+        "observationOrder": "time-then-strict-global-sequence",
+        "pointInTimeProvenanceCertified": false,
+        "proprietaryFormulaReproduced": false,
+        "revisionPolicy": "apply on arrival; never rewrite earlier output; latest withdrawal never falls back",
+        "transformation": "level",
+        "priorWindow": 20,
+        "maxAgeDays": 365.0
+      }
+    }
+  ]
+}

@@ -1124,9 +1124,11 @@
       "overlap": "与量价代理和真实订单流须分清。",
       "evidence": "产品存在已核；完整口径待核",
       "refs": "https://emdesk.eastmoney.com/pc_activity/Pages/VIPTrade/pages/link/zjl.html",
-      "status": "pending",
-      "implementations": [],
-      "implementationNote": "未完成；不以目录条目或近似名称充当实现。"
+      "status": "source_interface_implemented_and_tested",
+      "implementations": [
+        "external-observations:money-flow-vintages"
+      ],
+      "implementationNote": "接入外部DDE/资金流等已发布值，保留供应商定义、单位及修订；没有从日线伪造主力或大单公式。 已通过原生宿主实际运行和修订/前缀验证；需要用户提供真实来源数据。"
     },
     {
       "id": 62,
@@ -1554,9 +1556,11 @@
       "overlap": "与价格、换手相关，需要增量检验。",
       "evidence": "数据方向；定义和供应商待落实",
       "refs": "https://quant.10jqka.com.cn/view/dataplatform",
-      "status": "pending",
-      "implementations": [],
-      "implementationNote": "未完成；不以目录条目或近似名称充当实现。"
+      "status": "source_interface_implemented_and_tested",
+      "implementations": [
+        "external-observations:margin-vintages"
+      ],
+      "implementationNote": "可运行余额等外部序列及相邻已知观察期变化；余额差值不称为融资买入，保留原始口径。 已通过原生宿主实际运行和修订/前缀验证；需要用户提供真实来源数据。"
     },
     {
       "id": 86,
@@ -1570,9 +1574,11 @@
       "overlap": "与资金流代理不是同一数据。",
       "evidence": "数据方向；未建立交易规则",
       "refs": "https://quant.10jqka.com.cn/view/dataplatform\nhttps://quant.10jqka.com.cn/view/help/16",
-      "status": "pending",
-      "implementations": [],
-      "implementationNote": "未完成；不以目录条目或近似名称充当实现。"
+      "status": "source_interface_implemented_and_tested",
+      "implementations": [
+        "external-observations:holdings-vintages"
+      ],
+      "implementationNote": "可运行逐实体/对象披露值及修订回放；持仓变化不等于期间交易，未自动抓取所有披露。 已通过原生宿主实际运行和修订/前缀验证；需要用户提供真实来源数据。"
     },
     {
       "id": 87,
@@ -1586,9 +1592,11 @@
       "overlap": "热门度不等于利好，更不等于可获利。",
       "evidence": "研究方向；未核验具体情绪模型",
       "refs": "https://www.nber.org/papers/w25398",
-      "status": "pending",
-      "implementations": [],
-      "implementationNote": "未完成；不以目录条目或近似名称充当实现。"
+      "status": "source_interface_implemented_and_tested",
+      "implementations": [
+        "external-observations:news-vintages"
+      ],
+      "implementationNote": "接入有来源、定义/模型版本的情绪/关注度/事件数值；不声称已训练文本分类器。 已通过原生宿主实际运行和修订/前缀验证；需要用户提供真实来源数据。"
     },
     {
       "id": 88,
@@ -1618,9 +1626,11 @@
       "overlap": "非单一技术指标，需明确经济假设。",
       "evidence": "研究设计；本次未选择宏观模型",
       "refs": "https://quant.10jqka.com.cn/view/help/16",
-      "status": "pending",
-      "implementations": [],
-      "implementationNote": "未完成；不以目录条目或近似名称充当实现。"
+      "status": "source_interface_implemented_and_tested",
+      "implementations": [
+        "external-observations:macro-vintages"
+      ],
+      "implementationNote": "接入利率/汇率/信用/宏观已知版本，支持明确的差值/历史Z；没有用最终修订回填历史。 已通过原生宿主实际运行和修订/前缀验证；需要用户提供真实来源数据。"
     },
     {
       "id": 90,
@@ -1981,9 +1991,11 @@
       "overlap": "不能用“数到9或13”代替完整规则。",
       "evidence": "厂商说明；非独立效果证据",
       "refs": "https://demark.com/sequential-indicator/",
-      "status": "pending",
-      "implementations": [],
-      "implementationNote": "未完成；不以目录条目或近似名称充当实现。"
+      "status": "source_interface_implemented_and_tested",
+      "implementations": [
+        "external-observations:demark-vintages"
+      ],
+      "implementationNote": "可运行已获使用权的外部DeMARK输出回放；未复现专有Sequential公式，未声称官方兼容。 已通过原生宿主实际运行和修订/前缀验证；需要用户提供真实来源数据。"
     },
     {
       "id": 109,
@@ -2013,9 +2025,11 @@
       "overlap": "可能有新信息，也可能是既有指标包装；需逐个证明。",
       "evidence": "未指定产品；不可核验",
       "refs": "https://www.davidhbailey.com/dhbpapers/backtest-prob.pdf",
-      "status": "pending",
-      "implementations": [],
-      "implementationNote": "未完成；不以目录条目或近似名称充当实现。"
+      "status": "source_interface_implemented_and_tested",
+      "implementations": [
+        "external-observations:vendor-score-vintages"
+      ],
+      "implementationNote": "可运行有明确来源与版本的黑箱评分回放；未知公式和概率校准没有被复现或认证。 已通过原生宿主实际运行和修订/前缀验证；需要用户提供真实来源数据。"
     }
   ]
 }

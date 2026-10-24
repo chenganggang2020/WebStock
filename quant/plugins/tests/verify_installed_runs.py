@@ -33,7 +33,8 @@ def main():
         "wtpy":("wtpy310","daily-dsb"),"wondertrader":("wtpy310","sma-native"),"akshare":("data-tools","daily-eastmoney"),"lean":("data-tools","sma-close"),
         "panel-research":("data-tools","market-breadth"),"event-research":("data-tools","quote-liquidity"),"learning-models":("qlib","ridge"),
         "statistical-models":("statistical-models","garch"),"deep-models":("deep-models","lstm"),"portfolio-risk":("data-tools","equity-drawdown"),
-        "factor-models":("qlib","trailing-pca"),"technical-ratings":("data-tools","technical-ratings-v3")}
+        "factor-models":("qlib","trailing-pca"),"technical-ratings":("data-tools","technical-ratings-v3"),
+        "external-observations":("data-tools","money-flow-vintages")}
     environment=dict(os.environ,QT_QPA_PLATFORM="offscreen",PYTHONUTF8="1")
     runtime_map=json.loads(args.runtime_map.read_text(encoding="utf-8")) if args.runtime_map else {}
     operation_inputs=json.loads(args.operation_inputs.read_text(encoding="utf-8")) if args.operation_inputs else {}
@@ -73,12 +74,13 @@ def main():
             assert result["pluginVersion"]==manifest["version"]
             op=next(x for x in manifest["operations"] if x["id"]==operation)
             assert result["formulaVersion"]==op["formulaVersion"]
-            assert result["bars"]>100
+            assert result["bars"] >= (2 if op['inputKind']=='research-observations-csv' else 101)
             row={"pluginId":manifest["id"],"operationId":operation,"version":manifest["version"],"status":"verified",
                  "runId":record["runId"],"resultSha256":record["resultSha256"],"bars":result["bars"],
                  "inputSha256":result["inputSha256"],"inputName":data.name,
                  "tables":[{"id":t["id"],"rows":len(t["rows"])} for t in result["tables"]]}
             if "modelSemantics" in result:row["modelSemantics"]=result["modelSemantics"]
+            if "inputSemantics" in result:row["inputSemantics"]=result["inputSemantics"]
             rows.append(row);print(json.dumps(row,ensure_ascii=False),flush=True)
     args.evidence.parent.mkdir(parents=True,exist_ok=True)
     args.evidence.write_text(json.dumps({"schema":"webstock.plugin.native-acceptance.v1","runs":rows},ensure_ascii=False,indent=2),encoding="utf-8")
