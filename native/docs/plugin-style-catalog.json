@@ -1,0 +1,1491 @@
+{
+  "schema": "webstock.plugin-style-audit.v1",
+  "date": "2026-10-24",
+  "scope": "19 个已下载仓库 + 33 个去重插件 ID；基于本机冻结源码、原版输出与官方文档，不宣称穷尽上游所有界面。",
+  "notes": [
+    "原版界面、原版绘图、适配示例、自建包分别标记。",
+    "33 个包是旧研究包库存，不代表都已接入当前 3243 主 K 线宿主；当前验收的是 Backtesting.py。",
+    "同名包多版本只计一次；Backtesting.py 旧库存最高 0.28.0，当前主图插件为 0.30.0。",
+    "图片只用于外观参考，样本策略、时间与收益不同，不作引擎收益比较。"
+  ],
+  "sources": [
+    {
+      "project": "backtesting-py",
+      "repository": "kernc/backtesting.py",
+      "commit": "ca2e2611621e472542ba90f7243a1fa06a7d7108",
+      "kind": "原版交互图",
+      "style": "白底、细网格、上下联动的回测报告",
+      "candles": "蜡烛＋成交量；均线叠加；交易连线",
+      "colors": [
+        [
+          "上涨 / 盈利",
+          "#00ff00"
+        ],
+        [
+          "下跌 / 亏损",
+          "#ff6347"
+        ],
+        [
+          "均线蓝",
+          "#1f77b4"
+        ],
+        [
+          "均线橙",
+          "#ff7f0e"
+        ]
+      ],
+      "interaction": "横向缩放、平移、悬停、图例开关、导出图片",
+      "borrow": "交易过程与资金表现分区；保留悬停和同步时间轴",
+      "distinction": "原版默认绿涨红跌，与 WebStock 红涨绿跌不同；原版报告不是完整交易桌面。",
+      "evidence": [
+        {
+          "path": "backtesting/_plotting.py",
+          "url": "https://github.com/kernc/backtesting.py/blob/ca2e2611621e472542ba90f7243a1fa06a7d7108/backtesting/_plotting.py"
+        }
+      ],
+      "image": "backtesting.png",
+      "demo": "../backtesting-py/chart.html"
+    },
+    {
+      "project": "czsc",
+      "repository": "waditu/czsc",
+      "commit": "5d350a943d6b1935561765fed5467c234973d121",
+      "kind": "原版交互图",
+      "style": "量化年鉴：暖纸色 / 深空色；留白、弱网格、细线",
+      "candles": "红涨绿跌；笔用实线，分型用虚线；量与 MACD 分栏",
+      "colors": [
+        [
+          "暖纸背景",
+          "#FBF9F4"
+        ],
+        [
+          "浅色上涨",
+          "#C03A2B"
+        ],
+        [
+          "浅色下跌",
+          "#2E7D32"
+        ],
+        [
+          "笔",
+          "#1F3C6E"
+        ],
+        [
+          "深色背景",
+          "#0E1116"
+        ],
+        [
+          "深色上涨",
+          "#E94B3C"
+        ],
+        [
+          "深色下跌",
+          "#5BB85B"
+        ]
+      ],
+      "interaction": "深浅切换、缩放平移、十字线、点击图例隐藏图层",
+      "borrow": "主 K 线的简洁密度、颜色和线型层次；适合做两套皮肤",
+      "distinction": "笔和分型是结构标记，不是本插件的买卖成交线；原样本页的 LIVE 装饰不代表连接了实时行情。",
+      "evidence": [
+        {
+          "path": "czsc/utils/plotting/lightweight/_theme.py",
+          "url": "https://github.com/waditu/czsc/blob/5d350a943d6b1935561765fed5467c234973d121/czsc/utils/plotting/lightweight/_theme.py"
+        },
+        {
+          "path": "czsc/utils/plotting/lightweight/_html_renderer.py",
+          "url": "https://github.com/waditu/czsc/blob/5d350a943d6b1935561765fed5467c234973d121/czsc/utils/plotting/lightweight/_html_renderer.py"
+        }
+      ],
+      "image": "czsc-light.png",
+      "demo": "../czsc/chart.html"
+    },
+    {
+      "project": "vnpy",
+      "repository": "vnpy/vnpy",
+      "commit": "c6e231caf32b7fc97e6459817fff66458cf7e7c4",
+      "kind": "原版桌面",
+      "style": "深色 Qt 交易终端；停靠分区、表格、工具栏",
+      "candles": "PyQtGraph；上涨红色空心 / 黑填充，下跌青色实心",
+      "colors": [
+        [
+          "上涨",
+          "#ff4b4b"
+        ],
+        [
+          "下跌",
+          "#00ffff"
+        ],
+        [
+          "十字线",
+          "#fff5a2"
+        ],
+        [
+          "K 线背景",
+          "#000000"
+        ]
+      ],
+      "interaction": "分区窗口、十字光标、滚轮缩放、拖动历史",
+      "borrow": "插件窗可移动、主看盘不挤压、行情表与图联动",
+      "distinction": "本机桌面截图为原程序未连接账户的界面；K 线样式来自 chart 源码核对。不是所有模块都已经接入 WebStock。",
+      "evidence": [
+        {
+          "path": "vnpy/chart/base.py",
+          "url": "https://github.com/vnpy/vnpy/blob/c6e231caf32b7fc97e6459817fff66458cf7e7c4/vnpy/chart/base.py"
+        },
+        {
+          "path": "vnpy/chart/item.py",
+          "url": "https://github.com/vnpy/vnpy/blob/c6e231caf32b7fc97e6459817fff66458cf7e7c4/vnpy/chart/item.py"
+        },
+        {
+          "path": "vnpy/trader/ui/mainwindow.py",
+          "url": "https://github.com/vnpy/vnpy/blob/c6e231caf32b7fc97e6459817fff66458cf7e7c4/vnpy/trader/ui/mainwindow.py"
+        }
+      ],
+      "image": "vnpy.png",
+      "demo": "../vnpy/desktop.png"
+    },
+    {
+      "project": "vectorbt",
+      "repository": "polakowo/vectorbt",
+      "commit": "8e30b8ce102f302bec0c0226e05b59714453bebd",
+      "kind": "原版交互图",
+      "style": "Plotly 研究图；浅蓝灰网格；light / dark / seaborn 模板",
+      "candles": "当前 Portfolio 报告是收盘折线＋订单；另有 OHLCV 蜡烛图接口",
+      "colors": [
+        [
+          "浅色绘图区",
+          "#E5ECF6"
+        ],
+        [
+          "深色背景",
+          "#1f2536"
+        ],
+        [
+          "上涨",
+          "#1b9e76"
+        ],
+        [
+          "下跌",
+          "#d95f02"
+        ],
+        [
+          "曲线蓝",
+          "#1f77b4"
+        ]
+      ],
+      "interaction": "图例开关、框选、平移、悬停、导出；参数热力图属于其他研究图",
+      "borrow": "结果浮窗的交互图、参数比较、图例开关",
+      "distinction": "不能把当前示例的价格折线说成原版 K 线；默认价格涨跌为绿/橙，订单颜色又有独立含义。",
+      "evidence": [
+        {
+          "path": "vectorbt/_settings.py",
+          "url": "https://github.com/polakowo/vectorbt/blob/8e30b8ce102f302bec0c0226e05b59714453bebd/vectorbt/_settings.py"
+        },
+        {
+          "path": "vectorbt/templates/light.json",
+          "url": "https://github.com/polakowo/vectorbt/blob/8e30b8ce102f302bec0c0226e05b59714453bebd/vectorbt/templates/light.json"
+        },
+        {
+          "path": "vectorbt/templates/dark.json",
+          "url": "https://github.com/polakowo/vectorbt/blob/8e30b8ce102f302bec0c0226e05b59714453bebd/vectorbt/templates/dark.json"
+        },
+        {
+          "path": "vectorbt/ohlcv_accessors.py",
+          "url": "https://github.com/polakowo/vectorbt/blob/8e30b8ce102f302bec0c0226e05b59714453bebd/vectorbt/ohlcv_accessors.py"
+        }
+      ],
+      "image": "vectorbt.png",
+      "demo": "../vectorbt/chart.html"
+    },
+    {
+      "project": "backtrader",
+      "repository": "mementum/backtrader",
+      "commit": "b853d7c90b6721476eb5a5ea3135224e33db1f14",
+      "kind": "原版研究图",
+      "style": "Matplotlib 白底强网格；多子图、密集图例与末值标签",
+      "candles": "默认收盘折线；可选 OHLC / 蜡烛；本机示例使用蜡烛",
+      "colors": [
+        [
+          "默认阳线",
+          "#bfbfbf"
+        ],
+        [
+          "默认阴线",
+          "#ff0000"
+        ],
+        [
+          "上涨量柱",
+          "#aaaaaa"
+        ],
+        [
+          "下跌量柱",
+          "#cc6073"
+        ]
+      ],
+      "interaction": "Matplotlib 工具栏缩放、平移；研究图多层叠加",
+      "borrow": "现金、净值、单笔盈亏分栏；不照搬密集文字",
+      "distinction": "截图为原生 c.plot 输出；它是研究图风格，不是独立完整桌面。",
+      "evidence": [
+        {
+          "path": "backtrader/plot/scheme.py",
+          "url": "https://github.com/mementum/backtrader/blob/b853d7c90b6721476eb5a5ea3135224e33db1f14/backtrader/plot/scheme.py"
+        }
+      ],
+      "image": "backtrader.png",
+      "demo": "../backtrader/chart.png"
+    },
+    {
+      "project": "hikyuu",
+      "repository": "fasiondog/hikyuu",
+      "commit": "e6e35b2588d9eb1ea66fdec7a512ca7dd50bb527",
+      "kind": "原版研究图",
+      "style": "白底中文研究图；B/S 与箭头醒目；支持多种绘图后端",
+      "candles": "当前 Matplotlib 图为红绿 K 线；红 B / 蓝 S / 黑箭头",
+      "colors": [
+        [
+          "买入 B",
+          "#ff0000"
+        ],
+        [
+          "卖出 S",
+          "#0000ff"
+        ],
+        [
+          "背景",
+          "#ffffff"
+        ]
+      ],
+      "interaction": "Matplotlib 研究图；源码另有 Bokeh、ECharts 绘图后端",
+      "borrow": "中文买卖标注；控制密度后适合主图信号层",
+      "distinction": "本次截图只验证 Matplotlib 路径；其他绘图后端不能视为已部署验收。",
+      "evidence": [
+        {
+          "path": "hikyuu/draw/drawplot/matplotlib_draw.py",
+          "url": "https://github.com/fasiondog/hikyuu/blob/e6e35b2588d9eb1ea66fdec7a512ca7dd50bb527/hikyuu/draw/drawplot/matplotlib_draw.py"
+        },
+        {
+          "path": "hikyuu/draw/drawplot/bokeh_draw.py",
+          "url": "https://github.com/fasiondog/hikyuu/blob/e6e35b2588d9eb1ea66fdec7a512ca7dd50bb527/hikyuu/draw/drawplot/bokeh_draw.py"
+        },
+        {
+          "path": "hikyuu/draw/drawplot/echarts_draw.py",
+          "url": "https://github.com/fasiondog/hikyuu/blob/e6e35b2588d9eb1ea66fdec7a512ca7dd50bb527/hikyuu/draw/drawplot/echarts_draw.py"
+        }
+      ],
+      "image": "hikyuu.png",
+      "demo": "../hikyuu/chart.png"
+    },
+    {
+      "project": "rqalpha",
+      "repository": "ricequant/rqalpha",
+      "commit": "6a996af2876013615ceea141a97bad94ac4ab7f3",
+      "kind": "原版研究图",
+      "style": "白底绩效报告；上方统计矩阵、下方策略/基准曲线",
+      "candles": "此报告主要是收益与指标折线；没有统一的看盘蜡烛界面",
+      "colors": [],
+      "interaction": "报告导出；标注回撤与回撤持续时间",
+      "borrow": "结果浮窗中的策略、基准、超额三条曲线",
+      "distinction": "本机图来自 sys_analyser 原生绘图；报告颜色应按策略/基准含义解读。",
+      "evidence": [
+        {
+          "path": "rqalpha/mod/rqalpha_mod_sys_analyser/plot/plot.py",
+          "url": "https://github.com/ricequant/rqalpha/blob/6a996af2876013615ceea141a97bad94ac4ab7f3/rqalpha/mod/rqalpha_mod_sys_analyser/plot/plot.py"
+        }
+      ],
+      "image": "rqalpha.png",
+      "demo": "../rqalpha/chart.png"
+    },
+    {
+      "project": "bt",
+      "repository": "pmorissette/bt",
+      "commit": "28608cb3b1b72761eabedced21e14a1ff974ed3b",
+      "kind": "原版研究图",
+      "style": "Pandas / Matplotlib 组合净值研究图",
+      "candles": "通常为多资产/多策略净值折线，没有固定 K 线皮肤",
+      "colors": [],
+      "interaction": "多策略对比、统计表；样式随绘图环境变化",
+      "borrow": "组合对比和配置结果视图",
+      "distinction": "现有图调用 result.plot；只有组合研究图，不是一套看盘 UI。",
+      "evidence": [
+        {
+          "path": "bt/backtest.py",
+          "url": "https://github.com/pmorissette/bt/blob/28608cb3b1b72761eabedced21e14a1ff974ed3b/bt/backtest.py"
+        }
+      ],
+      "image": "bt.png",
+      "demo": "../bt/chart.png"
+    },
+    {
+      "project": "qlib",
+      "repository": "microsoft/qlib",
+      "commit": "54355232463878d2eebb91fe0ee5fa7fa1f5976c",
+      "kind": "原版研究图",
+      "style": "Notebook / Plotly 多层分析报告",
+      "candles": "主要是收益、回撤、换手、IC 和模型表现图；非看盘 K 线主题",
+      "colors": [],
+      "interaction": "同时间轴结果对比、模型分析图",
+      "borrow": "研究浮窗中的因子质量、收益与回撤分区",
+      "distinction": "这里展示官方仓库 report.png；此前本机预测/特征重要性图是我们的演示绘图，不是官方整套界面。",
+      "evidence": [
+        {
+          "path": "qlib/contrib/report/analysis_position/report.py",
+          "url": "https://github.com/microsoft/qlib/blob/54355232463878d2eebb91fe0ee5fa7fa1f5976c/qlib/contrib/report/analysis_position/report.py"
+        },
+        {
+          "path": "docs/component/report.rst",
+          "url": "https://github.com/microsoft/qlib/blob/54355232463878d2eebb91fe0ee5fa7fa1f5976c/docs/component/report.rst"
+        }
+      ],
+      "image": "qlib.png",
+      "demo": "../qlib/chart.png"
+    },
+    {
+      "project": "wbt",
+      "repository": "zengbin93/wbt",
+      "commit": "6f10f7513050b0a541b687270ad4120b4c23fa9b",
+      "kind": "原版交互图",
+      "style": "浅色 / 深色 HTML 报告；统计卡、表格与 Plotly 曲线",
+      "candles": "主要是多空归因、回撤和收益图；没有统一看盘蜡烛主题",
+      "colors": [
+        [
+          "多头/正收益",
+          "#e74c3c"
+        ],
+        [
+          "空头/负收益",
+          "#2ecc71"
+        ],
+        [
+          "合计",
+          "#3498db"
+        ],
+        [
+          "浅色背景",
+          "#f6f7f9"
+        ],
+        [
+          "深色背景",
+          "#0b0e15"
+        ]
+      ],
+      "interaction": "报告分区、交互曲线、表格；可导出 HTML",
+      "borrow": "浮窗里的收益归因、回撤填充和摘要卡",
+      "distinction": "官方示意图使用刻意调成强表现的模拟权重；只看样式，不能据此判断收益。",
+      "evidence": [
+        {
+          "path": "python/wbt/plotting/_common.py",
+          "url": "https://github.com/zengbin93/wbt/blob/6f10f7513050b0a541b687270ad4120b4c23fa9b/python/wbt/plotting/_common.py"
+        },
+        {
+          "path": "python/wbt/report/html_builder.py",
+          "url": "https://github.com/zengbin93/wbt/blob/6f10f7513050b0a541b687270ad4120b4c23fa9b/python/wbt/report/html_builder.py"
+        },
+        {
+          "path": "README.md",
+          "url": "https://github.com/zengbin93/wbt/blob/6f10f7513050b0a541b687270ad4120b4c23fa9b/README.md"
+        }
+      ],
+      "image": "wbt.png",
+      "demo": "../czsc/weight-report.html"
+    },
+    {
+      "project": "vnpy-ctastrategy",
+      "repository": "vnpy/vnpy_ctastrategy",
+      "commit": "7a8768de9784dda35a7b261a7ade1dbfbff50919",
+      "kind": "桌面扩展",
+      "style": "延续 VeighNa Qt 桌面；策略列表、参数与回测窗口",
+      "candles": "K 线可复用 VeighNa 图表；回测统计不是单独 K 线主题",
+      "colors": [],
+      "interaction": "参数对话框、策略启停、回测结果",
+      "borrow": "每个插件独立窗口与状态，不挤占主图",
+      "distinction": "CTA 策略扩展不是第二套完整主程序；不要和当前 alpha 示例混为同一回测。",
+      "evidence": [
+        {
+          "path": "vnpy_ctastrategy/ui/widget.py",
+          "url": "https://github.com/vnpy/vnpy_ctastrategy/blob/7a8768de9784dda35a7b261a7ade1dbfbff50919/vnpy_ctastrategy/ui/widget.py"
+        }
+      ],
+      "image": "",
+      "demo": ""
+    },
+    {
+      "project": "lean",
+      "repository": "QuantConnect/Lean",
+      "commit": "f3d841e60dfd010ee5fc293ea893e56952484108",
+      "kind": "引擎/适配展示",
+      "style": "本地引擎输出结果；图表与前端属于另一层",
+      "candles": "本机 chart.html 为从 JSON 重画的 Plotly 折线",
+      "colors": [],
+      "interaction": "可导出结果供前端使用",
+      "borrow": "统一结果接口和独立报告入口",
+      "distinction": "不能把本地演示页当作 QuantConnect 网站或 LEAN 自带完整桌面；云端样式未在本机部署。",
+      "evidence": [
+        {
+          "path": "README.md",
+          "url": "https://github.com/QuantConnect/Lean/blob/f3d841e60dfd010ee5fc293ea893e56952484108/README.md"
+        }
+      ],
+      "image": "",
+      "demo": "../lean/chart.html"
+    },
+    {
+      "project": "zipline-reloaded",
+      "repository": "stefan-jansen/zipline-reloaded",
+      "commit": "cf649ac06fddce76f6caa2403cd8494ac84f72ad",
+      "kind": "引擎/适配展示",
+      "style": "研究脚本 / Notebook；由调用者选择绘图",
+      "candles": "没有本次已验证的固定 K 线主题；当前是净值折线",
+      "colors": [],
+      "interaction": "结果 DataFrame 交给分析绘图",
+      "borrow": "复用结果数据，不必复制独立界面",
+      "distinction": "本地 chart.png 是我们用结果画的 Matplotlib 图，不能归为官方皮肤。",
+      "evidence": [
+        {
+          "path": "README.md",
+          "url": "https://github.com/stefan-jansen/zipline-reloaded/blob/cf649ac06fddce76f6caa2403cd8494ac84f72ad/README.md"
+        }
+      ],
+      "image": "",
+      "demo": "../zipline-reloaded/chart.png"
+    },
+    {
+      "project": "ml4t-backtest",
+      "repository": "ml4t/backtest",
+      "commit": "45becfb0985eb59e63c7e3d3f513dba372b103da",
+      "kind": "引擎/适配展示",
+      "style": "代码型回测；文档列出可选可视化依赖",
+      "candles": "本机展示是我们画的 Plotly 净值曲线",
+      "colors": [],
+      "interaction": "成交与资金结果接口",
+      "borrow": "统一回测输出后接宿主图表",
+      "distinction": "未核验完整官方可视化界面，不把可选依赖或本地示例等同于现成皮肤。",
+      "evidence": [
+        {
+          "path": "README.md",
+          "url": "https://github.com/ml4t/backtest/blob/45becfb0985eb59e63c7e3d3f513dba372b103da/README.md"
+        }
+      ],
+      "image": "",
+      "demo": "../ml4t-backtest/chart.html"
+    },
+    {
+      "project": "wondertrader",
+      "repository": "wondertrader/wondertrader",
+      "commit": "08b230dd05facf6d650d949bfe51054115a2ecb1",
+      "kind": "引擎/适配展示",
+      "style": "原生引擎与监控生态；当前本机展示为适配图",
+      "candles": "原回测产出交易/指标文件；现有 HTML 是我们从 funds.csv 生成",
+      "colors": [],
+      "interaction": "引擎结果供监控/分析前端使用",
+      "borrow": "任务状态、结果文件与可视化解耦",
+      "distinction": "完整官方监控前端未在本次验收，不把现在的 Plotly 页称为 WonderTrader 原版 UI。",
+      "evidence": [
+        {
+          "path": "README.md",
+          "url": "https://github.com/wondertrader/wondertrader/blob/08b230dd05facf6d650d949bfe51054115a2ecb1/README.md"
+        }
+      ],
+      "image": "",
+      "demo": "../wondertrader/chart.html"
+    },
+    {
+      "project": "wtpy",
+      "repository": "wondertrader/wtpy",
+      "commit": "9fd4cd98feaa6fa2ea084741b3bb2adbe2b6bd78",
+      "kind": "引擎/适配展示",
+      "style": "WonderTrader Python 接口、数据工具及分析/监控组件",
+      "candles": "本插件是数据工具；没有独立已验收的 K 线主题",
+      "colors": [],
+      "interaction": "数据转换、引擎调用、报告组件",
+      "borrow": "保持数据工具无多余图形入口",
+      "distinction": "与 WonderTrader 共用生态；完整监控前端仍需单独检查。",
+      "evidence": [
+        {
+          "path": "README.md",
+          "url": "https://github.com/wondertrader/wtpy/blob/9fd4cd98feaa6fa2ea084741b3bb2adbe2b6bd78/README.md"
+        }
+      ],
+      "image": "",
+      "demo": ""
+    },
+    {
+      "project": "quantaxis",
+      "repository": "yutiansut/QUANTAXIS",
+      "commit": "232aa7ac9869966108f02a8fff85f1f7b09a9ce2",
+      "kind": "引擎/适配展示",
+      "style": "Python 数据/研究后端；前端属于配套生态",
+      "candles": "本机 MA/MACD/RSI 图片为我们的 Matplotlib 演示",
+      "colors": [],
+      "interaction": "数据接口与指标计算；单独前端需另行部署",
+      "borrow": "复用数据和指标接口；UI 统一由 WebStock 提供",
+      "distinction": "当前离线指标包不等于 QUANTAXIS 全套前端；没有已验证的官方整套皮肤。",
+      "evidence": [
+        {
+          "path": "README.md",
+          "url": "https://github.com/yutiansut/QUANTAXIS/blob/232aa7ac9869966108f02a8fff85f1f7b09a9ce2/README.md"
+        }
+      ],
+      "image": "",
+      "demo": "../quantaxis/chart.png"
+    },
+    {
+      "project": "ta-lib",
+      "repository": "TA-Lib/ta-lib",
+      "commit": "204e6c99fe2aa24482a18f11ea1687c1074259d2",
+      "kind": "计算/数据库",
+      "style": "指标计算库，无独立应用界面",
+      "candles": "没有自己的 K 线配色或蜡烛绘制规则",
+      "colors": [],
+      "interaction": "输出数值序列",
+      "borrow": "由宿主统一绘制主图或副图",
+      "distinction": "本机指标示例图是调用者绘制。",
+      "evidence": [
+        {
+          "path": "README.md",
+          "url": "https://github.com/TA-Lib/ta-lib/blob/204e6c99fe2aa24482a18f11ea1687c1074259d2/README.md"
+        }
+      ],
+      "image": "",
+      "demo": "../data-tools/chart.png"
+    },
+    {
+      "project": "akshare",
+      "repository": "akfamily/akshare",
+      "commit": "2ea08ff44512a9b0c008cd4ff77463b940959c7e",
+      "kind": "计算/数据库",
+      "style": "行情接口库，无独立应用界面",
+      "candles": "没有自己的 K 线主题",
+      "colors": [],
+      "interaction": "获取数据表",
+      "borrow": "复用现有行情缓存、进度与来源状态",
+      "distinction": "数据源与图表皮肤应分开配置。",
+      "evidence": [
+        {
+          "path": "README.md",
+          "url": "https://github.com/akfamily/akshare/blob/2ea08ff44512a9b0c008cd4ff77463b940959c7e/README.md"
+        }
+      ],
+      "image": "",
+      "demo": ""
+    }
+  ],
+  "plugins": [
+    {
+      "project": "czsc",
+      "repository": "waditu/czsc",
+      "commit": "5d350a943d6b1935561765fed5467c234973d121",
+      "kind": "原版交互图",
+      "style": "量化年鉴：暖纸色 / 深空色；留白、弱网格、细线",
+      "candles": "红涨绿跌；笔用实线，分型用虚线；量与 MACD 分栏",
+      "colors": [
+        [
+          "暖纸背景",
+          "#FBF9F4"
+        ],
+        [
+          "浅色上涨",
+          "#C03A2B"
+        ],
+        [
+          "浅色下跌",
+          "#2E7D32"
+        ],
+        [
+          "笔",
+          "#1F3C6E"
+        ],
+        [
+          "深色背景",
+          "#0E1116"
+        ],
+        [
+          "深色上涨",
+          "#E94B3C"
+        ],
+        [
+          "深色下跌",
+          "#5BB85B"
+        ]
+      ],
+      "interaction": "深浅切换、缩放平移、十字线、点击图例隐藏图层",
+      "borrow": "主 K 线的简洁密度、颜色和线型层次；适合做两套皮肤",
+      "distinction": "笔和分型是结构标记，不是本插件的买卖成交线；原样本页的 LIVE 装饰不代表连接了实时行情。",
+      "evidence": [
+        {
+          "path": "czsc/utils/plotting/lightweight/_theme.py",
+          "url": "https://github.com/waditu/czsc/blob/5d350a943d6b1935561765fed5467c234973d121/czsc/utils/plotting/lightweight/_theme.py"
+        },
+        {
+          "path": "czsc/utils/plotting/lightweight/_html_renderer.py",
+          "url": "https://github.com/waditu/czsc/blob/5d350a943d6b1935561765fed5467c234973d121/czsc/utils/plotting/lightweight/_html_renderer.py"
+        }
+      ],
+      "image": "czsc-light.png",
+      "demo": "../czsc/chart.html",
+      "plugin_id": "org.webstock.czsc",
+      "name": "CZSC 逐根结构观察",
+      "package_version": "0.26.0",
+      "operations": 1
+    },
+    {
+      "project": "vnpy",
+      "repository": "vnpy/vnpy",
+      "commit": "c6e231caf32b7fc97e6459817fff66458cf7e7c4",
+      "kind": "原版桌面",
+      "style": "深色 Qt 交易终端；停靠分区、表格、工具栏",
+      "candles": "PyQtGraph；上涨红色空心 / 黑填充，下跌青色实心",
+      "colors": [
+        [
+          "上涨",
+          "#ff4b4b"
+        ],
+        [
+          "下跌",
+          "#00ffff"
+        ],
+        [
+          "十字线",
+          "#fff5a2"
+        ],
+        [
+          "K 线背景",
+          "#000000"
+        ]
+      ],
+      "interaction": "分区窗口、十字光标、滚轮缩放、拖动历史",
+      "borrow": "插件窗可移动、主看盘不挤压、行情表与图联动",
+      "distinction": "本机桌面截图为原程序未连接账户的界面；K 线样式来自 chart 源码核对。不是所有模块都已经接入 WebStock。",
+      "evidence": [
+        {
+          "path": "vnpy/chart/base.py",
+          "url": "https://github.com/vnpy/vnpy/blob/c6e231caf32b7fc97e6459817fff66458cf7e7c4/vnpy/chart/base.py"
+        },
+        {
+          "path": "vnpy/chart/item.py",
+          "url": "https://github.com/vnpy/vnpy/blob/c6e231caf32b7fc97e6459817fff66458cf7e7c4/vnpy/chart/item.py"
+        },
+        {
+          "path": "vnpy/trader/ui/mainwindow.py",
+          "url": "https://github.com/vnpy/vnpy/blob/c6e231caf32b7fc97e6459817fff66458cf7e7c4/vnpy/trader/ui/mainwindow.py"
+        }
+      ],
+      "image": "vnpy.png",
+      "demo": "../vnpy/desktop.png",
+      "plugin_id": "org.webstock.vnpy",
+      "name": "VeighNa 指标接口",
+      "package_version": "0.26.0",
+      "operations": 7
+    },
+    {
+      "project": "backtesting-py",
+      "repository": "kernc/backtesting.py",
+      "commit": "ca2e2611621e472542ba90f7243a1fa06a7d7108",
+      "kind": "原版交互图",
+      "style": "白底、细网格、上下联动的回测报告",
+      "candles": "蜡烛＋成交量；均线叠加；交易连线",
+      "colors": [
+        [
+          "上涨 / 盈利",
+          "#00ff00"
+        ],
+        [
+          "下跌 / 亏损",
+          "#ff6347"
+        ],
+        [
+          "均线蓝",
+          "#1f77b4"
+        ],
+        [
+          "均线橙",
+          "#ff7f0e"
+        ]
+      ],
+      "interaction": "横向缩放、平移、悬停、图例开关、导出图片",
+      "borrow": "交易过程与资金表现分区；保留悬停和同步时间轴",
+      "distinction": "原版默认绿涨红跌，与 WebStock 红涨绿跌不同；原版报告不是完整交易桌面。",
+      "evidence": [
+        {
+          "path": "backtesting/_plotting.py",
+          "url": "https://github.com/kernc/backtesting.py/blob/ca2e2611621e472542ba90f7243a1fa06a7d7108/backtesting/_plotting.py"
+        }
+      ],
+      "image": "backtesting.png",
+      "demo": "../backtesting-py/chart.html",
+      "plugin_id": "org.webstock.backtesting-py",
+      "name": "Backtesting.py 回测引擎",
+      "package_version": "0.28.0",
+      "operations": 1
+    },
+    {
+      "project": "vectorbt",
+      "repository": "polakowo/vectorbt",
+      "commit": "8e30b8ce102f302bec0c0226e05b59714453bebd",
+      "kind": "原版交互图",
+      "style": "Plotly 研究图；浅蓝灰网格；light / dark / seaborn 模板",
+      "candles": "当前 Portfolio 报告是收盘折线＋订单；另有 OHLCV 蜡烛图接口",
+      "colors": [
+        [
+          "浅色绘图区",
+          "#E5ECF6"
+        ],
+        [
+          "深色背景",
+          "#1f2536"
+        ],
+        [
+          "上涨",
+          "#1b9e76"
+        ],
+        [
+          "下跌",
+          "#d95f02"
+        ],
+        [
+          "曲线蓝",
+          "#1f77b4"
+        ]
+      ],
+      "interaction": "图例开关、框选、平移、悬停、导出；参数热力图属于其他研究图",
+      "borrow": "结果浮窗的交互图、参数比较、图例开关",
+      "distinction": "不能把当前示例的价格折线说成原版 K 线；默认价格涨跌为绿/橙，订单颜色又有独立含义。",
+      "evidence": [
+        {
+          "path": "vectorbt/_settings.py",
+          "url": "https://github.com/polakowo/vectorbt/blob/8e30b8ce102f302bec0c0226e05b59714453bebd/vectorbt/_settings.py"
+        },
+        {
+          "path": "vectorbt/templates/light.json",
+          "url": "https://github.com/polakowo/vectorbt/blob/8e30b8ce102f302bec0c0226e05b59714453bebd/vectorbt/templates/light.json"
+        },
+        {
+          "path": "vectorbt/templates/dark.json",
+          "url": "https://github.com/polakowo/vectorbt/blob/8e30b8ce102f302bec0c0226e05b59714453bebd/vectorbt/templates/dark.json"
+        },
+        {
+          "path": "vectorbt/ohlcv_accessors.py",
+          "url": "https://github.com/polakowo/vectorbt/blob/8e30b8ce102f302bec0c0226e05b59714453bebd/vectorbt/ohlcv_accessors.py"
+        }
+      ],
+      "image": "vectorbt.png",
+      "demo": "../vectorbt/chart.html",
+      "plugin_id": "org.webstock.vectorbt",
+      "name": "vectorbt 向量回测",
+      "package_version": "0.26.0",
+      "operations": 1
+    },
+    {
+      "project": "wbt",
+      "repository": "zengbin93/wbt",
+      "commit": "6f10f7513050b0a541b687270ad4120b4c23fa9b",
+      "kind": "原版交互图",
+      "style": "浅色 / 深色 HTML 报告；统计卡、表格与 Plotly 曲线",
+      "candles": "主要是多空归因、回撤和收益图；没有统一看盘蜡烛主题",
+      "colors": [
+        [
+          "多头/正收益",
+          "#e74c3c"
+        ],
+        [
+          "空头/负收益",
+          "#2ecc71"
+        ],
+        [
+          "合计",
+          "#3498db"
+        ],
+        [
+          "浅色背景",
+          "#f6f7f9"
+        ],
+        [
+          "深色背景",
+          "#0b0e15"
+        ]
+      ],
+      "interaction": "报告分区、交互曲线、表格；可导出 HTML",
+      "borrow": "浮窗里的收益归因、回撤填充和摘要卡",
+      "distinction": "官方示意图使用刻意调成强表现的模拟权重；只看样式，不能据此判断收益。",
+      "evidence": [
+        {
+          "path": "python/wbt/plotting/_common.py",
+          "url": "https://github.com/zengbin93/wbt/blob/6f10f7513050b0a541b687270ad4120b4c23fa9b/python/wbt/plotting/_common.py"
+        },
+        {
+          "path": "python/wbt/report/html_builder.py",
+          "url": "https://github.com/zengbin93/wbt/blob/6f10f7513050b0a541b687270ad4120b4c23fa9b/python/wbt/report/html_builder.py"
+        },
+        {
+          "path": "README.md",
+          "url": "https://github.com/zengbin93/wbt/blob/6f10f7513050b0a541b687270ad4120b4c23fa9b/README.md"
+        }
+      ],
+      "image": "wbt.png",
+      "demo": "../czsc/weight-report.html",
+      "plugin_id": "org.webstock.wbt",
+      "name": "WBT 权重归因",
+      "package_version": "0.26.0",
+      "operations": 1
+    },
+    {
+      "project": "hikyuu",
+      "repository": "fasiondog/hikyuu",
+      "commit": "e6e35b2588d9eb1ea66fdec7a512ca7dd50bb527",
+      "kind": "原版研究图",
+      "style": "白底中文研究图；B/S 与箭头醒目；支持多种绘图后端",
+      "candles": "当前 Matplotlib 图为红绿 K 线；红 B / 蓝 S / 黑箭头",
+      "colors": [
+        [
+          "买入 B",
+          "#ff0000"
+        ],
+        [
+          "卖出 S",
+          "#0000ff"
+        ],
+        [
+          "背景",
+          "#ffffff"
+        ]
+      ],
+      "interaction": "Matplotlib 研究图；源码另有 Bokeh、ECharts 绘图后端",
+      "borrow": "中文买卖标注；控制密度后适合主图信号层",
+      "distinction": "本次截图只验证 Matplotlib 路径；其他绘图后端不能视为已部署验收。",
+      "evidence": [
+        {
+          "path": "hikyuu/draw/drawplot/matplotlib_draw.py",
+          "url": "https://github.com/fasiondog/hikyuu/blob/e6e35b2588d9eb1ea66fdec7a512ca7dd50bb527/hikyuu/draw/drawplot/matplotlib_draw.py"
+        },
+        {
+          "path": "hikyuu/draw/drawplot/bokeh_draw.py",
+          "url": "https://github.com/fasiondog/hikyuu/blob/e6e35b2588d9eb1ea66fdec7a512ca7dd50bb527/hikyuu/draw/drawplot/bokeh_draw.py"
+        },
+        {
+          "path": "hikyuu/draw/drawplot/echarts_draw.py",
+          "url": "https://github.com/fasiondog/hikyuu/blob/e6e35b2588d9eb1ea66fdec7a512ca7dd50bb527/hikyuu/draw/drawplot/echarts_draw.py"
+        }
+      ],
+      "image": "hikyuu.png",
+      "demo": "../hikyuu/chart.png",
+      "plugin_id": "org.webstock.hikyuu",
+      "name": "Hikyuu 回测引擎",
+      "package_version": "0.26.0",
+      "operations": 1
+    },
+    {
+      "project": "backtrader",
+      "repository": "mementum/backtrader",
+      "commit": "b853d7c90b6721476eb5a5ea3135224e33db1f14",
+      "kind": "原版研究图",
+      "style": "Matplotlib 白底强网格；多子图、密集图例与末值标签",
+      "candles": "默认收盘折线；可选 OHLC / 蜡烛；本机示例使用蜡烛",
+      "colors": [
+        [
+          "默认阳线",
+          "#bfbfbf"
+        ],
+        [
+          "默认阴线",
+          "#ff0000"
+        ],
+        [
+          "上涨量柱",
+          "#aaaaaa"
+        ],
+        [
+          "下跌量柱",
+          "#cc6073"
+        ]
+      ],
+      "interaction": "Matplotlib 工具栏缩放、平移；研究图多层叠加",
+      "borrow": "现金、净值、单笔盈亏分栏；不照搬密集文字",
+      "distinction": "截图为原生 c.plot 输出；它是研究图风格，不是独立完整桌面。",
+      "evidence": [
+        {
+          "path": "backtrader/plot/scheme.py",
+          "url": "https://github.com/mementum/backtrader/blob/b853d7c90b6721476eb5a5ea3135224e33db1f14/backtrader/plot/scheme.py"
+        }
+      ],
+      "image": "backtrader.png",
+      "demo": "../backtrader/chart.png",
+      "plugin_id": "org.webstock.backtrader",
+      "name": "Backtrader 回测引擎",
+      "package_version": "0.26.0",
+      "operations": 1
+    },
+    {
+      "project": "rqalpha",
+      "repository": "ricequant/rqalpha",
+      "commit": "6a996af2876013615ceea141a97bad94ac4ab7f3",
+      "kind": "原版研究图",
+      "style": "白底绩效报告；上方统计矩阵、下方策略/基准曲线",
+      "candles": "此报告主要是收益与指标折线；没有统一的看盘蜡烛界面",
+      "colors": [],
+      "interaction": "报告导出；标注回撤与回撤持续时间",
+      "borrow": "结果浮窗中的策略、基准、超额三条曲线",
+      "distinction": "本机图来自 sys_analyser 原生绘图；报告颜色应按策略/基准含义解读。",
+      "evidence": [
+        {
+          "path": "rqalpha/mod/rqalpha_mod_sys_analyser/plot/plot.py",
+          "url": "https://github.com/ricequant/rqalpha/blob/6a996af2876013615ceea141a97bad94ac4ab7f3/rqalpha/mod/rqalpha_mod_sys_analyser/plot/plot.py"
+        }
+      ],
+      "image": "rqalpha.png",
+      "demo": "../rqalpha/chart.png",
+      "plugin_id": "org.webstock.rqalpha",
+      "name": "RQAlpha 冻结数据回测",
+      "package_version": "0.26.0",
+      "operations": 1
+    },
+    {
+      "project": "qlib",
+      "repository": "microsoft/qlib",
+      "commit": "54355232463878d2eebb91fe0ee5fa7fa1f5976c",
+      "kind": "原版研究图",
+      "style": "Notebook / Plotly 多层分析报告",
+      "candles": "主要是收益、回撤、换手、IC 和模型表现图；非看盘 K 线主题",
+      "colors": [],
+      "interaction": "同时间轴结果对比、模型分析图",
+      "borrow": "研究浮窗中的因子质量、收益与回撤分区",
+      "distinction": "这里展示官方仓库 report.png；此前本机预测/特征重要性图是我们的演示绘图，不是官方整套界面。",
+      "evidence": [
+        {
+          "path": "qlib/contrib/report/analysis_position/report.py",
+          "url": "https://github.com/microsoft/qlib/blob/54355232463878d2eebb91fe0ee5fa7fa1f5976c/qlib/contrib/report/analysis_position/report.py"
+        },
+        {
+          "path": "docs/component/report.rst",
+          "url": "https://github.com/microsoft/qlib/blob/54355232463878d2eebb91fe0ee5fa7fa1f5976c/docs/component/report.rst"
+        }
+      ],
+      "image": "qlib.png",
+      "demo": "../qlib/chart.png",
+      "plugin_id": "org.webstock.qlib",
+      "name": "Qlib Alpha158 特征",
+      "package_version": "0.26.0",
+      "operations": 1
+    },
+    {
+      "project": "bt",
+      "repository": "pmorissette/bt",
+      "commit": "28608cb3b1b72761eabedced21e14a1ff974ed3b",
+      "kind": "原版研究图",
+      "style": "Pandas / Matplotlib 组合净值研究图",
+      "candles": "通常为多资产/多策略净值折线，没有固定 K 线皮肤",
+      "colors": [],
+      "interaction": "多策略对比、统计表；样式随绘图环境变化",
+      "borrow": "组合对比和配置结果视图",
+      "distinction": "现有图调用 result.plot；只有组合研究图，不是一套看盘 UI。",
+      "evidence": [
+        {
+          "path": "bt/backtest.py",
+          "url": "https://github.com/pmorissette/bt/blob/28608cb3b1b72761eabedced21e14a1ff974ed3b/bt/backtest.py"
+        }
+      ],
+      "image": "bt.png",
+      "demo": "../bt/chart.png",
+      "plugin_id": "org.webstock.bt",
+      "name": "bt 组合再平衡",
+      "package_version": "0.26.0",
+      "operations": 1
+    },
+    {
+      "project": "akshare",
+      "repository": "akfamily/akshare",
+      "commit": "2ea08ff44512a9b0c008cd4ff77463b940959c7e",
+      "kind": "计算/数据库",
+      "style": "行情接口库，无独立应用界面",
+      "candles": "没有自己的 K 线主题",
+      "colors": [],
+      "interaction": "获取数据表",
+      "borrow": "复用现有行情缓存、进度与来源状态",
+      "distinction": "数据源与图表皮肤应分开配置。",
+      "evidence": [
+        {
+          "path": "README.md",
+          "url": "https://github.com/akfamily/akshare/blob/2ea08ff44512a9b0c008cd4ff77463b940959c7e/README.md"
+        }
+      ],
+      "image": "",
+      "demo": "",
+      "plugin_id": "org.webstock.akshare",
+      "name": "AKShare 历史数据采集",
+      "package_version": "0.26.0",
+      "operations": 1
+    },
+    {
+      "project": "core-indicators",
+      "kind": "WebStock 自建/适配",
+      "style": "没有单独的上游整套界面；当前采用 WebStock 统一控件",
+      "candles": "无独立 K 线主题，继承主图样式",
+      "colors": [],
+      "interaction": "按功能提供图层、表格或研究浮窗",
+      "borrow": "主图线/副图；由指标类别决定位置",
+      "distinction": "这是本地功能包分类，不把算法依赖库当作带有完整界面的软件。",
+      "evidence": [],
+      "image": "",
+      "demo": "",
+      "plugin_id": "org.webstock.core-indicators",
+      "name": "WebStock 补充指标",
+      "package_version": "0.26.0",
+      "operations": 49
+    },
+    {
+      "project": "cost-distribution",
+      "kind": "WebStock 自建/适配",
+      "style": "没有单独的上游整套界面；当前采用 WebStock 统一控件",
+      "candles": "无独立 K 线主题，继承主图样式",
+      "colors": [],
+      "interaction": "按功能提供图层、表格或研究浮窗",
+      "borrow": "价格侧边分布，不遮挡蜡烛",
+      "distinction": "这是本地功能包分类，不把算法依赖库当作带有完整界面的软件。",
+      "evidence": [],
+      "image": "",
+      "demo": "",
+      "plugin_id": "org.webstock.cost-distribution",
+      "name": "WebStock 筹码成本假设模型",
+      "package_version": "0.26.0",
+      "operations": 1
+    },
+    {
+      "project": "deep-models",
+      "kind": "WebStock 自建/适配",
+      "style": "没有单独的上游整套界面；当前采用 WebStock 统一控件",
+      "candles": "无独立 K 线主题，继承主图样式",
+      "colors": [],
+      "interaction": "按功能提供图层、表格或研究浮窗",
+      "borrow": "独立研究浮窗；预测与解释分区",
+      "distinction": "这是本地功能包分类，不把算法依赖库当作带有完整界面的软件。",
+      "evidence": [],
+      "image": "",
+      "demo": "",
+      "plugin_id": "org.webstock.deep-models",
+      "name": "WebStock 深度学习模型",
+      "package_version": "0.26.0",
+      "operations": 3
+    },
+    {
+      "project": "event-research",
+      "kind": "WebStock 自建/适配",
+      "style": "没有单独的上游整套界面；当前采用 WebStock 统一控件",
+      "candles": "无独立 K 线主题，继承主图样式",
+      "colors": [],
+      "interaction": "按功能提供图层、表格或研究浮窗",
+      "borrow": "盘口图、事件标记；不用硬塞到日 K",
+      "distinction": "这是本地功能包分类，不把算法依赖库当作带有完整界面的软件。",
+      "evidence": [],
+      "image": "",
+      "demo": "",
+      "plugin_id": "org.webstock.event-research",
+      "name": "WebStock 逐笔与盘口研究",
+      "package_version": "0.26.0",
+      "operations": 5
+    },
+    {
+      "project": "external-observations",
+      "kind": "WebStock 自建/适配",
+      "style": "没有单独的上游整套界面；当前采用 WebStock 统一控件",
+      "candles": "无独立 K 线主题，继承主图样式",
+      "colors": [],
+      "interaction": "按功能提供图层、表格或研究浮窗",
+      "borrow": "事件时间线、来源与修订提示",
+      "distinction": "这是本地功能包分类，不把算法依赖库当作带有完整界面的软件。",
+      "evidence": [],
+      "image": "",
+      "demo": "",
+      "plugin_id": "org.webstock.external-observations",
+      "name": "WebStock 外部研究数据与修订",
+      "package_version": "0.26.0",
+      "operations": 7
+    },
+    {
+      "project": "factor-models",
+      "kind": "WebStock 自建/适配",
+      "style": "没有单独的上游整套界面；当前采用 WebStock 统一控件",
+      "candles": "无独立 K 线主题，继承主图样式",
+      "colors": [],
+      "interaction": "按功能提供图层、表格或研究浮窗",
+      "borrow": "排序表、分组收益和因子质量图",
+      "distinction": "这是本地功能包分类，不把算法依赖库当作带有完整界面的软件。",
+      "evidence": [],
+      "image": "",
+      "demo": "",
+      "plugin_id": "org.webstock.factor-models",
+      "name": "WebStock 因子合成与排名组合",
+      "package_version": "0.26.0",
+      "operations": 3
+    },
+    {
+      "project": "lean",
+      "repository": "QuantConnect/Lean",
+      "commit": "f3d841e60dfd010ee5fc293ea893e56952484108",
+      "kind": "引擎/适配展示",
+      "style": "本地引擎输出结果；图表与前端属于另一层",
+      "candles": "本机 chart.html 为从 JSON 重画的 Plotly 折线",
+      "colors": [],
+      "interaction": "可导出结果供前端使用",
+      "borrow": "统一结果接口和独立报告入口",
+      "distinction": "不能把本地演示页当作 QuantConnect 网站或 LEAN 自带完整桌面；云端样式未在本机部署。",
+      "evidence": [
+        {
+          "path": "README.md",
+          "url": "https://github.com/QuantConnect/Lean/blob/f3d841e60dfd010ee5fc293ea893e56952484108/README.md"
+        }
+      ],
+      "image": "",
+      "demo": "../lean/chart.html",
+      "plugin_id": "org.webstock.lean",
+      "name": "LEAN 本地回测引擎",
+      "package_version": "0.26.0",
+      "operations": 1
+    },
+    {
+      "project": "learning-models",
+      "kind": "WebStock 自建/适配",
+      "style": "没有单独的上游整套界面；当前采用 WebStock 统一控件",
+      "candles": "无独立 K 线主题，继承主图样式",
+      "colors": [],
+      "interaction": "按功能提供图层、表格或研究浮窗",
+      "borrow": "训练/验证/测试时间轴与结果图",
+      "distinction": "这是本地功能包分类，不把算法依赖库当作带有完整界面的软件。",
+      "evidence": [],
+      "image": "",
+      "demo": "",
+      "plugin_id": "org.webstock.learning-models",
+      "name": "WebStock 逐时点学习模型",
+      "package_version": "0.26.0",
+      "operations": 6
+    },
+    {
+      "project": "limit-research",
+      "kind": "WebStock 自建/适配",
+      "style": "没有单独的上游整套界面；当前采用 WebStock 统一控件",
+      "candles": "无独立 K 线主题，继承主图样式",
+      "colors": [],
+      "interaction": "按功能提供图层、表格或研究浮窗",
+      "borrow": "主图事件徽标和按需详情",
+      "distinction": "这是本地功能包分类，不把算法依赖库当作带有完整界面的软件。",
+      "evidence": [],
+      "image": "",
+      "demo": "",
+      "plugin_id": "org.webstock.limit-research",
+      "name": "WebStock 历史涨跌停与封板研究",
+      "package_version": "0.26.0",
+      "operations": 2
+    },
+    {
+      "project": "ml4t-backtest",
+      "repository": "ml4t/backtest",
+      "commit": "45becfb0985eb59e63c7e3d3f513dba372b103da",
+      "kind": "引擎/适配展示",
+      "style": "代码型回测；文档列出可选可视化依赖",
+      "candles": "本机展示是我们画的 Plotly 净值曲线",
+      "colors": [],
+      "interaction": "成交与资金结果接口",
+      "borrow": "统一回测输出后接宿主图表",
+      "distinction": "未核验完整官方可视化界面，不把可选依赖或本地示例等同于现成皮肤。",
+      "evidence": [
+        {
+          "path": "README.md",
+          "url": "https://github.com/ml4t/backtest/blob/45becfb0985eb59e63c7e3d3f513dba372b103da/README.md"
+        }
+      ],
+      "image": "",
+      "demo": "../ml4t-backtest/chart.html",
+      "plugin_id": "org.webstock.ml4t-backtest",
+      "name": "ML4T 回测引擎",
+      "package_version": "0.26.0",
+      "operations": 1
+    },
+    {
+      "project": "option-research",
+      "kind": "WebStock 自建/适配",
+      "style": "没有单独的上游整套界面；当前采用 WebStock 统一控件",
+      "candles": "无独立 K 线主题，继承主图样式",
+      "colors": [],
+      "interaction": "按功能提供图层、表格或研究浮窗",
+      "borrow": "独立收益曲线和参数面板",
+      "distinction": "这是本地功能包分类，不把算法依赖库当作带有完整界面的软件。",
+      "evidence": [],
+      "image": "",
+      "demo": "",
+      "plugin_id": "org.webstock.option-research",
+      "name": "WebStock 欧式期权研究",
+      "package_version": "0.26.0",
+      "operations": 3
+    },
+    {
+      "project": "panel-research",
+      "kind": "WebStock 自建/适配",
+      "style": "没有单独的上游整套界面；当前采用 WebStock 统一控件",
+      "candles": "无独立 K 线主题，继承主图样式",
+      "colors": [],
+      "interaction": "按功能提供图层、表格或研究浮窗",
+      "borrow": "多股对比、相关性或分组图",
+      "distinction": "这是本地功能包分类，不把算法依赖库当作带有完整界面的软件。",
+      "evidence": [],
+      "image": "",
+      "demo": "",
+      "plugin_id": "org.webstock.panel-research",
+      "name": "WebStock 多证券研究",
+      "package_version": "0.26.0",
+      "operations": 20
+    },
+    {
+      "project": "pattern-research",
+      "kind": "WebStock 自建/适配",
+      "style": "没有单独的上游整套界面；当前采用 WebStock 统一控件",
+      "candles": "无独立 K 线主题，继承主图样式",
+      "colors": [],
+      "interaction": "按功能提供图层、表格或研究浮窗",
+      "borrow": "区间底纹、确认标记；不要文字覆盖",
+      "distinction": "这是本地功能包分类，不把算法依赖库当作带有完整界面的软件。",
+      "evidence": [],
+      "image": "",
+      "demo": "",
+      "plugin_id": "org.webstock.pattern-research",
+      "name": "WebStock 收缩与确认形态研究",
+      "package_version": "0.26.0",
+      "operations": 3
+    },
+    {
+      "project": "portfolio-risk",
+      "kind": "WebStock 自建/适配",
+      "style": "没有单独的上游整套界面；当前采用 WebStock 统一控件",
+      "candles": "无独立 K 线主题，继承主图样式",
+      "colors": [],
+      "interaction": "按功能提供图层、表格或研究浮窗",
+      "borrow": "风险分配、回撤和暴露图",
+      "distinction": "这是本地功能包分类，不把算法依赖库当作带有完整界面的软件。",
+      "evidence": [],
+      "image": "",
+      "demo": "",
+      "plugin_id": "org.webstock.portfolio-risk",
+      "name": "WebStock 组合风险与分配",
+      "package_version": "0.26.0",
+      "operations": 3
+    },
+    {
+      "project": "quantaxis",
+      "repository": "yutiansut/QUANTAXIS",
+      "commit": "232aa7ac9869966108f02a8fff85f1f7b09a9ce2",
+      "kind": "引擎/适配展示",
+      "style": "Python 数据/研究后端；前端属于配套生态",
+      "candles": "本机 MA/MACD/RSI 图片为我们的 Matplotlib 演示",
+      "colors": [],
+      "interaction": "数据接口与指标计算；单独前端需另行部署",
+      "borrow": "复用数据和指标接口；UI 统一由 WebStock 提供",
+      "distinction": "当前离线指标包不等于 QUANTAXIS 全套前端；没有已验证的官方整套皮肤。",
+      "evidence": [
+        {
+          "path": "README.md",
+          "url": "https://github.com/yutiansut/QUANTAXIS/blob/232aa7ac9869966108f02a8fff85f1f7b09a9ce2/README.md"
+        }
+      ],
+      "image": "",
+      "demo": "../quantaxis/chart.png",
+      "plugin_id": "org.webstock.quantaxis",
+      "name": "QUANTAXIS 离线指标",
+      "package_version": "0.26.0",
+      "operations": 5
+    },
+    {
+      "project": "statistical-models",
+      "kind": "WebStock 自建/适配",
+      "style": "没有单独的上游整套界面；当前采用 WebStock 统一控件",
+      "candles": "无独立 K 线主题，继承主图样式",
+      "colors": [],
+      "interaction": "按功能提供图层、表格或研究浮窗",
+      "borrow": "副图、置信区间和诊断浮窗",
+      "distinction": "这是本地功能包分类，不把算法依赖库当作带有完整界面的软件。",
+      "evidence": [],
+      "image": "",
+      "demo": "",
+      "plugin_id": "org.webstock.statistical-models",
+      "name": "WebStock 统计与时序模型",
+      "package_version": "0.26.0",
+      "operations": 9
+    },
+    {
+      "project": "ta-lib",
+      "repository": "TA-Lib/ta-lib",
+      "commit": "204e6c99fe2aa24482a18f11ea1687c1074259d2",
+      "kind": "计算/数据库",
+      "style": "指标计算库，无独立应用界面",
+      "candles": "没有自己的 K 线配色或蜡烛绘制规则",
+      "colors": [],
+      "interaction": "输出数值序列",
+      "borrow": "由宿主统一绘制主图或副图",
+      "distinction": "本机指标示例图是调用者绘制。",
+      "evidence": [
+        {
+          "path": "README.md",
+          "url": "https://github.com/TA-Lib/ta-lib/blob/204e6c99fe2aa24482a18f11ea1687c1074259d2/README.md"
+        }
+      ],
+      "image": "",
+      "demo": "../data-tools/chart.png",
+      "plugin_id": "org.webstock.talib",
+      "name": "TA-Lib 指标库",
+      "package_version": "0.26.0",
+      "operations": 201
+    },
+    {
+      "project": "technical-ratings",
+      "kind": "WebStock 自建/适配",
+      "style": "没有单独的上游整套界面；当前采用 WebStock 统一控件",
+      "candles": "无独立 K 线主题，继承主图样式",
+      "colors": [],
+      "interaction": "按功能提供图层、表格或研究浮窗",
+      "borrow": "条件评分条、分项解释；不当作保证收益",
+      "distinction": "这是本地功能包分类，不把算法依赖库当作带有完整界面的软件。",
+      "evidence": [],
+      "image": "",
+      "demo": "",
+      "plugin_id": "org.webstock.technical-ratings",
+      "name": "Technical Ratings v3条件 · 本地口径",
+      "package_version": "0.26.0",
+      "operations": 1
+    },
+    {
+      "project": "vnpy-ctastrategy",
+      "repository": "vnpy/vnpy_ctastrategy",
+      "commit": "7a8768de9784dda35a7b261a7ade1dbfbff50919",
+      "kind": "桌面扩展",
+      "style": "延续 VeighNa Qt 桌面；策略列表、参数与回测窗口",
+      "candles": "K 线可复用 VeighNa 图表；回测统计不是单独 K 线主题",
+      "colors": [],
+      "interaction": "参数对话框、策略启停、回测结果",
+      "borrow": "每个插件独立窗口与状态，不挤占主图",
+      "distinction": "CTA 策略扩展不是第二套完整主程序；不要和当前 alpha 示例混为同一回测。",
+      "evidence": [
+        {
+          "path": "vnpy_ctastrategy/ui/widget.py",
+          "url": "https://github.com/vnpy/vnpy_ctastrategy/blob/7a8768de9784dda35a7b261a7ade1dbfbff50919/vnpy_ctastrategy/ui/widget.py"
+        }
+      ],
+      "image": "",
+      "demo": "",
+      "plugin_id": "org.webstock.vnpy-ctastrategy",
+      "name": "VeighNa CTA 限价回测",
+      "package_version": "0.26.0",
+      "operations": 1
+    },
+    {
+      "project": "wondertrader",
+      "repository": "wondertrader/wondertrader",
+      "commit": "08b230dd05facf6d650d949bfe51054115a2ecb1",
+      "kind": "引擎/适配展示",
+      "style": "原生引擎与监控生态；当前本机展示为适配图",
+      "candles": "原回测产出交易/指标文件；现有 HTML 是我们从 funds.csv 生成",
+      "colors": [],
+      "interaction": "引擎结果供监控/分析前端使用",
+      "borrow": "任务状态、结果文件与可视化解耦",
+      "distinction": "完整官方监控前端未在本次验收，不把现在的 Plotly 页称为 WonderTrader 原版 UI。",
+      "evidence": [
+        {
+          "path": "README.md",
+          "url": "https://github.com/wondertrader/wondertrader/blob/08b230dd05facf6d650d949bfe51054115a2ecb1/README.md"
+        }
+      ],
+      "image": "",
+      "demo": "../wondertrader/chart.html",
+      "plugin_id": "org.webstock.wondertrader",
+      "name": "WonderTrader 原生回测",
+      "package_version": "0.26.0",
+      "operations": 1
+    },
+    {
+      "project": "wtpy",
+      "repository": "wondertrader/wtpy",
+      "commit": "9fd4cd98feaa6fa2ea084741b3bb2adbe2b6bd78",
+      "kind": "引擎/适配展示",
+      "style": "WonderTrader Python 接口、数据工具及分析/监控组件",
+      "candles": "本插件是数据工具；没有独立已验收的 K 线主题",
+      "colors": [],
+      "interaction": "数据转换、引擎调用、报告组件",
+      "borrow": "保持数据工具无多余图形入口",
+      "distinction": "与 WonderTrader 共用生态；完整监控前端仍需单独检查。",
+      "evidence": [
+        {
+          "path": "README.md",
+          "url": "https://github.com/wondertrader/wtpy/blob/9fd4cd98feaa6fa2ea084741b3bb2adbe2b6bd78/README.md"
+        }
+      ],
+      "image": "",
+      "demo": "",
+      "plugin_id": "org.webstock.wtpy",
+      "name": "wtpy 原生数据工具",
+      "package_version": "0.26.0",
+      "operations": 1
+    },
+    {
+      "project": "zipline-reloaded",
+      "repository": "stefan-jansen/zipline-reloaded",
+      "commit": "cf649ac06fddce76f6caa2403cd8494ac84f72ad",
+      "kind": "引擎/适配展示",
+      "style": "研究脚本 / Notebook；由调用者选择绘图",
+      "candles": "没有本次已验证的固定 K 线主题；当前是净值折线",
+      "colors": [],
+      "interaction": "结果 DataFrame 交给分析绘图",
+      "borrow": "复用结果数据，不必复制独立界面",
+      "distinction": "本地 chart.png 是我们用结果画的 Matplotlib 图，不能归为官方皮肤。",
+      "evidence": [
+        {
+          "path": "README.md",
+          "url": "https://github.com/stefan-jansen/zipline-reloaded/blob/cf649ac06fddce76f6caa2403cd8494ac84f72ad/README.md"
+        }
+      ],
+      "image": "",
+      "demo": "../zipline-reloaded/chart.png",
+      "plugin_id": "org.webstock.zipline-reloaded",
+      "name": "Zipline 日线回测",
+      "package_version": "0.26.0",
+      "operations": 1
+    }
+  ],
+  "proposed_presets": [
+    {
+      "name": "简洁看盘",
+      "reference": "CZSC 深色 / 暖纸色",
+      "scope": "主 K 线",
+      "priority": 1,
+      "reason": "弱网格、合理留白、实虚线区分含义；涨跌仍按用户选择的红绿方向。"
+    },
+    {
+      "name": "专业终端",
+      "reference": "VeighNa",
+      "scope": "可移动窗口与交易面板",
+      "priority": 2,
+      "reason": "借鉴窗口组织和高对比；保持主看盘空间。"
+    },
+    {
+      "name": "研究报告",
+      "reference": "vectorbt / Backtesting.py / WBT",
+      "scope": "结果浮窗",
+      "priority": 3,
+      "reason": "多图、图例、回撤区域和悬停详情；需要时再打开。"
+    }
+  ],
+  "replacement_plan": {
+    "status": "建议，尚未实施整套皮肤替换",
+    "entry": "右上角设置 → 外观 → 样式预设",
+    "layers": [
+      "界面皮肤：背景/文字/边框/按钮/间距",
+      "K线样式：蜡烛实空心/影线宽/网格/坐标/十字线",
+      "语义图层：上涨/下跌、买入/卖出、盈利/亏损分别定义",
+      "结果视图：卡片/表格/曲线/回撤填充"
+    ],
+    "invariants": [
+      "切换皮肤不得修改行情、复权、指标计算、策略参数或成交记录",
+      "颜色配合形状/实虚线/简短图例，不只靠红绿",
+      "每个插件引用语义颜色，不硬编码一套与宿主冲突的颜色",
+      "保留一键恢复默认与预览确认；原版报告可独立保留上游风格"
+    ],
+    "order": [
+      "先做主题令牌与预览，不替换计算引擎",
+      "再做蜡烛与网格样式切换",
+      "最后让各插件图层与结果浮窗跟随主题"
+    ]
+  }
+}

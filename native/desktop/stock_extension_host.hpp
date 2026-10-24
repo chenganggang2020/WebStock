@@ -2,12 +2,13 @@
 #include "quant_plugin_host.hpp"
 #include <QPointer>
 #include <QWidget>
+#include <QDialog>
 #include <QMap>
 class Chart;class CompactActions;class QVBoxLayout;class QMenu;class QPushButton;
 class QComboBox;class QDateEdit;class QLabel;class QCheckBox;class QTabWidget;
 class ExtensionPlot;class QDialog;class QFrame;
 
-class StockExtensionPanel final:public QWidget {
+class StockExtensionPanel final:public QDialog {
   Q_OBJECT
   quantPlugin::Repository repository_;
   quantPlugin::Job job_;
@@ -32,6 +33,7 @@ class StockExtensionPanel final:public QWidget {
   void selectItem(const QString& id);void closeInspection();void placeInspection();
   bool eventFilter(QObject* watched,QEvent* event)override;
   void hideEvent(QHideEvent* event)override;
+  void showEvent(QShowEvent* event)override;
   void guard(std::function<void()> action);
 public:
   StockExtensionPanel(QString root,QString id,Chart* chart,QWidget* parent=nullptr);
@@ -40,6 +42,7 @@ public:
   bool isRunning()const{return job_.active();}
 signals:
   void refreshRequested();
+  void visibilityChanged(bool visible);
 };
 
 class StockExtensionHost final:public QObject {

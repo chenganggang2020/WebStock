@@ -47,9 +47,11 @@ public:
   }
 };
 StockExtensionPanel::StockExtensionPanel(QString root,QString id,Chart* chart,QWidget* parent)
- :QWidget(parent),repository_(root),job_(root,this),chart_(chart),id_(id){
+ :QDialog(parent),repository_(root),job_(root,this),chart_(chart),id_(id){
   manifest_=repository_.plugin(id_)["manifest"].toObject();setObjectName("stockExtensionPanel");setProperty("pluginId",id_);
+  setModal(false);setSizeGripEnabled(true);resize(940,240);
   auto layout=new QVBoxLayout(this);layout->setContentsMargins(6,4,6,4);layout->setSpacing(6);
+  auto heading=new QHBoxLayout;auto title=new QLabel("操作与结果");heading->addWidget(title);heading->addStretch();auto collapse=new QPushButton("收起");collapse->setObjectName("collapseExtensionPanel");collapse->setToolTip("收起浮窗，保留主图的指标和交易标记（Esc）");collapse->setAutoDefault(false);heading->addWidget(collapse);layout->addLayout(heading);connect(collapse,&QPushButton::clicked,this,&QDialog::hide);
   auto controls=new CompactActions;operations_=new QComboBox;operations_->setObjectName("extensionOperation");
   for(auto v:manifest_["operations"].toArray()){auto o=v.toObject();if(o["inputKind"]=="ohlcv-single-csv")operations_->addItem(o["title"].toString(),o);}
   controls->addWidget(operations_);start_=new QDateEdit;end_=new QDateEdit;start_->setObjectName("extensionStart");end_->setObjectName("extensionEnd");
@@ -67,8 +69,9 @@ StockExtensionPanel::StockExtensionPanel(QString root,QString id,Chart* chart,QW
   legend_=new QLabel;legend_->setObjectName("extensionLegend");legend_->setTextFormat(Qt::RichText);legend_->setWordWrap(true);layout->addWidget(legend_);legend_->hide();
   for(auto box:{lines_,marks_,connections_,signals_})connect(box,&QCheckBox::toggled,this,[this]{if(!marks_->isChecked()&&!connections_->isChecked())closeInspection();else layers();});
   metrics_=new QWidget;metricLayout_=new QVBoxLayout(metrics_);metricLayout_->setContentsMargins(0,0,0,0);layout->addWidget(metrics_);metrics_->hide();
-  results_=new QTabWidget;results_->setObjectName("extensionResults");results_->setMinimumHeight(180);results_->setMaximumHeight(180);layout->addWidget(results_);results_->hide();
+  results_=new QTabWidget;results_->setObjectName("extensionResults");results_->setMinimumHeight(180);layout->addWidget(results_,1);results_->hide();
   inspection_=new QLabel;inspection_->setWordWrap(true);inspection_->hide();layout->addWidget(inspection_);status_=new QLabel;status_->setObjectName("extensionStatus");status_->setWordWrap(true);layout->addWidget(status_);
+  layout->addStretch();
   connect(operations_,&QComboBox::currentIndexChanged,this,[this]{parameters();clearResult();});
   connect(run_,&QPushButton::clicked,this,[this]{guard([this]{run();});});connect(cancel_,&QPushButton::clicked,this,[this]{job_.cancel();});
   connect(data,&QPushButton::clicked,this,&StockExtensionPanel::showDetails);connect(history_,&QPushButton::clicked,this,&StockExtensionPanel::showHistory);
@@ -76,11 +79,12 @@ StockExtensionPanel::StockExtensionPanel(QString root,QString id,Chart* chart,QW
   connect(chart,&Chart::barSelected,this,&StockExtensionPanel::inspect);
   chart->installEventFilter(this);
   connect(chart,&Chart::extensionItemSelected,this,[this](const QString& owner,const QString& item){
-    if(owner==id_&&!isHidden())selectItem(item);else closeInspection();
+    if(owner==id_)selectItem(item);else closeInspection();
   });
   for(auto d:{start_,end_})connect(d,&QDateEdit::dateChanged,this,[this]{if(changing_)return;clearResult();status_->setText("范围已改变，点击运行更新结果");availability();});
   job_.progress=[this](QString){status_->setText("计算中…");};
   job_.changed=[this]{availability();if(!job_.active())guard([this]{completed();});};parameters();availability();
+  for(auto button:findChildren<QPushButton*>())button->setAutoDefault(false);
 }
 StockExtensionPanel::~StockExtensionPanel(){job_.changed={};job_.progress={};job_.cancel();delete inspectionCard_;if(chart_)chart_->removeExtensionLayer(id_);}
 QJsonObject StockExtensionPanel::operation()const{return operations_->currentData().toJsonObject();}
@@ -97,6 +101,7 @@ void StockExtensionPanel::parameters(){
 }
 void StockExtensionPanel::clearResult(){result_={};runId_.clear();selectedItem_.clear();delete inspectionCard_;setProperty("runId",QVariant());metrics_->hide();results_->hide();inspection_->hide();legend_->hide();if(chart_)chart_->removeExtensionLayer(id_);availability();}
 void StockExtensionPanel::setContext(const QJsonObject& input){const auto key=extensionInput::identity(input);context_=input;if(key==contextKey_){layers();availability();return;}contextKey_=key;if(job_.active())job_.cancel();clearResult();changing_=true;
+  setWindowTitle(manifest_["ui"].toObject()["title"].toString()+" · "+input["name"].toString()+" "+input["id"].toString().section(':',-1));
   try{auto q=extensionInput::query(input);const auto s=extensionInput::snapshot(input,q);auto n=marketHistory::summary(s,q);start_->setDateRange(QDate::fromString(q["startDate"].toString(),Qt::ISODate),QDate::fromString(q["endDate"].toString(),Qt::ISODate));end_->setDateRange(start_->minimumDate(),start_->maximumDate());start_->setDate(start_->minimumDate());end_->setDate(end_->maximumDate());dataLabel_->setText(QString("本地 %1 根 · %2").arg(n["bars"].toInt()).arg(q["adjustment"]=="forward"?"前复权":"不复权"));status_->setText("复用当前股票行情");}
   catch(const std::exception&e){dataLabel_->setText("等待日 K 数据");status_->setText(QString::fromUtf8(e.what()));}changing_=false;availability();
 }
@@ -127,9 +132,9 @@ void StockExtensionPanel::render(){auto view=checkedView(result_);clearLayout(me
     for(int r=0;r<rows.size();++r)for(int c=0;c<columns.size();++c){auto value=rows[r].toObject()[columns[c].toObject()["field"].toString()];auto text=value.isDouble()?QString::number(value.toDouble(),'f',columns[c].toObject()["decimals"].toInt(2)):value.toVariant().toString();auto column=columns[c].toObject();if(column["format"]=="date")text=day(value);auto labels=column["labels"].toObject();if(labels.contains(text))text=labels[text].toString();t->setItem(r,c,new QTableWidgetItem(text));}
     t->setObjectName("extensionTable_"+spec["source"].toString());
     t->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);t->horizontalHeader()->setStretchLastSection(true);connect(t,&QTableWidget::cellClicked,this,[this,rows,spec](int row,int){if(!chart_||row>=rows.size())return;auto r=rows[row].toObject();int a=chart_->labels.indexOf(day(r[spec["startDate"].toString()])),b=chart_->labels.indexOf(day(r[spec["endDate"].toString()]));if(a<0)a=b;if(b<0)b=a;if(a<0)return;chart_->visibleCount=qBound(16,b-a+24,int(chart_->bars.size()));chart_->endIndex=qMin(int(chart_->bars.size()),b+12);chart_->selected=b;chart_->update();emit chart_->barSelected(b);auto ids=spec["inspectionIds"].toArray();if(row<ids.size())selectItem(ids[row].toString());});results_->addTab(t,spec["title"].toString());}
-  results_->setVisible(results_->count()>0);layers();availability();
+  results_->setVisible(results_->count()>0);if(height()<480)resize(width(),560);layers();availability();
 }
-void StockExtensionPanel::layers(){if(!chart_)return;chart_->removeExtensionLayer(id_);if(result_.isEmpty()||isHidden())return;const auto view=result_["view"].toObject();chartExtension::Layer layer;
+void StockExtensionPanel::layers(){if(!chart_)return;chart_->removeExtensionLayer(id_);if(result_.isEmpty())return;const auto view=result_["view"].toObject();chartExtension::Layer layer;
   if(lines_->isChecked())for(auto v:view["lines"].toArray()){auto o=v.toObject();chartExtension::Line line;line.name=o["name"].toString();line.color=color(o);for(auto p:o["points"].toArray()){auto r=p.toArray();int i=chart_->labels.indexOf(day(r[0]));if(i>=0&&r[1].isDouble())line.points.append({double(i),r[1].toDouble()});}layer.lines.append(line);}
   for(auto v:view["markers"].toArray()){auto m=v.toObject();if(m["category"]=="signal"?!signals_->isChecked():!marks_->isChecked())continue;int i=chart_->labels.indexOf(day(m["date"]));if(i>=0)layer.markers.append({i,m["price"].toDouble(),m["shape"].toString(),m["text"].toString(),m["category"].toString(),color(m),m["id"].toString(),m["label"].toString().left(4)});}
   if(connections_->isChecked())for(auto v:view["segments"].toArray()){auto s=v.toObject();int a=chart_->labels.indexOf(day(s["fromDate"])),b=chart_->labels.indexOf(day(s["toDate"]));if(a>=0&&b>=a)layer.segments.append({{double(a),s["fromPrice"].toDouble()},{double(b),s["toPrice"].toDouble()},color(s),s["id"].toString()});}
@@ -138,7 +143,7 @@ void StockExtensionPanel::layers(){if(!chart_)return;chart_->removeExtensionLaye
 }
 void StockExtensionPanel::inspect(int index){if(!chart_||result_.isEmpty()||!result_["view"].toObject()["inspections"].toArray().isEmpty())return;QStringList notes;for(auto v:result_["view"].toObject()["markers"].toArray()){auto m=v.toObject();if(day(m["date"])==chart_->labels.value(index))notes<<m["text"].toString();}inspection_->setText(notes.join(" · "));inspection_->setVisible(!notes.isEmpty());}
 void StockExtensionPanel::selectItem(const QString& id){
-  if(!chart_||result_.isEmpty()||isHidden())return;
+  if(!chart_||result_.isEmpty())return;
   QJsonObject item;for(auto v:result_["view"].toObject()["inspections"].toArray())if(v.toObject()["id"]==id){item=v.toObject();break;}
   if(item.isEmpty()){closeInspection();return;}
   selectedItem_=id;delete inspectionCard_;auto card=new QFrame(chart_);inspectionCard_=card;
@@ -165,7 +170,8 @@ void StockExtensionPanel::placeInspection(){
   inspectionCard_->move(qBound(4,left,qMax(4,chart_->width()-inspectionCard_->width()-4)),int(chart_->priceRect().top()+6));
 }
 bool StockExtensionPanel::eventFilter(QObject* watched,QEvent* event){if(watched==chart_&&event->type()==QEvent::Resize)placeInspection();return QWidget::eventFilter(watched,event);}
-void StockExtensionPanel::hideEvent(QHideEvent* event){selectedItem_.clear();delete inspectionCard_;if(chart_)chart_->removeExtensionLayer(id_);QWidget::hideEvent(event);}
+void StockExtensionPanel::hideEvent(QHideEvent* event){QDialog::hideEvent(event);emit visibilityChanged(false);}
+void StockExtensionPanel::showEvent(QShowEvent* event){if(parentWidget())setPalette(parentWidget()->palette());QDialog::showEvent(event);emit visibilityChanged(true);}
 void StockExtensionPanel::showDetails(){auto d=new QDialog(this);d->setAttribute(Qt::WA_DeleteOnClose);d->setWindowTitle("数据与规则");auto l=new QVBoxLayout(d);auto text=new QTextBrowser;QStringList lines{context_["name"].toString()+" · "+context_["id"].toString(),"数据：主程序行情缓存",context_["meta"].toObject()["source"].toString(),"获取时点："+context_["meta"].toObject()["checkedAt"].toString(),"回测范围："+start_->date().toString(Qt::ISODate)+" 至 "+end_->date().toString(Qt::ISODate),"主图缩放不会改变回测范围。",manifest_["ui"].toObject()["rules"].toString()};for(auto w:result_["warnings"].toArray())lines<<w.toString();text->setPlainText(lines.join("\n\n"));l->addWidget(text);d->resize(620,430);d->show();}
 void StockExtensionPanel::showHistory(){guard([this]{auto d=new QDialog(this);d->setAttribute(Qt::WA_DeleteOnClose);d->setWindowTitle("已保存结果");auto l=new QVBoxLayout(d);auto list=new QListWidget;l->addWidget(list);for(auto v:job_.records()){auto r=v.toObject();if(r["pluginId"]!=id_)continue;auto item=new QListWidgetItem(r["createdAt"].toString()+" · "+r["status"].toString(),list);item->setData(Qt::UserRole,r["runId"].toString());}connect(list,&QListWidget::itemDoubleClicked,d,[this,d](QListWidgetItem* item){guard([this,d,item]{auto record=job_.reopen(item->data(Qt::UserRole).toString());auto result=record["result"].toObject();require(record["status"]=="completed","此记录没有完成结果");require(result["dataPolicy"].toObject()["chartContextSha256"]==contextKey_,"该历史属于另一只股票或行情版本，请先返回对应行情");checkedView(result);result_=result;runId_=record["runId"].toString();setProperty("runId",runId_);
     {QSignalBlocker a(start_),b(end_);auto dataset=result["dataPolicy"].toObject()["dataset"].toObject();auto first=QDate::fromString(dataset["requestedStart"].toString(),Qt::ISODate),last=QDate::fromString(dataset["requestedEnd"].toString(),Qt::ISODate);if(first.isValid()&&last.isValid()){start_->setDate(first);end_->setDate(last);}}

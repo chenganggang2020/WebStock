@@ -29,6 +29,17 @@ struct Harness {
 class StockExtensionTests:public QObject {
   Q_OBJECT
 private slots:
+  void floatingControlsKeepTheChartSizeAndCanReopen(){
+    Harness h;h.host->install(package());h.window.show();QCoreApplication::processEvents();const auto chartSize=h.chart->size();
+    auto button=h.window.findChild<QPushButton*>("extensionAction_org.test.first");QVERIFY(button);button->click();
+    auto panel=h.window.findChild<StockExtensionPanel*>();QVERIFY(panel);QVERIFY(panel->isWindow());QVERIFY(!panel->isModal());QVERIFY(panel->isVisible());QVERIFY(button->isChecked());
+    QCoreApplication::processEvents();QCOMPARE(h.chart->size(),chartSize);QCOMPARE(h.layout->indexOf(panel),-1);
+    panel->findChild<QPushButton*>("collapseExtensionPanel")->click();QVERIFY(panel->isHidden());QVERIFY(!button->isChecked());QCOMPARE(h.chart->size(),chartSize);
+    button->click();QCOMPARE(h.window.findChildren<StockExtensionPanel*>().size(),1);QVERIFY(panel->isVisible());
+    panel->close();QVERIFY(panel->isHidden());QVERIFY(!button->isChecked());button->click();QVERIFY(panel->isVisible());
+    QTest::keyClick(panel,Qt::Key_Escape);QVERIFY(panel->isHidden());QVERIFY(!button->isChecked());
+    h.host->uninstall("org.test.first");QVERIFY(!h.window.findChild<StockExtensionPanel*>());QCOMPARE(h.chart->size(),chartSize);
+  }
   void chartHitTestingFollowsViewportAndIgnoresDrag(){
     Chart chart;stock(chart);chart.resize(900,480);chart.visibleCount=80;chart.endIndex=640;
     chartExtension::Layer layer;layer.segments.append({{570,10.5},{625,11.2},QColor("#ef717a"),"one"});
@@ -102,7 +113,13 @@ private slots:
     panel->findChild<QCheckBox*>("extensionConnections")->setChecked(false);QVERIFY(h.chart->extensionLayers[plugin].segments.isEmpty());panel->findChild<QCheckBox*>("extensionConnections")->setChecked(true);
     // Table selection shows the same inspection, including an unclosed entry.
     auto table=panel->findChild<QTableWidget*>("extensionTable_fills");QVERIFY(table);table->cellClicked(table->rowCount()-1,0);card=h.chart->findChild<QFrame*>("extensionInspectionCard");QVERIFY(card);QCOMPARE(card->findChild<QLabel*>("inspectionValue")->text(),QString("持仓中"));QVERIFY(card->property("itemId").toString()!=segment.id);
-    panel->hide();QVERIFY(!h.chart->findChild<QFrame*>("extensionInspectionCard"));QVERIFY(h.chart->extensionLayers.isEmpty());h.host->open(plugin);QCOMPARE(h.chart->extensionLayers[plugin].segments.size(),12);
+    const auto chartSize=h.chart->size();panel->hide();QCOMPARE(h.chart->extensionLayers[plugin].segments.size(),12);
+    // Collapsing controls leaves results and chart inspection usable, without a rerun.
+    card=h.chart->findChild<QFrame*>("extensionInspectionCard");QVERIFY(card);card->findChild<QToolButton*>("closeExtensionInspection")->click();
+    h.chart->visibleCount=qMax(40,int(segment.to.x()-segment.from.x())+24);h.chart->endIndex=qMin(640,int(segment.to.x())+12);
+    point=(h.chart->extensionPoint(int(segment.from.x()),segment.from.y())+h.chart->extensionPoint(int(segment.to.x()),segment.to.y()))/2;
+    QTest::mouseClick(h.chart,Qt::LeftButton,Qt::NoModifier,point.toPoint());QVERIFY(h.chart->findChild<QFrame*>("extensionInspectionCard"));
+    h.host->open(plugin);QCOMPARE(h.chart->extensionLayers[plugin].segments.size(),12);QCOMPARE(panel->property("runId").toString(),runId);QCOMPARE(h.chart->size(),chartSize);
     table=panel->findChild<QTableWidget*>("extensionTable_closed-trades");table->cellClicked(0,0);QVERIFY(h.chart->findChild<QFrame*>("extensionInspectionCard"));
     auto changed=stock(*h.chart);changed["id"]="SH:stock:600000";h.host->setContext(changed);QVERIFY(h.chart->extensionLayers.isEmpty());QVERIFY(panel->property("runId").toString().isEmpty());
     QVERIFY(!h.chart->findChild<QFrame*>("extensionInspectionCard"));

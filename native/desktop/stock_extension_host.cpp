@@ -24,7 +24,7 @@ void StockExtensionHost::synchronize(){
     try{p=repository_.plugin(id);auto m=p["manifest"].toObject();if(!p["enabled"].toBool()||!chartPlugin(m))continue;retained.insert(id);
       if(contributions_.contains(id)&&contributions_[id].signature==p["manifestSha256"].toString())continue;
       stop(id);auto button=new QPushButton(m["ui"].toObject()["toolbarLabel"].toString(m["ui"].toObject()["title"].toString()));button->setObjectName("extensionAction_"+id);button->setCheckable(true);button->setToolTip(m["ui"].toObject()["summary"].toString());tools_->addWidget(button);
-      contributions_[id]={button,nullptr,p["manifestSha256"].toString()};connect(button,&QPushButton::toggled,this,[this,id](bool on){if(on)open(id);else if(contributions_.value(id).panel){contributions_[id].panel->hide();if(chart_)chart_->removeExtensionLayer(id);}});
+      contributions_[id]={button,nullptr,p["manifestSha256"].toString()};connect(button,&QPushButton::toggled,this,[this,id](bool on){if(on)open(id);else if(contributions_.value(id).panel)contributions_[id].panel->hide();});
     }catch(const std::exception&e){retained.remove(id);emit error(QString::fromUtf8(e.what()));}
   }}catch(const std::exception&e){emit error(QString::fromUtf8(e.what()));}
   for(auto id:contributions_.keys())if(!retained.contains(id))stop(id);
@@ -33,8 +33,12 @@ void StockExtensionHost::synchronize(){
 void StockExtensionHost::setContext(const QJsonObject& input){context_=input;for(auto&c:contributions_)if(c.panel)c.panel->setContext(input);}
 void StockExtensionHost::open(const QString& id){
   try{require(contributions_.contains(id),"插件未安装或未启用");emit dayRequested();auto&c=contributions_[id];
-    if(!c.panel){c.panel=new StockExtensionPanel(repository_.root(),id,chart_,panels_->parentWidget());panels_->addWidget(c.panel);connect(c.panel,&StockExtensionPanel::refreshRequested,this,&StockExtensionHost::refreshRequested);}
-    c.panel->show();c.panel->setContext(context_);QSignalBlocker block(c.button);c.button->setChecked(true);
+    if(!c.panel){
+      c.panel=new StockExtensionPanel(repository_.root(),id,chart_,panels_->parentWidget());
+      connect(c.panel,&StockExtensionPanel::refreshRequested,this,&StockExtensionHost::refreshRequested);
+      connect(c.panel,&StockExtensionPanel::visibilityChanged,this,[button=QPointer<QPushButton>(c.button)](bool visible){if(button){QSignalBlocker block(button);button->setChecked(visible);}});
+    }
+    c.panel->setContext(context_);c.panel->show();c.panel->raise();c.panel->activateWindow();QSignalBlocker block(c.button);c.button->setChecked(true);
   }catch(const std::exception&e){if(contributions_.contains(id)&&contributions_[id].button){QSignalBlocker block(contributions_[id].button);contributions_[id].button->setChecked(false);}emit error(QString::fromUtf8(e.what()));}
 }
 void StockExtensionHost::install(const QByteArray& package){auto m=validateManifest(object(package)["manifest"].toObject());require(chartPlugin(m),"此插件包尚未适配当前图表扩展接口");stop(m["id"].toString());try{repository_.install(package);}catch(...){synchronize();throw;}synchronize();}
