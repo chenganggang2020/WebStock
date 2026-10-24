@@ -13,6 +13,7 @@
 #include <QListWidget>
 #include <QFontDatabase>
 #include <QDoubleSpinBox>
+#include <QDateEdit>
 using namespace quantPlugin;
 
 class PluginTests:public QObject{
@@ -114,7 +115,7 @@ out=dict(schema='webstock.plugin.result.v1',status='completed',automaticTrading=
         QTemporaryDir dir;Repository repo(dir.path());repo.install(package(m,code));repo.configure("org.test.engine",python,true);
         QuantPluginWidget widget(dir.path());widget.show();
         QVERIFY(!widget.findChild<QLineEdit*>("pluginInput")->isVisible());
-        auto date=widget.findChild<QLineEdit*>("pluginParam_date");QVERIFY(date);date->setText("2020-02-03");
+        auto date=widget.findChild<QDateEdit*>("pluginParam_date");QVERIFY(date);QVERIFY(date->calendarPopup());date->setDate(QDate(2020,2,3));
         QTest::mouseClick(widget.findChild<QPushButton*>("pluginRun"),Qt::LeftButton);
         Job reader(dir.path());QTRY_VERIFY_WITH_TIMEOUT(!reader.records().isEmpty()&&reader.records()[0].toObject().value("status")=="completed",10000);
         auto id=reader.records()[0].toObject().value("runId").toString();auto result=reader.reopen(id).value("result").toObject();
@@ -122,7 +123,7 @@ out=dict(schema='webstock.plugin.result.v1',status='completed',automaticTrading=
         auto bytes=reader.exportResult(id);QTemporaryDir copy;Job importer(copy.path());QCOMPARE(importer.importResult(bytes),id);
         QCOMPARE(importer.reopen(id).value("result").toObject(),result);QVERIFY(!importer.active());
         QuantPluginWidget reopened(dir.path());
-        QCOMPARE(reopened.findChild<QLineEdit*>("pluginParam_date")->text(),QString("2020-02-03"));
+        QCOMPARE(reopened.findChild<QDateEdit*>("pluginParam_date")->date(),QDate(2020,2,3));
         QVERIFY_EXCEPTION_THROWN(repo.rememberParameters("org.test.engine","test",{{"date","2020-02-31"}}),std::runtime_error);
     }
     void recoversWithoutReplay(){

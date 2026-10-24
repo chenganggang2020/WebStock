@@ -1,4 +1,5 @@
 #include "quant_plugin_widget.hpp"
+#include "quant_plugin_ui.hpp"
 #include <QAbstractTableModel>
 #include <QCheckBox>
 #include <QComboBox>
@@ -21,6 +22,7 @@
 #include <QTabWidget>
 #include <QVBoxLayout>
 #include <QJsonDocument>
+#include <QDialog>
 #include <cmath>
 #include <limits>
 
@@ -45,15 +47,18 @@ public:
     }
     QVariant headerData(int section,Qt::Orientation o,int role)const override {
         if(role!=Qt::DisplayRole)return {};
-        return o==Qt::Horizontal?QVariant(columns_[section].toString()):QVariant(section+1);
+        static const QMap<QString,QString> labels{{"time","日期"},{"symbol","股票代码"},{"open","开盘价"},{"high","最高价"},{"low","最低价"},{"close","收盘价"},{"volume","成交量（股）"},{"amount","成交额（元）"},{"priceadjustment","复权口径"},{"source","来源"},{"acquiredatutc","采集时间 UTC"},{"volumeunit","量单位"},{"amountunit","额单位"},{"timezone","时区"},{"isclosed","已完成日线"}};
+        return o==Qt::Horizontal?QVariant(labels.value(columns_[section].toString(),columns_[section].toString())):QVariant(section+1);
     }
 };
 class SeriesPlot : public QWidget {
     QJsonArray rows_;
     int column_=1;
+    bool bars_=false;
 public:
     explicit SeriesPlot(QJsonArray rows,QWidget* parent):QWidget(parent),rows_(rows){setMinimumHeight(190);}
     void setColumn(int column){column_=column;update();}
+    void setBars(){bars_=true;setMinimumHeight(105);update();}
 protected:
     void paintEvent(QPaintEvent*) override {
         QPainter p(this);p.fillRect(rect(),palette().base());p.setRenderHint(QPainter::Antialiasing);
@@ -62,7 +67,8 @@ protected:
         for(int i=0;i<rows_.size();++i) {auto v=rows_[i].toArray().at(column_);if(v.isDouble()){if(first<0)first=i;last=i;low=std::min(low,v.toDouble());high=std::max(high,v.toDouble());}}
         p.setPen(palette().text().color());
         if(!std::isfinite(low)){p.drawText(area,Qt::AlignCenter,"此列没有有效数值（可能预热不足）");return;}
-        if(high==low){high+=std::max(1.,std::abs(high)*.01);low-=std::max(1.,std::abs(low)*.01);}
+        if(bars_)low=0;
+        if(high==low){high+=std::max(1.,std::abs(high)*.01);if(!bars_)low-=std::max(1.,std::abs(low)*.01);}
         const auto highText=QString::number(high,'g',8),lowText=QString::number(low,'g',8);
         const int labelWidth=std::max(90,std::max(p.fontMetrics().horizontalAdvance(highText),p.fontMetrics().horizontalAdvance(lowText))+8);
         area=QRectF(labelWidth+8,18,std::max(10,width()-labelWidth-33),std::max(10,height()-55));
@@ -74,6 +80,11 @@ protected:
         // contiguous segment separately so pixel buckets cannot bridge a gap.
         int count=last-first+1;int bucket=std::max(1,count/std::max(1,int(area.width())));
         auto pointAt=[&](int i){return QPointF(area.left()+area.width()*(i-first)/std::max(1,count-1),area.bottom()-area.height()*(rows_[i].toArray()[column_].toDouble()-low)/(high-low));};
+        if(bars_){
+            p.setPen(QPen(QColor("#479f9a"),std::max(1.,std::min(4.,area.width()/std::max(1,count)*.7))));
+            for(int start=first;start<=last;start+=bucket){int maximum=start;for(int i=start;i<std::min(last+1,start+bucket);++i)if(rows_[i].toArray().at(column_).toDouble()>rows_[maximum].toArray().at(column_).toDouble())maximum=i;auto point=pointAt(maximum);p.drawLine(QPointF(point.x(),area.bottom()),point);}
+            p.setPen(palette().text().color());p.drawText(QRectF(area.left(),area.bottom()+5,area.width()/2,25),rows_[first].toArray().first().toVariant().toString());p.drawText(QRectF(area.center().x(),area.bottom()+5,area.width()/2,25),Qt::AlignRight,rows_[last].toArray().first().toVariant().toString());return;
+        }
         for(int segment=first;segment<=last;){
             if(!rows_[segment].toArray().at(column_).isDouble()){++segment;continue;}
             int stop=segment+1;while(stop<=last&&rows_[stop].toArray().at(column_).isDouble())++stop;
@@ -125,126 +136,53 @@ protected:
     }
 };
 }
-QuantPluginWidget::QuantPluginWidget(QString root,QWidget* parent):QWidget(parent),repository_(root),job_(root,this) {
-    setObjectName("quantPluginWidget");auto layout=new QVBoxLayout(this);
-    auto heading=new QLabel("量化插件 · 安装、指标计算与历史回测");heading->setStyleSheet("font-size:18px;font-weight:600;");layout->addWidget(heading);
-    auto bar=new QHBoxLayout;auto install=new QPushButton("安装插件包");auto configure=new QPushButton("保存运行环境");
-    auto cancel=new QPushButton("取消运行");run_=new QPushButton("运行所选功能");run_->setObjectName("pluginRun");
-    auto uninstall=new QPushButton("卸载所选插件");auto exportResult=new QPushButton("导出结果包");auto importResult=new QPushButton("导入结果包");
-    bar->addWidget(install);bar->addWidget(configure);bar->addWidget(uninstall);bar->addWidget(exportResult);bar->addWidget(importResult);bar->addStretch();bar->addWidget(run_);bar->addWidget(cancel);layout->addLayout(bar);
-    auto splitter=new QSplitter;layout->addWidget(splitter,1);auto scroll=new QScrollArea;scroll->setWidgetResizable(true);scroll->setMinimumWidth(400);
-    auto panel=new QWidget;auto form=new QFormLayout(panel);form->setRowWrapPolicy(QFormLayout::WrapLongRows);form_=form;scroll->setWidget(panel);splitter->addWidget(scroll);
-    plugins_=new QComboBox;plugins_->setObjectName("pluginPicker");plugins_->setSizeAdjustPolicy(QComboBox::AdjustToMinimumContentsLengthWithIcon);plugins_->setMinimumContentsLength(18);form->addRow("插件",plugins_);
-    enabled_=new QCheckBox("启用此插件");form->addRow(enabled_);
-    connect(enabled_,&QCheckBox::toggled,this,[this](bool checked){enabled_->setText(checked?"已启用此插件":"此插件已停用");});
-    auto pathRow=[&](const QString& title,QLineEdit*& edit,const QString& filter){
-        auto row=new QWidget;auto h=new QHBoxLayout(row);h->setContentsMargins(0,0,0,0);edit=new QLineEdit;auto choose=new QPushButton("选择");h->addWidget(edit,1);h->addWidget(choose);form->addRow(title,row);
-        connect(choose,&QPushButton::clicked,this,[this,edit,title,filter]{auto file=QFileDialog::getOpenFileName(this,title,{},filter);if(!file.isEmpty())edit->setText(file);});
-    };
-    pathRow("独立Python环境",runtime_,"Python (python.exe);;所有文件 (*)");runtime_->setObjectName("pluginRuntime");
-    filter_=new QLineEdit;filter_->setPlaceholderText("按名称搜索指标或功能");form->addRow("搜索",filter_);
-    operations_=new QComboBox;operations_->setObjectName("pluginOperation");operations_->setSizeAdjustPolicy(QComboBox::AdjustToMinimumContentsLengthWithIcon);operations_->setMinimumContentsLength(18);form->addRow("功能",operations_);
-    description_=new QLabel;description_->setTextFormat(Qt::PlainText);description_->setWordWrap(true);form->addRow(description_);
-    pathRow("历史K线 CSV",input_,"CSV (*.csv)");input_->setObjectName("pluginInput");
-    adjustment_=new QComboBox;for(auto pair:QList<QPair<QString,QString>>{{"尚未核实","unknown"},{"不复权","unadjusted"},{"前复权","forward"},{"后复权","backward"}})adjustment_->addItem(pair.first,pair.second);form->addRow("价格口径",adjustment_);
-    closed_=new QCheckBox("确认输入仅包含已完成的K线");closed_->setObjectName("pluginClosedBars");form->addRow(closed_);
-    connect(closed_,&QCheckBox::toggled,this,[this](bool checked){
-        const bool events=operation_.value("inputKind")=="market-events-csv";
-        const bool portfolio=operation_.value("inputKind")=="portfolio-equity-csv";
-        const bool observations=operation_.value("inputKind")=="research-observations-csv";
-    const bool options=operation_.value("inputKind")=="option-chain-csv";
-        closed_->setText(options?(checked?"已确认：期权报价及模型输入当时可知":"确认期权报价及模型输入当时可知"):observations?(checked?"已确认：数据发布及修订当时可知":"确认数据发布及修订当时可知"):portfolio?(checked?"已确认：权益、费用与出入金当时可知":"确认权益、费用与出入金当时可知"):events?(checked?"已确认：事件已发生且当时可知":"确认输入事件已发生且当时可知"):(checked?"已确认：仅包含已完成K线":"确认输入仅包含已完成的K线"));});
-    timeout_=new QSpinBox;timeout_->setRange(5,3600);timeout_->setValue(600);form->addRow("最长运行秒数",timeout_);
-    auto parameterPanel=new QWidget;parameters_=new QFormLayout(parameterPanel);parameters_->setContentsMargins(0,0,0,0);form->addRow(parameterPanel);
-    auto right=new QWidget;auto rightLayout=new QVBoxLayout(right);history_=new QListWidget;history_->setObjectName("pluginHistory");history_->setMaximumHeight(140);rightLayout->addWidget(history_);
-    results_=new QTabWidget;results_->setObjectName("pluginResults");rightLayout->addWidget(results_,1);splitter->addWidget(right);splitter->setStretchFactor(1,3);
-    status_=new QLabel("安装插件后，选择独立运行环境和本地历史数据。进入本页不会启动任务。");status_->setTextFormat(Qt::PlainText);status_->setWordWrap(true);status_->setObjectName("pluginStatus");layout->addWidget(status_);
-    connect(install,&QPushButton::clicked,this,[this]{guard([this]{auto file=QFileDialog::getOpenFileName(this,"安装WebStock插件",{},"WebStock 插件 (*.wspkg)");if(file.isEmpty())return;
-        auto p=repository_.install(quantPlugin::read(file));refreshPlugins();plugins_->setCurrentIndex(plugins_->findData(p.value("id").toString()));status_->setText("插件已安装，请选择它的独立运行环境。包内为可执行代码，仅安装可信来源。");});});
-    connect(configure,&QPushButton::clicked,this,[this]{guard([this]{repository_.configure(plugins_->currentData().toString(),runtime_->text(),enabled_->isChecked());status_->setText("插件运行环境与启用状态已保存。");});});
-    connect(uninstall,&QPushButton::clicked,this,[this]{guard([this]{quantPlugin::require(!job_.active(),"请等待或取消本窗口任务后卸载");repository_.uninstall(plugins_->currentData().toString());refreshPlugins();status_->setText("插件已从可运行列表移除。历史结果与版本缓存保留，可重新安装恢复。");});});
-    connect(exportResult,&QPushButton::clicked,this,[this]{guard([this]{auto item=history_->currentItem();quantPlugin::require(item,"请在历史中选择已完成结果");auto bytes=job_.exportResult(item->data(Qt::UserRole).toString());auto path=QFileDialog::getSaveFileName(this,"导出含冻结输入的结果包",{},"WebStock 结果 (*.wsresult)");if(!path.isEmpty()){quantPlugin::write(path,bytes);status_->setText("完整结果包已导出，包含本次冻结的输入数据与适配代码。");}});});
-    connect(importResult,&QPushButton::clicked,this,[this]{guard([this]{auto path=QFileDialog::getOpenFileName(this,"导入结果包",{},"WebStock 结果 (*.wsresult)");if(path.isEmpty())return;auto id=job_.importResult(quantPlugin::read(path,68*1024*1024));refreshHistory();showResult(id);});});
-    connect(plugins_,&QComboBox::currentIndexChanged,this,[this]{guard([this]{selectPlugin();});});
-    connect(filter_,&QLineEdit::textChanged,this,[this]{guard([this]{filterOperations();});});
-    connect(operations_,&QComboBox::currentIndexChanged,this,[this]{guard([this]{selectOperation();});});
-    connect(run_,&QPushButton::clicked,this,[this]{guard([this]{start();});});connect(cancel,&QPushButton::clicked,this,[this]{job_.cancel();});
-    connect(history_,&QListWidget::itemClicked,this,[this](QListWidgetItem* item){guard([this,item]{showResult(item->data(Qt::UserRole).toString());});});
-    job_.progress=[this](QString message){status_->setText(message);};
-    job_.changed=[this]{refreshHistory();run_->setEnabled(!job_.active());auto r=job_.current();status_->setText(statusText(r.value("status").toString())+" · "+r.value("message").toString());
-        if(r.value("status")=="completed")guard([this,r]{showResult(r.value("runId").toString());});};
-    guard([this]{refreshPlugins();refreshHistory();});
-}
-QuantPluginWidget::~QuantPluginWidget(){job_.changed={};job_.progress={};job_.cancel();}
-void QuantPluginWidget::guard(std::function<void()> action){try{action();}catch(const std::exception& e){status_->setText(QString::fromUtf8(e.what()));}}
-void QuantPluginWidget::refreshPlugins(){QSignalBlocker block(plugins_);auto selected=plugins_->currentData();plugins_->clear();for(auto v:repository_.plugins()){auto p=v.toObject();plugins_->addItem(p.value("name").toString()+" / "+p.value("version").toString(),p.value("id"));}int i=plugins_->findData(selected);if(i>=0)plugins_->setCurrentIndex(i);selectPlugin();}
-void QuantPluginWidget::selectPlugin(){
-    if(plugins_->currentIndex()<0){QSignalBlocker block(operations_);operations_->clear();runtime_->clear();enabled_->setChecked(false);selectOperation();return;}
-    auto p=repository_.plugin(plugins_->currentData().toString());runtime_->setText(p.value("runtimePath").toString());enabled_->setChecked(p.value("enabled").toBool());
-    filterOperations();
-}
-void QuantPluginWidget::filterOperations(){
-    QSignalBlocker block(operations_);auto previous=operation_.value("id").toString();operations_->clear();if(plugins_->currentIndex()<0)return;
-    auto p=repository_.plugin(plugins_->currentData().toString());
-    for(auto v:p.value("manifest").toObject().value("operations").toArray()){auto op=v.toObject();if(op.value("title").toString().contains(filter_->text(),Qt::CaseInsensitive))operations_->addItem(op.value("title").toString(),op);}
-    for(int i=0;i<operations_->count();++i)if(operations_->itemData(i).toJsonObject().value("id")==previous)operations_->setCurrentIndex(i);
-    selectOperation();
-}
-void QuantPluginWidget::selectOperation(){
-    fields_.clear();while(parameters_->rowCount())parameters_->removeRow(0);
-    operation_=operations_->currentData().toJsonObject();description_->setText(operation_.value("description").toString());
-    const bool query=operation_.value("inputKind")=="parameters-only";
-    const bool events=operation_.value("inputKind")=="market-events-csv";
-    const bool portfolio=operation_.value("inputKind")=="portfolio-equity-csv";
-    const bool observations=operation_.value("inputKind")=="research-observations-csv";
-    const bool options=operation_.value("inputKind")=="option-chain-csv";
-    form_->setRowVisible(input_->parentWidget(),!query);form_->setRowVisible(adjustment_,operation_.value("inputKind")=="ohlcv-single-csv");form_->setRowVisible(closed_,!query);
-    closed_->setChecked(false);
-    closed_->setText(options?"确认期权报价及模型输入当时可知":observations?"确认数据发布及修订当时可知":portfolio?"确认权益、费用与出入金当时可知":events?"确认输入事件已发生且当时可知":"确认输入仅包含已完成的K线");
-    if(auto label=qobject_cast<QLabel*>(form_->labelForField(input_->parentWidget())))
-        label->setText(options?"期权链报价 / 曲线假设 CSV":observations?"研究数据发布 / 修订 CSV":portfolio?"策略权益 / 出入金 CSV":events?"逐笔成交 / 盘口 CSV":operation_.value("inputKind")=="market-panel-csv"?"历史多证券 CSV":"历史K线 CSV");
-    QJsonObject saved;
-    if(!operation_.isEmpty()){
-        auto p=repository_.plugin(plugins_->currentData().toString());
-        try{saved=quantPlugin::validateParameters(operation_,p.value("parametersByOperation").toObject().value(operation_.value("id").toString()).toObject());}
-        catch(const std::exception&){/* An older version's parameters may no longer be valid. */}
-    }
-    for(auto v:operation_.value("parameters").toArray()){auto f=v.toObject();QWidget* field;
-        if(saved.contains(f.value("id").toString()))f["default"]=saved.value(f.value("id").toString());
-        if(f.value("type")=="choice"){auto box=new QComboBox;for(auto x:f.value("choices").toArray())box->addItem(x.toVariant().toString(),x.toVariant());box->setCurrentIndex(box->findData(f.value("default").toVariant()));field=box;}
-        else if(f.value("type")=="text"){auto edit=new QLineEdit(f.value("default").toString());edit->setMaxLength(f.value("maxLength").toInt());if(f.value("format")=="date")edit->setPlaceholderText("YYYY-MM-DD");field=edit;}
-        else {
-            auto spin=new QDoubleSpinBox;const bool integer=f.value("type")=="integer";int decimals=integer?0:6;
-            if(!integer)for(const auto& key:QStringList{"default","minimum"}){
-                const double value=std::abs(f.value(key).toDouble());
-                if(value>0&&value<1)decimals=std::max(decimals,std::min(12,int(std::ceil(-std::log10(value)))+2));
-            }
-            spin->setDecimals(decimals);spin->setRange(f.value("minimum").toDouble(),f.value("maximum").toDouble());
-            spin->setValue(f.value("default").toDouble());spin->setSingleStep(integer?1:.01);
-            if(!integer)spin->setStepType(QAbstractSpinBox::AdaptiveDecimalStepType);field=spin;
-        }
-        field->setObjectName("pluginParam_"+f.value("id").toString());fields_[f.value("id").toString()]=field;parameters_->addRow(f.value("title").toString(),field);
-    }
-}
-void QuantPluginWidget::refreshHistory(){history_->clear();for(auto v:job_.records()){auto r=v.toObject();auto item=new QListWidgetItem(statusText(r.value("status").toString())+" · "+r.value("pluginId").toString()+" / "+r.value("operationId").toString()+" · "+r.value("createdAt").toString(),history_);item->setData(Qt::UserRole,r.value("runId"));}}
-void QuantPluginWidget::start(){
-    quantPlugin::require(!operation_.isEmpty(),"请选择已安装插件的功能");
-    repository_.configure(plugins_->currentData().toString(),runtime_->text(),enabled_->isChecked());QJsonObject parameters;
-    for(auto i=fields_.begin();i!=fields_.end();++i){if(auto s=qobject_cast<QDoubleSpinBox*>(i.value()))parameters[i.key()]=s->value();else if(auto edit=qobject_cast<QLineEdit*>(i.value()))parameters[i.key()]=edit->text();else parameters[i.key()]=QJsonValue::fromVariant(qobject_cast<QComboBox*>(i.value())->currentData());}
-    job_.start(plugins_->currentData().toString(),operation_.value("id").toString(),input_->text(),parameters,
-               {{"closedBarsOnly",closed_->isChecked()},{"knownEventsOnly",closed_->isChecked()},{"knownValuationsOnly",closed_->isChecked()},{"knownObservationsOnly",closed_->isChecked()},{"knownQuotesOnly",closed_->isChecked()},{"adjustment",adjustment_->currentData().toString()},
-                {"timezone","unspecified"},{"volumeUnit","unspecified"},{"source","user-selected local CSV"}},timeout_->value());
-}
-void QuantPluginWidget::showResult(const QString& id){
-    auto record=job_.reopen(id);while(results_->count()){auto w=results_->widget(0);results_->removeTab(0);w->deleteLater();}
+void QuantPluginWidget::showResult(const QString& id,bool fresh){
+    QJsonObject record;
+    if(id.startsWith("shared:")){auto input=job_.marketDataInput(id);auto result=input["result"].toObject();record={{"pluginId",pluginId_},{"operationId","daily-eastmoney"},{"status","completed"},{"result",result},{"request",QJsonObject{{"parameters",result["parameters"]}}}};history_->setCurrentRow(-1);}
+    else record=job_.reopen(id);quantPlugin::require(record.value("pluginId")==pluginId_,"此记录属于其他插件，请打开对应插件的历史");
+    while(results_->count()){auto w=results_->widget(0);results_->removeTab(0);w->deleteLater();}
+    for(int i=0;i<history_->count();++i)if(history_->item(i)->data(Qt::UserRole).toString()==id)history_->setCurrentRow(i);
     auto result=record.value("result").toObject();
+    const bool market=pluginId_=="org.webstock.akshare"&&record.value("operationId")=="daily-eastmoney";
+    const bool pending=QStringList{"starting","running"}.contains(record.value("status").toString());
+    const auto query=record.value("request").toObject().value("parameters").toObject();
+    if(result.isEmpty()){
+        auto panel=new QWidget;auto layout=new QVBoxLayout(panel);auto heading=new QLabel(market?(pending?"正在获取行情…":"本次行情未获取成功"):statusText(record.value("status").toString()));heading->setStyleSheet("font-size:20px;font-weight:600;");layout->addWidget(heading);
+        auto reason=new QLabel(pending?"请求已记录，正在等待数据源返回，可随时取消。":market?quantPluginUi::failure(record):record.value("message").toString());reason->setObjectName(pending?"pluginPendingRequest":"pluginFailureReason");reason->setTextFormat(Qt::PlainText);reason->setWordWrap(true);layout->addWidget(reason);
+        if(market){auto request=new QLabel(QString("股票 %1 · %2\n请求区间：%3 至 %4\n发起时间：%5\n%6").arg(query.value("symbol").toString(),quantPluginUi::adjustment(query.value("adjustment").toString()),query.value("startDate").toString(),query.value("endDate").toString(),quantPluginUi::time(record.value("createdAt").toString()),pending?"来源：AKShare / 东方财富；这次请求还没有返回新行情。":"没有用缓存或合成数据替代这次请求。"));request->setWordWrap(true);layout->addWidget(request);
+            if(!historyOnly_&&!pending){auto retry=new QPushButton("按以上条件重新获取行情");retry->setObjectName("pluginRetry");retry->setEnabled(!isRunning());layout->addWidget(retry,0,Qt::AlignLeft);connect(retry,&QPushButton::clicked,this,[this,query]{guard([this,query]{restoreQuery(query);sourceChoice_->setCurrentIndex(sourceChoice_->findData("akshare-eastmoney"));startSharedHistory(true);});});}
+        }
+        layout->addStretch();results_->addTab(panel,market?"获取结果":"运行状态");
+    }
     const QString historicalCaution=result.value("pluginId")=="org.webstock.hikyuu"&&result.value("formulaVersion")=="hikyuu-sma-cross-next-open-v1"
         ?QString("此旧版Hikyuu结果存在已确认的日期转换错误，资金曲线不可用于分析。请用0.26.0或更新插件重新运行；下方仅保留原始归档供核对。") : QString();
     for(auto v:result.value("tables").toArray()){auto table=v.toObject();auto panel=new QWidget;auto layout=new QVBoxLayout(panel);
+        const bool marketTable=market&&table.value("id")=="market-data";
+        if(marketTable){
+            auto source=result.value("provenance").toObject();auto summary=new QLabel;
+            summary->setObjectName("pluginMarketSummary");summary->setTextFormat(Qt::PlainText);summary->setWordWrap(true);
+            summary->setText(QString("%1\n证券 %2 · %3 · %4 根已完成K线\n请求区间：%5 至 %6\n实际返回：%7 至 %8\n来源：%9 · 最近采集时间：%10")
+                .arg(fresh?(id.startsWith("shared:")?"本次更新已完成 · 预览为合并后的公共行情":"本次联网返回 · 已保存到行情档案"):"已保存历史行情 · 非本次联网获取",quantPluginUi::security(source["identity"].toObject()["securityId"].toString(query.value("symbol").toString())),quantPluginUi::adjustment(query.value("adjustment").toString())).arg(result.value("bars").toInt())
+                .arg(source.value("requestedStart").toString(),source.value("requestedEnd").toString(),source.value("firstReturnedDate").toString(),source.value("lastReturnedDate").toString(),source.value("providerLabel").toString("AKShare / 东方财富"),quantPluginUi::time(source.value("acquiredAtUtc").toString())));
+            layout->addWidget(summary);
+            auto actions=new QHBoxLayout;auto save=new QPushButton("导出行情 CSV…");save->setObjectName("pluginSaveMarketData");actions->addWidget(save);
+            connect(save,&QPushButton::clicked,this,[this,result]{guard([this,result]{auto artifact=result.value("generatedData").toObject();auto bytes=quantPlugin::generatedData(artifact);auto path=QFileDialog::getSaveFileName(this,"导出已校验的历史行情",artifact.value("name").toString(),"CSV (*.csv)");if(!path.isEmpty()){quantPlugin::write(path,bytes);status_->setText("行情 CSV 已导出。来源和采集信息保留在公共行情库或原始插件档案中。");}});});
+            auto consumers=new QComboBox;consumers->setObjectName("pluginDataConsumer");consumers->setMinimumContentsLength(15);consumers->setSizeAdjustPolicy(QComboBox::AdjustToMinimumContentsLengthWithIcon);
+            for(auto p:repository_.plugins()){
+                auto entry=p.toObject();if(!entry.value("enabled").toBool())continue;
+                try{auto manifest=repository_.plugin(entry.value("id").toString()).value("manifest").toObject();bool compatible=false;for(auto op:manifest.value("operations").toArray())if(op.toObject().value("inputKind")=="ohlcv-single-csv")compatible=true;
+                    if(compatible)consumers->addItem(entry.value("name").toString(),entry.value("id").toString());}catch(const std::exception&){}
+            }
+            actions->addWidget(consumers,1);auto use=new QPushButton("交给指标 / 回测");use->setObjectName("pluginUseMarketData");use->setEnabled(consumers->count()>0);actions->addWidget(use);layout->addLayout(actions);
+            connect(use,&QPushButton::clicked,this,[this,consumers,id]{guard([this,consumers,id]{auto target=consumers->currentData().toString();if(openDataConsumer)openDataConsumer(target,id);else {auto dialog=new QDialog(this);dialog->setAttribute(Qt::WA_DeleteOnClose);dialog->resize(1320,900);auto layout=new QVBoxLayout(dialog);auto widget=new QuantPluginWidget(repository_.root(),dialog,target);layout->addWidget(widget);widget->useSavedData(id);dialog->setWindowTitle("WebStock · "+consumers->currentText());dialog->show();}});});
+            auto rows=table.value("rows").toArray();auto columns=table.value("columns").toArray().toVariantList();auto close=columns.indexOf("close"),volume=columns.indexOf("volume");
+            if(close>=0){layout->addWidget(new QLabel("收盘价（元，按所选复权口径）"));auto plot=new SeriesPlot(rows,panel);plot->setObjectName("pluginPricePlot");plot->setMinimumHeight(130);plot->setColumn(close);layout->addWidget(plot);}
+            if(volume>=0){layout->addWidget(new QLabel("成交量（股）"));auto plot=new SeriesPlot(rows,panel);plot->setObjectName("pluginVolumePlot");plot->setBars();plot->setColumn(volume);layout->addWidget(plot);}
+        }
         if(!historicalCaution.isEmpty()){auto notice=new QLabel(historicalCaution);notice->setObjectName("pluginHistoricalCaution");notice->setTextFormat(Qt::PlainText);notice->setWordWrap(true);notice->setStyleSheet("background:#533c18;color:#ffe2a8;padding:10px;");layout->addWidget(notice);}
-        auto saveTable=new QPushButton("导出此表 CSV");layout->addWidget(saveTable,0,Qt::AlignLeft);
+        auto saveTable=new QPushButton("导出此表 CSV");layout->addWidget(saveTable,0,Qt::AlignLeft);saveTable->setVisible(!marketTable);
         connect(saveTable,&QPushButton::clicked,this,[this,table]{guard([this,table]{auto path=QFileDialog::getSaveFileName(this,"导出当前结果表",table.value("id").toString()+".csv","CSV (*.csv)");if(!path.isEmpty())quantPlugin::write(path,quantPlugin::tableCsv(table));});});
-        if(QStringList{"indicators","equity","weight-index","native-dsb-bars","market-data"}.contains(table.value("id").toString())||table.value("id").toString().startsWith("features-")){
+        if(!marketTable&&(QStringList{"indicators","equity","weight-index","native-dsb-bars","market-data"}.contains(table.value("id").toString())||table.value("id").toString().startsWith("features-"))){
             auto select=new QComboBox;select->setObjectName("pluginPlotColumn");auto columns=table.value("columns").toArray();auto rows=table.value("rows").toArray();
             for(int i=1;i<columns.size();++i){
                 if(QStringList{"sequence","symbol","session","eventtime","eventTime","reportEnd","rangeStart","rangeEnd"}.contains(columns[i].toString()))continue;
@@ -258,11 +196,11 @@ void QuantPluginWidget::showResult(const QString& id){
             }else delete select;
         }
         if(table.value("id")=="selected-range-profile"||table.value("id")=="model-cost-profile")layout->addWidget(new PriceDistributionPlot(table,panel));
-        auto view=new QTableView;view->setModel(new ResultModel(table,view));view->horizontalHeader()->setSectionResizeMode(QHeaderView::Interactive);view->horizontalHeader()->setDefaultSectionSize(150);view->setAlternatingRowColors(false);view->setSelectionBehavior(QAbstractItemView::SelectRows);layout->addWidget(view,1);
+        auto view=new QTableView;view->setObjectName(marketTable?"pluginMarketTable":"pluginResultTable");view->setModel(new ResultModel(table,view));view->horizontalHeader()->setSectionResizeMode(QHeaderView::Interactive);view->horizontalHeader()->setDefaultSectionSize(marketTable?105:150);view->setMinimumHeight(125);view->setAlternatingRowColors(false);view->setSelectionBehavior(QAbstractItemView::SelectRows);layout->addWidget(view,1);
         auto id=table.value("id").toString();
-        results_->addTab(panel,id=="indicators"?"指标曲线与明细":id=="equity"?"权益曲线":id=="weight-index"?"权重单利指数":id=="daily-attribution"?"每日收益归因":id=="model-cost-profile"?"成本分布（模型）":id);
+        results_->addTab(panel,id=="market-data"?"行情预览":id=="provider-return"?"数据源原始返回":id=="indicators"?"指标曲线与明细":id=="equity"?"权益曲线":id=="weight-index"?"权重单利指数":id=="daily-attribution"?"每日收益归因":id=="model-cost-profile"?"成本分布（模型）":id);
     }
-    if(result.contains("generatedData")){
+    if(result.contains("generatedData")&&!market){
         auto artifact=result.value("generatedData").toObject();auto panel=new QWidget;auto layout=new QVBoxLayout(panel);
         auto description=new QLabel("本次生成的文件："+artifact.value("name").toString()+"\nSHA256："+artifact.value("sha256").toString());description->setTextFormat(Qt::PlainText);description->setWordWrap(true);layout->addWidget(description);
         auto save=new QPushButton("保存生成的数据文件");layout->addWidget(save);layout->addStretch();
@@ -275,5 +213,6 @@ void QuantPluginWidget::showResult(const QString& id){
     detail->setPlainText(QString::fromUtf8(QJsonDocument(metadata).toJson(QJsonDocument::Indented)));results_->addTab(detail,"版本、数据与诊断");
     QStringList warnings;for(auto w:result.value("warnings").toArray())warnings<<w.toString();
     if(!historicalCaution.isEmpty())warnings.prepend(historicalCaution);
-    status_->setText(statusText(record.value("status").toString())+"。"+warnings.join(" ")+record.value("message").toString());
+    if(market)status_->setText(pending?"正在等待新行情返回…":result.isEmpty()?quantPluginUi::failure(record):(fresh?"获取成功，行情及来源已保存。":"当前显示已保存的历史行情，未发起联网请求。")+QString("采集时快照不代表历史当时可见数据；复权序列可能修订。"));
+    else status_->setText(statusText(record.value("status").toString())+"。"+warnings.join(" ")+record.value("message").toString());
 }

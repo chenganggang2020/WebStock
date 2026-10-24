@@ -13,6 +13,7 @@
 #include <QTimer>
 #include <QPointer>
 class QDialog;
+class MarketFeed;
 #include <memory>
 #include <atomic>
 #include <mutex>
@@ -29,6 +30,7 @@ class QuantResearchPage:public QWidget {
  QWidget *form;
  QuantModelWidget *models=nullptr;
  QPointer<QDialog> pluginsDialog;
+ MarketFeed* historyFeed=nullptr;
  QuantParquetWidget *parquet=nullptr;
  PageSnapshotReader* snapshotReader=nullptr;
  QWidget* toolbar=nullptr;
@@ -64,6 +66,7 @@ public:
  ~QuantResearchPage()override;
  // Host calls only after its existing saved dailyEnabled check has passed.
  void prepareEnabledDailySchedule(){ensureModels();}
+ void setMarketFeed(MarketFeed* feed){historyFeed=feed;}
  void setParquetChartOpener(std::function<void(QJsonObject)> fn){parquetChartOpener=fn;if(parquet)parquet->setChartOpener(fn);}
  void previewImport(const QByteArray&);
  void confirmImport();

@@ -7,8 +7,16 @@
 #include <functional>
 #include <memory>
 #include <QMap>
+#include <QNetworkReply>
 
 #include "market_data.hpp"
+class MarketHistoryRequest final : public QObject {
+ public:
+  explicit MarketHistoryRequest(QObject* parent):QObject(parent){}
+  QPointer<QNetworkReply> reply;
+  bool cancelled=false;
+  void abort(){cancelled=true;if(reply)reply->abort();}
+};
 class MarketFeed final : public QObject {
   Q_OBJECT
  public:
@@ -26,6 +34,13 @@ class MarketFeed final : public QObject {
   void refreshEtf(const QString& fullId, const QString& period, const QString& token,
                   std::function<void(QJsonObject)> completed);
   void chart(const QString &id, const QString &period, bool force = false);
+  // Research and charts share this store and the existing transport/save queue.
+  QString historyStorePath() const { return directory + "/market-v1.sqlite"; }
+  QJsonObject inspectHistory(const QJsonObject& query) const;
+  MarketHistoryRequest* fetchHistory(const QJsonObject& query,bool replace,
+                              std::function<void(QJsonObject,QString)> completed);
+  void saveHistory(const QJsonObject& query,QJsonObject snapshot,bool replace,
+                   std::function<void(QJsonObject,QString)> completed);
   void capitalFlow(const QString &id, const QString &period, bool force = false,
                    int retry = 0);
   void cancelCapitalDay();
@@ -102,7 +117,7 @@ class MarketFeed final : public QObject {
                QJsonObject result,
                std::function<void(QJsonObject, QString)> completed = {},
                quint64 recoveryOf = 0);
-  void get(const QString &key, const QString &url, const QByteArray &referer,
+  QNetworkReply* get(const QString &key, const QString &url, const QByteArray &referer,
            std::function<void(QByteArray, QString)> done);
   QJsonObject read(const QString &key) const;
   void write(const QString &key, const QJsonObject &data) const;

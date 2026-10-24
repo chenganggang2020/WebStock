@@ -1,4 +1,5 @@
 #include "quant_plugin_host.hpp"
+#include "market_history.hpp"
 #include "watchlist_backup_model.hpp"
 #include <QCryptographicHash>
 #include <QDateTime>
@@ -193,6 +194,10 @@ QJsonObject Repository::install(const QByteArray& package) {
     QLockFile lock(root_ + "/catalog.lock"); require(lock.tryLock(0), "另一窗口正在更新插件");
     auto list = plugins(); QJsonObject previous;
     for (auto v : list) if (v.toObject().value("id") == m.value("id")) previous = v.toObject();
+    if(previous.isEmpty() && QFileInfo::exists(root_+"/preferences.json"))
+        previous=object(read(root_+"/preferences.json",2*1024*1024)).value(m.value("id").toString()).toObject();
+    if(!QFileInfo(previous.value("runtimePath").toString()).isFile())
+        previous["runtimePath"]=runtimeFor(m.value("id").toString());
     const auto bytes = QJsonDocument(m).toJson(QJsonDocument::Indented);
     QJsonObject entry{{"id",m.value("id")},{"version",m.value("version")},{"name",m.value("name")},
                       {"manifestSha256",hash(bytes)},{"enabled",true},{"runtimePath",previous.value("runtimePath").toString()},
@@ -217,6 +222,21 @@ QJsonObject Repository::install(const QByteArray& package) {
     write(root_ + "/catalog.json", QJsonObject{{"schema","webstock.plugin.catalog.v1"},{"plugins",next}});
     return entry;
 }
+QString Repository::runtimeFor(const QString& id) const {
+    auto valid=[](const QString& path){return QFileInfo(path).isAbsolute()&&QFileInfo(path).isFile();};
+    for(auto v:plugins())if(v.toObject().value("id")==id){auto path=v.toObject().value("runtimePath").toString();if(valid(path))return path;}
+    // Only exact plugin-ID mappings from this installation are reused. Never
+    // execute a guessed interpreter or a runtime path supplied by a package.
+    if(QFileInfo::exists(root_+"/preferences.json")){
+        auto path=object(read(root_+"/preferences.json",2*1024*1024)).value(id).toObject().value("runtimePath").toString();
+        if(valid(path))return path;
+    }
+    if(QFileInfo::exists(root_+"/runtime-defaults.json")){
+        auto path=object(read(root_+"/runtime-defaults.json",2*1024*1024)).value(id).toString();
+        if(valid(path))return path;
+    }
+    return {};
+}
 void Repository::configure(const QString& id, const QString& runtime, bool enabled) {
     auto selected = plugin(id);
     require(runtime.isEmpty() || (QFileInfo(runtime).isAbsolute() && QFileInfo(runtime).isFile()), "请选择有效的解释器文件");
@@ -226,8 +246,11 @@ void Repository::configure(const QString& id, const QString& runtime, bool enabl
     write(root_ + "/catalog.json", QJsonObject{{"schema","webstock.plugin.catalog.v1"},{"plugins",next}});
 }
 void Repository::uninstall(const QString& id) {
-    plugin(id);
+    auto selected=plugin(id);selected.remove("manifest");
     QLockFile lock(root_+"/catalog.lock");require(lock.tryLock(0),"插件目录正在更新");
+    QJsonObject preferences;
+    if(QFileInfo::exists(root_+"/preferences.json"))preferences=object(read(root_+"/preferences.json",2*1024*1024));
+    preferences[id]=selected;write(root_+"/preferences.json",preferences);
     QJsonArray next;for(auto p:plugins())if(p.toObject().value("id")!=id)next.append(p);
     // Version cache is retained for rollback; removed plugins cannot start jobs.
     write(root_+"/catalog.json",QJsonObject{{"schema","webstock.plugin.catalog.v1"},{"plugins",next}});
@@ -286,15 +309,104 @@ Job::~Job() {
 #endif
 }
 void Job::save() {write(folder_+"/record.json",record_);}
+static QJsonObject marketSummary(const QJsonObject& result) {
+    const auto p=result.value("parameters").toObject(),source=result.value("provenance").toObject();
+    return {{"symbol",p.value("symbol")},{"adjustment",p.value("adjustment")},
+        {"requestedStart",source.value("requestedStart")},{"requestedEnd",source.value("requestedEnd")},
+        {"firstDate",source.value("firstReturnedDate")},{"lastDate",source.value("lastReturnedDate")},
+        {"bars",result.value("bars")},{"source","AKShare / 东方财富"},
+        {"acquiredAtUtc",source.value("acquiredAtUtc")},{"pointInTimeDataset",false}};
+}
 QJsonArray Job::records() const {
     QJsonArray results;
     auto jobs=repository_.root()+"/jobs";
     for(auto name:QDir(jobs).entryList(QDir::Dirs|QDir::NoDotAndDotDot,QDir::Time)) {
         if(!runIdValid(name)) continue;
-        try {auto r=object(read(jobs+"/"+name+"/record.json"));require(r.value("runId")==name,"任务身份损坏");results.append(r);}
+        try {auto r=object(read(jobs+"/"+name+"/record.json"));require(r.value("runId")==name,"任务身份损坏");
+            // Fill display metadata for older archives without migrating or
+            // changing any of their frozen files. Reopening verifies results.
+            try {
+                auto request=object(read(jobs+"/"+name+"/request.json"));
+                if(hash(read(jobs+"/"+name+"/request.json"))==r.value("requestSha256").toString())r["parameters"]=request.value("parameters");
+                auto manifest=object(read(jobs+"/"+name+"/plugin/manifest.json",2*1024*1024));
+                r["pluginName"]=manifest.value("name");
+                for(auto op:manifest.value("operations").toArray())if(op.toObject().value("id")==r.value("operationId"))r["operationTitle"]=op.toObject().value("title");
+                if(r.value("status")=="completed"&&r.value("pluginId")=="org.webstock.akshare")
+                    r["dataSummary"]=marketSummary(object(read(jobs+"/"+name+"/result.json",24*1024*1024)));
+            }catch(const std::exception&){/* The archive remains visible for diagnosis. */}
+            results.append(r);}
         catch(const std::exception& e) {results.append(QJsonObject{{"runId",name},{"status","damaged"},{"message",QString::fromUtf8(e.what())}});}
     }
     return results;
+}
+QJsonArray Job::savedMarketData() const {
+    QJsonArray saved;
+    QSet<QString> sharedOrigins;
+    MarketStore store(QFileInfo(repository_.root()).absolutePath()+"/live/market-v1.sqlite");
+    QStringList keys;try{keys=store.keys("");}catch(const std::exception&){/* Archive inputs remain available. */}
+    QSet<QString> identities;
+    // Canonical identities first; old native keys are read through the same
+    // conservative compatibility view, never a second cache directory.
+    std::stable_sort(keys.begin(),keys.end(),[](const QString& a,const QString& b){return a.startsWith("history/")&&!b.startsWith("history/");});
+    for(auto key:keys)try{
+        auto snapshot=store.read(key),q=snapshot["historyIdentity"].toObject();auto rows=snapshot["rows"].toArray();if(rows.isEmpty())continue;
+        if(q.isEmpty()){
+            auto match=QRegularExpression("^(sh|sz|bj)([0-9]{6})-(day|week|month)$").match(key);if(!match.hasMatch())continue;
+            auto market=match.captured(1).toUpper(),code=match.captured(2);QString type=market=="SH"&&code.startsWith("000")||market=="SZ"&&code.startsWith("399")||market=="BJ"&&code.startsWith("899")?"index":market=="SH"&&code.startsWith('5')||market=="SZ"&&code.startsWith('1')?"etf":"stock";
+            q={{"securityId",market+":"+type+":"+code},{"period",match.captured(3)},{"sourceId","tencent-kline"},{"adjustment",snapshot["adjustment"]=="qfq"?"forward":"unadjusted"}};
+        }
+        QJsonArray closed;for(auto row:rows)if(row.toObject()["closed"]==true)closed.append(row);if(closed.isEmpty())continue;
+        q["startDate"]=closed.first().toObject()["label"];q["endDate"]=closed.last().toObject()["label"];
+        if(identities.contains(marketHistory::key(q)))continue;
+        auto plan=marketHistory::inspect(store,q);if(!plan["compatible"].toBool())continue;snapshot=plan["snapshot"].toObject();identities.insert(marketHistory::key(q));
+        auto summary=marketHistory::summary(snapshot,q);summary["runId"]=marketHistory::token(snapshot,q);summary["shared"]=true;saved.append(summary);sharedOrigins.insert(snapshot["archiveRunId"].toString());
+    }catch(const std::exception&){/* Invalid/legacy snapshots are not advertised as verified research inputs. */}
+    for(auto v:records()){
+        auto r=v.toObject();
+        if(r.value("status")!="completed"||r.value("pluginId")!="org.webstock.akshare"||r.value("operationId")!="daily-eastmoney")continue;
+        if(sharedOrigins.contains(r["runId"].toString()))continue;
+        auto summary=r.value("dataSummary").toObject();
+        summary["runId"]=r.value("runId");saved.append(summary);
+    }
+    return saved;
+}
+void Job::reuseArchivedMarketData() const {
+    auto directory=QFileInfo(repository_.root()).absolutePath()+"/live";require(QDir().mkpath(directory),"公共行情目录不可用");MarketStore store(directory+"/market-v1.sqlite");
+    for(auto v:records())try{
+        auto record=v.toObject();if(record["status"]!="completed"||record["pluginId"]!="org.webstock.akshare"||record["operationId"]!="daily-eastmoney")continue;
+        auto p=record["parameters"].toObject();auto code=p["symbol"].toString();QString market=code.startsWith('6')?"SH":code.startsWith('4')||code.startsWith('8')||code.startsWith("92")?"BJ":"SZ";
+        QJsonObject q{{"securityId",market+":stock:"+code},{"period","day"},{"adjustment",p["adjustment"]},{"sourceId","akshare-eastmoney"},{"startDate",p["startDate"]},{"endDate",p["endDate"]}};
+        if(!store.read(marketHistory::key(q)).isEmpty())continue;
+        auto result=reopen(record["runId"].toString())["result"].toObject();auto snapshot=marketHistory::fromAkshare(result,q);snapshot["importedFromVerifiedPluginArchive"]=record["runId"];store.save(marketHistory::key(q),snapshot);
+    }catch(const std::exception&){/* An archive with incomplete identity stays in the archive viewer, never as verified cache. */}
+}
+QJsonObject Job::marketDataInput(const QString& id) const {
+    if(id.startsWith("shared:")){
+        auto q=marketHistory::tokenQuery(id);MarketStore store(QFileInfo(repository_.root()).absolutePath()+"/live/market-v1.sqlite");auto plan=marketHistory::inspect(store,q);require(plan["compatible"].toBool(),"公共行情已失效或口径不符，请重新选择");auto snapshot=plan["snapshot"].toObject();
+        marketHistory::validate(snapshot,q);require(marketHistory::digest(snapshot)==q["version"].toString(),"公共行情版本已更新，请重新选择并检查数据后再运行");
+        auto bytes=marketHistory::csv(snapshot,q);auto directory=repository_.root()+"/data-inputs";plainDirectory(repository_.root(),directory);require(QDir().mkpath(directory),"无法准备研究冻结输入");auto path=directory+"/"+hash(bytes)+".csv";
+        if(QFileInfo::exists(path))require(read(path,16*1024*1024)==bytes,"研究输入暂存文件已变化");else write(path,bytes);
+        auto summary=marketHistory::summary(snapshot,q);QJsonObject parameters{{"symbol",summary["symbol"]},{"startDate",q["startDate"]},{"endDate",q["endDate"]},{"adjustment",q["adjustment"]}};
+        QJsonObject result{{"schema","webstock.shared-market-view.v1"},{"parameters",parameters},{"bars",summary["bars"]},{"tables",QJsonArray{marketHistory::table(snapshot,q)}},
+            {"generatedData",QJsonObject{{"name",summary["symbol"].toString()+"-"+q["period"].toString()+".csv"},{"sha256",hash(bytes)},{"base64",QString::fromLatin1(bytes.toBase64())}}},
+            {"provenance",QJsonObject{{"providerLabel",summary["source"]},{"requestedStart",q["startDate"]},{"requestedEnd",q["endDate"]},{"firstReturnedDate",summary["firstDate"]},{"lastReturnedDate",summary["lastDate"]},{"acquiredAtUtc",summary["acquiredAtUtc"]},{"sharedStoreVersion",summary["version"]},{"identity",marketHistory::identity(q)},{"queryCoverage",snapshot["queryCoverage"]},{"pointInTimeDataset",false}}}};
+        return {{"path",path},{"summary",summary},{"result",result},{"policy",QJsonObject{{"closedBarsOnly",true},{"adjustment",summary["adjustment"]},{"timezone","Asia/Shanghai"},{"volumeUnit","share"},{"source",summary["sourceId"]},{"sharedMarketVersion",summary["version"]},{"dataset",summary},{"queryCoverage",snapshot["queryCoverage"]},{"sourceRequests",snapshot["sourceRequests"]},{"legacyIdentityEvidence",snapshot["legacyIdentityEvidence"]}}}};
+    }
+    auto record=reopen(id);auto result=record.value("result").toObject();
+    require(record.value("status")=="completed"&&result.value("pluginId")=="org.webstock.akshare"&&result.value("operationId")=="daily-eastmoney",
+            "所选档案不是已完成的股票历史行情");
+    auto bytes=generatedData(result.value("generatedData").toObject());
+    // Materialize the already verified result artifact. The original query,
+    // result and plugin snapshots remain the sole source of provenance.
+    auto directory=repository_.root()+"/data-inputs";plainDirectory(repository_.root(),directory);
+    require(QDir().mkpath(directory),"无法准备已保存行情");
+    auto path=directory+"/"+hash(bytes)+".csv";
+    if(QFileInfo::exists(path))require(hash(read(path,16*1024*1024))==hash(bytes),"已保存行情文件被修改，请保留现场并重新导出原始档案");
+    else write(path,bytes);
+    auto summary=marketSummary(result);
+    return {{"path",path},{"summary",summary},{"policy",QJsonObject{{"closedBarsOnly",true},
+        {"adjustment",summary.value("adjustment")},{"timezone","Asia/Shanghai"},{"volumeUnit","share"},
+        {"source","AKShare/stock_zh_a_hist/Eastmoney"},{"archiveRunId",id},{"dataset",summary}}}};
 }
 void Job::start(const QString& pluginId,const QString& operationId,const QString& inputCsv,const QJsonObject& parameters,const QJsonObject& policy,int seconds) {
     require(!active(),"已有插件任务运行"); require(seconds>=1 && seconds<=3600,"运行时限无效");
@@ -442,6 +554,9 @@ QJsonObject Job::reopen(const QString& id) const {
     require(runIdValid(id),"任务身份无效");auto dir=repository_.root()+"/jobs/"+id;plainDirectory(repository_.root(),dir);
     auto record=object(read(dir+"/record.json"));require(record.value("runId")==id,"任务目录身份不一致");
     if(record.value("status")=="completed") record["result"]=verify(dir,record);
+    const auto requestBytes=read(dir+"/request.json");
+    require(hash(requestBytes)==record.value("requestSha256").toString(),"冻结请求已变化");
+    record["request"]=object(requestBytes);
     return record;
 }
 QByteArray Job::exportResult(const QString& id) const {

@@ -39,6 +39,23 @@ New-Item -ItemType Directory -Path $taskData | Out-Null
 & $PythonBase -c 'import sqlite3,sys; db=sqlite3.connect(sys.argv[1]); db.execute("PRAGMA user_version=0"); db.close()' (Join-Path $taskData 'business-v1.sqlite')
 if ($LASTEXITCODE -ne 0) { throw 'Could not create the isolated preview database.' }
 Copy-Item -LiteralPath $ExistingPluginRoot -Destination (Join-Path $taskData 'quant-plugins') -Recurse
+# SQLite's consistent backup reads the old application's shared cache without
+# copying a database file mid-transaction or writing to the source data root.
+$taskPreviousLive = Join-Path (Split-Path -Parent $ExistingPluginRoot) 'live'
+if (Test-Path -LiteralPath $taskPreviousLive -PathType Container) {
+    & $PythonBase (Join-Path $PSScriptRoot 'snapshot_market_cache.py') $taskPreviousLive (Join-Path $taskData 'live')
+    if ($LASTEXITCODE -ne 0) { throw 'Could not snapshot the existing public market cache.' }
+}
+# Exact mappings from the previously configured installation allow a freshly
+# installed package to reuse its own environment without asking for a path.
+$taskRuntimeDefaults = @{}
+$taskInstalledCatalog = Get-Content -LiteralPath (Join-Path $taskData 'quant-plugins\catalog.json') -Raw | ConvertFrom-Json
+foreach ($taskPlugin in $taskInstalledCatalog.plugins) {
+    if ($taskPlugin.runtimePath -and (Test-Path -LiteralPath $taskPlugin.runtimePath -PathType Leaf)) {
+        $taskRuntimeDefaults[$taskPlugin.id] = $taskPlugin.runtimePath
+    }
+}
+[IO.File]::WriteAllText((Join-Path $taskData 'quant-plugins\runtime-defaults.json'),($taskRuntimeDefaults | ConvertTo-Json),[Text.UTF8Encoding]::new($false))
 Copy-Item -LiteralPath $PluginPackages -Destination (Join-Path $taskRelease 'plugin-packages') -Recurse
 Copy-Item -LiteralPath $SampleCsv -Destination (Join-Path $taskRelease 'historical-fixture.csv')
 if ($PanelCsv) { Copy-Item -LiteralPath $PanelCsv -Destination (Join-Path $taskRelease 'synthetic-panel-test.csv') }
@@ -74,7 +91,16 @@ $taskConfig = @{schema='stock-local-data-root/v1';directory=$taskData} | Convert
 $taskReadme = @'
 WebStock 量化插件本机预览版
 
-双击 Start-Stock.cmd。进入“研究 → 量化研究 → 量化插件”。
+双击 Start-Stock.cmd。进入“研究 → 量化研究 → 插件中心”。
+在插件中心查看本地插件包、安装/卸载/启停；双击“我的功能”或点击“打开功能”进入独立业务窗口。
+“股票历史行情”：市场/证券类型/代码 → 周期与日期 → 来源/复权口径。
+入口与原程序看盘共用data/live/market-v1.sqlite，沿用原生请求和保存队列；没有另建插件行情库。
+可选择“使用已保存数据（不联网）”“补齐缺失行情”或“主动刷新”。腾讯日/周/月线及AKShare股票日线分别按来源保存。
+旧缓存只在身份、来源、单位与复权可核验时复用；缺失元数据、未知休市/停牌/上市状态或截断都不宣称完整。
+复权快照跨日或扩展范围时刷新整个选定区间；腾讯长区间分段并核对重叠行情，更新失败保留旧版本。
+右侧显示请求与实际返回区间、来源、采集时间、价格/成交量图和明细；成功后自动保存到原有结果档案。
+已保存历史行情明确标注为旧档案，可导出CSV或交给已安装的指标/回测；没有用旧样本顶替新请求。
+Python路径和等待时限位于高级设置；同一插件重新安装会复用本机已配置环境。
 插件包已安装；具体数量与功能见plugin-packages/index.json及implementation-plan.json。
 运行环境使用本机此前准备好的隔离环境；本目录尚不是可在另一台机器直接运行的完整安装器。
 可选择 historical-fixture.csv 运行；这是公开仓库的旧股票样本，不是实时行情或收益有效性证据。
@@ -98,7 +124,7 @@ Hikyuu选择historical-hikyuu-first500.csv：原样本前500根保留实际amoun
 本预览使用本目录内独立data，不修改原安装版的账户与数据库。
 移动整个目录后，需要把stock-data-root.json的directory更新到移动后的data绝对路径。
 插件窗口支持安装、停用、卸载、运行、取消、历史重开及.wsresult结果包导出/导入。
-卸载保留历史与版本缓存；结果导入不会执行其代码。
+卸载保留公共行情库、历史与版本缓存；结果导入不会执行其代码。指标和回测直接选择已保存行情，运行时冻结来源、参数、版本及输入哈希。
 
 本机首版的19项目适配入口、110类目录和33个插件包已经交付；具体功能与验收范围见QUICK_START.txt。
 7类是来源接口，当前AKShare在线代理连接失败，第二台机器未验收；这些限制不计为已通过。

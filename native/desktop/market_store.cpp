@@ -1,4 +1,5 @@
 #include "market_store.hpp"
+#include "market_history.hpp"
 
 #include <QDateTime>
 #include <QFileInfo>
@@ -102,12 +103,12 @@ bool MarketStore::contains(const QString &key) const {
 }
 QJsonObject MarketStore::read(const QString &key) const {
   if (!QFileInfo::exists(file)) return {};
-  Connection c(file);
+  Connection c(file,true,100);
   return ::read(c.db, key);
 }
 QStringList MarketStore::keys(const QString &prefix) const {
   if (!QFileInfo::exists(file)) return {};
-  Connection c(file);
+  Connection c(file,true,100);
   QSqlQuery q(c.db);
   q.prepare(
       "SELECT cache_key FROM snapshots WHERE substr(cache_key,1,?)=? ORDER BY "
@@ -149,13 +150,29 @@ QJsonObject MarketStore::save(const QString &key,
   require(c.db.transaction());
   try {
     auto old = ::read(c.db, key, info);
+    if(!incoming["historyIdentity"].toObject().isEmpty()){
+      auto q=incoming["historyIdentity"].toObject();auto rows=incoming["rows"].toArray();
+      if(rows.isEmpty())throw std::runtime_error("拒绝保存空公共行情");
+      q["startDate"]=rows.first().toObject()["label"];
+      q["endDate"]=QDateTime::currentDateTimeUtc().toOffsetFromUtc(8*3600).date().addDays(-1).toString(Qt::ISODate);
+      marketHistory::validate(incoming,q);
+      if(key!=marketHistory::key(q))throw std::runtime_error("公共行情键与证券身份不符");
+      if(!old.isEmpty())try{marketHistory::validate(old,q);if(!old.contains("historyIntegrity"))old={};}catch(const std::exception&){old={};}
+    }
+    bool legacyBase=false;
+    if(old.isEmpty()&&!incoming["historyIdentity"].toObject().isEmpty()&&!incoming["replaceHistory"].toBool())try{
+      auto identity=incoming["historyIdentity"].toObject();auto rows=incoming["rows"].toArray();
+      identity["startDate"]=rows.first().toObject()["label"];identity["endDate"]=rows.last().toObject()["label"];
+      auto id=identity["securityId"].toString();auto previous=::read(c.db,id.section(':',0,0).toLower()+id.section(':',2)+"-"+identity["period"].toString());
+      if(!previous.isEmpty()){old=marketHistory::legacy(previous,identity);legacyBase=true;}
+    }catch(const std::exception&){/* Legacy metadata is not sufficient for a safe merge. */}
     auto checked =
         QDateTime::fromString(incoming["checkedAt"].toString(), Qt::ISODate);
     auto previous =
         QDateTime::fromString(old["checkedAt"].toString(), Qt::ISODate);
     if (!old.isEmpty() &&
         ((checked.isValid() && previous.isValid() && checked < previous) ||
-         sourceTime(incoming) < sourceTime(old))) {
+         (incoming["historyIdentity"].toObject().isEmpty() && sourceTime(incoming) < sourceTime(old)))) {
       require(c.db.commit());
       if (info) info->superseded = true;
       return old;
@@ -184,9 +201,15 @@ QJsonObject MarketStore::save(const QString &key,
                        : QJsonValue("")}};
       if (!incoming["periodKeyVersion"].toString().isEmpty())
         basisFields["periodKeyVersion"] = incoming["periodKeyVersion"];
+      if(!incoming["historyIdentity"].toObject().isEmpty())basisFields["historyIdentity"]=incoming["historyIdentity"];
       const QString basis = json(basisFields);
-      bool same = old["seriesBasis"].toString() == basis;
-      if (same)
+      bool same = old["seriesBasis"].toString() == basis && !incoming["replaceHistory"].toBool();
+      if((same||legacyBase)&&!incoming["historyIdentity"].toObject().isEmpty()){
+        auto coverage=old["queryCoverage"].toArray();for(auto span:incoming["queryCoverage"].toArray())if(!coverage.contains(span))coverage.append(span);result["queryCoverage"]=coverage;
+        auto sessions=old["sessionEvidence"].toObject();auto additions=incoming["sessionEvidence"].toObject();for(auto i=additions.begin();i!=additions.end();++i)sessions[i.key()]=i.value();result["sessionEvidence"]=sessions;
+        if(old["dataDate"].toString()>result["dataDate"].toString())result["dataDate"]=old["dataDate"];
+      }
+      if (same||legacyBase)
         for (auto v : old["rows"].toArray()) {
           auto b = v.toObject();
           merged[qint64(b["time"].toDouble())] = b;
@@ -197,7 +220,7 @@ QJsonObject MarketStore::save(const QString &key,
         if (!b["time"].isDouble() || !std::isfinite(b["time"].toDouble()))
           throw std::runtime_error("拒绝保存无效时间；整批回滚");
         auto before = merged.value(qint64(b["time"].toDouble()));
-        if (same && incoming["adjustment"] == "qfq" &&
+        if (same && QStringList{"qfq","hfq","forward","backward"}.contains(incoming["adjustment"].toString()) &&
             before["closed"].toBool() && before["valid"].toBool() &&
             b["valid"].toBool()) {
           for (auto field : {"open", "high", "low", "close"})
@@ -207,7 +230,7 @@ QJsonObject MarketStore::save(const QString &key,
       }
       QString series = same && !rebase ? old["seriesKey"].toString()
                                        : QUuid::createUuid().toString();
-      if (!same || rebase) merged.clear();
+      if ((!same&&!legacyBase) || rebase) merged.clear();
       if (rebase)
         result["historyBoundary"] =
             "前复权历史发生修订：旧版本已归档，不拼接旧基准";
@@ -216,6 +239,7 @@ QJsonObject MarketStore::save(const QString &key,
       QSqlQuery insert(c.db);
       insert.prepare(
           "INSERT OR REPLACE INTO bars(series_key,time,data) VALUES(?,?,?)");
+      if(legacyBase)for(auto b:merged){insert.bindValue(0,series);insert.bindValue(1,qint64(b["time"].toDouble()));insert.bindValue(2,json(b));require(insert.exec());}
       for (auto v : rows) {
         auto b = v.toObject();
         auto t = qint64(b["time"].toDouble());
@@ -242,6 +266,7 @@ QJsonObject MarketStore::save(const QString &key,
     result["persistedAt"] =
         QDateTime::currentDateTimeUtc().toString(Qt::ISODateWithMs);
     result["persistenceState"] = "saved";
+    if(!result["historyIdentity"].toObject().isEmpty())result["historyIntegrity"]=marketHistory::digest(result);
     auto meta = result;
     if (!fundingSnapshot) meta.remove("rows");
     if (meta.contains("seriesKey")) {

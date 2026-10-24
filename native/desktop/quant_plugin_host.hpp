@@ -29,6 +29,7 @@ public:
     QJsonObject plugin(const QString& id) const;
     QString directory(const QJsonObject& plugin) const;
     QJsonObject install(const QByteArray& package);
+    QString runtimeFor(const QString& id) const;
     void configure(const QString& id, const QString& runtimePath, bool enabled);
     void rememberParameters(const QString& id, const QString& operationId, const QJsonObject& parameters);
     void uninstall(const QString& id);
@@ -57,6 +58,9 @@ public:
     bool active() const { return bool(lock_); }
     QJsonObject current() const { return record_; }
     QJsonArray records() const;
+    QJsonArray savedMarketData() const;
+    QJsonObject marketDataInput(const QString& id) const;
+    void reuseArchivedMarketData() const;
     QJsonObject reopen(const QString& id) const;
     QByteArray exportResult(const QString& id) const;
     QString importResult(const QByteArray& bundle);

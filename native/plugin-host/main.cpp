@@ -1,4 +1,4 @@
-#include "quant_plugin_widget.hpp"
+#include "quant_plugin_center.hpp"
 #include <QApplication>
 #include <QCommandLineParser>
 #include <QStandardPaths>
@@ -24,7 +24,7 @@ int main(int argc,char** argv){
             auto parameters=parser.isSet("parameters")?quantPlugin::object(quantPlugin::read(parser.value("parameters"))):QJsonObject{};
             job.start(parts[0],parts[1],parser.value("input"),parameters,{{"closedBarsOnly",true},{"knownEventsOnly",true},{"knownValuationsOnly",true},{"knownObservationsOnly",true},{"knownQuotesOnly",true},{"adjustment","unknown"},{"timezone","unspecified"},{"volumeUnit","unspecified"},{"source","explicit local CLI input"}},parser.value("timeout").toInt());return app.exec();
         }
-        QuantPluginWidget widget(root);widget.setWindowTitle("WebStock 量化插件 · 独立验收宿主");widget.resize(1280,850);widget.show();
+        QuantPluginCenter widget(root);widget.setWindowTitle("WebStock 插件中心 · 独立验收宿主");widget.resize(1320,850);widget.show();
         if(parser.isSet("screenshot"))QTimer::singleShot(500,&app,[&]{widget.grab().save(parser.value("screenshot"));app.quit();});
         return app.exec();
     }catch(const std::exception& e){QTextStream(stderr)<<e.what()<<"\n";return 2;}
