@@ -143,6 +143,9 @@ def validate_parameters(operation, supplied):
 
 
 def compute(manifest, operation, frame, parameters):
+    if manifest["id"] == "org.webstock.technical-ratings":
+        from technical_ratings import calculate
+        return calculate(frame)
     if manifest["id"] == "org.webstock.factor-models":
         from factor_models import calculate
         return calculate(operation["id"],frame,parameters)

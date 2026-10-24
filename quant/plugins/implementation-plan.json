@@ -9,11 +9,11 @@
     "indicatorFamilies": 110,
     "source": "indicator-scope.json",
     "indicatorReadiness": {
-      "formula_implemented_and_tested": 97,
+      "formula_implemented_and_tested": 98,
       "partial": 2,
-      "pending": 11
+      "pending": 10
     },
-    "installedPackages": 27
+    "installedPackages": 28
   },
   "completionDefinition": [
     "All 19 projects have runnable installed adapters with declared capabilities, inputs, versions and actual results.",
@@ -299,7 +299,7 @@
     },
     {
       "id": "indicator-coverage",
-      "status": "201_talib_49_core_20_panel_5_event_6_learning_9_statistical_3_deep_3_portfolio_risk_operations_verified__3_factor_model_operations_verified",
+      "status": "201_talib_49_core_20_panel_5_event_6_learning_9_statistical_3_deep_3_portfolio_risk_operations_verified__3_factor_model_operations_verified__1_public_v3_rating_conditions_operation_verified",
       "note": "Function counts are not catalogue-family completion counts."
     },
     {
@@ -405,7 +405,20 @@
         "prefix invariance and future perturbation"
       ],
       "limits": "Fixed research universe and external availability claims; not full A-share execution, certified PIT data or return superiority."
+    },
+    {
+      "id": "public-technical-rating-conditions",
+      "status": "public_v3_conditions_and_declared_local_kernel_verified",
+      "checks": [
+        "public upstream version and source SHA256",
+        "all 26 component condition branches",
+        "EMA50 trend filter and v3 rising-ADX sell condition",
+        "15/11 group averaging with explicit missingness",
+        "independent primitives and chronological prefixes",
+        "native full-window execution and history"
+      ],
+      "limits": "No verified numerical parity with Pine built-ins/live TradingView screener; local seed, warmup and zero-divisor conventions are explicit."
     }
   ],
-  "latestPackageVersion": "0.19.1"
+  "latestPackageVersion": "0.20.1"
 }

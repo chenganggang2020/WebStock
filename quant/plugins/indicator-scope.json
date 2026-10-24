@@ -1963,9 +1963,11 @@
       "overlap": "大量成分来自同一价格序列。",
       "evidence": "厂商说明；非独立效果证据",
       "refs": "https://www.tradingview.com/support/solutions/43000614331-technical-ratings/",
-      "status": "pending",
-      "implementations": [],
-      "implementationNote": "未完成；不以目录条目或近似名称充当实现。"
+      "status": "formula_implemented_and_tested",
+      "implementations": [
+        "technical-ratings:technical-ratings-v3"
+      ],
+      "implementationNote": "官方TechnicalRating v3条件按MPL-2.0移植，15/11两组评分、26项投票及底层数值；本地明确数值种子/预热/零分母，不声称Pine逐点一致。6项条件/独立公式/时序测试和4937根原生运行通过。"
     },
     {
       "id": 108,

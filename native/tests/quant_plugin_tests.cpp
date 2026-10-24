@@ -58,6 +58,16 @@ private slots:
         QVERIFY_EXCEPTION_THROWN(job.start("org.test.engine","test","none",{},{{"closedBarsOnly",true},{"adjustment","unknown"}}),std::runtime_error);
         repo.configure("org.test.engine",{},false);QVERIFY_EXCEPTION_THROWN(job.start("org.test.engine","test","none",{},{}),std::runtime_error);
     }
+    void largeNumericJsonKeepsStrictValidation(){
+        QByteArray bytes="{\"values\":[";
+        for(int i=0;i<25000;++i){if(i)bytes+=',';bytes+="-12.345e+6";}
+        bytes+="]}";auto values=object(bytes).value("values").toArray();
+        QCOMPARE(values.size(),25000);QCOMPARE(values.first().toDouble(),-12345000.);
+        for(auto token:QList<QByteArray>{"01","+1",".1","1.","1e","--1","0x1","NaN","Infinity"})
+            QVERIFY_EXCEPTION_THROWN(object("{\"x\":"+token+"}"),std::runtime_error);
+        QVERIFY_EXCEPTION_THROWN(object("{\"a\":1,\"\\u0061\":2}"),std::runtime_error);
+        QVERIFY_EXCEPTION_THROWN(object("{\"x\":\"\\u00xz\"}"),std::runtime_error);
+    }
     void parameterValidation(){
         QJsonObject op{{"parameters",QJsonArray{QJsonObject{{"id","n"},{"type","integer"},{"default",20},{"minimum",2},{"maximum",100}}}}};
         QCOMPARE(validateParameters(op,{}).value("n").toInt(),20);

@@ -20,7 +20,7 @@ def number(key, default, minimum=2, maximum=10000, title=None, kind=None):
 def save_package(output, manifest, sources):
     content = {name: (HERE/source).read_bytes() for name, source in sources.items()}
     manifest.update(schema="webstock.plugin.manifest.v1", protocolVersion=1,
-                    entrypoint="worker.py", runtime="python", version="0.19.1",
+                    entrypoint="worker.py", runtime="python", version="0.20.1",
                     files={name: hashlib.sha256(raw).hexdigest() for name,raw in content.items()})
     package = {"schema": "webstock.plugin.package.v1", "manifest": manifest,
                "files": {name: base64.b64encode(raw).decode("ascii") for name,raw in content.items()}}
@@ -359,6 +359,13 @@ def main():
         "source":"https://github.com/chenganggang2020/WebStock","distributions":["numpy","pandas","scikit-learn"],"operations":factor},
         {"worker.py":"worker.py","factor_models.py":"factor_models.py","learning_models.py":"learning_models.py","portfolio_risk.py":"portfolio_risk.py","panel_contract.py":"panel_contract.py",
          "FACTOR_MODELS.txt":"FACTOR_MODELS.txt","PANEL_INPUT.txt":"PANEL_INPUT.txt","THIRD_PARTY_NOTICES.txt":"THIRD_PARTY_NOTICES.txt"}))
+    records.append(save_package(args.output,{"id":"org.webstock.technical-ratings","name":"Technical Ratings v3条件 · 本地口径","license":"MPL-2.0 for technical_ratings.py; Project source terms for host adapter",
+        "source":"https://www.tradingview.com/script/jDWyb5PG-TechnicalRating/","distributions":["numpy","pandas"],
+        "operations":[{"id":"technical-ratings-v3","title":"26项技术条件 · 本地综合评分","formulaVersion":"webstock-tv-v3-conditions-local-kernel-v1",
+            "parameters":[],"inputKind":"ohlcv-single-csv","outputKind":"indicator",
+            "description":"公开v3条件逐项移植，显示分组、26项投票和底层数值；本地预热/零分母口径，未验证Pine逐点一致性。见TECHNICAL_RATINGS.txt。"}]},
+        {"worker.py":"worker.py","technical_ratings.py":"technical_ratings.py","TECHNICAL_RATINGS.txt":"TECHNICAL_RATINGS.txt",
+         "MPL-2.0.txt":"MPL-2.0.txt","THIRD_PARTY_NOTICES.txt":"THIRD_PARTY_NOTICES.txt"}))
     (args.output/"index.json").write_text(json.dumps(records,ensure_ascii=False,indent=2),encoding="utf-8")
     print(json.dumps(records,ensure_ascii=False))
 

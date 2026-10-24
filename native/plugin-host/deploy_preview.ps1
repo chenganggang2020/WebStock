@@ -68,6 +68,7 @@ WebStock 量化插件本机预览版
 组合权益风险选择synthetic-portfolio-equity.csv（合成费用/出入金账本）；风险预算组合选择synthetic-econometric-panel.csv。
 补充指标中的盘中同时刻相对量选择synthetic-intraday-sessions.csv（合成会话分钟线），字段见SESSION_EXECUTION.txt。
 因子合成插件中PCA选择historical-fixture.csv；截面评分及排名组合选择synthetic-factor-panel.csv，公式见FACTOR_MODELS.txt。
+Technical Ratings v3条件插件可选historical-fixture.csv；它使用明确的本地数值口径，尚未验证与TradingView网站逐点一致。
 
 本预览使用本目录内独立data，不修改原安装版的账户与数据库。
 移动整个目录后，需要把stock-data-root.json的directory更新到移动后的data绝对路径。
@@ -92,6 +93,8 @@ Copy-Item -LiteralPath (Join-Path $taskRepo 'quant\plugins\DEEP_MODELS.txt') -De
 Copy-Item -LiteralPath (Join-Path $taskRepo 'quant\plugins\PORTFOLIO_RISK.txt') -Destination $taskRelease
 Copy-Item -LiteralPath (Join-Path $taskRepo 'quant\plugins\SESSION_EXECUTION.txt') -Destination $taskRelease
 Copy-Item -LiteralPath (Join-Path $taskRepo 'quant\plugins\FACTOR_MODELS.txt') -Destination $taskRelease
+Copy-Item -LiteralPath (Join-Path $taskRepo 'quant\plugins\TECHNICAL_RATINGS.txt') -Destination $taskRelease
+Copy-Item -LiteralPath (Join-Path $taskRepo 'quant\plugins\MPL-2.0.txt') -Destination $taskRelease
 $taskSetup = Join-Path $taskRelease 'runtime-setup'
 New-Item -ItemType Directory -Path $taskSetup | Out-Null
 Copy-Item -LiteralPath (Join-Path $taskRepo 'quant\plugins\setup_runtime.py') -Destination $taskSetup

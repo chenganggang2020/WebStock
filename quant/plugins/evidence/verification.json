@@ -16,7 +16,7 @@
       ]
     },
     "qt": {
-      "passed": 15,
+      "passed": 16,
       "failed": 0,
       "skipped": 0,
       "checks": [
@@ -40,7 +40,8 @@
         "event-specific acknowledgement and frozen input policy",
         "numeric plot fields exclude timestamps and sequence",
         "native selected-range volume profile chart",
-        "portfolio-specific acknowledgement and frozen flow/fee input archive"
+        "portfolio-specific acknowledgement and frozen flow/fee input archive",
+        "25000 numeric values, malformed numbers and escaped duplicate keys"
       ]
     },
     "temporal": {
@@ -153,6 +154,29 @@
         "next-close cash/fees/position reconciliation",
         "missing data and future availability rejected"
       ]
+    },
+    "technicalRatings": {
+      "passed": 6,
+      "failed": 0,
+      "skipped": 0,
+      "checks": [
+        "26 public condition branches including both directions",
+        "independent EMA/CCI/HMA/RMA",
+        "shifted Ichimoku and EMA50 trend",
+        "group means and label thresholds",
+        "missing source guards and zero denominators",
+        "prefix invariance and future perturbation"
+      ],
+      "pineNumericalParityVerified": false
+    },
+    "sharedJsonGateRegression": {
+      "watchlistWorkspaceChecks": 99,
+      "backupNative": {
+        "passed": 3,
+        "failed": 0,
+        "skipped": 0
+      },
+      "testFixtureAdjustment": "Wait for the base branch asynchronous initial watchlist snapshot before importing a backup"
     }
   },
   "integrationRuns": [
@@ -288,14 +312,14 @@
     "built": true,
     "qt": "6.9.1",
     "compiler": "MinGW13.1.0",
-    "programSha256": "db79b618fc332e502e708814930af05e693160ea0f9571da038f0c004042c161",
+    "programSha256": "9eebf9eaace14f1c57244d658856da6f845c690c4c844d73a197073f741c07a3",
     "domainTests": "passed",
     "legacyIndicators": "passed",
-    "pluginPlatform": "passed, 15 QtTest cases, 0 skipped",
+    "pluginPlatform": "passed, 16 QtTest cases, 0 skipped",
     "nativeWindow": "passed, quotes/classic and legacy focus redirect, real installed TA-Lib workflow",
-    "visualReview": "Native PCA curves, cross-sectional factor score table, ranked-portfolio equity/orders; actual quotes/classic/focus entry and frozen history reopening"
+    "visualReview": "Native overall technical-rating curve, 15/11 component tabs and numerical table; actual quotes/classic/focus run and frozen history reopening"
   },
-  "latestPackageVersion": "0.19.1",
+  "latestPackageVersion": "0.20.1",
   "additionalEvidence": [
     "native-acceptance-0.8.1.json",
     "native-akshare-0.7.0.json",
@@ -335,7 +359,7 @@
     "leanDotnetRebuild": "fresh pinned checkout, 20 content-hash dependency locks, locked offline restore, original engine run and equity parity verified"
   },
   "nativeCoreExpansion010": "native-core-expansion-0.10.0.json",
-  "programSha256": "db79b618fc332e502e708814930af05e693160ea0f9571da038f0c004042c161",
+  "programSha256": "9eebf9eaace14f1c57244d658856da6f845c690c4c844d73a197073f741c07a3",
   "nativePanelAcceptance": [
     "native-panel-0.11.0.json",
     "native-panel-0.11.1.json"
@@ -403,5 +427,19 @@
       "failed": 0,
       "skipped": 0
     }
+  },
+  "nativeTechnicalRatingAcceptance": "native-technical-ratings-0.20.1.json",
+  "nativeTechnicalRatingWindow": {
+    "passed": 3,
+    "failed": 0,
+    "skipped": 0,
+    "testedPackageVersion": "0.20.0",
+    "subsequentChange": "0.20.1 clarifies an already-implemented DX zero-sum exception in documentation only; same Python formulas and C++ executable"
+  },
+  "strictJsonPerformance": {
+    "change": "Reuse the same compiled numeric grammar expression; strict syntax and duplicate-key gates retained",
+    "windowTestBeforeMs": 158673,
+    "windowTestAfterMs": 11608,
+    "scope": "One local before/after run of the same 4937-bar rating package across quotes/classic/focus and history reopen; not a general hardware benchmark"
   }
 }
