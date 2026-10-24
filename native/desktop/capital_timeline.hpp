@@ -8,7 +8,7 @@
 
 // One date index and one viewport for price, classified flow, visible and dark models.
 class CapitalTimeline final:public QWidget {
- QJsonArray rows;QString metric="mainNet",caption="主力净额";int selected=-1,begin=0,visible=40,dragBegin=0;QPoint dragAt;bool dragging=false,candlesVisible=true;
+ QJsonArray rows;QString metric="mainNet",caption="主力净额",modelCoverage="明暗盘尚无已取得记录";int selected=-1,begin=0,visible=40,dragBegin=0;QPoint dragAt;bool dragging=false,candlesVisible=true;
  QRectF plotRect()const{return QRectF(88,64,std::max(1,width()-108),std::max(1,height()-106));}
  int count()const{return std::min(visible,int(rows.size())-begin);}
  QStringList mainKeys()const{if(metric=="seven")return {"mainNet","superNet","largeNet","mediumNet","smallNet"};if(metric=="all"||metric=="darkPair"||metric=="darkNet"||metric=="visibleNet")return {"mainNet"};return {metric};}
@@ -28,14 +28,16 @@ public:
  QPair<int,int> viewport()const{return {begin,count()};}
  QRectF barRect(int index,const QString& key)const{return moneyBar(index,key,moneyExtent());}
  QRectF priceRect()const{return candlesVisible?panelRect(0):QRectF();}
- void setRows(const QJsonArray& source){if(rows==source)return;const bool newest=begin+visible>=rows.size();rows=source;selected=-1;if(newest)begin=std::max(0,int(rows.size())-visible);else begin=std::min(begin,std::max(0,int(rows.size())-visible));update();}
+ QString modelCoverageText()const{return modelCoverage;}
+ void setRows(const QJsonArray& source){if(rows==source)return;const bool newest=begin+visible>=rows.size();rows=source;selected=-1;if(newest)begin=std::max(0,int(rows.size())-visible);else begin=std::min(begin,std::max(0,int(rows.size())-visible));int days=0;QString first,last;for(auto value:rows){const auto row=value.toObject();if(!row["visibleNet"].isDouble()&&!row["darkNet"].isDouble())continue;if(!days)first=row["label"].toString();last=row["label"].toString();++days;}modelCoverage=days?QString("明暗盘已取得 %1 日：%2 — %3；区间内缺日不补值").arg(days).arg(first,last):QString("明暗盘尚无已取得记录；K线日期不代表资金覆盖");update();}
+ void focusModelHistory(){int first=-1,last=-1;for(int i=0;i<rows.size();++i){const auto row=rows[i].toObject();if(!row["visibleNet"].isDouble()&&!row["darkNet"].isDouble())continue;if(first<0)first=i;last=i;}if(first<0)return;visible=std::max(5,std::min(60,last-first+1));begin=std::max(0,last-visible+1);selected=-1;update();}
  void setMetric(QString key,QString title){metric=std::move(key);caption=std::move(title);update();}
  void setCandlesVisible(bool show){candlesVisible=show;update();}
 protected:
  void paintEvent(QPaintEvent*)override{
   QPainter p(this);p.setRenderHint(QPainter::Antialiasing);const auto theme=appearance::theme(window()->property("stockTheme").toString().isEmpty()?(palette().base().color().lightness()<128?"graphite":"soft"):window()->property("stockTheme").toString());
   p.fillRect(rect(),theme.bg);p.setPen(theme.text);const auto box=plotRect();
-  QString title=QString("同一日期轴 · %1 / %2 点 · 滚轮缩放 / 拖动历史 · 资金红流入 绿流出").arg(count()).arg(rows.size());
+  QString title=QString("同一日期轴 · %1 / %2 点 · ").arg(count()).arg(rows.size())+modelCoverage;
   p.drawText(QRectF(12,4,width()-24,22),Qt::AlignLeft|Qt::AlignVCenter,title);
   QString values="悬停查看同一日期的价格、主力、明盘和暗盘；空缺不补零。";
   if(selected>=0&&selected<rows.size()){const auto row=rows[selected].toObject();values=row["label"].toString();auto price=row["candle"].toObject();if(price["close"].isDouble())values+="  收 "+QString::number(price["close"].toDouble(),'f',2);

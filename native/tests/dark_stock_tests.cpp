@@ -29,8 +29,32 @@ class DarkStockTests : public QObject {
   Q_OBJECT
 private slots:
   void unavailableDatesDoNotStopEarlierHistory(){
-    QTemporaryDir dir;int requests=0;auto get=[&](const QString& day,const std::function<bool()>&){++requests;if(day>"2026-10-05"&&day<"2026-10-09")throw std::runtime_error("来源未提供该交易日明暗盘记录（errid=-2）");auto r=raw();r["1"]=QString(day).remove('-');darkStock::Assembly a(day,"2026-10-23T09:00:00Z");a.append(darkStock::normalize(r,day,1,"2026-10-23T09:00:01Z"),1000);return a.finish();};
-    const auto receipt=darkHistory::backfill(dir.filePath("dark-stocks-v1"),QDate(2026,10,5),QDate(2026,10,9),{}, {},get,0);QCOMPARE(requests,5);QCOMPARE(receipt["saved"].toInt(),2);QCOMPARE(receipt["failed"].toInt(),3);QVERIFY(!receipt.contains("stoppedReason"));
+    QTemporaryDir dir;int requests=0;auto get=[&](const QString& day,const std::function<bool()>&){++requests;if(day>"2026-09-14"&&day<"2026-09-18")throw std::runtime_error("来源未提供该交易日明暗盘记录（errid=-2）");auto r=raw();r["1"]=QString(day).remove('-');darkStock::Assembly a(day,"2026-10-23T09:00:00Z");a.append(darkStock::normalize(r,day,1,"2026-10-23T09:00:01Z"),1000);return a.finish();};
+    const auto receipt=darkHistory::backfill(dir.filePath("dark-stocks-v1"),QDate(2026,9,14),QDate(2026,9,18),{}, {},get,0);QCOMPARE(requests,5);QCOMPARE(receipt["saved"].toInt(),2);QCOMPARE(receipt["failed"].toInt(),3);QVERIFY(!receipt.contains("stoppedReason"));
+  }
+  void nationalDayClosureDoesNotBlockEarlierHistory() {
+    QTemporaryDir dir;
+    const auto path=dir.filePath("dark-stocks-v1");
+    const QStringList tradingDays{"2026-10-09","2026-10-08","2026-09-30"};
+    QStringList requested;
+    auto get=[&](const QString& day,const std::function<bool()>&){
+      requested.append(day);
+      if(!tradingDays.contains(day))throw std::runtime_error("来源请求失败：休市日没有榜单");
+      auto r=raw();r["1"]=QString(day).remove('-');
+      darkStock::Assembly a(day,"2026-10-23T09:00:00Z");
+      a.append(darkStock::normalize(r,day,1,"2026-10-23T09:00:01Z"),1000);
+      return a.finish();
+    };
+    const auto receipt=darkHistory::backfill(path,QDate(2026,9,30),QDate(2026,10,9),{}, {},get,0);
+    qInfo().noquote()<<"Requested dates:"<<requested.join(", ");
+    qInfo().noquote()<<"Backfill receipt:"<<QJsonDocument(receipt).toJson(QJsonDocument::Compact);
+    QCOMPARE(requested,tradingDays);
+    QCOMPARE(receipt["saved"].toInt(),3);
+    QCOMPARE(receipt["failed"].toInt(),0);
+    QCOMPARE(receipt["skippedClosed"].toInt(),7);
+    QVERIFY(!receipt.contains("stoppedReason"));
+    for(const auto& day:tradingDays)
+      QCOMPARE(darkStock::Store(darkHistory::directory(path)).read(day)["tradingDay"].toString(),day);
   }
   void historyBackfillPreservesAndResumes() {
     QTemporaryDir dir;const auto path=dir.filePath("dark-stocks-v1");darkStock::Store current(path);current.save(complete());

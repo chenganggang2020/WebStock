@@ -1,5 +1,6 @@
 #pragma once
 #include "dark_stock.hpp"
+#include "trading_day_selection.hpp"
 #include <QDateTime>
 #include <QDir>
 #include <QFileInfo>
@@ -21,7 +22,7 @@ inline QJsonObject backfill(const QString& current,QDate first,QDate last,const 
  need(first.isValid()&&last.isValid()&&first<=last&&first.daysTo(last)<=366,"历史范围须为有效日期，最多366天");
  need(last<=QDateTime::currentDateTimeUtc().toOffsetFromUtc(28800).date(),"不请求未来日期");
  QJsonObject receipt{{"schema","native-dark-history-backfill/v1"},{"from",first.toString(Qt::ISODate)},{"through",last.toString(Qt::ISODate)},
-  {"startedAt",QDateTime::currentDateTimeUtc().toString(Qt::ISODateWithMs)},{"classification","provider-model-estimate"},{"saved",0},{"preserved",0},{"failed",0},{"cancelled",false}};
+  {"startedAt",QDateTime::currentDateTimeUtc().toString(Qt::ISODateWithMs)},{"classification","provider-model-estimate"},{"saved",0},{"preserved",0},{"failed",0},{"skippedClosed",0},{"cancelled",false}};
  if(cancelled&&cancelled()){receipt["cancelled"]=true;return receipt;}
  need(QDir().mkpath(current)&&QDir().mkpath(directory(current)),"无法建立隔离历史目录");
  QLockFile lock(current+"/scan.lock");lock.setStaleLockTime(0);need(lock.tryLock(0),"明暗榜已有扫描任务；请等待或取消后重试");
@@ -30,7 +31,12 @@ inline QJsonObject backfill(const QString& current,QDate first,QDate last,const 
  QJsonArray dates;int failures=0;
  for(auto day=last;day>=first;day=day.addDays(-1)){
   if(cancelled&&cancelled()){receipt["cancelled"]=true;break;}
-  if(day.dayOfWeek()>5)continue; // Not evidence of exchange holidays or a complete trading calendar.
+  const auto open=tradingDaySelection::open(day);
+  if(day.dayOfWeek()>5||(open.has_value()&&!*open)){
+   dates.append(QJsonObject{{"date",day.toString(Qt::ISODate)},{"state","skipped-closed"}});
+   receipt["skippedClosed"]=receipt["skippedClosed"].toInt()+1;
+   continue; // Known closures do not consume source failure budget. Unknown years are not guessed.
+  }
   const auto date=day.toString(Qt::ISODate);QJsonObject item{{"date",date}};bool fetched=false;
   try{
    if(!history.read(date).isEmpty()||!originals.read(date).isEmpty()){

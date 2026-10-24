@@ -7,6 +7,11 @@
 class CapitalWorkbenchTests:public QObject {
  Q_OBJECT
 private slots:
+ void modelCoverageAndFocusKeepMissingDaysHonest(){
+  CapitalTimeline chart;QJsonArray rows;for(int i=0;i<100;++i){QJsonObject row{{"label",QDate(2026,7,1).addDays(i).toString(Qt::ISODate)}};if(i==60||i==80){row["visibleNet"]=0.;row["darkNet"]=-10000.;}rows.append(row);}chart.setRows(rows);
+  QVERIFY(chart.modelCoverageText().contains("2 日"));QVERIFY(chart.modelCoverageText().contains("2026-08-30"));QVERIFY(chart.modelCoverageText().contains("2026-09-19"));chart.focusModelHistory();QCOMPARE(chart.viewport(),qMakePair(60,21));QCOMPARE(chart.sourceRows(),rows);QVERIFY(chart.barRect(61,"darkNet").isEmpty());
+  chart.setRows(QJsonArray{QJsonObject{{"label","2025-11-24"}}});QVERIFY(chart.modelCoverageText().contains("尚无"));chart.focusModelHistory();QVERIFY(chart.barRect(0,"darkNet").isEmpty());
+ }
  void priceDominatesCompactMoneyPanels(){
   CapitalTimeline chart;chart.resize(1200,900);chart.setRows(QJsonArray{QJsonObject{{"label","2026-10-22"},{"mainNet",100000.},{"visibleNet",100000.},{"darkNet",100000.}}});
   const auto main=chart.barRect(0,"mainNet"),visible=chart.barRect(0,"visibleNet");

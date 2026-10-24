@@ -346,6 +346,7 @@ final class CapitalScreen extends LinearLayout {
       if (chosen != null)
         state.append("\n" + TradingDaySelection.recordCaption(chosen, rows.isEmpty() ? "" : meta.optString("dataDate")));
       if(snapshot && !owner.testing) state.append("\n资金源时刻未知；抓取 "+meta.optString("checkedAt")+"（不是数据时刻），不生成分时曲线。");
+      if(!owner.testing) state.append("\n" + CapitalHistoryCoverage.caption(MarketData.array(s,"capitalDay"),historyDates));
     } catch (Exception e) {
       state.setText("资金读取未完成：" + e.getMessage());
     } finally {

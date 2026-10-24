@@ -9,6 +9,14 @@
 class CapitalUiTests:public QObject {
  Q_OBJECT
 private slots:
+ void actualBackfilledHistoryEvidence(){
+  const auto output=qEnvironmentVariable("CAPITAL_CFFEX_EVIDENCE");QVERIFY(!output.isEmpty());QFile f(output+"/actual-instruments.json");QVERIFY(f.open(QIODevice::ReadOnly));const auto actual=QJsonDocument::fromJson(f.readAll()).array();QVERIFY(!actual.isEmpty());
+  QTemporaryDir settings;Window w(true,settings.filePath("settings.ini"),output+"/backfill");w.testing=false;w.instruments=actual;w.activeId=actual[0].toObject()["id"].toString();w.resize(1900,1200);w.show();w.funds();
+  auto*roster=dynamic_cast<CapitalWorkbenchRoster*>(w.findChild<QWidget*>("capitalRoster"));QVERIFY(roster);w.findChild<QDateEdit*>("capitalModelDate")->setDate(QDate(2026,10,23));auto*table=w.findChild<QTableWidget*>("capitalRosterTable");QTRY_VERIFY_WITH_TIMEOUT(table->rowCount()>0,10000);table->setCurrentCell(0,0);QMetaObject::invokeMethod(table,"cellClicked",Q_ARG(int,0),Q_ARG(int,0));
+  auto*chart=dynamic_cast<CapitalTimeline*>(w.findChild<QWidget*>("fundTimeline"));QVERIFY(chart);auto modelDays=[&]{int count=0;for(auto value:chart->sourceRows())if(value.toObject()["darkNet"].isDouble())++count;return count;};QTRY_VERIFY_WITH_TIMEOUT(modelDays()>=25,30000);QVERIFY(chart->isVisible());w.findChild<QPushButton*>("fundModelRange")->click();
+  for(auto*label:w.findChildren<QLabel*>())if(label->text().startsWith("设计模拟"))label->setText("明暗盘使用本次回补及原有记录 · K线与主力为已保存数据");w.statusBar()->showMessage("本次完整回补的明暗日线 · K线和主力使用已保存记录 · 后台原生页面核验");QTest::qWait(80);QVERIFY(w.grab().save(output+"/actual-backfilled-history.png"));
+  QFile receipt(output+"/actual-history-ui.json");QVERIFY(receipt.open(QIODevice::WriteOnly));receipt.write(QJsonDocument(QJsonObject{{"modelDays",modelDays()},{"coverage",chart->modelCoverageText()},{"rows",chart->sourceRows()},{"physicalMouseUsed",false},{"render","actual Qt page offscreen"},{"priceAndCapital","previously saved, not freshly fetched"}}).toJson());w.close();
+ }
  void requestedDateShowsOnlyApplicableTradingDay_data(){
   QTest::addColumn<QDate>("requested");QTest::addColumn<bool>("showsFriday");
   QTest::newRow("closed-saturday-shows-friday")<<QDate(2026,10,24)<<true;

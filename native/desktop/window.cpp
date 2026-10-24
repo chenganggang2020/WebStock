@@ -3206,6 +3206,7 @@ void Window::funds() {
   auto* metric = new QComboBox(d);metric->setObjectName("fundMetric");for(auto pair:{qMakePair("主力 / 暗盘 / 明盘","all"),qMakePair("主力净额","mainNet"),qMakePair("超大单","superNet"),qMakePair("大单","largeNet"),qMakePair("中单","mediumNet"),qMakePair("小单","smallNet"),qMakePair("暗盘 · 模型估算","darkNet"),qMakePair("明盘 · 模型估算","visibleNet"),qMakePair("全部七类","seven")})metric->addItem(pair.first,pair.second);historyTools->insertWidget(0,metric);
   connect(metric,&QComboBox::currentIndexChanged,timeline,[metric,timeline]{timeline->setMetric(metric->currentData().toString(),metric->currentText());});
   auto* candleToggle=new QCheckBox("叠加日K",d);candleToggle->setObjectName("fundCandleToggle");candleToggle->setChecked(true);historyTools->insertWidget(1,candleToggle);
+  auto* modelRange=button("定位明暗记录","fundModelRange",d);historyTools->insertWidget(2,modelRange);connect(modelRange,&QPushButton::clicked,timeline,&CapitalTimeline::focusModelHistory);
   connect(candleToggle,&QCheckBox::toggled,timeline,[timeline](bool show){timeline->setCandlesVisible(show);});
   auto* backfillRow=new QHBoxLayout;auto* from=new QDateEdit(QDate::currentDate().addDays(-90),lower);auto* through=new QDateEdit(QDate::currentDate().addDays(-1),lower);
   from->setObjectName("capitalHistoryFrom");through->setObjectName("capitalHistoryThrough");for(auto* field:{from,through}){field->setDisplayFormat("yyyy-MM-dd");field->setCalendarPopup(true);field->setMaximumDate(QDateTime::currentDateTimeUtc().toOffsetFromUtc(28800).date());}
