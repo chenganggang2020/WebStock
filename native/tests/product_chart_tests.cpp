@@ -166,9 +166,14 @@ private slots:
    int row=0;for(auto value:{"100.00","-75.00","0.00","—"})table.setItem(row++,0,new QTableWidgetItem(value));table.show();QTest::qWait(25);QVERIFY(table.grab().save(directory+"/funds-"+id+".png"));
   }
  }
+ void themesKeepTextAndFinancialSignsReadable_data(){
+  QTest::addColumn<QString>("themeId");
+  for(auto id:appearance::ids())QTest::newRow(qPrintable(id))<<id;
+ }
  void themesKeepTextAndFinancialSignsReadable(){
+  QFETCH(QString,themeId);
   auto luminance=[](QColor c){auto f=[](double v){return v<=.04045?v/12.92:std::pow((v+.055)/1.055,2.4);};return .2126*f(c.redF())+.7152*f(c.greenF())+.0722*f(c.blueF());};
-  for(auto id:appearance::ids()){
+  for(auto id:{themeId}){
    auto t=appearance::theme(id);
    for(auto bg:{t.bg,t.panel,t.button,t.selection})for(auto fg:{t.text,t.up,t.down}){
     double a=luminance(bg),b=luminance(fg);double ratio=(std::max(a,b)+.05)/(std::min(a,b)+.05);

@@ -39,6 +39,7 @@ public:
   StockExtensionPanel(QString root,QString id,Chart* chart,QWidget* parent=nullptr);
   ~StockExtensionPanel()override;
   void setContext(const QJsonObject& input);
+  void refreshAppearance();
   bool isRunning()const{return job_.active();}
 signals:
   void refreshRequested();
@@ -62,6 +63,7 @@ public:
   ~StockExtensionHost()override;
   void setContext(const QJsonObject& input);
   void synchronize();
+  void refreshAppearance();
   void open(const QString& id);
   void showManager();
   void install(const QByteArray& package);

@@ -5,6 +5,7 @@
 #include "compact_actions.hpp"
 #include "chart.hpp"
 #include "window.hpp"
+#include "appearance.hpp"
 using namespace quantPlugin;
 namespace {
 QByteArray package(QString id="org.test.first",QByteArray code="print('test')\n"){
@@ -29,6 +30,38 @@ struct Harness {
 class StockExtensionTests:public QObject {
   Q_OBJECT
 private slots:
+  void themeMenuPersistsAndUpdatesOpenDialogs(){
+    QTemporaryDir d;const auto ini=d.filePath("review.ini");
+    {
+      Window w(true,ini,d.path());w.show();w.extensions->install(package());w.extensions->setContext(stock(*w.chart));w.extensions->open("org.test.first");w.extensions->showManager();
+      auto panel=w.findChild<StockExtensionPanel*>();auto manager=w.findChild<QDialog*>("stockPluginManager");QVERIFY(panel);QVERIFY(manager);
+      auto menu=w.findChild<QMenu*>("appearanceThemeMenu");QVERIFY(menu);QCOMPARE(menu->title(),QString("外观"));
+      w.chart->visibleCount=74;w.chart->endIndex=631;w.chart->selected=620;
+      QImage priorIcon;
+      for(const auto& id:appearance::presetIds()){
+        auto action=w.findChild<QAction*>("appearanceTheme_"+id);QVERIFY(action);action->trigger();QCoreApplication::processEvents();
+        const auto theme=appearance::theme(id);QCOMPARE(w.property("stockTheme").toString(),id);QVERIFY(action->isChecked());
+        QCOMPARE(QSettings(ini,QSettings::IniFormat).value("appearance/theme").toString(),id);
+        QCOMPARE(panel,w.findChild<StockExtensionPanel*>());QCOMPARE(manager,w.findChild<QDialog*>("stockPluginManager"));
+        QCOMPARE(panel->palette().color(QPalette::Window),theme.bg);QCOMPARE(manager->palette().color(QPalette::Window),theme.bg);
+        QCOMPARE(w.chart->bars.size(),size_t(640));QCOMPARE(w.chart->visibleCount,74);QCOMPARE(w.chart->endIndex,631);QCOMPARE(w.chart->selected,620);
+        auto icon=w.findChild<QPushButton*>("workbenchSettings")->icon().pixmap(24,24).toImage();QVERIFY(!icon.isNull());if(!priorIcon.isNull())QVERIFY(icon!=priorIcon);priorIcon=icon;
+      }
+      w.extensions->uninstall("org.test.first");QVERIFY(!w.findChild<StockExtensionPanel*>());QCOMPARE(w.chart->bars.size(),size_t(640));
+    }
+    Window restored(true,ini,d.path());QCOMPARE(restored.property("stockTheme").toString(),QString("clear"));
+    for(auto id:appearance::legacyIds())QVERIFY(restored.findChild<QAction*>("appearanceTheme_"+id));
+  }
+  void terminalCandlesAreHollowWithoutChangingPrices(){
+    QWidget root;Chart chart(&root);root.resize(900,600);chart.resize(900,600);chart.overlay=false;chart.showNine=false;
+    std::vector<market::Bar> bars;QStringList dates;for(int i=0;i<8;++i){bars.push_back({double(i),10,13,9,12,100,true,true,true});dates<<QString::number(i);}
+    chart.setSeries(bars,dates,false);chart.overlay=false;chart.showNine=false;chart.selected=-1;
+    for(auto id:appearance::presetIds()){
+      root.setProperty("stockTheme",id);const auto theme=appearance::theme(id);auto image=chart.grab().toImage();
+      auto at=chart.extensionPoint(3,11).toPoint()+QPoint(2,0);
+      QCOMPARE(image.pixelColor(at),theme.hollowUp?theme.bg:theme.up);QCOMPARE(chart.bars[3].close,12.);
+    }
+  }
   void floatingControlsKeepTheChartSizeAndCanReopen(){
     Harness h;h.host->install(package());h.window.show();QCoreApplication::processEvents();const auto chartSize=h.chart->size();
     auto button=h.window.findChild<QPushButton*>("extensionAction_org.test.first");QVERIFY(button);button->click();
@@ -109,6 +142,19 @@ private slots:
     QTest::mouseClick(h.chart,Qt::LeftButton,Qt::NoModifier,point.toPoint());auto card=h.chart->findChild<QFrame*>("extensionInspectionCard");QVERIFY(card);QCOMPARE(card->property("itemId").toString(),segment.id);QVERIFY(card->isVisible());QCOMPARE(h.chart->extensionLayers[plugin].selectedId,segment.id);
     QStringList words;for(auto label:card->findChildren<QLabel*>())words<<label->text();QVERIFY(words.join(" ").contains("扣费净盈亏"));QVERIFY(words.join(" ").contains("交易费用"));
     QCOMPARE(card->palette().color(QPalette::WindowText),QColor("#e6edf5"));QVERIFY(card->styleSheet().contains("#1c2838"));
+    // Restyle an existing result and inspection in place. No worker or data rewrite.
+    const auto beforeRecord=read(h.host->root()+"/jobs/"+runId+"/result.json");
+    const auto beforeEnd=h.chart->endIndex,beforeCount=h.chart->visibleCount;
+    const auto runCount=audit.records().size();
+    for(auto id:appearance::presetIds()){
+      h.window.setProperty("stockTheme",id);h.window.setPalette(appearance::palette(appearance::theme(id)));panel->refreshAppearance();
+      QCOMPARE(card,h.chart->findChild<QFrame*>("extensionInspectionCard"));QCOMPARE(panel->property("runId").toString(),runId);
+      QCOMPARE(card->palette().color(QPalette::WindowText),appearance::theme(id).text);
+      QVERIFY(panel->findChild<QLabel*>("extensionLegend")->text().contains(appearance::theme(id).fast.name()));
+      QCOMPARE(h.chart->endIndex,beforeEnd);QCOMPARE(h.chart->visibleCount,beforeCount);QCOMPARE(h.chart->extensionLayers[plugin].selectedId,segment.id);
+      QCOMPARE(h.chart->extensionLayers[plugin].segments.last().from,segment.from);QCOMPARE(h.chart->extensionLayers[plugin].segments.last().to,segment.to);
+      QCOMPARE(audit.records().size(),runCount);QCOMPARE(read(h.host->root()+"/jobs/"+runId+"/result.json"),beforeRecord);
+    }
     card->findChild<QToolButton*>("closeExtensionInspection")->click();QVERIFY(!h.chart->findChild<QFrame*>("extensionInspectionCard"));QVERIFY(h.chart->extensionLayers[plugin].selectedId.isEmpty());
     panel->findChild<QCheckBox*>("extensionConnections")->setChecked(false);QVERIFY(h.chart->extensionLayers[plugin].segments.isEmpty());panel->findChild<QCheckBox*>("extensionConnections")->setChecked(true);
     // Table selection shows the same inspection, including an unclosed entry.

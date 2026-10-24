@@ -520,9 +520,13 @@ Window::Window(bool test, const QString& testSettingsFile,
   ui->navLayout->addStretch();
   auto* theme = button("配色", "theme");
   ui->navLayout->addWidget(theme);
-  auto* themeMenu=new QMenu(theme);
+  auto* themeMenu=new QMenu(theme);themeMenu->setObjectName("appearanceThemeMenu");
+  auto* themeGroup=new QActionGroup(themeMenu);themeGroup->setExclusive(true);
+  QMenu* legacyThemes=nullptr;
   for(auto id:appearance::ids()){
-    auto* action=themeMenu->addAction(appearance::theme(id).name);
+    if(!appearance::presetIds().contains(id)&&!legacyThemes){themeMenu->addSeparator();legacyThemes=themeMenu->addMenu("原有配色");}
+    auto* action=(appearance::presetIds().contains(id)?themeMenu:legacyThemes)->addAction(appearance::theme(id).name);
+    action->setObjectName("appearanceTheme_"+id);action->setData(id);action->setCheckable(true);themeGroup->addAction(action);
     connect(action,&QAction::triggered,this,[this,id]{selectTheme(id);});
   }
   theme->setMenu(themeMenu);
@@ -3758,7 +3762,7 @@ void Window::applyTheme() {
   stylePage(dynamic_cast<RiskSettingsPage*>(pages.value("riskSettings")));
   chart->dark = referenceChart->dark = dark;
   QString bg=colors.bg.name(),fg=colors.text.name(),line=colors.border.name(),panel=colors.panel.name(),select=colors.selection.name();
-  const auto desiredStyle=QString("QMainWindow,QWidget{background:%1;color:%2;font-family:'"
+  auto desiredStyle=QString("QMainWindow,QWidget{background:%1;color:%2;font-family:'"
               "Microsoft YaHei UI';font-size:13px;}"
               "#header{background:%4;border-bottom:1px solid "
               "%3;}#toolbar{background:%4;}"
@@ -3819,7 +3823,19 @@ void Window::applyTheme() {
                     "QCheckBox::indicator:checked,QListView::indicator:checked{background:%7;border:3px solid %3;}"
                     "QTabBar::tab{background:%4;color:%2;padding:5px 9px;}QTabBar::tab:selected{background:%5;border-bottom:2px solid %7;}")
             .arg(colors.button.name(),fg,line,panel,select,colors.muted.name(),colors.accent.name());
+  desiredStyle.replace("#467daf",colors.accent.name()).replace("#4d80b7",colors.accent.name()).replace("#316398",colors.selection.name());
+  if(colors.preset){
+    desiredStyle.replace("font-size:13px",QString("font-size:%1px").arg(colors.fontSize));
+    desiredStyle.replace("border-radius:4px",QString("border-radius:%1px").arg(colors.radius));
+    desiredStyle+=QString("QMenu::item{padding:7px 24px 7px 12px;} QMenu::item:selected{background:%1;} QAbstractSpinBox{border:1px solid %2;border-radius:%3px;padding:2px 5px;selection-background-color:%1;} QCalendarWidget QToolButton{color:%4;}").arg(select,line).arg(colors.radius).arg(fg);
+  }
   if(styleSheet()!=desiredStyle)setStyleSheet(desiredStyle);
+  // Existing modeless dialogs must change with their owner, without recreation.
+  for(auto* w:findChildren<QWidget*>())if(w->isWindow()){w->setPalette(desiredPalette);w->update();}
+  for(auto* action:findChildren<QAction*>(QRegularExpression("^appearanceTheme_"))){QSignalBlocker block(action);action->setChecked(action->data().toString()==themeId);}
+  appearance::refreshIcons(this);
+  for(auto* p:findChildren<StockExtensionPanel*>())p->refreshAppearance();
+  if(extensions)extensions->refreshAppearance();
   if(quote&&!activeId.isEmpty()&&instrument.value("id").toString()==activeId&&legacyHighFrequencyFrame.isEmpty()){
     const auto* source=inspectedChart?inspectedChart:chart;
     const auto html=selectedQuoteHtml(instrument,source,source?source->selected:-1,testing,colors);

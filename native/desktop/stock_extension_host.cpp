@@ -1,14 +1,16 @@
 #include "stock_extension_host.hpp"
 #include "chart.hpp"
 #include "compact_actions.hpp"
+#include "appearance.hpp"
 #include <QtWidgets>
 #include <QVersionNumber>
 using namespace quantPlugin;
 namespace {
 bool chartPlugin(const QJsonObject& m){auto ui=m["ui"].toObject();return ui["apiVersion"]==1&&ui["placement"]=="chart";}
-QPixmap preview(const QJsonObject& ui,const QPalette& palette){
+QPixmap preview(const QJsonObject& ui,const appearance::Theme& theme){
+  const auto palette=appearance::palette(theme);
   QPixmap image(240,100);image.fill(palette.base().color());QPainter p(&image);p.setRenderHint(QPainter::Antialiasing);
-  for(auto v:ui["preview"].toArray()){auto line=v.toObject();auto values=line["values"].toArray();if(values.size()<2||values.size()>128)continue;QPainterPath path;for(int i=0;i<values.size();++i){QPointF at(12+i*216./(values.size()-1),88-qBound(0.,values[i].toDouble(),1.)*76);if(i)path.lineTo(at);else path.moveTo(at);}QColor c(line["color"].toString());p.setPen(QPen(c.isValid()?c:palette.text().color(),2));p.drawPath(path);}return image;
+  for(auto v:ui["preview"].toArray()){auto line=v.toObject();auto values=line["values"].toArray();if(values.size()<2||values.size()>128)continue;QPainterPath path;for(int i=0;i<values.size();++i){QPointF at(12+i*216./(values.size()-1),88-qBound(0.,values[i].toDouble(),1.)*76);if(i)path.lineTo(at);else path.moveTo(at);}QColor c(line["color"].toString());p.setPen(QPen(appearance::plotColor(theme,c.isValid()?c:palette.text().color(),line["role"].toString()),2));p.drawPath(path);}return image;
 }
 }
 StockExtensionHost::StockExtensionHost(QString root,Chart* chart,CompactActions* tools,QVBoxLayout* panels,QObject* parent)
@@ -23,12 +25,19 @@ void StockExtensionHost::synchronize(){
     auto p=v.toObject();const auto id=p["id"].toString();
     try{p=repository_.plugin(id);auto m=p["manifest"].toObject();if(!p["enabled"].toBool()||!chartPlugin(m))continue;retained.insert(id);
       if(contributions_.contains(id)&&contributions_[id].signature==p["manifestSha256"].toString())continue;
-      stop(id);auto button=new QPushButton(m["ui"].toObject()["toolbarLabel"].toString(m["ui"].toObject()["title"].toString()));button->setObjectName("extensionAction_"+id);button->setCheckable(true);button->setToolTip(m["ui"].toObject()["summary"].toString());tools_->addWidget(button);
+      stop(id);auto button=new QPushButton(m["ui"].toObject()["toolbarLabel"].toString(m["ui"].toObject()["title"].toString()));button->setObjectName("extensionAction_"+id);button->setCheckable(true);button->setToolTip(m["ui"].toObject()["summary"].toString());tools_->addWidget(button);appearance::setIcon(button,"strategy");
       contributions_[id]={button,nullptr,p["manifestSha256"].toString()};connect(button,&QPushButton::toggled,this,[this,id](bool on){if(on)open(id);else if(contributions_.value(id).panel)contributions_[id].panel->hide();});
     }catch(const std::exception&e){retained.remove(id);emit error(QString::fromUtf8(e.what()));}
   }}catch(const std::exception&e){emit error(QString::fromUtf8(e.what()));}
   for(auto id:contributions_.keys())if(!retained.contains(id))stop(id);
   emit changed();
+}
+void StockExtensionHost::refreshAppearance(){
+  for(auto& c:contributions_)if(c.button)appearance::setIcon(c.button,"strategy");
+  if(!manager_)return;
+  const auto theme=appearance::of(manager_);manager_->setPalette(appearance::palette(theme));
+  appearance::refreshIcons(manager_);
+  for(auto* picture:manager_->findChildren<QLabel*>())if(picture->property("appearancePreview").isValid())picture->setPixmap(preview(picture->property("appearancePreview").toJsonObject(),theme));
 }
 void StockExtensionHost::setContext(const QJsonObject& input){context_=input;for(auto&c:contributions_)if(c.panel)c.panel->setContext(input);}
 void StockExtensionHost::open(const QString& id){
@@ -48,7 +57,7 @@ void StockExtensionHost::showManager(){
   if(manager_){manager_->show();manager_->raise();manager_->activateWindow();return;}
   auto d=new QDialog(qobject_cast<QWidget*>(parent()));manager_=d;d->setAttribute(Qt::WA_DeleteOnClose);d->setObjectName("stockPluginManager");d->setWindowTitle("设置 · 插件");d->resize(920,650);d->ensurePolished();
   auto layout=new QVBoxLayout(d);layout->setContentsMargins(18,18,18,18);layout->setSpacing(12);
-  auto bar=new QHBoxLayout;auto title=new QLabel("插件");QFont titleFont=title->font();titleFont.setPointSize(16);title->setFont(titleFont);bar->addWidget(title);bar->addStretch();auto search=new QLineEdit;search->setPlaceholderText("搜索功能");search->setObjectName("pluginSearch");bar->addWidget(search);auto installedOnly=new QCheckBox("已安装");bar->addWidget(installedOnly);auto import=new QPushButton("导入插件包");bar->addWidget(import);layout->addLayout(bar);
+  auto bar=new QHBoxLayout;auto title=new QLabel("插件");QFont titleFont=title->font();titleFont.setPointSize(16);title->setFont(titleFont);bar->addWidget(title);bar->addStretch();auto search=new QLineEdit;search->setPlaceholderText("搜索功能");search->setObjectName("pluginSearch");bar->addWidget(search);auto installedOnly=new QCheckBox("已安装");bar->addWidget(installedOnly);auto import=new QPushButton("导入插件包");bar->addWidget(import);layout->addLayout(bar);appearance::setIcon(import,"data");
   auto area=new QScrollArea;area->setWidgetResizable(true);area->setFrameShape(QFrame::NoFrame);auto content=new QWidget;auto cards=new QVBoxLayout(content);area->setWidget(content);layout->addWidget(area,1);auto status=new QLabel;status->setWordWrap(true);status->setObjectName("pluginManagerStatus");layout->addWidget(status);
   auto refresh=std::make_shared<std::function<void()>>();
   *refresh=[this,d,cards,status,search,installedOnly]{
@@ -60,7 +69,7 @@ void StockExtensionHost::showManager(){
         try{auto bytes=read(dir+"/"+file);auto m=validateManifest(object(bytes)["manifest"].toObject());if(!chartPlugin(m))continue;const auto id=m["id"].toString();auto old=entries[id];auto current=old["manifest"].toObject();if(current.isEmpty()||QVersionNumber::fromString(m["version"].toString())>=QVersionNumber::fromString(current["version"].toString())){old["manifest"]=m;entries[id]=old;packages[id]=bytes;}}catch(const std::exception&){/* Invalid offers never become installable. */}
       }
       for(auto it=entries.begin();it!=entries.end();++it){auto e=it.value(),m=e["manifest"].toObject(),ui=m["ui"].toObject();const auto id=it.key();bool installed=e["installed"].toBool(),enabled=e["enabled"].toBool();if(installedOnly->isChecked()&&!installed)continue;if(!(ui["title"].toString()+ui["summary"].toString()+m["name"].toString()).contains(search->text(),Qt::CaseInsensitive))continue;
-        auto card=new QFrame;card->setObjectName("pluginCard_"+id);card->setFrameShape(QFrame::StyledPanel);auto row=new QHBoxLayout(card);auto picture=new QLabel;picture->setPixmap(preview(ui,d->palette()));picture->setAccessibleName("插件效果示意");picture->setFixedSize(240,100);row->addWidget(picture);auto info=new QVBoxLayout;auto heading=new QLabel(ui["title"].toString());heading->setTextFormat(Qt::PlainText);QFont f=heading->font();f.setPointSize(12);heading->setFont(f);info->addWidget(heading);auto desc=new QLabel(ui["summary"].toString());desc->setTextFormat(Qt::PlainText);desc->setWordWrap(true);info->addWidget(desc);
+        auto card=new QFrame;card->setObjectName("pluginCard_"+id);card->setFrameShape(QFrame::StyledPanel);auto row=new QHBoxLayout(card);auto picture=new QLabel;picture->setProperty("appearancePreview",ui);picture->setPixmap(preview(ui,appearance::of(d)));picture->setAccessibleName("插件效果示意");picture->setFixedSize(240,100);row->addWidget(picture);auto info=new QVBoxLayout;auto heading=new QLabel(ui["title"].toString());heading->setTextFormat(Qt::PlainText);QFont f=heading->font();f.setPointSize(12);heading->setFont(f);info->addWidget(heading);auto desc=new QLabel(ui["summary"].toString());desc->setTextFormat(Qt::PlainText);desc->setWordWrap(true);info->addWidget(desc);
         auto controls=new QHBoxLayout;auto primary=new QPushButton(installed?(enabled?"打开":"启用"):"安装");primary->setObjectName("pluginPrimary_"+id);primary->setEnabled(installed||packages.contains(id));controls->addWidget(primary);
         if(installed&&packages.contains(id)&&QVersionNumber::fromString(m["version"].toString())>QVersionNumber::fromString(e["installedVersion"].toString())){
           auto update=new QPushButton("更新");update->setObjectName("pluginUpdate_"+id);controls->addWidget(update);

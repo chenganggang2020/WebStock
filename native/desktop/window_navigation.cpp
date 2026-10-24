@@ -2,6 +2,7 @@
 #include "stock_extension_host.hpp"
 #include "ui_mainwindow.h"
 #include "navigation_model.hpp"
+#include "appearance.hpp"
 #include <QtWidgets>
 #include <QJsonDocument>
 #include <QSaveFile>
@@ -50,17 +51,11 @@ void Window::setupNavigation(){
  configure->hide();
  // Keep the existing handlers and data-source semantics; only consolidate their UI.
  auto* gear=findChild<QPushButton*>("theme");
- auto* paletteMenu=gear->menu();paletteMenu->setTitle("配色");
+ auto* paletteMenu=gear->menu();paletteMenu->setTitle("外观");
  auto* menu=new QMenu(gear);menu->setObjectName("workbenchSettingsMenu");
  gear->setObjectName("workbenchSettings");gear->setText({});
  // A drawn icon avoids a missing Unicode gear glyph on deployed font sets.
- QPixmap gearImage(40,40);gearImage.setDevicePixelRatio(2);gearImage.fill(Qt::transparent);
- {QPainter painter(&gearImage);painter.setRenderHint(QPainter::Antialiasing);painter.translate(10,10);
-  const QColor ink("#859bb5");painter.setPen(Qt::NoPen);painter.setBrush(ink);
-  for(int i=0;i<8;++i){painter.drawRoundedRect(QRectF(-1.5,-9,3,4),.5,.5);painter.rotate(45);}
-  painter.setBrush(Qt::NoBrush);painter.setPen(QPen(ink,2.3));painter.drawEllipse(QPointF(0,0),5.6,5.6);
-  painter.setPen(QPen(ink,1.5));painter.drawEllipse(QPointF(0,0),2.1,2.1);}
- gear->setIcon(QIcon(gearImage));gear->setIconSize(QSize(20,20));
+ appearance::setIcon(gear,"settings");gear->setIconSize(QSize(20,20));
  gear->setAccessibleName("设置");gear->setToolTip("设置与视图");gear->setMenu(menu);
  if(auto* old=findChild<QPushButton*>("workspace设置"))old->hide();
  auto* classic=menu->addAction("看盘");classic->setObjectName("showClassicWorkbench");
