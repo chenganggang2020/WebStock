@@ -1,5 +1,7 @@
 package org.marketreview.nativeapp;
 import android.content.Intent;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.net.Uri;
 import android.os.Bundle;
@@ -30,7 +32,19 @@ final class EtfScreen extends LinearLayout {
   final boolean networkEnabled;
   final EtfDaily.Store store;
   final ExecutorService worker = Executors.newSingleThreadExecutor();
+  final ExecutorService imageWorker = Executors.newSingleThreadExecutor();
+  final EtfSourceImage imageSelection = new EtfSourceImage();
+  EtfDaily.Fetch imageFetch;
+  Future<?> imageJob;
+  Bitmap imageBitmap;
+  boolean imageEnlarged;
   final LinearLayout controls, body, approvals;
+  final LinearLayout imagePanel, columns;
+  final ScrollView imageScroll;
+  final HorizontalScrollView imagePan;
+  final ImageView sourceImage;
+  final TextView imageState;
+  final Button details, imageZoom, imageRetry;
   final ScrollView controlScroll;
   final Spinner days;
   final TextView state, summary, dates, preview, coverage;
@@ -135,7 +149,7 @@ final class EtfScreen extends LinearLayout {
     controls.addView(coverage);
     LinearLayout links = row(controls);
     source = button(links, "来源原文", () -> external(false));
-    image = button(links, "原图", () -> external(true));
+    image = button(links, "完整官方榜单", this::showSourceImage);
     preview = text("", 12);
     preview.setTag("etfPreview");
     preview.setVisibility(GONE);
@@ -145,8 +159,41 @@ final class EtfScreen extends LinearLayout {
     confirm = button(approvals, "确认导入", this::confirmImport);
     confirm.setEnabled(false);
     button(approvals, "清除预览", this::invalidatePreview);
-    LinearLayout columns = new LinearLayout(owner);
+    LinearLayout imageTools = row(body);
+    details = button(imageTools, "正文TOP3明细", this::toggleDetails);
+    details.setTag("etfBodyDetails");
+    imageZoom = button(imageTools, "放大原图", () -> {
+      imageEnlarged = !imageEnlarged;
+      resizeSourceImage();
+    });
+    imageZoom.setEnabled(false);
+    imageRetry = button(imageTools, "重试原图", () -> {
+      imageSelection.clear();
+      renderSourceImage();
+    });
+    imageRetry.setEnabled(false);
+    imagePanel = new LinearLayout(owner);
+    imagePanel.setOrientation(VERTICAL);
+    body.addView(imagePanel, new LayoutParams(-1, 0, 1));
+    imageState = text("尚无可用官方榜单图", 12);
+    imageState.setTag("etfImageState");
+    imagePanel.addView(imageState);
+    imageScroll = new ScrollView(owner);
+    imageScroll.setTag("etfOfficialImageScroll");
+    imagePanel.addView(imageScroll, new LayoutParams(-1, 0, 1));
+    imagePan = new HorizontalScrollView(owner);
+    imagePan.setFillViewport(true);
+    imageScroll.addView(imagePan, new ScrollView.LayoutParams(-1, -2));
+    sourceImage = new ImageView(owner);
+    sourceImage.setTag("etfOfficialImage");
+    sourceImage.setScaleType(ImageView.ScaleType.FIT_CENTER);
+    imagePan.addView(sourceImage, new HorizontalScrollView.LayoutParams(-1, -2));
+    imageScroll.addOnLayoutChangeListener((v,l,t,r,b,ol,ot,or,ob) -> {
+      if (r-l != or-ol) resizeSourceImage();
+    });
+    columns = new LinearLayout(owner);
     columns.setTag("etfRankColumns");
+    columns.setVisibility(GONE);
     body.addView(columns, new LayoutParams(-1, 0, 1));
     LinearLayout buys = new LinearLayout(owner), sells = new LinearLayout(owner);
     buys.setOrientation(VERTICAL); sells.setOrientation(VERTICAL);
@@ -155,8 +202,8 @@ final class EtfScreen extends LinearLayout {
     divider.setBackgroundColor(owner.darkTheme() ? 0xff64748b : 0xff94a3b8);
     columns.addView(divider, new LayoutParams(owner.dp(1), -1));
     columns.addView(sells, new LayoutParams(0, -1, 1));
-    buys.addView(text("净申购 · 原文条目", 12));
-    sells.addView(text("净赎回 · 原文条目", 12));
+    buys.addView(text("净申购 · 正文TOP3", 12));
+    sells.addView(text("净赎回 · 正文TOP3", 12));
     list = new ListView(owner); list.setTag("etfTable");
     redemptionList = new ListView(owner); redemptionList.setTag("etfRedemptions");
     adapter = rankAdapter(subscriptions); redemptionAdapter = rankAdapter(redemptions);
@@ -293,7 +340,7 @@ final class EtfScreen extends LinearLayout {
           MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED));
       controlScroll.setLayoutParams(new LayoutParams(
           -1, Math.min(controls.getMeasuredHeight(),
-                       Math.max(owner.dp(48), h - owner.dp(230)))));
+                       Math.max(owner.dp(48), h - owner.dp(290)))));
       body.setLayoutParams(new LayoutParams(-1, 0, 1));
     }
     super.onMeasure(wSpec, hSpec);
@@ -326,6 +373,9 @@ final class EtfScreen extends LinearLayout {
   }
   void cancel() {
     generation++;
+    imageSelection.clear();
+    cancelImageRequest();
+    imageState.setText("原图读取已取消；正文TOP3明细仍可查看");
     if (fetch != null) {
       fetch.cancel();
       fetch = null;
@@ -341,6 +391,9 @@ final class EtfScreen extends LinearLayout {
     closed = true;
     cancel();
     worker.shutdownNow();
+    imageWorker.shutdownNow();
+    sourceImage.setImageDrawable(null);
+    imageBitmap = null;
   }
   void cancelFromUi() {
     cancel();
@@ -456,15 +509,115 @@ final class EtfScreen extends LinearLayout {
           (key.equals("subscriptions") ? subscriptions : redemptions).add(a.optJSONObject(j));
         }
       }
-      coverage.setText("正文结构化：申购 " + subscriptions.size() + " 条 / 赎回 " + redemptions.size()
-          + " 条；原图可能另有 TOP10，未结构化，不代表全榜。"
-          + (report.isNull("originalImageUrl") ? " 本条无可用原图。" : " 可查看来源原图。"));
+      coverage.setText("正文仅提供TOP3：申购 " + subscriptions.size() + " 条 / 赎回 " + redemptions.size()
+          + " 条。完整公布榜单见官方原图；图中额外条目未转成可跳转明细，不代表全市场。"
+          + (report.isNull("originalImageUrl") ? " 本条无可用原图。" : ""));
       source.setEnabled(true);
       image.setEnabled(!report.isNull("originalImageUrl"));
     }
     adapter.notifyDataSetChanged();
     redemptionAdapter.notifyDataSetChanged();
     calendar.setText(chosenDay.isEmpty() ? "日历" : chosenDay);
+    details.setEnabled(!rows.isEmpty());
+    renderSourceImage();
+  }
+  void showSourceImage() {
+    columns.setVisibility(GONE);
+    imagePanel.setVisibility(VISIBLE);
+    details.setText("正文TOP3明细");
+    imageZoom.setEnabled(imageBitmap != null);
+  }
+  void toggleDetails() {
+    if (columns.getVisibility() == VISIBLE) {
+      showSourceImage();
+    } else {
+      columns.setVisibility(VISIBLE);
+      imagePanel.setVisibility(GONE);
+      details.setText("返回官方榜单");
+      imageZoom.setEnabled(false);
+    }
+  }
+  void cancelImageRequest() {
+    if (imageFetch != null) imageFetch.cancel();
+    if (imageJob != null) imageJob.cancel(true);
+    imageFetch = null;
+    imageJob = null;
+  }
+  void resizeSourceImage() {
+    if (imageBitmap == null || imageScroll.getWidth() <= 0) return;
+    int width = imageScroll.getWidth() * (imageEnlarged ? 2 : 1);
+    int height = (int)Math.ceil((double)width * imageBitmap.getHeight() / imageBitmap.getWidth());
+    sourceImage.setLayoutParams(new HorizontalScrollView.LayoutParams(width, height));
+    imageZoom.setText(imageEnlarged ? "适合宽度" : "放大原图");
+  }
+  void renderSourceImage() {
+    if (closed || !imageSelection.select(report)) return;
+    cancelImageRequest();
+    sourceImage.setImageDrawable(null);
+    sourceImage.setVisibility(GONE);
+    imageBitmap = null;
+    imageEnlarged = false;
+    imageZoom.setText("放大原图");
+    showSourceImage();
+    imageScroll.scrollTo(0, 0);
+    imagePan.scrollTo(0, 0);
+    String url = imageSelection.url;
+    String date = report.optString("asOf");
+    imageRetry.setEnabled(networkEnabled && !url.isEmpty());
+    if (url.isEmpty()) {
+      imageState.setText("本条没有可用官方榜单图；已保存的正文TOP3明细仍可查看");
+      return;
+    }
+    sourceImage.setContentDescription(date + " 官方完整ETF申赎榜单图");
+    if (!networkEnabled) {
+      imageState.setText(date + " · 原图尚未加载；正文TOP3明细仍可查看");
+      return;
+    }
+    imageState.setText(date + " · 正在读取完整官方榜单图…");
+    long token = imageSelection.generation;
+    EtfDaily.Fetch request = new EtfDaily.Fetch();
+    imageFetch = request;
+    imageJob = imageWorker.submit(() -> {
+      Bitmap bitmap = null;
+      String error = "";
+      try {
+        byte[] bytes = request.getImage(url);
+        request.check();
+        BitmapFactory.Options bounds = new BitmapFactory.Options();
+        bounds.inJustDecodeBounds = true;
+        BitmapFactory.decodeByteArray(bytes, 0, bytes.length, bounds);
+        EtfDaily.require(EtfSourceImage.safeDimensions(bounds.outWidth, bounds.outHeight), "原图无法解码或尺寸超限");
+        request.check();
+        bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
+        EtfDaily.require(bitmap != null, "原图无法解码");
+        request.check();
+      } catch (Exception | OutOfMemoryError e) {
+        if (bitmap != null) bitmap.recycle();
+        bitmap = null;
+        error = e instanceof OutOfMemoryError ? "原图超出可用内存" : e.getMessage();
+      }
+      Bitmap result = bitmap;
+      String failure = error;
+      owner.runOnUiThread(() -> acceptSourceImage(token, date, result, failure));
+    });
+  }
+  void acceptSourceImage(long token, String date, Bitmap bitmap, String error) {
+    if (closed || !imageSelection.current(token)) {
+      if (bitmap != null) bitmap.recycle();
+      return;
+    }
+    imageFetch = null;
+    imageJob = null;
+    if (bitmap == null) {
+      imageState.setText(date + " · 原图加载失败，正文TOP3明细已保留；可重试原图。\n" + (error == null ? "" : error));
+      return;
+    }
+    imageBitmap = bitmap;
+    sourceImage.setImageBitmap(bitmap);
+    sourceImage.setVisibility(VISIBLE);
+    imageState.setText(date + " · 完整官方原图，可上下滚动；放大后可左右移动。正文仅提供TOP3明细。");
+    imageZoom.setEnabled(imagePanel.getVisibility() == VISIBLE);
+    resizeSourceImage();
   }
   void refreshSource() {
     if (!networkEnabled || fetch != null)

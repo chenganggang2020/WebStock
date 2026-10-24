@@ -1,4 +1,5 @@
 #include "etf_page.hpp"
+#include "etf_source_image.hpp"
 #include "window.hpp"
 #include <QFile>
 #include <QFontDatabase>
@@ -44,6 +45,18 @@ class EtfUiTests : public QObject {
     QVERIFY(page.grab().save(dir + "/" + name + ".png"));
   }
 private slots:
+  void completeSourceRankingsInline(){
+    const auto file=qEnvironmentVariable("NATIVE_ETF_CAPTURE");if(file.isEmpty())QSKIP("Captured official article required");QFile input(file);QVERIFY(input.open(QIODevice::ReadOnly));const auto payload=QJsonDocument::fromJson(input.readAll()).object(),news=payload["news"].toObject();
+    const auto report=etfDaily::content(payload,{{"code",news["newsid"]},{"title",news["title"]},{"stime",news["showtime"]},{"source","东方财富Choice数据"}},QDateTime::currentDateTimeUtc());
+    QImage image(qEnvironmentVariable("NATIVE_ETF_IMAGE"));QVERIFY(!image.isNull());const auto panels=etfSourcePanels(image);QCOMPARE(panels.size(),2);QVERIFY(panels[0].top()<=1140&&panels[0].bottom()>=2067);QVERIFY(panels[1].top()<=2140&&panels[1].bottom()>=3071);
+    QImage unknown(800,1200,QImage::Format_RGB32);unknown.fill(Qt::white);QVERIFY(etfSourcePanels(unknown).isEmpty());
+    QTemporaryDir dir;const auto db=dir.filePath("etf.sqlite");etfDaily::Store store(db);QVERIFY(store.saveVerifiedHistory(report,QDateTime::currentDateTimeUtc()));const auto before=store.state();
+    EtfPage page(db,true);page.resize(1550,960);page.show();QCOMPARE(page.findChild<QTabWidget*>("etfRankingViews")->currentIndex(),0);
+    auto* buy=page.findChild<QLabel*>("etfSourceBuyImage");auto* sell=page.findChild<QLabel*>("etfSourceSellImage");QVERIFY(buy&&sell);QTRY_VERIFY_WITH_TIMEOUT(!buy->pixmap().isNull()&&!sell->pixmap().isNull(),22000);QVERIFY(sell->isVisible());
+    QVERIFY(page.findChild<QLabel*>("etfSourceImageState")->text().contains("左侧净申购 / 右侧净赎回"));QCOMPARE(store.state(),before);shot(page,"actual-etf-full-rankings");
+    page.findChild<QTabWidget*>("etfRankingViews")->setCurrentIndex(1);QCOMPARE(page.findChild<QTableWidget*>("etfSubscriptions")->rowCount(),3);QCOMPARE(page.findChild<QTableWidget*>("etfRedemptions")->rowCount(),3);shot(page,"actual-etf-body-entries");
+    page.findChild<QTabWidget*>("etfRankingViews")->setCurrentIndex(0);page.resize(1000,760);shot(page,"actual-etf-full-narrow");page.cancel();
+  }
   void capturedReportAndOriginalImage() {
     const auto file=qEnvironmentVariable("NATIVE_ETF_CAPTURE");if(file.isEmpty())QSKIP("Requires captured official news response");
     QFile input(file);QVERIFY(input.open(QIODevice::ReadOnly));const auto payload=QJsonDocument::fromJson(input.readAll()).object();
@@ -74,6 +87,7 @@ private slots:
     EtfPage page(dir.filePath("etf.sqlite"), false);
     page.previewImport(json);
     page.confirmImport();
+    page.findChild<QTabWidget*>("etfRankingViews")->setCurrentIndex(1);
     page.resize(1600, 900);
     page.show();
     QVERIFY(QTest::qWaitForWindowExposed(&page));
@@ -237,6 +251,7 @@ private slots:
     QTest::mouseClick(p.findChild<QPushButton *>("etfConfirmImport"),
                       Qt::LeftButton);
     QCOMPARE(table->rowCount(), 3);
+    p.findChild<QTabWidget*>("etfRankingViews")->setCurrentIndex(1);
     QCOMPARE(p.findChild<QTableWidget *>("etfRedemptions")->rowCount(), 3);
     QCOMPARE(p.findChild<QListWidget *>("etfHistory")->count(), 1);
     QVERIFY(p.findChild<QLabel *>("etfSummary")->text().contains("-19.87"));

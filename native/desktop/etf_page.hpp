@@ -14,6 +14,8 @@ class QPushButton;
 class QNetworkReply;
 class QCheckBox;
 class QDateEdit;
+class QTabWidget;
+class EtfSourcePicture;
 class EtfPage final : public QWidget {
   Q_OBJECT
 public:
@@ -33,6 +35,12 @@ private:
   bool networkEnabled;
   QNetworkAccessManager network;
   QPointer<QNetworkReply> reply;
+  QPointer<QNetworkReply> sourceImageReply;
+  QString sourceImageUrl;
+  quint64 sourceImageGeneration = 0;
+  QTabWidget *rankingViews;
+  QLabel *sourceImageState;
+  EtfSourcePicture *sourceBuy, *sourceSell;
   quint64 generation = 0;
   QString token;
   etfDaily::ScheduleClock scheduleClock;
@@ -54,6 +62,7 @@ private:
   QJsonArray records, pending;
   QJsonObject report;
   void render();
+  void loadSourceImage();
   void scheduleTick();
   void startSource();
   void nextHistory();

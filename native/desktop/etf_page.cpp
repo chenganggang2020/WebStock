@@ -1,4 +1,8 @@
 #include "etf_page.hpp"
+#include "etf_source_image.hpp"
+#include <QTabWidget>
+#include <QImageReader>
+#include <QBuffer>
 #include "trading_day_selection.hpp"
 #include <QDateEdit>
 #include <QDialog>
@@ -130,7 +134,12 @@ EtfPage::EtfPage(QString file, bool enabled, QWidget *parent)
   body->addWidget(dates);
   auto *ranks = new QSplitter(Qt::Horizontal, content);
   ranks->setObjectName("etfRankColumns");
-  body->addWidget(ranks, 1);
+  rankingViews=new QTabWidget(content);rankingViews->setObjectName("etfRankingViews");body->addWidget(rankingViews,1);
+  auto* sourcePage=new QWidget;auto* sourceLayout=new QVBoxLayout(sourcePage);sourceLayout->setContentsMargins(0,0,0,0);
+  sourceImageState=new QLabel("选择日报后自动显示来源完整图表");sourceImageState->setObjectName("etfSourceImageState");sourceImageState->setWordWrap(true);sourceLayout->addWidget(sourceImageState);
+  auto* sourceScroll=new QScrollArea;sourceScroll->setWidgetResizable(true);sourceScroll->setObjectName("etfSourceRankScroll");auto* sourceContent=new QWidget;auto* sourceColumns=new QHBoxLayout(sourceContent);sourceColumns->setContentsMargins(0,0,0,0);
+  sourceBuy=new EtfSourcePicture;sourceBuy->setObjectName("etfSourceBuyImage");sourceSell=new EtfSourcePicture;sourceSell->setObjectName("etfSourceSellImage");sourceColumns->addWidget(sourceBuy,1);sourceColumns->addWidget(sourceSell,1);sourceScroll->setWidget(sourceContent);sourceLayout->addWidget(sourceScroll,1);
+  rankingViews->addTab(sourcePage,"完整榜单 · 来源原图");rankingViews->addTab(ranks,"正文条目 · 可双击看行情");
   auto grid = [&](QString title, QString name) {
     auto *box = new QWidget(ranks);
     auto *layout = new QVBoxLayout(box);
@@ -190,7 +199,7 @@ EtfPage::EtfPage(QString file, bool enabled, QWidget *parent)
     });
     dialog->show();
   });
-  auto *note = new QLabel("一级市场申赎 · 正文公布前三，完整覆盖范围以来源原图为准");
+  auto *note = new QLabel("一级市场申赎 · 展示来源公布的完整榜单，非全市场ETF名单");
   note->setToolTip("不是个股主力资金或二级市场成交额。原图未结构化提取，不补造全榜；公开访问不代表取得行情再分发授权。");
   note->setWordWrap(true);
   body->addWidget(note);
@@ -306,8 +315,7 @@ void EtfPage::render() {
       status += "\n未更新，旧资料保留：" + s["lastError"].toString();
     state->setText(status);
     int n = days->currentRow();
-    if (n < 0 || n >= records.size())
-      return;
+    if (n < 0 || n >= records.size()){loadSourceImage();return;}
     auto entry = records[n].toObject();
     report = entry["report"].toObject();
     auto expected = etfDaily::previousDay(
@@ -354,11 +362,30 @@ void EtfPage::render() {
     }
     article->setEnabled(true);
     image->setEnabled(report["originalImageUrl"].isString());
+    loadSourceImage();
   } catch (const std::exception &e) {
     state->setText("无法展示：" + QString::fromUtf8(e.what()));
   }
 }
+void EtfPage::loadSourceImage(){
+ const auto url=report["originalImageUrl"].toString();if(url==sourceImageUrl&&!sourceBuy->pixmap().isNull())return;
+ ++sourceImageGeneration;if(sourceImageReply){sourceImageReply->abort();sourceImageReply=nullptr;}sourceImageUrl=url;sourceBuy->setSource({});sourceSell->setSource({});sourceSell->hide();
+ if(!etfDaily::allowedUrl(url,true)){sourceImageState->setText("该日报未提供完整原图；正文条目仍可查看，未补造全榜。");return;}
+ if(!networkEnabled){sourceImageState->setText("当前未连接来源；正文条目仍可查看，未补造全榜。");return;}
+ sourceImageState->setText("正在读取 "+report["asOf"].toString()+" 完整来源图表；正文条目可先查看");const auto epoch=sourceImageGeneration;
+ QNetworkRequest req{QUrl(url)};req.setTransferTimeout(15000);req.setAttribute(QNetworkRequest::RedirectPolicyAttribute,QNetworkRequest::ManualRedirectPolicy);auto* r=network.get(req);sourceImageReply=r;r->setReadBufferSize(65536);auto bytes=std::make_shared<QByteArray>();
+ connect(r,&QIODevice::readyRead,this,[r,bytes]{bytes->append(r->readAll());if(bytes->size()>10*1024*1024)r->abort();});
+ auto* timer=new QTimer(r);timer->setSingleShot(true);connect(timer,&QTimer::timeout,r,[r]{r->abort();});timer->start(20000);
+ connect(r,&QNetworkReply::finished,this,[this,r,bytes,url,epoch,timer]{timer->stop();bytes->append(r->readAll());r->deleteLater();if(epoch!=sourceImageGeneration)return;sourceImageReply=nullptr;
+  QBuffer buffer(bytes.get());buffer.open(QIODevice::ReadOnly);QImageReader reader(&buffer);const auto size=reader.size();
+  if(r->error()!=QNetworkReply::NoError||r->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt()!=200||r->url()!=QUrl(url)||bytes->size()>10*1024*1024||size.isEmpty()||qint64(size.width())*size.height()>20000000){sourceImageState->setText("完整原图读取失败；正文条目保留，未标为完整更新。");return;}
+  const auto picture=reader.read();if(picture.isNull()){sourceImageState->setText("来源原图无法解码；正文条目保留。");return;}
+  const auto panels=etfSourcePanels(picture);if(panels.size()==2){sourceBuy->setSource(picture.copy(panels[0]));sourceSell->setSource(picture.copy(panels[1]));sourceSell->show();sourceImageState->setText(report["asOf"].toString()+" · 左侧净申购 / 右侧净赎回 · 来源公布完整榜单原图");}
+  else{sourceBuy->setSource(picture);sourceImageState->setText(report["asOf"].toString()+" · 完整来源原图，可向下滚动查看；未裁去任何条目");}
+ });
+}
 void EtfPage::cancel() {
+  ++sourceImageGeneration;if(sourceImageReply){sourceImageReply->abort();sourceImageReply=nullptr;}
   ++generation;
   backfilling=false;historyQueue={};
   scheduledRequest = false;

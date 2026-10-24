@@ -230,6 +230,7 @@ final class EtfScheduleChecks {
     f.check(f.activity.etfScreen.scheduleClock==process&&process==EtfScreen.PROCESS_CLOCK,"production process clock retained across Activity recreation");
     f.ui(()->f.activity.etfDaily());
     f.check(savedKey.equals(new EtfDaily.Store(db).state().optString("lastScheduledKey")),"Activity reconstruction preserves scheduled request identity");
+    f.ui(()->{if(f.activity.etfScreen.columns.getVisibility()!=android.view.View.VISIBLE)f.activity.etfScreen.details.performClick();});
     SourceChecks.waitFor(f,()->f.activity.etfScreen.isShown()&&f.activity.etfScreen.getWidth()>0&&
       f.activity.etfScreen.automatic.isShown()&&f.activity.etfScreen.automatic.getHeight()>=f.activity.dp(40)&&
       f.activity.etfScreen.list.isShown()&&f.activity.etfScreen.list.getHeight()>f.activity.dp(160)&&

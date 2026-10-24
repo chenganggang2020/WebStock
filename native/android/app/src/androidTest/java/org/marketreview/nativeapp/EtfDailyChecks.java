@@ -330,9 +330,37 @@ final class EtfDailyChecks {
       f.check(
           f.activity.etfScreen.summary.getText().toString().contains("-19.87"),
           "signed stock ETF amount");
-      f.check(f.activity.etfScreen.list.getHeight() >= f.activity.dp(200),
-              "list visible in portrait");
+      EtfScreen screen = f.activity.etfScreen;
+      f.check(screen.imagePanel.getVisibility() == android.view.View.VISIBLE &&
+                  screen.columns.getVisibility() == android.view.View.GONE,
+              "complete official image is the default report view");
+      String original = screen.report.toString(), status = screen.state.getText().toString();
+      screen.acceptSourceImage(screen.imageSelection.generation, r.optString("asOf"), null, "synthetic image failure");
+      f.check(screen.imageState.getText().toString().contains("加载失败") &&
+                  screen.rows.size() == 6 && screen.report.toString().equals(original) &&
+                  screen.state.getText().toString().equals(status),
+              "image failure retains body rows, report and daily status");
+      long staleToken = screen.imageSelection.generation;
+      screen.imageSelection.clear();
+      screen.renderSourceImage();
+      android.graphics.Bitmap stale = android.graphics.Bitmap.createBitmap(10, 20, android.graphics.Bitmap.Config.ARGB_8888);
+      screen.acceptSourceImage(staleToken, r.optString("asOf"), stale, "");
+      f.check(stale.isRecycled() && screen.imageBitmap == null,
+              "late image callback discarded after selection invalidation");
+      android.graphics.Bitmap tall = android.graphics.Bitmap.createBitmap(100, 600, android.graphics.Bitmap.Config.ARGB_8888);
+      screen.acceptSourceImage(screen.imageSelection.generation, r.optString("asOf"), tall, "");
+      f.check(screen.sourceImage.getVisibility() == android.view.View.VISIBLE &&
+                  screen.sourceImage.getLayoutParams().height > screen.imageScroll.getHeight(),
+              "entire tall image extends into native scroll area without crop");
+      int fittedWidth = screen.sourceImage.getLayoutParams().width;
+      screen.imageZoom.performClick();
+      f.check(screen.sourceImage.getLayoutParams().width == fittedWidth * 2,
+              "inline image zoom preserves full aspect ratio");
+      screen.details.performClick();
     });
+    SourceChecks.waitFor(f, () -> f.activity.etfScreen.columns.getVisibility() == android.view.View.VISIBLE &&
+                            f.activity.etfScreen.list.getHeight() >= f.activity.dp(200),
+                        5000, "secondary body TOP3 rows visible in portrait");
     Thread.sleep(2400);
     f.shot("android-etf-fixture");
     f.ui(()

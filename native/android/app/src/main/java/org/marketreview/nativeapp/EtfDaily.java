@@ -706,8 +706,14 @@ final class EtfDaily {
               "请求已取消");
     }
     byte[] get(String url, int limit) throws Exception {
+      return get(url, limit, false);
+    }
+    byte[] getImage(String url) throws Exception {
+      return get(url, EtfSourceImage.MAX_BYTES, true);
+    }
+    private byte[] get(String url, int limit, boolean image) throws Exception {
       check();
-      require(allowedUrl(url, false), "禁止访问非固定日报源");
+      require(allowedUrl(url, image), "禁止访问非固定日报源");
       HttpURLConnection c = (HttpURLConnection) new URL(url).openConnection();
       connection = c;
       c.setInstanceFollowRedirects(false);
