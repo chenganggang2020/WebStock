@@ -32,7 +32,7 @@ final class CffexHostChecks {
  static void run(FlowInstrumentation f)throws Exception{
   byte[] raw=fixture(f);guards(f,raw);String xml=new String(raw,StandardCharsets.UTF_8);
   LinkedBlockingQueue<EtfMonitorHostChecks.Reply> replies=new LinkedBlockingQueue<>();List<String> urls=new CopyOnWriteArrayList<>();
-  f.ui(()->{f.activity.cffexTestOpener=url->{urls.add(url.toString());EtfMonitorHostChecks.Reply r=new EtfMonitorHostChecks.Reply(url);replies.add(r);return r;};f.activity.openCffexDisclosure();f.check(f.activity.cffexScreen.isShown(),"native disclosure internal page");});
+  f.ui(()->{f.activity.cffexTestOpener=url->{urls.add(url.toString());EtfMonitorHostChecks.Reply r=new EtfMonitorHostChecks.Reply(url);replies.add(r);return r;};f.activity.openCffexDisclosure();f.check(f.activity.cffexScreen.isShown(),"native disclosure internal page");f.check(f.activity.cffexScreen.product.getSelectedItemPosition()==0,"default all four products");f.activity.cffexScreen.product.setSelection(1);});
   CffexDisclosureStore archive=new CffexDisclosureStore(file(f.activity));f.check(urls.isEmpty()&&!file(f.activity).exists(),"opening neither fetches nor creates archive");
   f.ui(()->{((EditText)f.activity.cffexScreen.findViewWithTag("cffexDate")).setText("2026-08-28");((Button)f.activity.cffexScreen.findViewWithTag("cffexFetch")).performClick();});
   EtfMonitorHostChecks.Reply r=replies.poll(3,TimeUnit.SECONDS);f.check(r!=null&&r.getURL().toString().endsWith("/202608/28/IF.xml"),"single exact-date HTTPS");r.deliver(xml,200);waitDone(f);f.check(!file(f.activity).exists(),"fetch does not implicitly save");

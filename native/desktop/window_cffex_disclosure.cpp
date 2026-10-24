@@ -14,7 +14,8 @@ void Window::cffexDisclosureView(){
     [target,service,isolated](QString token,QJsonObject q){
      if(!service||isolated){if(*target)(*target)->fail(token,"隔离模式未连接来源或来源已关闭");return;}
      service->start(token,q,[target](QString t,QJsonObject r,QString error){if(!*target)return;if(error.isEmpty())(*target)->accept(t,r);else (*target)->fail(t,error);});
-    },[service](QString token){if(service)service->cancel(token);}
+    },[service](QString token){if(service)service->cancel(token);},
+    [this](QString title,QString message){if(testing)return;statusBar()->showMessage(title+" · "+message,30000);if(!QSystemTrayIcon::isSystemTrayAvailable())return;auto*tray=findChild<QSystemTrayIcon*>("cffexNotificationTray");if(!tray){tray=new QSystemTrayIcon(windowIcon(),this);tray->setObjectName("cffexNotificationTray");tray->setToolTip("Stock 期货披露");tray->show();}tray->showMessage(title,message,QSystemTrayIcon::Information,15000);}
    },path,workspaceTabs);
    *target=page;page->setObjectName("cffexDisclosurePage");page->setProperty("workspace","资金");page->setProperty("pageTitle","股指期货指定日披露");pages["cffexDisclosure"]=page;
    connect(workspaceTabs,&QTabWidget::currentChanged,page,[this,page]{if(workspaceTabs->currentWidget()!=page)page->cancel();});
