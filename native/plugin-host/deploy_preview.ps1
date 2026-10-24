@@ -100,8 +100,8 @@ Hikyuu选择historical-hikyuu-first500.csv：原样本前500根保留实际amoun
 插件窗口支持安装、停用、卸载、运行、取消、历史重开及.wsresult结果包导出/导入。
 卸载保留历史与版本缓存；结果导入不会执行其代码。
 
-全部19项目、110类目录的目标仍在实施。此版本是已验证的第一批可运行交付，不是全部完成。
-新插件会继续沿用同一安装接口。
+本机首版的19项目适配入口、110类目录和33个插件包已经交付；具体功能与验收范围见QUICK_START.txt。
+7类是来源接口，当前AKShare在线代理连接失败，第二台机器未验收；这些限制不计为已通过。
 '@
 [IO.File]::WriteAllText((Join-Path $taskRelease '开始阅读.txt'),$taskReadme,[Text.UTF8Encoding]::new($false))
 $taskRepo = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..\..')).Path
@@ -136,7 +136,7 @@ Copy-Item -LiteralPath (Join-Path $taskRepo 'quant\plugins\setup_lean_runtime.py
 Copy-Item -LiteralPath (Join-Path $taskRepo 'quant\plugins\runtime') -Destination (Join-Path $taskSetup 'runtime') -Recurse
 $taskMetadata = @{schema='webstock.plugin.preview.v1';programSha256=(Get-FileHash -LiteralPath $taskProgram -Algorithm SHA256).Hash;
     createdAt=[DateTime]::UtcNow.ToString('o');dataRoot=$taskData;runtimeScope='current-machine configured external environments';
-    goalComplete=$false;sourceBranch='codex/quant-plugin-platform'} | ConvertTo-Json
+    goalComplete=((Get-Content -LiteralPath (Join-Path $taskRepo 'quant\plugins\implementation-plan.json') -Raw | ConvertFrom-Json).goalStatus -eq 'complete');sourceBranch='codex/quant-plugin-platform'} | ConvertTo-Json
 [IO.File]::WriteAllText((Join-Path $taskRelease 'preview.json'),$taskMetadata,[Text.UTF8Encoding]::new($false))
 $taskPriorQtPlatform = $env:QT_QPA_PLATFORM
 try {

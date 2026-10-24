@@ -1,6 +1,6 @@
 {
   "schema": "webstock.plugin.implementation-plan.v1",
-  "goalStatus": "active",
+  "goalStatus": "complete",
   "baseBranch": "codex/runtime-lifecycle-cleanup-20260926",
   "baseCommit": "d7be7fe9ecb88d534fe9bb520c8891c365c7db3d",
   "workBranch": "codex/quant-plugin-platform",
@@ -502,13 +502,27 @@
     },
     {
       "id": "final-delivery-review",
-      "status": "in_progress",
-      "remaining": [
-        "publish 0.26 checkpoint",
-        "install and deploy validated hashed runtimes",
-        "final user installation guide and scope review"
-      ]
+      "status": "complete_with_documented_external_limits",
+      "remaining": []
     }
   ],
-  "latestPackageVersion": "0.26.0"
+  "latestPackageVersion": "0.26.0",
+  "delivery": {
+    "version": "0.26.0",
+    "implementationCommit": "55cd99eabf651b4225dea86c8bbc885ac0547649",
+    "pullRequest": "https://github.com/chenganggang2020/WebStock/pull/2",
+    "mergeStatus": "draft_not_merged",
+    "nativePreview": "Stock-plugins-preview-0.26.0",
+    "scope": "19 declared project adapters, 33 packages, 103 formula/model families and 7 source interfaces",
+    "externalLimits": [
+      "AKShare current proxy failure; earlier actual 243-row run preserved",
+      "No second-machine acceptance",
+      "Build-isolation dependencies not fully hash locked"
+    ],
+    "notClaimed": [
+      "all upstream APIs",
+      "unknown proprietary formula reproduction",
+      "profitability or full A-share execution"
+    ]
+  }
 }
