@@ -1,0 +1,29 @@
+WebStock 换手衰减筹码成本模型 v1
+
+org.webstock.cost-distribution / turnover-cost-model。独立、可检查的本地假设模型，不复现未公开供应商算法，不是股东真实成本账本。
+输入最多20000根单证券已完成OHLCV，额外字段：barend,availableat,freefloatshares,freefloatknownat,regimeid,adjustment,volumeunit,currency,sessionindex,calendarid。
+time/barend/availableat/freefloatknownat须显式时区。barend<=availableat<=time、freefloatknownat<=time；源barend严格递增。
+adjustment固定unadjusted，volumeunit固定share；freefloatshares正整数。currency和calendarid整个文件唯一。
+sessionindex为提供者声明的连续交易会话索引，不能跳过已有成交会话；停牌零量会话可保留。不认证外部日历或自由流通股历史真实性。
+regimeid声明价格/股本制度段，除权拆合股等需切换；缺少准确公司行动数据时不得跨段假装可比。
+任一freefloatshares变化也重置模型；不假定新增/减持股份的成本，股本更新时重新说明初始化假设。
+
+固定价格箱：[k*binWidth,(k+1)*binWidth)，k非负整数，原点0。宽度为用户事先设定的价格单位，不能用全段未来最高最低价定网格。
+首根及重置根：把总质量1放在当根收盘所在箱，并假设箱内均匀；该根成交量不参与递推。
+之后t=volume/freefloatshares，默认linear-capped旧质量保留r=max(0,1-t)，可选poisson为r=exp(-t)。
+新质量1-r按当根[low,high]均匀分配至相交价格箱，权重按区间交集长度；high=low则全部给该价格所在箱。
+M_new[k]=r*M_old[k]+(1-r)*newAllocation[k]。零成交量保留旧分布。多次换手不等于不同股东必定全部更替，两个衰减方案均是研究假设。
+每步只为浮点误差归一化总质量；不按微小权重阈值丢弃旧箱。单根及累计跨度最多4096箱，超出明确报错，需更粗事先箱宽。
+initialAssumptionWeight记录最初假设质量乘历次r的残余量；重置重新为1，不将初始历史未知隐去。
+
+modelMeanCost=质量加权箱中心；modelPeakCost为最大质量箱中心（并列取较低价）。
+模型成本分位在箱内按均匀质量插值：5%、15%、50%、85%、95%。
+modelProfitFraction=sum(M[k]*clip((close-lower[k])/binWidth,0,1))；是模型成本低于收盘的质量，不等于真实获利股东比例。
+central70Concentration=(Q85-Q15)/(Q85+Q15)；central90Concentration=(Q95-Q05)/(Q95+Q05)。这些是本地明确口径，不宣称供应商一致。
+最终成本直方图保留全部连续箱及零权重；图上高亮与中央70%分位区间相交的箱，边界箱可能只有部分质量在区间。
+历史摘要逐根计算，末端分布仅对应最后time；不会把最终成本分布回填到过去。
+
+换手分母必须显式选择。交易所统计也区分总股本、流通股本等口径，本模型固定采用输入声明的自由流通股，不偷换分母：
+https://www.sse.com.cn/aboutus/publication/monthly/explain/
+https://www.sse.com.cn/lawandrules/regulations/csrcannoun/c/10118129/files/4e7be4f65d9246f19d637885b0ecfdfb.pdf
+synthetic-cost-model.csv为人工合成验算数据，含零成交、大于100%换手和股本/制度段变化；不代表真实行情或收益证据。

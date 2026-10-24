@@ -319,7 +319,7 @@
     "nativeWindow": "passed, quotes/classic and legacy focus redirect, real installed TA-Lib workflow",
     "visualReview": "Native overall technical-rating curve, 15/11 component tabs and numerical table; actual quotes/classic/focus run and frozen history reopening"
   },
-  "latestPackageVersion": "0.22.1",
+  "latestPackageVersion": "0.23.0",
   "additionalEvidence": [
     "native-acceptance-0.8.1.json",
     "native-akshare-0.7.0.json",
@@ -359,7 +359,7 @@
     "leanDotnetRebuild": "fresh pinned checkout, 20 content-hash dependency locks, locked offline restore, original engine run and equity parity verified"
   },
   "nativeCoreExpansion010": "native-core-expansion-0.10.0.json",
-  "programSha256": "62c7cfa00c1da7ac22aa11072f746023f9e1e1ad2d7301a15e522581555b9b40",
+  "programSha256": "c0d94f6834276ab2132e98b82170b7c144a8fdfef8bdd08e541561a11cefd09a",
   "nativePanelAcceptance": [
     "native-panel-0.11.0.json",
     "native-panel-0.11.1.json"
@@ -487,5 +487,22 @@
     "pythonFailed": 0,
     "initialNativeEvidence": "native-patterns-0.22.0.json",
     "subsequentFix": "0.22.1 admits machine-rounding at exact ratio boundaries; all three native operations/windows rerun"
+  },
+  "nativeCostAcceptance": "native-cost-model-0.23.0.json",
+  "nativeCostWindow": {
+    "passed": 3,
+    "failed": 0,
+    "skipped": 0,
+    "testedPackageVersion": "0.23.0"
+  },
+  "costModelTests": {
+    "pythonPassed": 8,
+    "pythonFailed": 0,
+    "nativePlatform": {
+      "passed": 17,
+      "failed": 0,
+      "skipped": 0
+    },
+    "input": "320 synthetic sessions; raw prices, share volume, declared free float and resets; not real market data"
   }
 }

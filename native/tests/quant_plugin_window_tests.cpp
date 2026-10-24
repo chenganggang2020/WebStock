@@ -38,9 +38,15 @@ private slots:
             widget->findChild<QLineEdit*>("pluginInput")->setText(csv);widget->findChild<QCheckBox*>("pluginClosedBars")->setChecked(true);
             QTest::mouseClick(widget->findChild<QPushButton*>("pluginRun"),Qt::LeftButton);
             auto tabs=widget->findChild<QTabWidget*>("pluginResults");QTRY_VERIFY_WITH_TIMEOUT(tabs->count()>=2,15000);
+            if(requested=="turnover-cost-model")QVERIFY(widget->findChild<QWidget*>("pluginCostProfile"));
             quantPlugin::Job verifier(root);QCOMPARE(verifier.records().size(),1);auto record=verifier.records()[0].toObject();
             QCOMPARE(record.value("status").toString(),QString("completed"));
-            auto output=qEnvironmentVariable("WEBSTOCK_TEST_SCREENSHOT");if(!output.isEmpty()&&layout=="classic")QVERIFY(widget->window()->grab().save(output));
+            auto output=qEnvironmentVariable("WEBSTOCK_TEST_SCREENSHOT");if(!output.isEmpty()&&layout=="classic"){
+                auto requestedTab=qEnvironmentVariable("WEBSTOCK_TEST_RESULT_TAB");
+                if(!requestedTab.isEmpty()){bool valid=false;auto index=requestedTab.toInt(&valid);QVERIFY(valid&&index>=0&&index<tabs->count());tabs->setCurrentIndex(index);}
+                QCoreApplication::processEvents();
+                QVERIFY(widget->window()->grab().save(output));
+            }
             auto dialog=qobject_cast<QDialog*>(widget->window());QVERIFY(dialog);QPointer<QDialog> guarded(dialog);dialog->close();QTRY_VERIFY(!guarded);
             entry->click();auto reopened=dynamic_cast<QuantPluginWidget*>(window.findChild<QWidget*>("quantPluginWidget"));QVERIFY(reopened);
             auto history=reopened->findChild<QListWidget*>("pluginHistory");QCOMPARE(history->count(),1);

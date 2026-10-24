@@ -2012,9 +2012,11 @@
       "overlap": "与 Volume Profile 不同，加入持仓留存假设。",
       "evidence": "厂商说明；非独立效果证据",
       "refs": "https://www.10jqka.com.cn/ad_mar/man/f3-1.htm",
-      "status": "pending",
-      "implementations": [],
-      "implementationNote": "未完成；不以目录条目或近似名称充当实现。"
+      "status": "formula_implemented_and_tested",
+      "implementations": [
+        "cost-distribution:turnover-cost-model"
+      ],
+      "implementationNote": "固定价格箱、明确初始化、自由流通股换手衰减和日内均匀分配的本地假设模型已实现测试，支持linear-capped/poisson、成本分位/峰值/获利质量及股本或制度段重置。不代表实际股东成本或供应商公式复现。"
     },
     {
       "id": 110,

@@ -92,14 +92,16 @@ protected:
         p.drawText(QRectF(area.center().x(),area.bottom()+5,area.width()/2,25),Qt::AlignRight,rows_[last].toArray().first().toVariant().toString());
     }
 };
-class VolumeProfilePlot : public QWidget {
+class PriceDistributionPlot : public QWidget {
     QJsonArray rows_;
     int lower_,upper_,volume_,valueArea_;
+    bool costModel_;
 public:
-    explicit VolumeProfilePlot(const QJsonObject& table,QWidget* parent):QWidget(parent),rows_(table.value("rows").toArray()){
+    explicit PriceDistributionPlot(const QJsonObject& table,QWidget* parent):QWidget(parent),rows_(table.value("rows").toArray()),costModel_(table.value("id")=="model-cost-profile"){
         auto columns=table.value("columns").toArray();
         lower_=columns.toVariantList().indexOf("priceLower");upper_=columns.toVariantList().indexOf("priceUpper");
-        volume_=columns.toVariantList().indexOf("volumeShares");valueArea_=columns.toVariantList().indexOf("inValueArea");setMinimumHeight(250);
+        volume_=columns.toVariantList().indexOf(costModel_?"modelWeight":"volumeShares");valueArea_=columns.toVariantList().indexOf(costModel_?"inCentral70":"inValueArea");setMinimumHeight(250);
+        if(costModel_)setObjectName("pluginCostProfile");
     }
 protected:
     void paintEvent(QPaintEvent*) override {
@@ -114,7 +116,7 @@ protected:
         p.setPen(palette().mid().color());p.drawRect(area);p.setPen(palette().text().color());
         p.drawText(QRectF(0,area.top()-12,labelWidth,25),Qt::AlignRight,upperText);
         p.drawText(QRectF(0,area.bottom()-12,labelWidth,25),Qt::AlignRight,lowerText);
-        p.drawText(QRectF(area.left(),area.bottom()+7,area.width(),25),QString("成交股数（逐价格箱）；蓝色为价值区间 · 最大箱 %1 股").arg(QString::number(maximum,'g',10)));
+        p.drawText(QRectF(area.left(),area.bottom()+7,area.width(),25),costModel_?QString("模型权重（非真实持仓）；蓝色与中央70%区间相交 · 最大箱 %1%").arg(QString::number(maximum*100,'g',6)):QString("成交股数（逐价格箱）；蓝色为价值区间 · 最大箱 %1 股").arg(QString::number(maximum,'g',10)));
         double height=area.height()/rows_.size();
         for(int i=0;i<rows_.size();++i){auto row=rows_[i].toArray();
             p.fillRect(QRectF(area.left(),area.bottom()-(i+1)*height,area.width()*row.at(volume_).toDouble()/maximum,std::max(.25,height*.9)),
@@ -250,10 +252,10 @@ void QuantPluginWidget::showResult(const QString& id){
                 plot->setColumn(select->currentData().toInt());
             }else delete select;
         }
-        if(table.value("id")=="selected-range-profile")layout->addWidget(new VolumeProfilePlot(table,panel));
+        if(table.value("id")=="selected-range-profile"||table.value("id")=="model-cost-profile")layout->addWidget(new PriceDistributionPlot(table,panel));
         auto view=new QTableView;view->setModel(new ResultModel(table,view));view->horizontalHeader()->setSectionResizeMode(QHeaderView::Interactive);view->horizontalHeader()->setDefaultSectionSize(150);view->setAlternatingRowColors(false);view->setSelectionBehavior(QAbstractItemView::SelectRows);layout->addWidget(view,1);
         auto id=table.value("id").toString();
-        results_->addTab(panel,id=="indicators"?"指标曲线与明细":id=="equity"?"权益曲线":id=="weight-index"?"权重单利指数":id=="daily-attribution"?"每日收益归因":id);
+        results_->addTab(panel,id=="indicators"?"指标曲线与明细":id=="equity"?"权益曲线":id=="weight-index"?"权重单利指数":id=="daily-attribution"?"每日收益归因":id=="model-cost-profile"?"成本分布（模型）":id);
     }
     if(result.contains("generatedData")){
         auto artifact=result.value("generatedData").toObject();auto panel=new QWidget;auto layout=new QVBoxLayout(panel);

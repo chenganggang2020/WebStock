@@ -9,11 +9,11 @@
     "indicatorFamilies": 110,
     "source": "indicator-scope.json",
     "indicatorReadiness": {
-      "formula_implemented_and_tested": 100,
+      "formula_implemented_and_tested": 101,
       "source_interface_implemented_and_tested": 7,
-      "pending": 3
+      "pending": 2
     },
-    "installedPackages": 30
+    "installedPackages": 31
   },
   "completionDefinition": [
     "All 19 projects have runnable installed adapters with declared capabilities, inputs, versions and actual results.",
@@ -299,7 +299,7 @@
     },
     {
       "id": "indicator-coverage",
-      "status": "201_talib_49_core_20_panel_5_event_6_learning_9_statistical_3_deep_3_portfolio_risk_operations_verified__3_factor_model_operations_verified__1_public_v3_rating_conditions_operation_verified__7_external_source_interfaces_verified__3_explicit_pattern_operations_verified",
+      "status": "201_talib_49_core_20_panel_5_event_6_learning_9_statistical_3_deep_3_portfolio_risk_operations_verified__3_factor_model_operations_verified__1_public_v3_rating_conditions_operation_verified__7_external_source_interfaces_verified__3_explicit_pattern_operations_verified__1_declared_cost_distribution_operation_verified",
       "note": "Function counts differ from family counts; source interfaces are tracked separately from reproduced formulas."
     },
     {
@@ -446,7 +446,21 @@
         "native history reopening"
       ],
       "limits": "Declared local kernels and continuous confirmed-close candidates; no full Elliott subdivision, commercial recognition parity or verified predictive advantage."
+    },
+    {
+      "id": "declared-turnover-cost-distribution",
+      "status": "cost_model_verified_in_cpp_host_and_full_window",
+      "checks": [
+        "hand-calculated histogram mass and quantiles",
+        "linear-capped and Poisson retention",
+        "zero and over-100-percent turnover",
+        "free-float and regime resets",
+        "known-time and contiguous-session contract",
+        "prefix invariance and unit scaling",
+        "separately labelled native cost-weight histogram"
+      ],
+      "limits": "Assumed initial cost and uniform daily price allocation; not an observed shareholder ledger, vendor replication or PIT data certification."
     }
   ],
-  "latestPackageVersion": "0.22.1"
+  "latestPackageVersion": "0.23.0"
 }

@@ -22,7 +22,7 @@ def save_package(output, manifest, sources):
     # immutable package independent of Git core.autocrlf on the build machine.
     content = {name: (HERE/source).read_text(encoding="utf-8").replace('\r\n','\n').replace('\r','\n').encode('utf-8') for name, source in sources.items()}
     manifest.update(schema="webstock.plugin.manifest.v1", protocolVersion=1,
-                    entrypoint="worker.py", runtime="python", version="0.22.1",
+                    entrypoint="worker.py", runtime="python", version="0.23.0",
                     files={name: hashlib.sha256(raw).hexdigest() for name,raw in content.items()})
     package = {"schema": "webstock.plugin.package.v1", "manifest": manifest,
                "files": {name: base64.b64encode(raw).decode("ascii") for name,raw in content.items()}}
@@ -398,6 +398,14 @@ def main():
         'source':'https://github.com/chenganggang2020/WebStock','distributions':['numpy','pandas'],'operations':patterns},
         {'worker.py':'worker.py','pattern_research.py':'pattern_research.py','temporal_indicators.py':'temporal_indicators.py',
          'PATTERN_RESEARCH.txt':'PATTERN_RESEARCH.txt','THIRD_PARTY_NOTICES.txt':'THIRD_PARTY_NOTICES.txt'}))
+    records.append(save_package(args.output,{'id':'org.webstock.cost-distribution','name':'WebStock 筹码成本假设模型','license':'Project source terms',
+        'source':'https://github.com/chenganggang2020/WebStock','distributions':['numpy','pandas'],'operations':[
+            {'id':'turnover-cost-model','title':'换手衰减成本分布 · 明确假设','formulaVersion':'webstock-turnover-cost-model-v1','inputKind':'ohlcv-single-csv','outputKind':'indicator',
+             'parameters':[number('binWidth',.5,.0001,10000.,title='固定价格箱宽度'),
+                 {'id':'retention','title':'旧质量保留模型','type':'choice','default':'linear-capped','choices':['linear-capped','poisson']}],
+             'description':'需原始价格、以股为单位的成交量、当时自由流通股、连续会话及制度段。初始分布和日内成交分配是模型假设。见COST_DISTRIBUTION.txt。'}]},
+        {'worker.py':'worker.py','cost_distribution.py':'cost_distribution.py','panel_contract.py':'panel_contract.py',
+         'COST_DISTRIBUTION.txt':'COST_DISTRIBUTION.txt','THIRD_PARTY_NOTICES.txt':'THIRD_PARTY_NOTICES.txt'}))
     (args.output/"index.json").write_text(json.dumps(records,ensure_ascii=False,indent=2),encoding="utf-8")
     print(json.dumps(records,ensure_ascii=False))
 
