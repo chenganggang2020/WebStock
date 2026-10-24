@@ -1,0 +1,50 @@
+WebStock 收缩与确认形态研究 v1
+
+3项操作：squeeze-regression、impulse-candidate、harmonic-candidate；最多20000根已完成单证券OHLCV。
+全部为明确公式的本地研究版本，不声称复现所有TTM、Elliott或商业谐波系统。
+
+1. squeeze-regression
+BB=SMA(close,n) ± bbMultiple*STD(close,n,ddof=0)。
+KC=SMA(close,n) ± kcMultiple*SMA(TR,n)，TR首根=high-low，以后=max(high-low,abs(high-prevClose),abs(low-prevClose))。
+收缩状态1=BB双边严格在KC内；-1=BB双边严格在KC外；其他为0。预热空值。
+release只在上一根1、本根-1时为1；1→0不标为双边外扩。
+delta=close-(((HH(high,m)+LL(low,m))/2+SMA(close,m))/2)。
+对最近m个完整delta在x=0..m-1上做含截距OLS，动量为x=m-1的拟合值；首次可用索引2m-2。
+momentumState：2正值上升，1正值未升，-2负值下降，-1负值未降，0恰零；上一动量缺失时留空。
+这里使用SMA(TR)和close中线，不声称与StockCharts原始Keltner或任何Pine数值内核逐点相同。
+公开的Donchian/SMA/回归动量说明参考：
+https://chartschool.stockcharts.com/table-of-contents/technical-indicators-and-overlays/technical-indicators/ttm-squeeze
+https://www.tradingview.com/script/nqQ1DT5a-Squeeze-Momentum-Indicator-LazyBear/
+
+2. impulse-candidate
+沿用WebStock收盘百分比反转ZigZag，只保留已确认极值，等价极值取首次。检查最近6个连续点P0..P5。
+将P0→P1方向统一为正后，要求5段正负交替；P2>P0，P3>P1，P4>P1，P5>P3，且第三段算术长度不小于第一/第五段较小者。
+边界接触不算不重叠；不允许第五段截短。第三段用算术价格长度，不默认百分比长度。
+输出为“五段推进候选”，不是完整Elliott标浪：没有验证每段的递归子浪、对角线、复杂调整或更大级别上下文。
+方向+1/-1描述已完成推进。确认第五端点需后续反转，不能按该极值价回测买卖。
+基本约束来源：
+https://www.elliottwave.com/waveopedia/motive-waves/
+https://www.elliottwave.com/waveopedia/impulse/
+
+3. harmonic-candidate
+检查最近4个点ABCD或5个点XABCD。所有段非零且交替，必须连续，不挑选跳过中间点。
+以下为公开比例的明确数值模板，名称描述比例以避免与某商业系统完整识别等同。
+abcd：BC/AB在[.382,.886]，CD/AB接近1；C在A/B之间，D越过B。
+其余模板依次为AB/XA、BC/AB、CD/BC、AD/XA、CD/AB：
+retracement-618-786：[.618,.618]，[.382,.886]，[1.27,1.618]，[.786,.786]，[1,1]。
+retracement-382-500-886：[.382,.5]，[.382,.886]，[1.618,2.618]，[.886,.886]，[1,无上限]。
+extension-786-1270：[.786,.786]，[.382,.886]，[1.618,2.618]，[1.27,1.27]，[1,1.618]。
+extension-382-618-1618：[.382,.618]，[.382,.886]，[2.618,3.618]，[1.618,1.618]，[1,无上限]。
+XA统一向上后，要求X<B<C<A。retracement要求X<D<B，extension要求D<X；下行图形镜像同理。
+每个比例区间按tolerancePct相对扩展：下界*(1-t)，上界*(1+t)。几何关系不因容差放宽。
+比例边界另允许8倍浮点机器精度的量级误差，避免零容差下十进制比例被二进制舍入拒绝。
+每个候选显示实际比例及判定。缺少匹配仍输出已评估候选；不根据最终走势修订结果。
+参考来源描述存在不同变体，本版区间以上表为准，不输出官方认证或预测成功率：
+https://harmonictrader.com/harmonic-patterns/abcd-pattern/
+https://harmonictrader.com/harmonic-patterns/gartley-pattern/
+https://harmonictrader.com/harmonic-patterns/bat-pattern/
+https://harmonictrader.com/harmonic-patterns/butterfly-pattern/
+https://harmonictrader.com/harmonic-patterns/crab-pattern/
+
+保留所有确认点、候选规则、原极值索引、每点可知索引及当前确认延迟；不绘制向历史回填的交易标记。
+首版不根据图形自动下单，没有将候选几何形状当作未来收益优势。

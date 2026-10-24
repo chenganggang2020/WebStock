@@ -1,0 +1,528 @@
+{
+  "schema": "webstock.plugin.implementation-plan.v1",
+  "goalStatus": "complete",
+  "baseBranch": "codex/runtime-lifecycle-cleanup-20260926",
+  "baseCommit": "d7be7fe9ecb88d534fe9bb520c8891c365c7db3d",
+  "workBranch": "codex/quant-plugin-platform",
+  "scope": {
+    "repositoryCount": 19,
+    "indicatorFamilies": 110,
+    "source": "indicator-scope.json",
+    "indicatorReadiness": {
+      "formula_implemented_and_tested": 103,
+      "source_interface_implemented_and_tested": 7
+    },
+    "installedPackages": 33,
+    "upstreamBoundary": "All 19 declared adapters, not every upstream API; capabilities are the installed operation manifests."
+  },
+  "completionDefinition": [
+    "All 19 projects have runnable installed adapters with declared capabilities, inputs, versions and actual results.",
+    "All 110 catalogue families are mapped to explicit implemented formulas/models or documented source-dependent interfaces; a missing proprietary formula is not a reproduced implementation.",
+    "Native C++ application compiles and hosts package install/enable/configure/start/cancel/timeout/history/result/export flows.",
+    "Data semantics, point-in-time input checks, no-future-information tests, fees and execution assumptions are versioned.",
+    "Independent runtimes, dependency installation/lockfiles, licenses, migration and installation documentation are delivered."
+  ],
+  "projects": [
+    {
+      "name": "hikyuu",
+      "repo": "fasiondog/hikyuu",
+      "role": "primary",
+      "url": "https://github.com/fasiondog/hikyuu.git",
+      "status": "adapter_and_full_native_window_verified",
+      "pluginId": "org.webstock.hikyuu",
+      "remaining": [],
+      "futureWork": [
+        "additional_upstream_capabilities_beyond_declared_adapter",
+        "second_machine_acceptance"
+      ],
+      "correctedIn": "0.26.0 daily ns bridge, mandatory actual amount, independent close-mark ledger; prior v1 numerical evidence invalidated"
+    },
+    {
+      "name": "rqalpha",
+      "repo": "ricequant/rqalpha",
+      "role": "primary",
+      "url": "https://github.com/ricequant/rqalpha.git",
+      "status": "adapter_and_full_native_window_verified",
+      "pluginId": "org.webstock.rqalpha",
+      "remaining": [],
+      "futureWork": [
+        "additional_upstream_capabilities_beyond_declared_adapter",
+        "second_machine_acceptance"
+      ]
+    },
+    {
+      "name": "vnpy",
+      "repo": "vnpy/vnpy",
+      "role": "primary",
+      "url": "https://github.com/vnpy/vnpy.git",
+      "status": "adapter_and_full_native_window_verified",
+      "pluginId": "org.webstock.vnpy",
+      "remaining": [],
+      "futureWork": [
+        "additional_upstream_capabilities_beyond_declared_adapter",
+        "second_machine_acceptance"
+      ]
+    },
+    {
+      "name": "qlib",
+      "repo": "microsoft/qlib",
+      "role": "primary",
+      "url": "https://github.com/microsoft/qlib.git",
+      "status": "adapter_and_full_native_window_verified",
+      "pluginId": "org.webstock.qlib",
+      "remaining": [],
+      "futureWork": [
+        "additional_upstream_capabilities_beyond_declared_adapter",
+        "second_machine_acceptance"
+      ]
+    },
+    {
+      "name": "lean",
+      "repo": "QuantConnect/Lean",
+      "role": "primary",
+      "url": "https://github.com/QuantConnect/Lean.git",
+      "status": "adapter_and_full_native_window_verified",
+      "pluginId": "org.webstock.lean",
+      "remaining": [],
+      "futureWork": [
+        "additional_upstream_capabilities_beyond_declared_adapter",
+        "second_machine_acceptance"
+      ]
+    },
+    {
+      "name": "backtrader",
+      "repo": "mementum/backtrader",
+      "role": "primary",
+      "url": "https://github.com/mementum/backtrader.git",
+      "status": "adapter_and_full_native_window_verified",
+      "pluginId": "org.webstock.backtrader",
+      "remaining": [],
+      "futureWork": [
+        "additional_upstream_capabilities_beyond_declared_adapter",
+        "second_machine_acceptance"
+      ]
+    },
+    {
+      "name": "backtesting-py",
+      "repo": "kernc/backtesting.py",
+      "role": "primary",
+      "url": "https://github.com/kernc/backtesting.py.git",
+      "status": "adapter_and_full_native_window_verified",
+      "pluginId": "org.webstock.backtesting-py",
+      "remaining": [],
+      "futureWork": [
+        "additional_upstream_capabilities_beyond_declared_adapter",
+        "second_machine_acceptance"
+      ]
+    },
+    {
+      "name": "vectorbt",
+      "repo": "polakowo/vectorbt",
+      "role": "primary",
+      "url": "https://github.com/polakowo/vectorbt.git",
+      "status": "adapter_and_full_native_window_verified",
+      "pluginId": "org.webstock.vectorbt",
+      "remaining": [],
+      "futureWork": [
+        "additional_upstream_capabilities_beyond_declared_adapter",
+        "second_machine_acceptance"
+      ]
+    },
+    {
+      "name": "bt",
+      "repo": "pmorissette/bt",
+      "role": "primary",
+      "url": "https://github.com/pmorissette/bt.git",
+      "status": "adapter_and_full_native_window_verified",
+      "pluginId": "org.webstock.bt",
+      "remaining": [],
+      "futureWork": [
+        "additional_upstream_capabilities_beyond_declared_adapter",
+        "second_machine_acceptance"
+      ]
+    },
+    {
+      "name": "zipline-reloaded",
+      "repo": "stefan-jansen/zipline-reloaded",
+      "role": "primary",
+      "url": "https://github.com/stefan-jansen/zipline-reloaded.git",
+      "status": "adapter_and_full_native_window_verified",
+      "pluginId": "org.webstock.zipline-reloaded",
+      "remaining": [],
+      "futureWork": [
+        "additional_upstream_capabilities_beyond_declared_adapter",
+        "second_machine_acceptance"
+      ]
+    },
+    {
+      "name": "ml4t-backtest",
+      "repo": "ml4t/backtest",
+      "role": "primary",
+      "url": "https://github.com/ml4t/backtest.git",
+      "status": "adapter_and_full_native_window_verified",
+      "pluginId": "org.webstock.ml4t-backtest",
+      "remaining": [],
+      "futureWork": [
+        "additional_upstream_capabilities_beyond_declared_adapter",
+        "second_machine_acceptance"
+      ]
+    },
+    {
+      "name": "wondertrader",
+      "repo": "wondertrader/wondertrader",
+      "role": "primary",
+      "url": "https://github.com/wondertrader/wondertrader.git",
+      "status": "adapter_and_full_native_window_verified",
+      "pluginId": "org.webstock.wondertrader",
+      "remaining": [],
+      "futureWork": [
+        "additional_upstream_capabilities_beyond_declared_adapter",
+        "second_machine_acceptance"
+      ]
+    },
+    {
+      "name": "quantaxis",
+      "repo": "yutiansut/QUANTAXIS",
+      "role": "primary",
+      "url": "https://github.com/yutiansut/QUANTAXIS.git",
+      "status": "adapter_and_full_native_window_verified",
+      "pluginId": "org.webstock.quantaxis",
+      "remaining": [],
+      "futureWork": [
+        "additional_upstream_capabilities_beyond_declared_adapter",
+        "second_machine_acceptance"
+      ]
+    },
+    {
+      "name": "czsc",
+      "repo": "waditu/czsc",
+      "role": "primary",
+      "url": "https://github.com/waditu/czsc.git",
+      "status": "adapter_and_full_native_window_verified",
+      "pluginId": "org.webstock.czsc",
+      "remaining": [],
+      "futureWork": [
+        "additional_upstream_capabilities_beyond_declared_adapter",
+        "second_machine_acceptance"
+      ]
+    },
+    {
+      "name": "vnpy-ctastrategy",
+      "repo": "vnpy/vnpy_ctastrategy",
+      "role": "companion",
+      "url": "https://github.com/vnpy/vnpy_ctastrategy.git",
+      "status": "adapter_and_full_native_window_verified",
+      "pluginId": "org.webstock.vnpy-ctastrategy",
+      "remaining": [],
+      "futureWork": [
+        "additional_upstream_capabilities_beyond_declared_adapter",
+        "second_machine_acceptance"
+      ]
+    },
+    {
+      "name": "wtpy",
+      "repo": "wondertrader/wtpy",
+      "role": "companion",
+      "url": "https://github.com/wondertrader/wtpy.git",
+      "status": "adapter_and_full_native_window_verified",
+      "pluginId": "org.webstock.wtpy",
+      "remaining": [],
+      "futureWork": [
+        "additional_upstream_capabilities_beyond_declared_adapter",
+        "second_machine_acceptance"
+      ]
+    },
+    {
+      "name": "wbt",
+      "repo": "zengbin93/wbt",
+      "role": "companion",
+      "url": "https://github.com/zengbin93/wbt.git",
+      "status": "adapter_and_full_native_window_verified",
+      "pluginId": "org.webstock.wbt",
+      "remaining": [],
+      "futureWork": [
+        "additional_upstream_capabilities_beyond_declared_adapter",
+        "second_machine_acceptance"
+      ]
+    },
+    {
+      "name": "ta-lib",
+      "repo": "TA-Lib/ta-lib",
+      "role": "helper",
+      "url": "https://github.com/TA-Lib/ta-lib.git",
+      "status": "adapter_and_full_native_window_verified",
+      "pluginId": "org.webstock.talib",
+      "remaining": [],
+      "futureWork": [
+        "additional_upstream_capabilities_beyond_declared_adapter",
+        "second_machine_acceptance"
+      ]
+    },
+    {
+      "name": "akshare",
+      "repo": "akfamily/akshare",
+      "role": "helper",
+      "url": "https://github.com/akfamily/akshare.git",
+      "status": "adapter_implemented__earlier_native_success__current_provider_proxy_failure",
+      "pluginId": "org.webstock.akshare",
+      "remaining": [],
+      "futureWork": [
+        "additional_upstream_capabilities_beyond_declared_adapter",
+        "second_machine_acceptance"
+      ],
+      "externalDependency": "Current Eastmoney ProxyError preserved; not a successful current online acceptance."
+    }
+  ],
+  "milestones": [
+    {
+      "id": "plugin-platform",
+      "status": "native_platform_and_16_hash_required_runtime_rebuilds_verified",
+      "pending": [],
+      "checks": [
+        "16 fresh Python environments",
+        "pinned LEAN source fresh checkout + 20 NuGet locks + locked offline restore",
+        "native LEAN accounting curve matches baseline",
+        "all non-VCS runtime distributions require SHA256",
+        "source installations use complete Git commits",
+        "19 unchanged adapter/model numerical results match prior runtimes",
+        "corrected Hikyuu v2 independent date/cash/position/equity tests"
+      ],
+      "limitations": [
+        "Build-isolation tool dependencies not fully hash locked",
+        "No independent second-machine acceptance"
+      ]
+    },
+    {
+      "id": "full-native-program",
+      "status": "18_offline_project_windows_verified__akshare_current_network_failure_observed",
+      "checks": [
+        "quotes and classic layouts plus legacy focus alias",
+        "open plugin through actual research workspace",
+        "run installed TA-Lib from Qt input form",
+        "close and reopen validated history without replay",
+        "each of 18 offline upstream projects runs through actual window, three layouts, history reopen; Hikyuu corrected v2"
+      ],
+      "limits": "Not a full application-page audit or production-installed desktop acceptance."
+    },
+    {
+      "id": "indicator-coverage",
+      "status": "all_110_families_mapped__103_explicit_formula_families_and_7_source_interface_families_verified",
+      "note": "Function counts differ from family counts; source interfaces are tracked separately from reproduced formulas."
+    },
+    {
+      "id": "all-engine-coverage",
+      "status": "19_declared_adapters_implemented__18_current_offline_acceptances__akshare_earlier_success_current_network_failure",
+      "note": "Hikyuu v1 date/funds evidence superseded by v2; AKShare earlier 243-row run retained but current proxy failure is not counted as current online success."
+    },
+    {
+      "id": "historical-panel-input",
+      "status": "typed_panel_input_and_20_operations_verified_in_cpp_host",
+      "checks": [
+        "explicit-offset availability and membership",
+        "historical universe count",
+        "missing previous holdings do not disappear from wealth",
+        "future claim rejection",
+        "native install/run/archive"
+      ],
+      "limits": "Synthetic four-security fixture verifies mathematics and lifecycle; provider PIT provenance and real full-market history not certified."
+    },
+    {
+      "id": "actual-market-event-input",
+      "status": "typed_trade_quote_input_and_5_operations_verified_in_cpp_host",
+      "checks": [
+        "availability and sequence gaps",
+        "unclassified trades do not become neutral CVD",
+        "OFI quote changes and session reset",
+        "exact price bins and explicit value-area rule",
+        "native install/run/plot/archive"
+      ],
+      "limits": "Synthetic events validate math and lifecycle; no exchange completeness certification or broker historical feed connection."
+    },
+    {
+      "id": "chronological-learning",
+      "status": "six_original_estimators_verified_in_cpp_host_and_full_window",
+      "checks": [
+        "mature labels with purge gap",
+        "train-only scaling",
+        "independent linear and ridge solve",
+        "prefix invariance and future perturbation",
+        "evaluation at outcome maturity",
+        "last trained model JSON export"
+      ],
+      "limits": "Fixed declared features and hyperparameters; not exhaustive model search or return validation."
+    },
+    {
+      "id": "statistical-endpoint-models",
+      "status": "nine_original_models_verified_in_cpp_host_and_full_window",
+      "checks": [
+        "trailing as-of windows",
+        "no smoothed state backfill",
+        "independent filtering variance and matrix checks",
+        "failed optimizations remain unavailable"
+      ],
+      "limits": "Historical fixture and synthetic panels are not profitability validation; explicit fixed configurations, no exhaustive model search."
+    },
+    {
+      "id": "chronological-deep-models",
+      "status": "three_pytorch_baselines_verified_in_cpp_host_and_full_window",
+      "checks": [
+        "matured-label training gap",
+        "train-only sequence scaling and correlation graph",
+        "independent NumPy LSTM gates and GCN propagation",
+        "prefix invariance and future perturbation",
+        "JSON state recovery without pickle",
+        "explicit CPU wheel URL and SHA256, fresh runtime rebuild"
+      ],
+      "limits": "Fixed small architectures; not exhaustive neural models, trading performance, or point-in-time provider certification."
+    },
+    {
+      "id": "portfolio-risk-and-budget",
+      "status": "equity_contract_and_three_operations_verified_in_cpp_host",
+      "checks": [
+        "explicit net equity and end cashflows",
+        "independent downside and volatility math",
+        "diagonal and correlated risk-budget solution",
+        "next-input-close signals and delayed-availability rejection",
+        "fees/cash/positions reconcile without borrowing",
+        "native input acknowledgement and archive roundtrip"
+      ],
+      "limits": "Positive-capital segments only; fractional virtual securities; no complete A-share execution, funding or provider certification."
+    },
+    {
+      "id": "position-exits-and-session-volume",
+      "status": "two_operations_verified_in_cpp_host",
+      "checks": [
+        "prior ATR entry and next-bar ratchet activation",
+        "gap versus existing-stop touch",
+        "position reset and fees",
+        "exact prior-session matching and cumulative gap propagation",
+        "all 201 TA-Lib and 49 core operations prefix invariant"
+      ],
+      "limits": "Fixed scheduled entries are research inputs; no full market execution or externally certified session calendar."
+    },
+    {
+      "id": "factor-composition-and-ranking",
+      "status": "three_operations_verified_in_cpp_host_and_full_windows",
+      "checks": [
+        "prior-window full-SVD PCA and independent eigensolve",
+        "all fitted loadings and train-only scaling recorded",
+        "point-in-time factor inputs, signed ex-ante weights and average ranks",
+        "cutoff ties included without symbol-order preference",
+        "next-input-close fees/cash/positions reconcile",
+        "prefix invariance and future perturbation"
+      ],
+      "limits": "Fixed research universe and external availability claims; not full A-share execution, certified PIT data or return superiority."
+    },
+    {
+      "id": "public-technical-rating-conditions",
+      "status": "public_v3_conditions_and_declared_local_kernel_verified",
+      "checks": [
+        "public upstream version and source SHA256",
+        "all 26 component condition branches",
+        "EMA50 trend filter and v3 rising-ADX sell condition",
+        "15/11 group averaging with explicit missingness",
+        "independent primitives and chronological prefixes",
+        "native full-window execution and history"
+      ],
+      "limits": "No verified numerical parity with Pine built-ins/live TradingView screener; local seed, warmup and zero-divisor conventions are explicit."
+    },
+    {
+      "id": "external-research-observations",
+      "status": "seven_source_interfaces_verified_in_cpp_host_and_full_window",
+      "checks": [
+        "strict source and revision input contract",
+        "same-timestamp sequence prefixes",
+        "old-period revisions never backfill",
+        "withdrawals never fall back to earlier observation",
+        "declared-age stale states",
+        "current-vintage prior-window differences and sample Z",
+        "native acknowledgement and archive roundtrip",
+        "LF-canonical immutable package source bytes"
+      ],
+      "limits": "Source interfaces, not supplier formula reproduction, automated source acquisition, sentiment-model training or certified point-in-time provenance."
+    },
+    {
+      "id": "explicit-squeeze-and-confirmed-patterns",
+      "status": "three_operations_verified_in_cpp_host_and_full_windows",
+      "checks": [
+        "independent OLS and band arithmetic",
+        "both-direction impulse constraints",
+        "five ratio templates and floating boundary handling",
+        "last-pivot confirmation timing",
+        "all-table prefix invariance and future perturbation",
+        "native history reopening"
+      ],
+      "limits": "Declared local kernels and continuous confirmed-close candidates; no full Elliott subdivision, commercial recognition parity or verified predictive advantage."
+    },
+    {
+      "id": "declared-turnover-cost-distribution",
+      "status": "cost_model_verified_in_cpp_host_and_full_window",
+      "checks": [
+        "hand-calculated histogram mass and quantiles",
+        "linear-capped and Poisson retention",
+        "zero and over-100-percent turnover",
+        "free-float and regime resets",
+        "known-time and contiguous-session contract",
+        "prefix invariance and unit scaling",
+        "separately labelled native cost-weight histogram"
+      ],
+      "limits": "Assumed initial cost and uniform daily price allocation; not an observed shareholder ledger, vendor replication or PIT data certification."
+    },
+    {
+      "id": "historical-price-limits-and-book-states",
+      "status": "two_operations_verified_in_cpp_host_and_full_windows",
+      "checks": [
+        "historical supplied bounds and tick alignment",
+        "point-in-time historical membership",
+        "traded versus suspended/unbounded observations",
+        "left-censored observed closing streaks",
+        "one-sided displayed books and last-trade timing",
+        "phase/session boundaries",
+        "sampled streams never manufacture event counts",
+        "same-time sequence prefixes and future perturbation"
+      ],
+      "limits": "Externally declared rules/completeness; displayed-book state only, no full trading/execution engine or inferred hidden liquidity."
+    },
+    {
+      "id": "european-option-snapshots",
+      "status": "three_operations_verified_in_cpp_host_and_full_windows",
+      "checks": [
+        "strict quote/spot/curve/volume/OI availability and units",
+        "independent SciPy surface inversion",
+        "known price and put-call parity",
+        "finite-difference delta gamma vega",
+        "bounded IV statuses and stale quotes",
+        "auditable delta/log-strike interpolation without extrapolation",
+        "volume/OI PCR separate with zero denominator unavailable",
+        "selected contract/expiry charting",
+        "all-table chronological prefixes",
+        "native acknowledgement and result archive roundtrip"
+      ],
+      "limits": "European continuous-yield model only; declared input cohort and provenance, no American pricing, VIX, arbitrage-free smile fitting or guaranteed trading edge."
+    },
+    {
+      "id": "final-delivery-review",
+      "status": "complete_with_documented_external_limits",
+      "remaining": []
+    }
+  ],
+  "latestPackageVersion": "0.26.0",
+  "delivery": {
+    "version": "0.26.0",
+    "implementationCommit": "55cd99eabf651b4225dea86c8bbc885ac0547649",
+    "pullRequest": "https://github.com/chenganggang2020/WebStock/pull/2",
+    "mergeStatus": "draft_not_merged",
+    "nativePreview": "Stock-plugins-preview-0.26.0",
+    "scope": "19 declared project adapters, 33 packages, 103 formula/model families and 7 source interfaces",
+    "externalLimits": [
+      "AKShare current proxy failure; earlier actual 243-row run preserved",
+      "No second-machine acceptance",
+      "Build-isolation dependencies not fully hash locked"
+    ],
+    "notClaimed": [
+      "all upstream APIs",
+      "unknown proprietary formula reproduction",
+      "profitability or full A-share execution"
+    ]
+  }
+}

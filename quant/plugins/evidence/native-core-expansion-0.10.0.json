@@ -1,0 +1,155 @@
+{
+  "schema": "webstock.plugin.native-acceptance.v1",
+  "runs": [
+    {
+      "pluginId": "org.webstock.core-indicators",
+      "operationId": "confirmed-pivots",
+      "version": "0.10.0",
+      "status": "verified",
+      "runId": "plugin-7fea1fab-11b1-4c33-8cb3-6c0025a7334c",
+      "resultSha256": "e3aff3e0591c0342bc1e9cc4eb1e72c47622227ebfce9c966f252ae55a0094fb",
+      "bars": 4937,
+      "tables": [
+        {
+          "id": "indicators",
+          "rows": 4937
+        }
+      ]
+    },
+    {
+      "pluginId": "org.webstock.core-indicators",
+      "operationId": "zigzag-confirmed",
+      "version": "0.10.0",
+      "status": "verified",
+      "runId": "plugin-96ba1358-5d0e-4dd9-85fd-c4912bd7f2cb",
+      "resultSha256": "7a2b3c6cfcdb317419aa98c8ba6e421fd17ce18d18344c1d937138e0ebcb8d62",
+      "bars": 4937,
+      "tables": [
+        {
+          "id": "indicators",
+          "rows": 4937
+        }
+      ]
+    },
+    {
+      "pluginId": "org.webstock.core-indicators",
+      "operationId": "fibonacci-confirmed",
+      "version": "0.10.0",
+      "status": "verified",
+      "runId": "plugin-4c2f4038-1eca-43ff-a971-bebcab52e4cd",
+      "resultSha256": "68429e127c77121516bfb3505710bb4e875d985af1943e89ee034dd863940e97",
+      "bars": 4937,
+      "tables": [
+        {
+          "id": "indicators",
+          "rows": 4937
+        }
+      ]
+    },
+    {
+      "pluginId": "org.webstock.core-indicators",
+      "operationId": "structure-events",
+      "version": "0.10.0",
+      "status": "verified",
+      "runId": "plugin-99e8e9a7-d8e4-43cb-89d5-108758dfb746",
+      "resultSha256": "995320aefee9f39c9d5e73ecbde8d894aca9cdd8e6c263dec06d0bf60f32c104",
+      "bars": 4937,
+      "tables": [
+        {
+          "id": "indicators",
+          "rows": 4937
+        }
+      ]
+    },
+    {
+      "pluginId": "org.webstock.core-indicators",
+      "operationId": "renko-close",
+      "version": "0.10.0",
+      "status": "verified",
+      "runId": "plugin-d1df9a3e-7c8d-49c9-9d67-71f08ee27e2a",
+      "resultSha256": "22146c99313eab6073fc2b03c26a1e18a54f8eae79565b9b6289e978b0a489d3",
+      "bars": 4937,
+      "tables": [
+        {
+          "id": "indicators",
+          "rows": 4937
+        }
+      ]
+    },
+    {
+      "pluginId": "org.webstock.core-indicators",
+      "operationId": "kalman-filter",
+      "version": "0.10.0",
+      "status": "verified",
+      "runId": "plugin-131ccc11-1e7f-4d32-a2a2-63f40c534f40",
+      "resultSha256": "ab12e41aef072cd76f2a730bb2d1c2333bffb0e9aa0171c52735cf9bab3b2342",
+      "bars": 4937,
+      "tables": [
+        {
+          "id": "indicators",
+          "rows": 4937
+        }
+      ]
+    },
+    {
+      "pluginId": "org.webstock.core-indicators",
+      "operationId": "hurst-rs",
+      "version": "0.10.0",
+      "status": "verified",
+      "runId": "plugin-aa226621-5e5d-4fdb-8485-2df53952b229",
+      "resultSha256": "6d40ee0999063d2c1b1d68a126aa844b2c2987b117281bd10653268b46c64076",
+      "bars": 4937,
+      "tables": [
+        {
+          "id": "indicators",
+          "rows": 4937
+        }
+      ]
+    },
+    {
+      "pluginId": "org.webstock.core-indicators",
+      "operationId": "higuchi-dimension",
+      "version": "0.10.0",
+      "status": "verified",
+      "runId": "plugin-7362c8ee-0e83-407c-a831-d5a0c31f0ddf",
+      "resultSha256": "f1fd5f4d0ca4bab77f56d4952a48a80148775abd88be96716e2d65b85c2398c4",
+      "bars": 4937,
+      "tables": [
+        {
+          "id": "indicators",
+          "rows": 4937
+        }
+      ]
+    },
+    {
+      "pluginId": "org.webstock.core-indicators",
+      "operationId": "permutation-entropy",
+      "version": "0.10.0",
+      "status": "verified",
+      "runId": "plugin-fab30884-a140-4174-ade7-b4ff39b5a46d",
+      "resultSha256": "0de547d71b3ac742dfbc9bb68f859c609d8737d53b34f5623f4cb7d857c4106c",
+      "bars": 4937,
+      "tables": [
+        {
+          "id": "indicators",
+          "rows": 4937
+        }
+      ]
+    },
+    {
+      "pluginId": "org.webstock.core-indicators",
+      "operationId": "fft-trailing",
+      "version": "0.10.0",
+      "status": "verified",
+      "runId": "plugin-decefd7c-26eb-4f91-a648-43a38d7e90ae",
+      "resultSha256": "c58f294703d3d314962dd500938024c2cd239dc5f2938dd98aa4f5d61a13c3e6",
+      "bars": 4937,
+      "tables": [
+        {
+          "id": "indicators",
+          "rows": 4937
+        }
+      ]
+    }
+  ]
+}

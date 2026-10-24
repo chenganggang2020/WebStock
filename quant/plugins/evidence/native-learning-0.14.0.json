@@ -1,0 +1,203 @@
+{
+  "schema": "webstock.plugin.native-acceptance.v1",
+  "runs": [
+    {
+      "pluginId": "org.webstock.learning-models",
+      "operationId": "linear",
+      "version": "0.14.0",
+      "status": "verified",
+      "runId": "plugin-a617be73-1908-411f-8edc-b1abad9932b9",
+      "resultSha256": "a54a16ae4d050d8ffb24fe5b74e6aa81ba239bb2e6afb29b3dccd414d468c465",
+      "bars": 4937,
+      "inputSha256": "9dc7b976ef19fae657ebaaa6d5a78f0de24071b27781f76a323dc4d0443239f8",
+      "inputName": "sz000001-hikyuu-fixture.csv",
+      "tables": [
+        {
+          "id": "indicators",
+          "rows": 4937
+        },
+        {
+          "id": "training-audit",
+          "rows": 74
+        },
+        {
+          "id": "training-preprocessing",
+          "rows": 518
+        },
+        {
+          "id": "learned-parameters",
+          "rows": 518
+        },
+        {
+          "id": "matured-evaluation",
+          "rows": 4655
+        }
+      ]
+    },
+    {
+      "pluginId": "org.webstock.learning-models",
+      "operationId": "ridge",
+      "version": "0.14.0",
+      "status": "verified",
+      "runId": "plugin-55a076e7-ed66-4df6-ae16-e0df05a8b3e9",
+      "resultSha256": "2a51dd5c09b911ab0fd4f92b7291498837ebd6f88871710e7e37cf1a69ba67c5",
+      "bars": 4937,
+      "inputSha256": "9dc7b976ef19fae657ebaaa6d5a78f0de24071b27781f76a323dc4d0443239f8",
+      "inputName": "sz000001-hikyuu-fixture.csv",
+      "tables": [
+        {
+          "id": "indicators",
+          "rows": 4937
+        },
+        {
+          "id": "training-audit",
+          "rows": 74
+        },
+        {
+          "id": "training-preprocessing",
+          "rows": 518
+        },
+        {
+          "id": "learned-parameters",
+          "rows": 518
+        },
+        {
+          "id": "matured-evaluation",
+          "rows": 4655
+        }
+      ]
+    },
+    {
+      "pluginId": "org.webstock.learning-models",
+      "operationId": "logistic",
+      "version": "0.14.0",
+      "status": "verified",
+      "runId": "plugin-82979d3f-86f6-4347-968a-39c9c0bf24df",
+      "resultSha256": "2821f7d656e11d42c6b8d3fe7024f789677be2eaea0761f9bfde88f09c312897",
+      "bars": 4937,
+      "inputSha256": "9dc7b976ef19fae657ebaaa6d5a78f0de24071b27781f76a323dc4d0443239f8",
+      "inputName": "sz000001-hikyuu-fixture.csv",
+      "tables": [
+        {
+          "id": "indicators",
+          "rows": 4937
+        },
+        {
+          "id": "training-audit",
+          "rows": 74
+        },
+        {
+          "id": "training-preprocessing",
+          "rows": 518
+        },
+        {
+          "id": "learned-parameters",
+          "rows": 518
+        },
+        {
+          "id": "matured-evaluation",
+          "rows": 4655
+        }
+      ]
+    },
+    {
+      "pluginId": "org.webstock.learning-models",
+      "operationId": "random-forest",
+      "version": "0.14.0",
+      "status": "verified",
+      "runId": "plugin-68c8bb55-4d78-4557-b72e-7fa946ba5dd8",
+      "resultSha256": "38e5cae9e09ea29a7adfcad0d0503b8bec9edafa63cdb1ccd75ab41884c6194e",
+      "bars": 4937,
+      "inputSha256": "9dc7b976ef19fae657ebaaa6d5a78f0de24071b27781f76a323dc4d0443239f8",
+      "inputName": "sz000001-hikyuu-fixture.csv",
+      "tables": [
+        {
+          "id": "indicators",
+          "rows": 4937
+        },
+        {
+          "id": "training-audit",
+          "rows": 74
+        },
+        {
+          "id": "training-preprocessing",
+          "rows": 518
+        },
+        {
+          "id": "learned-parameters",
+          "rows": 518
+        },
+        {
+          "id": "matured-evaluation",
+          "rows": 4655
+        }
+      ]
+    },
+    {
+      "pluginId": "org.webstock.learning-models",
+      "operationId": "gradient-boosting",
+      "version": "0.14.0",
+      "status": "verified",
+      "runId": "plugin-07c2524d-e3fd-4b3f-b1e4-7ed66d45accb",
+      "resultSha256": "c30c95adfacfddfd09702c4e1ab1f840be0d268559e82477e61e703b19b95b9d",
+      "bars": 4937,
+      "inputSha256": "9dc7b976ef19fae657ebaaa6d5a78f0de24071b27781f76a323dc4d0443239f8",
+      "inputName": "sz000001-hikyuu-fixture.csv",
+      "tables": [
+        {
+          "id": "indicators",
+          "rows": 4937
+        },
+        {
+          "id": "training-audit",
+          "rows": 74
+        },
+        {
+          "id": "training-preprocessing",
+          "rows": 518
+        },
+        {
+          "id": "learned-parameters",
+          "rows": 518
+        },
+        {
+          "id": "matured-evaluation",
+          "rows": 4655
+        }
+      ]
+    },
+    {
+      "pluginId": "org.webstock.learning-models",
+      "operationId": "lightgbm",
+      "version": "0.14.0",
+      "status": "verified",
+      "runId": "plugin-8dc4dd7a-b202-42e0-ac85-d9948bf19877",
+      "resultSha256": "3eff623459f30457029f0e1cf0cd04b64495e8ec362519b4588aa53e8ae164b9",
+      "bars": 4937,
+      "inputSha256": "9dc7b976ef19fae657ebaaa6d5a78f0de24071b27781f76a323dc4d0443239f8",
+      "inputName": "sz000001-hikyuu-fixture.csv",
+      "tables": [
+        {
+          "id": "indicators",
+          "rows": 4937
+        },
+        {
+          "id": "training-audit",
+          "rows": 74
+        },
+        {
+          "id": "training-preprocessing",
+          "rows": 518
+        },
+        {
+          "id": "learned-parameters",
+          "rows": 518
+        },
+        {
+          "id": "matured-evaluation",
+          "rows": 4655
+        }
+      ]
+    }
+  ]
+}

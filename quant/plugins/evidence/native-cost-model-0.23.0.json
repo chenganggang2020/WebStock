@@ -1,0 +1,43 @@
+{
+  "schema": "webstock.plugin.native-acceptance.v1",
+  "runs": [
+    {
+      "pluginId": "org.webstock.cost-distribution",
+      "operationId": "turnover-cost-model",
+      "version": "0.23.0",
+      "status": "verified",
+      "runId": "plugin-37a4aba4-a7b5-43bc-a711-898543443ab7",
+      "resultSha256": "61d4cca2f391afafb3485dd85a579e0be1c86ed5cabe08f717cedd75bfdc59d4",
+      "bars": 320,
+      "inputSha256": "90ee3d4a540558dbc9a6e917ea60e9f4bf0fb28e489c32280c3e7997e9647385",
+      "inputName": "synthetic-cost-model.csv",
+      "tables": [
+        {
+          "id": "indicators",
+          "rows": 320
+        },
+        {
+          "id": "model-cost-profile",
+          "rows": 8
+        }
+      ],
+      "modelSemantics": {
+        "retention": "linear-capped",
+        "tradeAllocation": "uniform within daily low/high; flat bar assigned to one bin",
+        "initialization": "entire mass uniformly in the initial close bin; first bar turnover not applied",
+        "reset": "new close-bin mass when regimeid or freefloatshares changes",
+        "gridOrigin": 0,
+        "binWidth": 0.5,
+        "costWithinBin": "uniform",
+        "profileAsOf": "2020-11-15 07:05:00+00:00",
+        "actualHolderLedger": false
+      },
+      "inputSemantics": {
+        "prices": "unadjusted",
+        "volume": "shares",
+        "floatBasis": "declared free float with availability",
+        "historicalProvenanceCertified": false
+      }
+    }
+  ]
+}

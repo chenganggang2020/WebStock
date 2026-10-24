@@ -1,6 +1,7 @@
 #include "market_data.hpp"
 
 #include <QMap>
+#include <QJsonDocument>
 #include <QRegularExpression>
 #include <QSet>
 #include <QSqlDatabase>

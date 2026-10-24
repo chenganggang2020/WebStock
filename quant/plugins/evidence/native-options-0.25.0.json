@@ -1,0 +1,119 @@
+{
+  "schema": "webstock.plugin.native-acceptance.v1",
+  "runs": [
+    {
+      "pluginId": "org.webstock.option-research",
+      "operationId": "option-iv",
+      "version": "0.25.0",
+      "status": "verified",
+      "runId": "plugin-dc4c3338-4b0b-4877-a4db-c7356b709ca5",
+      "resultSha256": "345b7b0ac191e7c2d594a74162f2c41bf1a1fa49517e656f3f49127bad115295",
+      "bars": 672,
+      "inputSha256": "dff0e91caac74ed463ac98929e72a8ee8fb1be2f46e5b607248c4488e8490009",
+      "inputName": "synthetic-option-chain.csv",
+      "tables": [
+        {
+          "id": "indicators",
+          "rows": 24
+        },
+        {
+          "id": "option-values",
+          "rows": 672
+        },
+        {
+          "id": "expiry-summary",
+          "rows": 48
+        },
+        {
+          "id": "input-audit",
+          "rows": 672
+        }
+      ],
+      "inputSemantics": {
+        "pricingModel": "European Black-Scholes-Merton; continuous r and q; ACT/365F; per underlying unit",
+        "valuationTime": "decision time; only quotes/spot within maxAgeSeconds eligible",
+        "selectedContract": "C100E1",
+        "selectedExpiryRank": null,
+        "providerCertified": false,
+        "fullMarketUniverseCertified": false,
+        "automaticTrading": false
+      }
+    },
+    {
+      "pluginId": "org.webstock.option-research",
+      "operationId": "option-skew",
+      "version": "0.25.0",
+      "status": "verified",
+      "runId": "plugin-479e4af1-7251-4730-b9c0-2581a8a1cd90",
+      "resultSha256": "9205c9f011cef9ae9af84aaef13c3e74048e40c387d422b52b40186eb9a8bfff",
+      "bars": 672,
+      "inputSha256": "dff0e91caac74ed463ac98929e72a8ee8fb1be2f46e5b607248c4488e8490009",
+      "inputName": "synthetic-option-chain.csv",
+      "tables": [
+        {
+          "id": "indicators",
+          "rows": 24
+        },
+        {
+          "id": "option-values",
+          "rows": 672
+        },
+        {
+          "id": "expiry-summary",
+          "rows": 48
+        },
+        {
+          "id": "input-audit",
+          "rows": 672
+        }
+      ],
+      "inputSemantics": {
+        "pricingModel": "European Black-Scholes-Merton; continuous r and q; ACT/365F; per underlying unit",
+        "valuationTime": "decision time; only quotes/spot within maxAgeSeconds eligible",
+        "selectedContract": null,
+        "selectedExpiryRank": 1,
+        "providerCertified": false,
+        "fullMarketUniverseCertified": false,
+        "automaticTrading": false
+      }
+    },
+    {
+      "pluginId": "org.webstock.option-research",
+      "operationId": "option-term-pcr",
+      "version": "0.25.0",
+      "status": "verified",
+      "runId": "plugin-9564057d-9164-42a5-9439-b24ccd2320d1",
+      "resultSha256": "f757488d7d5b9824f67d92dc8445117dccd47bce7847c7be2bfa89b679bea21b",
+      "bars": 672,
+      "inputSha256": "dff0e91caac74ed463ac98929e72a8ee8fb1be2f46e5b607248c4488e8490009",
+      "inputName": "synthetic-option-chain.csv",
+      "tables": [
+        {
+          "id": "indicators",
+          "rows": 24
+        },
+        {
+          "id": "option-values",
+          "rows": 672
+        },
+        {
+          "id": "expiry-summary",
+          "rows": 48
+        },
+        {
+          "id": "input-audit",
+          "rows": 672
+        }
+      ],
+      "inputSemantics": {
+        "pricingModel": "European Black-Scholes-Merton; continuous r and q; ACT/365F; per underlying unit",
+        "valuationTime": "decision time; only quotes/spot within maxAgeSeconds eligible",
+        "selectedContract": null,
+        "selectedExpiryRank": 1,
+        "providerCertified": false,
+        "fullMarketUniverseCertified": false,
+        "automaticTrading": false
+      }
+    }
+  ]
+}

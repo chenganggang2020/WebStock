@@ -2701,6 +2701,7 @@ void Window::prepareQuantResearch(bool activate) {
   if(!page){
     auto store=std::make_shared<QuantResearchStore>(QFileInfo(businessStore->filePath()).absolutePath()+"/quant-research-v1.json",false);
     page=new QuantResearchPage(store,[path=businessStore->filePath()]{return nativeBusinessVersions(path);},[this](QJsonObject original){openPersonMethodSource(original);},workspaceTabs);
+    page->setMarketFeed(feed);
     page->setParquetChartOpener([this,page](QJsonObject packet){if(page->isVisible()&&workspaceTabs->currentWidget()==page&&!isMinimized())openLegacyHistoryPacket(packet);});
     page->setObjectName("quantResearchPage");page->setProperty("workspace","研究");page->setProperty("pageTitle","量化研究 / 历史模拟");pages["quantResearch"]=page;
   }

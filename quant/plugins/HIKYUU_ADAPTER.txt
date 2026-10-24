@@ -1,0 +1,25 @@
+Hikyuu 日线适配 v2
+
+0.26.0修复两处适配问题：
+1. pandas推断的日期存储可为微秒，而已安装Hikyuu发行版的DataFrame桥接按纳秒读取整数。
+   旧适配把1991年的日线压缩到1970年的盘中，导致错误资金曲线。现在明确转datetime64[ns]，并逐根核对引擎读回日期。
+2. Hikyuu执行器会把成交额或成交量为零的K线当作不能交易；即便信号仅用均线，也不能用零填补缺失成交额。
+   现在必须提供实际amount，且amount/volume为有限非负、零值状态一致；缺少字段明确拒绝。
+
+只接受无时区、午夜的日历日期日线；不是盘中、期货夜盘或交易日历推断器。
+原版SG_Cross使用严格上穿/下穿，MM_FixedCount，买卖延后下一输入根开盘，零费用/零滑点。
+原引擎的零成交额/量和高低价相同限制仍保留；不是完整A股交易规则实现。
+原版账户事件表保留INIT/BUY/SELL；INIT不是交易。
+新增逐日审计：独立按事件重算现金、持仓，再按当根收盘估值，与原引擎资金曲线逐根核对。
+现金、成交金额和市值按分四舍五入；考虑发行版浮点边界，一分加浮点余量(0.011)之外的差异直接失败。
+输出cash、position、close和ledgerEquity，可与原始事件表逐笔对账。
+核验日期范围、初始入金、未知账户事件、资金/持仓、原引擎曲线；不把无法对账的结果当作成功回测。
+
+0.25.0及更早版本的Hikyuu历史验收只证明程序执行成功，不能作为数值正确证据；旧结果需用v2重跑。
+其他引擎没有通过这项修复被替换。新的合成测试要求实际有成交，并检查下一根开盘成交、日期、账本、
+前缀不变、未来价格扰动、微秒输入转换和缺失成交额拒绝；防止“没有交易所以测试通过”。
+
+来源实现位置（原项目）：
+https://github.com/fasiondog/hikyuu/blob/master/hikyuu_pywrap/df_to_ks.cpp
+https://github.com/fasiondog/hikyuu/blob/master/hikyuu_cpp/hikyuu/trade_sys/system/System.cpp
+https://github.com/fasiondog/hikyuu/blob/master/hikyuu_cpp/hikyuu/trade_manage/TradeManager.cpp

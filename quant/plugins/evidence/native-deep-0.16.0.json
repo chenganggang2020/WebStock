@@ -1,0 +1,138 @@
+{
+  "schema": "webstock.plugin.native-acceptance.v1",
+  "runs": [
+    {
+      "pluginId": "org.webstock.deep-models",
+      "operationId": "lstm",
+      "version": "0.16.0",
+      "status": "verified",
+      "runId": "plugin-bec2ef22-9110-40c1-ae7e-e8850cbc0f2d",
+      "resultSha256": "83c6ee72d128b221222084d21225e79e5df13337b0b4366f42ff76c2c8661f9e",
+      "bars": 1000,
+      "inputSha256": "ecb475376307a9555810b20f5ca81a4fe01df35d0145cf8e9dfbfa7c4ea71933",
+      "inputName": "hikyuu-first1000-statistical.csv",
+      "tables": [
+        {
+          "id": "indicators",
+          "rows": 836
+        },
+        {
+          "id": "training-audit",
+          "rows": 14
+        },
+        {
+          "id": "training-preprocessing",
+          "rows": 98
+        },
+        {
+          "id": "training-loss",
+          "rows": 280
+        },
+        {
+          "id": "matured-evaluation",
+          "rows": 831
+        }
+      ],
+      "modelSemantics": {
+        "fits": 14,
+        "nodes": 1,
+        "targetHorizon": 5,
+        "cpuOnly": true,
+        "trainingUsesFutureLabels": false,
+        "graphUsesFutureReturns": false,
+        "fixedEpochs": 20,
+        "executionIncluded": false
+      }
+    },
+    {
+      "pluginId": "org.webstock.deep-models",
+      "operationId": "transformer",
+      "version": "0.16.0",
+      "status": "verified",
+      "runId": "plugin-a7cf6db1-048f-4b15-9e07-fdf82b26006b",
+      "resultSha256": "b6d3e1a5cf420e967e52d1a597b56ea6e0268321c4bfaf760947e6b0ab9ccb3a",
+      "bars": 1000,
+      "inputSha256": "ecb475376307a9555810b20f5ca81a4fe01df35d0145cf8e9dfbfa7c4ea71933",
+      "inputName": "hikyuu-first1000-statistical.csv",
+      "tables": [
+        {
+          "id": "indicators",
+          "rows": 836
+        },
+        {
+          "id": "training-audit",
+          "rows": 14
+        },
+        {
+          "id": "training-preprocessing",
+          "rows": 98
+        },
+        {
+          "id": "training-loss",
+          "rows": 280
+        },
+        {
+          "id": "matured-evaluation",
+          "rows": 831
+        }
+      ],
+      "modelSemantics": {
+        "fits": 14,
+        "nodes": 1,
+        "targetHorizon": 5,
+        "cpuOnly": true,
+        "trainingUsesFutureLabels": false,
+        "graphUsesFutureReturns": false,
+        "fixedEpochs": 20,
+        "executionIncluded": false
+      }
+    },
+    {
+      "pluginId": "org.webstock.deep-models",
+      "operationId": "gcn",
+      "version": "0.16.0",
+      "status": "verified",
+      "runId": "plugin-a64a5b62-835f-4d28-ab36-ceac5917b0d1",
+      "resultSha256": "75a0628e610055e5d573a560bc75f2c906861c3dc571c9a02b0fe0025d5b6ab4",
+      "bars": 1600,
+      "inputSha256": "52f995b51b8c829d1278ed4ccac6e7cd83c2d190b72e677819b0971d492786a1",
+      "inputName": "synthetic-econometric-panel.csv",
+      "tables": [
+        {
+          "id": "indicators",
+          "rows": 494
+        },
+        {
+          "id": "training-audit",
+          "rows": 4
+        },
+        {
+          "id": "training-preprocessing",
+          "rows": 28
+        },
+        {
+          "id": "training-loss",
+          "rows": 80
+        },
+        {
+          "id": "matured-evaluation",
+          "rows": 484
+        },
+        {
+          "id": "training-graph",
+          "rows": 16
+        }
+      ],
+      "modelSemantics": {
+        "fits": 4,
+        "nodes": 2,
+        "targetHorizon": 5,
+        "cpuOnly": true,
+        "trainingUsesFutureLabels": false,
+        "graphUsesFutureReturns": false,
+        "fixedEpochs": 20,
+        "executionIncluded": false
+      }
+    }
+  ]
+}

@@ -1,0 +1,41 @@
+{
+  "schema": "webstock.plugin.native-acceptance.v1",
+  "runs": [
+    {
+      "pluginId": "org.webstock.technical-ratings",
+      "operationId": "technical-ratings-v3",
+      "version": "0.20.1",
+      "status": "verified",
+      "runId": "plugin-d8822776-2a98-445a-83c5-80b6b8086ef3",
+      "resultSha256": "76b21c464c4639a7c82179e7dcde7fb465c051c681e4f5467943328d9fc50b8f",
+      "bars": 4937,
+      "inputSha256": "9dc7b976ef19fae657ebaaa6d5a78f0de24071b27781f76a323dc4d0443239f8",
+      "inputName": "historical-fixture.csv",
+      "tables": [
+        {
+          "id": "indicators",
+          "rows": 4937
+        },
+        {
+          "id": "ma-components",
+          "rows": 4937
+        },
+        {
+          "id": "oscillator-components",
+          "rows": 4937
+        },
+        {
+          "id": "underlying-values",
+          "rows": 4937
+        }
+      ],
+      "modelSemantics": {
+        "upstream": "TradingView/TechnicalRating/3",
+        "upstreamSourceSha256": "93c8274c1e2e6e4f594b694611243c5399aca48863aab2a4300789b0d707d08b",
+        "kernel": "explicit-local-v1",
+        "pineNumericalParityVerified": false,
+        "automaticTrading": false
+      }
+    }
+  ]
+}

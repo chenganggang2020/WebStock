@@ -32,10 +32,12 @@ private slots:
    if(!qEnvironmentVariable("NATIVE_QA_OUTPUT").isEmpty())QVERIFY(w.grab().save(qEnvironmentVariable("NATIVE_QA_OUTPUT")+"/qt-v36-account-"+layout+".png"));
   }
  }
- void backupNative(){
+ void backupNative(){try{
   QTemporaryDir dir;Window w(true,dir.filePath("settings.ini"),dir.path());w.resize(1600,1000);w.show();
   auto inputs=w.watchlistBridgeCapture()["inputs"].toObject();w.watchlistBridgeStore(true)->initialize(inputs);w.watchlistWorkspaceView();
   auto*p=dynamic_cast<WatchlistWorkspacePage*>(w.pages["watchlistWorkspace"]);QVERIFY(p&&p->isVisible());auto roster=w.instruments;
+  // The runtime-lifecycle base branch loads the first snapshot asynchronously.
+  QTRY_VERIFY_WITH_TIMEOUT(!p->property("snapshotLoading").toBool(),15000);
   auto file=dir.filePath("groups.json");w.watchlistBackupExportPath(file);auto envelope=watchlistBackup::decodeBackup(bytes(file));
   auto config=envelope["config"].toObject();auto groups=config["groups"].toArray();int at=-1;for(int i=0;i<groups.size();++i)if(!groups[i].toObject()["readOnly"].toBool()){at=i;break;}QVERIFY(at>=0);
   auto g=groups[at].toObject();g["name"]="完整分组恢复";groups[at]=g;config["groups"]=groups;envelope["config"]=config;envelope["sha256"]=watchlistWorkspace::hash(config);put(file,watchlistBackup::encodeBackup(envelope));
@@ -45,6 +47,7 @@ private slots:
   auto saved=p->exportBackupBytes();put(file,saved);p->findChild<QLineEdit*>("watchWorkspaceNewName")->setText("未确认新组");QVERIFY_EXCEPTION_THROWN(w.watchlistBackupImportPath(file),std::exception);QCOMPARE(p->findChild<QLineEdit*>("watchWorkspaceNewName")->text(),QString("未确认新组"));p->findChild<QLineEdit*>("watchWorkspaceNewName")->clear();
   w.watchlistBackupImportPath(file);p->acceptBackupImport();w.watchlistBridgeSaveViews();p->reload();w.watchlistBridgeRestoreViews();QCOMPARE(p->draftSnapshot()["groups"],QJsonValue(groups));QCOMPARE(w.instruments,roster);
   if(!qEnvironmentVariable("NATIVE_QA_OUTPUT").isEmpty())QVERIFY(w.grab().save(qEnvironmentVariable("NATIVE_QA_OUTPUT")+"/qt-v36-group-backup.png"));
+ }catch(const std::exception& error){QFAIL(error.what());}
  }
 };
 QTEST_MAIN(AccountBackupHostTests)

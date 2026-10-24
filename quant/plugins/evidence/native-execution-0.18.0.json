@@ -1,0 +1,39 @@
+{
+  "schema": "webstock.plugin.native-acceptance.v1",
+  "runs": [
+    {
+      "pluginId": "org.webstock.core-indicators",
+      "operationId": "atr-position-exit",
+      "version": "0.18.0",
+      "status": "verified",
+      "runId": "plugin-eef403d4-e4fb-480b-8d33-3a3ec4774914",
+      "resultSha256": "01e77bb1ce3e550434ce2156ce55562b421a22455f1c0260798b13531870afb3",
+      "bars": 4937,
+      "inputSha256": "9dc7b976ef19fae657ebaaa6d5a78f0de24071b27781f76a323dc4d0443239f8",
+      "inputName": "historical-fixture.csv",
+      "tables": [
+        {
+          "id": "indicators",
+          "rows": 4937
+        }
+      ]
+    },
+    {
+      "pluginId": "org.webstock.core-indicators",
+      "operationId": "rvol-at-time",
+      "version": "0.18.0",
+      "status": "verified",
+      "runId": "plugin-4fb5475f-94e1-454e-ba9a-0be86f8fbdd6",
+      "resultSha256": "26d88bdf57d1a741aed442ad5e1d52f57d23529e681a7f7cec93d8e959a59f1e",
+      "bars": 400,
+      "inputSha256": "b0c3b538711f6ed5c881bfad3e850c678759ab0d3560011605db1b76707330fb",
+      "inputName": "synthetic-intraday-sessions.csv",
+      "tables": [
+        {
+          "id": "indicators",
+          "rows": 400
+        }
+      ]
+    }
+  ]
+}

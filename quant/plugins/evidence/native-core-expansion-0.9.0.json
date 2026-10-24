@@ -1,0 +1,50 @@
+{
+  "schema": "webstock.plugin.native-acceptance.v1",
+  "runs": [
+    {
+      "pluginId": "org.webstock.core-indicators",
+      "operationId": "ohlc-volatility",
+      "version": "0.9.0",
+      "status": "verified",
+      "runId": "plugin-7f543a6a-c866-45f0-b8b1-a084f9e74692",
+      "resultSha256": "5876b8a4796679d0393fd59cf44e8b697f4bc33862211b5c0621e8f2525d610c",
+      "bars": 243,
+      "tables": [
+        {
+          "id": "indicators",
+          "rows": 243
+        }
+      ]
+    },
+    {
+      "pluginId": "org.webstock.core-indicators",
+      "operationId": "vwap-actual-day",
+      "version": "0.9.0",
+      "status": "verified",
+      "runId": "plugin-e1f349dc-8522-4595-ae2b-12856b2c20e5",
+      "resultSha256": "2e3b28bb18b186efe2eba8bd6fa04a58d6b6b521037d150a3a30232e317076f4",
+      "bars": 243,
+      "tables": [
+        {
+          "id": "indicators",
+          "rows": 243
+        }
+      ]
+    },
+    {
+      "pluginId": "org.webstock.core-indicators",
+      "operationId": "vwap-actual-anchor",
+      "version": "0.9.0",
+      "status": "verified",
+      "runId": "plugin-228b0969-81a3-4798-af3e-540953f72014",
+      "resultSha256": "c7f6689ac2cf966052335dfc3374f7e13cee3f46b17b5ca6533083f30de9b56e",
+      "bars": 243,
+      "tables": [
+        {
+          "id": "indicators",
+          "rows": 243
+        }
+      ]
+    }
+  ]
+}

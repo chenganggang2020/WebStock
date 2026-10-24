@@ -1,0 +1,44 @@
+# Exact package versions observed in the verified local Windows runtime.
+# Source distributions use full Git commits; wheel hashes are not locked yet.
+certifi==2026.10.23
+charset-normalizer==3.5.2
+click==8.5.0
+contourpy==1.4.0
+cycler==0.12.1
+et_xmlfile==2.0.0
+filelock==4.2.4
+fonttools==4.67.0
+formulaic==1.2.2
+h5py==3.16.0
+hdf5plugin==7.1.0
+idna==3.20
+interface_meta==2.0.1
+jsonpickle==4.1.4
+kiwisolver==1.5.1
+Logbook==1.10.1
+matplotlib==3.11.2
+methodtools==0.4.7
+narwhals==2.27.1
+numpy==2.5.4
+openpyxl==3.1.5
+packaging==26.3
+pandas==3.1.0
+patsy==1.0.3
+pillow==13.0.0
+pyparsing==3.3.3
+python-dateutil==3.0.0
+PyYAML==6.0.3
+requests==2.34.2
+rqalpha @ git+https://github.com/ricequant/rqalpha.git@6a996af2876013615ceea141a97bad94ac4ab7f3
+rqrisk==1.0.13
+scipy==1.18.1
+simplejson==4.2.0
+six==1.17.0
+statsmodels==0.15.0
+TA-Lib==0.8.2
+tabulate==0.10.0
+typing_extensions==4.16.0
+tzdata==2026.5
+urllib3==2.8.0
+wirerope==1.0.0
+wrapt==2.5.1

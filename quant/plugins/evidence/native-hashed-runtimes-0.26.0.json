@@ -1,0 +1,327 @@
+{
+  "schema": "webstock.plugin.native-acceptance.v1",
+  "runs": [
+    {
+      "pluginId": "org.webstock.hikyuu",
+      "operationId": "sma-cross",
+      "version": "0.26.0",
+      "status": "verified",
+      "runId": "plugin-93bb16b8-7f2f-4706-8138-0773e53e91ab",
+      "resultSha256": "2a9f599d23797706d25ef1746a255d1a3f184c5e342bee40e83abc5a81f08d28",
+      "bars": 500,
+      "inputSha256": "7a4cdc29a4b7aa2577b7bf7626c4e67996c8b7de2af1e4426c14aa0f90560b73",
+      "inputName": "historical-hikyuu-first500.csv",
+      "tables": [
+        {
+          "id": "equity",
+          "rows": 500
+        },
+        {
+          "id": "trades",
+          "rows": 13
+        }
+      ]
+    },
+    {
+      "pluginId": "org.webstock.lean",
+      "operationId": "sma-close",
+      "version": "0.26.0",
+      "status": "verified",
+      "runId": "plugin-fde644e3-e98b-44a3-b878-85a4310291bb",
+      "resultSha256": "1027ff1b231aac67b60fc0f1dc66ee88105e6382dde3f6b823030ca6869f12cc",
+      "bars": 4937,
+      "inputSha256": "9dc7b976ef19fae657ebaaa6d5a78f0de24071b27781f76a323dc4d0443239f8",
+      "inputName": "historical-fixture.csv",
+      "tables": [
+        {
+          "id": "equity",
+          "rows": 4937
+        },
+        {
+          "id": "orders",
+          "rows": 348
+        },
+        {
+          "id": "signals",
+          "rows": 174
+        }
+      ]
+    },
+    {
+      "pluginId": "org.webstock.ml4t-backtest",
+      "operationId": "sma-cross",
+      "version": "0.26.0",
+      "status": "verified",
+      "runId": "plugin-07b6410e-3220-4803-908f-0860ff456543",
+      "resultSha256": "62410aa1b1b9191ac13b1e479e3d46edad3099c924b59b7bc17eec754aec00b9",
+      "bars": 4937,
+      "inputSha256": "9dc7b976ef19fae657ebaaa6d5a78f0de24071b27781f76a323dc4d0443239f8",
+      "inputName": "historical-fixture.csv",
+      "tables": [
+        {
+          "id": "equity",
+          "rows": 4937
+        },
+        {
+          "id": "fills",
+          "rows": 174
+        },
+        {
+          "id": "rejected-orders",
+          "rows": 0
+        }
+      ]
+    },
+    {
+      "pluginId": "org.webstock.qlib",
+      "operationId": "alpha158",
+      "version": "0.26.0",
+      "status": "verified",
+      "runId": "plugin-57cc728c-c9a0-466d-b8ab-e8c6c0091a2a",
+      "resultSha256": "b26525cfb426a13d9c52192849dfbc9e4b65372e3a376f41e75a41158576554d",
+      "bars": 4937,
+      "inputSha256": "9dc7b976ef19fae657ebaaa6d5a78f0de24071b27781f76a323dc4d0443239f8",
+      "inputName": "historical-fixture.csv",
+      "tables": [
+        {
+          "id": "features-1",
+          "rows": 4937
+        },
+        {
+          "id": "features-2",
+          "rows": 4937
+        },
+        {
+          "id": "features-3",
+          "rows": 4937
+        },
+        {
+          "id": "features-4",
+          "rows": 4937
+        },
+        {
+          "id": "feature-definitions",
+          "rows": 158
+        }
+      ]
+    },
+    {
+      "pluginId": "org.webstock.quantaxis",
+      "operationId": "kdj",
+      "version": "0.26.0",
+      "status": "verified",
+      "runId": "plugin-b9467495-8ded-4669-93aa-e17daabddfee",
+      "resultSha256": "13aa70a36cf2e909705b119b9ea0b10d799a60c473730364eefd0a0118cd07a2",
+      "bars": 4937,
+      "inputSha256": "9dc7b976ef19fae657ebaaa6d5a78f0de24071b27781f76a323dc4d0443239f8",
+      "inputName": "historical-fixture.csv",
+      "tables": [
+        {
+          "id": "indicators",
+          "rows": 4937
+        }
+      ]
+    },
+    {
+      "pluginId": "org.webstock.rqalpha",
+      "operationId": "sma-close",
+      "version": "0.26.0",
+      "status": "verified",
+      "runId": "plugin-4f0fe1ff-f70f-435f-a99b-999c70d681bd",
+      "resultSha256": "bdd986e356b5f66de8855fb7e32a9f0f2e76131422c732f58c7b149ea75e67af",
+      "bars": 4937,
+      "inputSha256": "9dc7b976ef19fae657ebaaa6d5a78f0de24071b27781f76a323dc4d0443239f8",
+      "inputName": "historical-fixture.csv",
+      "tables": [
+        {
+          "id": "equity",
+          "rows": 4937
+        },
+        {
+          "id": "fills",
+          "rows": 170
+        },
+        {
+          "id": "orders",
+          "rows": 174
+        }
+      ]
+    },
+    {
+      "pluginId": "org.webstock.talib",
+      "operationId": "rsi",
+      "version": "0.26.0",
+      "status": "verified",
+      "runId": "plugin-888e6793-5af9-4bc6-b0ce-19161a245719",
+      "resultSha256": "b742c2322d19e3bed16f393164e892b3844b21d07366be8e4086336944d29090",
+      "bars": 4937,
+      "inputSha256": "9dc7b976ef19fae657ebaaa6d5a78f0de24071b27781f76a323dc4d0443239f8",
+      "inputName": "historical-fixture.csv",
+      "tables": [
+        {
+          "id": "indicators",
+          "rows": 4937
+        }
+      ]
+    },
+    {
+      "pluginId": "org.webstock.vectorbt",
+      "operationId": "sma-cross",
+      "version": "0.26.0",
+      "status": "verified",
+      "runId": "plugin-f39a7754-71d2-49a2-8f83-8c493a0b670c",
+      "resultSha256": "34d3eb62057902dc5f4c277fc44de721b411d23a470a9f58b2d6140492806d6d",
+      "bars": 4937,
+      "inputSha256": "9dc7b976ef19fae657ebaaa6d5a78f0de24071b27781f76a323dc4d0443239f8",
+      "inputName": "historical-fixture.csv",
+      "tables": [
+        {
+          "id": "equity",
+          "rows": 4937
+        },
+        {
+          "id": "orders",
+          "rows": 174
+        },
+        {
+          "id": "execution-log",
+          "rows": 174
+        }
+      ]
+    },
+    {
+      "pluginId": "org.webstock.vnpy",
+      "operationId": "rsi",
+      "version": "0.26.0",
+      "status": "verified",
+      "runId": "plugin-da775eb6-645f-4a5c-9960-d2e9e1bae9d6",
+      "resultSha256": "ee00d24fad1d7971d77e8640422985ca3a4f10cfcba5c3d49fadb1fc9fcbe3fa",
+      "bars": 4937,
+      "inputSha256": "9dc7b976ef19fae657ebaaa6d5a78f0de24071b27781f76a323dc4d0443239f8",
+      "inputName": "historical-fixture.csv",
+      "tables": [
+        {
+          "id": "indicators",
+          "rows": 4937
+        }
+      ]
+    },
+    {
+      "pluginId": "org.webstock.vnpy-ctastrategy",
+      "operationId": "sma-limit",
+      "version": "0.26.0",
+      "status": "verified",
+      "runId": "plugin-2371e274-a8eb-4095-a155-375756edef70",
+      "resultSha256": "c69218e55c7f6f1cf2d9633513c4a3c3c78abf45f484a0eabea5f90bd97ac8db",
+      "bars": 4937,
+      "inputSha256": "9dc7b976ef19fae657ebaaa6d5a78f0de24071b27781f76a323dc4d0443239f8",
+      "inputName": "historical-fixture.csv",
+      "tables": [
+        {
+          "id": "equity",
+          "rows": 4937
+        },
+        {
+          "id": "orders",
+          "rows": 156
+        },
+        {
+          "id": "fills",
+          "rows": 138
+        }
+      ]
+    },
+    {
+      "pluginId": "org.webstock.wbt",
+      "operationId": "sma-weight",
+      "version": "0.26.0",
+      "status": "verified",
+      "runId": "plugin-3f8a8dd2-4f48-4004-b3a4-c921a4c2aa4f",
+      "resultSha256": "fa3f7831e91f17996cd585e65899712e3cd0095558d9ce06c08836220af3f35d",
+      "bars": 4937,
+      "inputSha256": "9dc7b976ef19fae657ebaaa6d5a78f0de24071b27781f76a323dc4d0443239f8",
+      "inputName": "historical-fixture.csv",
+      "tables": [
+        {
+          "id": "weight-index",
+          "rows": 4936
+        },
+        {
+          "id": "daily-attribution",
+          "rows": 4936
+        }
+      ]
+    },
+    {
+      "pluginId": "org.webstock.wondertrader",
+      "operationId": "sma-native",
+      "version": "0.26.0",
+      "status": "verified",
+      "runId": "plugin-65fc199d-4f6f-4f57-b703-eb6743c127c7",
+      "resultSha256": "5e6c77f631b33983b575e81ab8d3173da7c4fd55c3efec97d310f6a2fe0d4391",
+      "bars": 4937,
+      "inputSha256": "9dc7b976ef19fae657ebaaa6d5a78f0de24071b27781f76a323dc4d0443239f8",
+      "inputName": "historical-fixture.csv",
+      "tables": [
+        {
+          "id": "equity",
+          "rows": 4936
+        },
+        {
+          "id": "trades",
+          "rows": 174
+        },
+        {
+          "id": "signals",
+          "rows": 174
+        },
+        {
+          "id": "closes",
+          "rows": 87
+        }
+      ]
+    },
+    {
+      "pluginId": "org.webstock.wtpy",
+      "operationId": "daily-dsb",
+      "version": "0.26.0",
+      "status": "verified",
+      "runId": "plugin-9df9d0c9-4b0c-4be7-9a54-9045294f3527",
+      "resultSha256": "2944f5534c227482562e20edb3e6e292aff68e33e037cdfd1585e7111d7dc9a5",
+      "bars": 4937,
+      "inputSha256": "9dc7b976ef19fae657ebaaa6d5a78f0de24071b27781f76a323dc4d0443239f8",
+      "inputName": "historical-fixture.csv",
+      "tables": [
+        {
+          "id": "native-dsb-bars",
+          "rows": 4937
+        }
+      ]
+    },
+    {
+      "pluginId": "org.webstock.zipline-reloaded",
+      "operationId": "sma-close",
+      "version": "0.26.0",
+      "status": "verified",
+      "runId": "plugin-f961eea4-5ffa-4d2f-bf77-43b1eb038901",
+      "resultSha256": "b158131fd89981e2cd3c6d17381bf36e689b0300194ba58211c96d49934ab012",
+      "bars": 4937,
+      "inputSha256": "9dc7b976ef19fae657ebaaa6d5a78f0de24071b27781f76a323dc4d0443239f8",
+      "inputName": "historical-fixture.csv",
+      "tables": [
+        {
+          "id": "equity",
+          "rows": 4937
+        },
+        {
+          "id": "fills",
+          "rows": 174
+        },
+        {
+          "id": "orders",
+          "rows": 348
+        }
+      ]
+    }
+  ]
+}

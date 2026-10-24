@@ -1,0 +1,262 @@
+{
+  "adjustedRefresh": {
+    "newSeriesVersion": "{dc1eec7b-a90e-471a-a50a-b3839362e521}",
+    "overlapValidated": true,
+    "pages": 3,
+    "revisionAbortsWithoutReplacingOld": true,
+    "sourceRequestHashes": [
+      {
+        "acquiredAt": "2026-10-24T03:53:45Z",
+        "endDate": "2019-05-16",
+        "rawResponseSha256": "5200d8692c221cb5763ee7281b557ae36f2c0c6c07885b98d2ba978719d4b012",
+        "startDate": "2018-01-02",
+        "url": "https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=sz000001,day,2018-01-02,2019-05-16,640,qfq"
+      },
+      {
+        "acquiredAt": "2026-10-24T03:53:45Z",
+        "endDate": "2020-09-26",
+        "rawResponseSha256": "8a17b4f62b0b78d9a2e538a6c457beb988df53d3f366119aed4faa2fd54de720",
+        "startDate": "2019-05-16",
+        "url": "https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=sz000001,day,2019-05-16,2020-09-26,640,qfq"
+      },
+      {
+        "acquiredAt": "2026-10-24T03:53:45Z",
+        "endDate": "2020-12-31",
+        "rawResponseSha256": "0d391ac0805135a3cbbde37f5639f5bce47c99902eab39549c80a4af9143ca6f",
+        "startDate": "2020-09-25",
+        "url": "https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=sz000001,day,2020-09-25,2020-12-31,640,qfq"
+      }
+    ],
+    "staleRebuildsWholeRange": true
+  },
+  "cacheReuseAndGapFill": {
+    "actualBars": 3,
+    "cancelPreservesOld": true,
+    "falseCompletenessClaim": false,
+    "fullCacheNetworkRequests": 0,
+    "partialRequestEnd": "2020-01-06",
+    "partialRequestStart": "2020-01-04",
+    "refreshFailurePreservesOld": true,
+    "unexplainedDates": 2
+  },
+  "calendarEvidence": {
+    "closedSuspendedNotListedRequireVersionedEvidence": true,
+    "truncatedResponseNotFullCoverage": true,
+    "unknownIsNotWeekendAssumption": true
+  },
+  "fixture": "Controlled Tencent transport responses; isolated temporary data roots; not real market acquisition",
+  "identityAndLegacy": {
+    "checksumTamperingRejected": true,
+    "legacyMissingMetadataNotPromoted": true,
+    "legacyNotClaimedComplete": true,
+    "sourceAdjustmentPeriodSeparated": true,
+    "stockIndexCollisionRejected": true,
+    "verifiedLegacyBarsReused": true
+  },
+  "nativeToResearch": {
+    "consumerNetworkRequests": 0,
+    "frozenRunsSurviveLaterCacheRevision": true,
+    "nativeChartProducer": true,
+    "runs": [
+      {
+        "dataPolicy": {
+          "adjustment": "unadjusted",
+          "closedBarsOnly": true,
+          "dataset": {
+            "acquiredAtUtc": "2026-10-24T03:53:45Z",
+            "adjustment": "unadjusted",
+            "bars": 86,
+            "firstDate": "2020-01-02",
+            "lastDate": "2020-04-30",
+            "period": "day",
+            "pointInTimeDataset": false,
+            "requestedEnd": "2020-04-30",
+            "requestedStart": "2020-01-02",
+            "securityId": "SZ:stock:000001",
+            "seriesKey": "{d54d6bf5-d63b-465e-b7d3-9a8641559fcf}",
+            "source": "腾讯公开K线",
+            "sourceId": "tencent-kline",
+            "symbol": "000001",
+            "version": "709734c340d438f4a08b7948df0e34735678f924295a2c39d9ab036cfb4b63d0"
+          },
+          "legacyIdentityEvidence": null,
+          "originalName": "9c3491eea73a6f190273640ca43fed3524210b5f6aa825b76a789f701f43168d.csv",
+          "path": "input.csv",
+          "queryCoverage": [
+            {
+              "acquiredAt": "2026-10-24T03:53:45Z",
+              "calendarCompletenessProven": false,
+              "end": "2020-04-30",
+              "evidence": "provider-response-window",
+              "requestedEnd": "2026-10-23",
+              "requestedStart": "2020-01-02",
+              "start": "2020-01-02",
+              "truncated": false
+            }
+          ],
+          "sha256": "9c3491eea73a6f190273640ca43fed3524210b5f6aa825b76a789f701f43168d",
+          "sharedMarketVersion": "709734c340d438f4a08b7948df0e34735678f924295a2c39d9ab036cfb4b63d0",
+          "source": "tencent-kline",
+          "sourceRequests": null,
+          "timezone": "Asia/Shanghai",
+          "volumeUnit": "share"
+        },
+        "inputSha256": "9c3491eea73a6f190273640ca43fed3524210b5f6aa825b76a789f701f43168d",
+        "pluginId": "org.webstock.talib",
+        "runId": "plugin-ef1e9450-0e9d-4410-acb2-31e09c014d86"
+      },
+      {
+        "dataPolicy": {
+          "adjustment": "unadjusted",
+          "closedBarsOnly": true,
+          "dataset": {
+            "acquiredAtUtc": "2026-10-24T03:53:45Z",
+            "adjustment": "unadjusted",
+            "bars": 86,
+            "firstDate": "2020-01-02",
+            "lastDate": "2020-04-30",
+            "period": "day",
+            "pointInTimeDataset": false,
+            "requestedEnd": "2020-04-30",
+            "requestedStart": "2020-01-02",
+            "securityId": "SZ:stock:000001",
+            "seriesKey": "{d54d6bf5-d63b-465e-b7d3-9a8641559fcf}",
+            "source": "腾讯公开K线",
+            "sourceId": "tencent-kline",
+            "symbol": "000001",
+            "version": "709734c340d438f4a08b7948df0e34735678f924295a2c39d9ab036cfb4b63d0"
+          },
+          "legacyIdentityEvidence": null,
+          "originalName": "9c3491eea73a6f190273640ca43fed3524210b5f6aa825b76a789f701f43168d.csv",
+          "path": "input.csv",
+          "queryCoverage": [
+            {
+              "acquiredAt": "2026-10-24T03:53:45Z",
+              "calendarCompletenessProven": false,
+              "end": "2020-04-30",
+              "evidence": "provider-response-window",
+              "requestedEnd": "2026-10-23",
+              "requestedStart": "2020-01-02",
+              "start": "2020-01-02",
+              "truncated": false
+            }
+          ],
+          "sha256": "9c3491eea73a6f190273640ca43fed3524210b5f6aa825b76a789f701f43168d",
+          "sharedMarketVersion": "709734c340d438f4a08b7948df0e34735678f924295a2c39d9ab036cfb4b63d0",
+          "source": "tencent-kline",
+          "sourceRequests": null,
+          "timezone": "Asia/Shanghai",
+          "volumeUnit": "share"
+        },
+        "inputSha256": "9c3491eea73a6f190273640ca43fed3524210b5f6aa825b76a789f701f43168d",
+        "pluginId": "org.webstock.backtesting-py",
+        "runId": "plugin-7b775830-ac37-4bb7-8e3d-93c2cba6aeb8"
+      }
+    ],
+    "sourceUninstallRetainsPublicCache": true,
+    "staleSelectionRejected": true,
+    "unitsConvertedToShares": true
+  },
+  "originalNativeCache": {
+    "copiedToIsolatedTestRoot": true,
+    "dataset": {
+      "acquiredAtUtc": "2026-10-24T03:50:21Z",
+      "adjustment": "unadjusted",
+      "bars": 640,
+      "firstDate": "2024-03-04",
+      "lastDate": "2026-10-23",
+      "period": "day",
+      "pointInTimeDataset": false,
+      "requestedEnd": "2026-10-23",
+      "requestedStart": "2024-03-04",
+      "securityId": "SH:index:000001",
+      "seriesKey": "{6b2f2169-c1c4-4b70-b407-46ffaeea23c6}",
+      "source": "腾讯公开K线",
+      "sourceId": "tencent-kline",
+      "symbol": "000001",
+      "version": "de6d65e2d3628a8c2640ffe096bc8d894add36f4fef2d9b9a4e47a4c71f4ef47"
+    },
+    "networkRequests": 0,
+    "runs": [
+      {
+        "inputSha256": "e84a5f3f635ae10c5c82b7b6b00b392c020babc02f0900f9a100236fefcd2c63",
+        "operationId": "rsi",
+        "pluginId": "org.webstock.talib",
+        "status": "completed"
+      },
+      {
+        "inputSha256": "e84a5f3f635ae10c5c82b7b6b00b392c020babc02f0900f9a100236fefcd2c63",
+        "operationId": "sma-cross",
+        "pluginId": "org.webstock.backtesting-py",
+        "status": "completed"
+      }
+    ],
+    "sourceCheckedAt": "2026-10-24T03:50:21Z",
+    "sourceContentSha256": "1758d5eecf5713fb062c2f7fd53dc678b5708d3d7af8e5d121c033787c8eb364",
+    "sourceKey": "sh000001-day",
+    "sourceUnchanged": true
+  },
+  "realTencentProbe": {
+    "bars": 2,
+    "error": "",
+    "query": {
+      "adjustment": "unadjusted",
+      "endDate": "2020-01-03",
+      "period": "day",
+      "securityId": "SZ:stock:000001",
+      "sourceId": "tencent-kline",
+      "startDate": "2020-01-02"
+    },
+    "sourceRequests": [
+      {
+        "acquiredAt": "2026-10-24T03:53:51Z",
+        "endDate": "2020-01-03",
+        "rawResponseSha256": "9b06747a641f3f71d09f0b30ed55f4b22389a518f4e4f0b4ba536826a9f4e4be",
+        "startDate": "2020-01-02",
+        "url": "https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=sz000001,day,2020-01-02,2020-01-03,640,"
+      }
+    ],
+    "success": true
+  },
+  "schema": "webstock.shared-native-history-verification.v1",
+  "qtSuites": [
+    {
+      "suite": "shared_market_history_tests",
+      "result": "Totals: 9 passed, 0 failed, 0 skipped, 0 blacklisted, 7888ms"
+    },
+    {
+      "suite": "market_store_tests",
+      "result": "Totals: 10 passed, 0 failed, 0 skipped, 0 blacklisted, 206ms"
+    },
+    {
+      "suite": "market_data_tests",
+      "result": "Totals: 11 passed, 0 failed, 0 skipped, 0 blacklisted, 29ms"
+    },
+    {
+      "suite": "quant_plugin_tests",
+      "result": "Totals: 18 passed, 0 failed, 0 skipped, 0 blacklisted, 13651ms"
+    },
+    {
+      "suite": "quant_plugin_center_tests",
+      "result": "Totals: 5 passed, 0 failed, 0 skipped, 0 blacklisted, 9365ms"
+    },
+    {
+      "suite": "quant_plugin_window_tests",
+      "result": "Totals: 4 passed, 0 failed, 0 skipped, 0 blacklisted, 12498ms"
+    }
+  ],
+  "realAkshareProbe": {
+    "status": "failed",
+    "reason": "ProxyError connecting to Eastmoney; old 243-bar archive remains explicitly historical",
+    "cancelRetryPassed": true
+  },
+  "architecture": {
+    "rawCsvIsOnlyFrozenResearchInput": true,
+    "secondMarketDatabase": false,
+    "transport": "existing MarketFeed transport and persistence queue; AKShare existing plugin worker",
+    "securityIdentity": "market + security type + code + period + adjustment + source",
+    "oldPreviewUntouched": true,
+    "revision": "fresh adjusted generation with overlapping-page consistency checks",
+    "warehouse": "existing MarketStore: data/live/market-v1.sqlite"
+  }
+}

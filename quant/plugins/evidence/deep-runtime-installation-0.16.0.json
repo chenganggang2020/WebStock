@@ -1,0 +1,81 @@
+{
+  "schema": "webstock.plugin.runtime-install.v1",
+  "recipe": "deep-models",
+  "createdAtUtc": "2026-10-23T23:25:05.076660+00:00",
+  "requirementsSha256": "dcfb9aa579a827c80ea9df6ac535531332e92ecbe2c57588bccca4f5b5e9b15f",
+  "status": "dependencies_verified",
+  "adapterVerification": "Six tests, three native operations and full native window passed; declared fixed small-model baselines",
+  "wheelHashesLocked": false,
+  "offline": false,
+  "restoredSourceData": [],
+  "inventory": {
+    "python": [
+      3,
+      12,
+      14
+    ],
+    "packages": [
+      {
+        "name": "filelock",
+        "version": "3.32.3"
+      },
+      {
+        "name": "fsspec",
+        "version": "2026.7.0"
+      },
+      {
+        "name": "Jinja2",
+        "version": "3.1.6"
+      },
+      {
+        "name": "MarkupSafe",
+        "version": "3.0.3"
+      },
+      {
+        "name": "mpmath",
+        "version": "1.3.0"
+      },
+      {
+        "name": "networkx",
+        "version": "3.6.1"
+      },
+      {
+        "name": "numpy",
+        "version": "2.5.4"
+      },
+      {
+        "name": "pandas",
+        "version": "3.1.0"
+      },
+      {
+        "name": "python-dateutil",
+        "version": "3.0.0"
+      },
+      {
+        "name": "setuptools",
+        "version": "78.1.0"
+      },
+      {
+        "name": "six",
+        "version": "1.17.0"
+      },
+      {
+        "name": "sympy",
+        "version": "1.14.0"
+      },
+      {
+        "name": "torch",
+        "version": "2.14.1+cpu"
+      },
+      {
+        "name": "typing_extensions",
+        "version": "4.16.0"
+      },
+      {
+        "name": "tzdata",
+        "version": "2026.5"
+      }
+    ]
+  },
+  "torchWheelHashLocked": true
+}

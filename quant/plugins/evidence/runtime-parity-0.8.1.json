@@ -1,0 +1,181 @@
+{
+  "schema": "webstock.plugin.runtime-parity.v1",
+  "absoluteTolerance": 1e-08,
+  "relativeTolerance": 1e-10,
+  "runs": [
+    {
+      "pluginId": "org.webstock.backtesting-py",
+      "baselineRunId": "plugin-8e0a7846-a8cd-4495-9ccd-3cb163c217a6",
+      "rebuiltRunId": "plugin-b3ff5c91-714e-4612-84e3-779e72eaf941",
+      "comparedTables": [
+        "equity"
+      ],
+      "status": "matched"
+    },
+    {
+      "pluginId": "org.webstock.backtrader",
+      "baselineRunId": "plugin-ecff7105-a073-4331-833b-37c181800e1f",
+      "rebuiltRunId": "plugin-703225e9-f687-4b4a-a4e8-2f77ff1ef442",
+      "comparedTables": [
+        "equity"
+      ],
+      "status": "matched"
+    },
+    {
+      "pluginId": "org.webstock.bt",
+      "baselineRunId": "plugin-ff8c7a7a-d569-4af1-ac29-6aaaffc24ce3",
+      "rebuiltRunId": "plugin-d7db9f7a-188e-4449-85b7-6cabcf3055ee",
+      "comparedTables": [
+        "equity"
+      ],
+      "status": "matched"
+    },
+    {
+      "pluginId": "org.webstock.core-indicators",
+      "baselineRunId": "plugin-f704ab25-7b22-4ad6-9d07-8e30e21bd53a",
+      "rebuiltRunId": "plugin-2a189ece-38bd-4383-9c8a-a47d4ef4be57",
+      "comparedTables": [
+        "indicators"
+      ],
+      "status": "matched"
+    },
+    {
+      "pluginId": "org.webstock.czsc",
+      "baselineRunId": "plugin-61b19ae6-ff39-4d9c-8fc7-908feb6b0139",
+      "rebuiltRunId": "plugin-2b39c922-53cf-4566-aee4-cf844521814a",
+      "comparedTables": [
+        "indicators"
+      ],
+      "status": "matched"
+    },
+    {
+      "pluginId": "org.webstock.hikyuu",
+      "baselineRunId": "plugin-843e86cc-b992-4df6-8e7e-e5bee03c7144",
+      "rebuiltRunId": "plugin-fb81fd6d-f69f-459b-88be-2a99f8a898d7",
+      "comparedTables": [
+        "equity"
+      ],
+      "status": "matched"
+    },
+    {
+      "pluginId": "org.webstock.lean",
+      "baselineRunId": "plugin-3d17d095-6f09-4bfe-a300-1ff71b2a23c3",
+      "rebuiltRunId": "plugin-95306191-9319-4229-8b0c-1c84905cc502",
+      "comparedTables": [
+        "equity"
+      ],
+      "status": "matched"
+    },
+    {
+      "pluginId": "org.webstock.ml4t-backtest",
+      "baselineRunId": "plugin-cd627f7b-3c18-4ab1-be7a-a8b9dc374b02",
+      "rebuiltRunId": "plugin-3120ce38-f315-4e4e-94ae-f868b0cb38ca",
+      "comparedTables": [
+        "equity"
+      ],
+      "status": "matched"
+    },
+    {
+      "pluginId": "org.webstock.qlib",
+      "baselineRunId": "plugin-ce8c97e3-d477-4b3b-8206-c6d0b884014a",
+      "rebuiltRunId": "plugin-9571afe4-f214-42e5-a60d-1d3266e02b34",
+      "comparedTables": [
+        "features-1",
+        "features-2",
+        "features-3",
+        "features-4"
+      ],
+      "status": "matched"
+    },
+    {
+      "pluginId": "org.webstock.quantaxis",
+      "baselineRunId": "plugin-f9b576b2-2872-432d-b4d1-dadabffdc1b5",
+      "rebuiltRunId": "plugin-cd0eb030-e7b2-4aa4-b864-a10bbc8c9d63",
+      "comparedTables": [
+        "indicators"
+      ],
+      "status": "matched"
+    },
+    {
+      "pluginId": "org.webstock.rqalpha",
+      "baselineRunId": "plugin-74230d0c-b8f9-4ad1-8528-0f860ee17eae",
+      "rebuiltRunId": "plugin-fc689b0f-8a0f-487c-b400-3a5a06c36eba",
+      "comparedTables": [
+        "equity"
+      ],
+      "status": "matched"
+    },
+    {
+      "pluginId": "org.webstock.talib",
+      "baselineRunId": "plugin-d7de50e8-b29d-4303-ad5a-422fef18524c",
+      "rebuiltRunId": "plugin-ef6b75ce-8a1f-44a4-bf59-7d760ac7799d",
+      "comparedTables": [
+        "indicators"
+      ],
+      "status": "matched"
+    },
+    {
+      "pluginId": "org.webstock.vectorbt",
+      "baselineRunId": "plugin-fe154980-3183-46e4-b2e5-572cfc945d65",
+      "rebuiltRunId": "plugin-15c0241a-46c0-4ad8-b67b-3bd02c272f9f",
+      "comparedTables": [
+        "equity"
+      ],
+      "status": "matched"
+    },
+    {
+      "pluginId": "org.webstock.vnpy",
+      "baselineRunId": "plugin-e188391b-629d-47aa-a091-14e514e403ad",
+      "rebuiltRunId": "plugin-6ee131fa-a5cc-44d1-ae94-29b419dc79e9",
+      "comparedTables": [
+        "indicators"
+      ],
+      "status": "matched"
+    },
+    {
+      "pluginId": "org.webstock.vnpy-ctastrategy",
+      "baselineRunId": "plugin-dae6ae95-c7fb-45f0-84f7-052c40cde90f",
+      "rebuiltRunId": "plugin-1e0cff17-ea95-4996-bf83-27143f7fddb7",
+      "comparedTables": [
+        "equity"
+      ],
+      "status": "matched"
+    },
+    {
+      "pluginId": "org.webstock.wbt",
+      "baselineRunId": "plugin-0dabd87a-2fc4-41e3-90e0-c859869a00f3",
+      "rebuiltRunId": "plugin-3254ab25-fd10-4c7c-82ba-b4f378bdeb71",
+      "comparedTables": [
+        "weight-index"
+      ],
+      "status": "matched"
+    },
+    {
+      "pluginId": "org.webstock.wondertrader",
+      "baselineRunId": "plugin-95844f96-1e36-4a8c-8833-60e4901cf874",
+      "rebuiltRunId": "plugin-ba762f6e-dc8e-4cbb-8c6c-fec6984510e2",
+      "comparedTables": [
+        "equity"
+      ],
+      "status": "matched"
+    },
+    {
+      "pluginId": "org.webstock.wtpy",
+      "baselineRunId": "plugin-d7a1b44a-d3bc-4410-9957-ef692cb4b927",
+      "rebuiltRunId": "plugin-99c66b2c-46ba-4870-8563-450fd10e7b91",
+      "comparedTables": [
+        "native-dsb-bars"
+      ],
+      "status": "matched"
+    },
+    {
+      "pluginId": "org.webstock.zipline-reloaded",
+      "baselineRunId": "plugin-a90633e6-0ece-4b91-a1b3-c84b4b78290b",
+      "rebuiltRunId": "plugin-8f57e193-d800-4496-b32f-5b8c462ef2c3",
+      "comparedTables": [
+        "equity"
+      ],
+      "status": "matched"
+    }
+  ]
+}

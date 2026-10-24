@@ -1,0 +1,30 @@
+{
+  "schema": "webstock.plugin.native-acceptance.v1",
+  "runs": [
+    {
+      "pluginId": "org.webstock.lean",
+      "operationId": "sma-close",
+      "version": "0.13.0",
+      "status": "verified",
+      "runId": "plugin-76e55320-66ea-4ff2-897a-a2ff85d61600",
+      "resultSha256": "65be8aa6aff0adc13a98a953872935a63b2902d672432fc217e2ba7d1d4c883d",
+      "bars": 4937,
+      "inputSha256": "9dc7b976ef19fae657ebaaa6d5a78f0de24071b27781f76a323dc4d0443239f8",
+      "inputName": "sz000001-hikyuu-fixture.csv",
+      "tables": [
+        {
+          "id": "equity",
+          "rows": 4937
+        },
+        {
+          "id": "orders",
+          "rows": 348
+        },
+        {
+          "id": "signals",
+          "rows": 174
+        }
+      ]
+    }
+  ]
+}

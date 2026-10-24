@@ -1,0 +1,64 @@
+TechnicalRating v3 条件移植 · WebStock 本地数值口径 v1
+
+来源与范围
+----------
+官方公开库： https://www.tradingview.com/script/jDWyb5PG-TechnicalRating/
+固定版本 TradingView/TechnicalRating/3，2024-11-29。
+2026-10-24从其公开无需认证的源码接口取得，原始source字符串UTF-8的SHA256：
+93c8274c1e2e6e4f594b694611243c5399aca48863aab2a4300789b0d707d08b
+上游导入 TradingView/ta/9： https://www.tradingview.com/script/BICzyhq0-ta/
+技术条件以v3源码为准：趋势是close相对EMA50；CCI输入close；ADX买卖都要求
+ADX>20且上升；Ichimoku比较26根前的spanA/B，而非未来云图值。
+本文件对应的Python移植technical_ratings.py按MPL-2.0提供并保留TradingView署名；
+完整许可证在MPL-2.0.txt。修改包含Python条件移植、本地数值内核、明细/诊断输出，
+不含Pine示例绘图、跨周期请求、countRising装饰或任何自动交易。
+插件包包含可编辑Python源代码，公开仓库亦保留同一文件。
+
+不能声称与TradingView网站同源数据逐点相同
+----------------------------------------
+这是官方公开条件的移植，底层数值内核由本插件明确实现；没有在Pine执行器里对
+同一OHLCV导出做逐点一致性验收。尤其预热、零分母、平价窗口以及缺失处理可能
+与Pine内置函数不同。因此名称、公式版本和结果均保留local-kernel标记与
+pineNumericalParityVerified=false；不得把它改称官方认证结果或网站实时评分。
+数据供应商、时段、复权、加载历史起点和时间周期也会影响结果。
+
+本地数值内核
+------------
+输入为已有单证券已收盘OHLCV；不请求网络。EMA从首根close开始，以2/(n+1)
+逐根递推；MACD信号线也从首个MACD值开始。SMA、最高/最低、WMA要求完整连续窗口。
+WMA近期权重更大，为1..n；HMA9=WMA3(2*WMA4(close)-WMA9(close))。
+VWMA20=20根成交额近似close*volume之和/成交量和，它不是逐笔成交VWAP。
+Ichimoku转换/基准/跨度B为9/26/52根高低中点，A为转换与基准的均值。
+RSI的涨/跌幅从第二根开始；Wilder RMA先以14个完整值的算术均值种子，再递推。
+RSI=100*平均涨幅/(平均涨幅+平均跌幅)，完全平价窗口不可用。
+随机指标14根范围，K再SMA3、D再SMA3；StochRSI用RSI14的14根范围，同样3/3平滑。
+CCI20用close减窗口均值，除以0.015倍窗口平均绝对偏差，非hlc3。
+DMI从第二根开始：+DM/-DM按更大的正高点/低点变化择一；TR为高低差及前收盘
+跳空差最大值，均RMA14；DI为100*RMA(DM)/RMA(TR)，ADX为100*RMA14(|DI+-DI-|/(DI++DI-))。
+DI已可知且两者之和为0时DX取0；TR为0导致DI不可用。缺失会重置RMA的种子。
+AO=SMA5(hl2)-SMA34(hl2)；Momentum=close-close[10]。
+MACD=EMA12(close)-EMA26(close)，信号EMA9。Bull/Bear Power为high/low减EMA13(close)。
+WilliamsR=-100*(14根最高-close)/(14根最高-14根最低)。
+UO由前收盘和当前高低形成购买压力/真实范围，在7/14/28根求和后按4/2/1加权，乘100/7。
+除上述DX零和规则外，其余零分母保留不可用，不补零；不居中、不回填、不自动插值。
+
+26项条件与汇总
+--------------
+15项均线：SMA与EMA各10/20/30/50/100/200，HMA9，VWMA20，以及Ichimoku条件。
+11项振荡：RSI14，Stochastic14/3/3，CCI20，ADX14/14，AO，Momentum10，MACD12/26/9，
+StochRSI14/14/3/3，WilliamsR14，Bull/Bear Power13，以及UO7/14/28。
+各项返回-1/0/+1，或按源码的特定source检查返回不可用。source检查与条件自身
+不是同一件事，例如StochRSI检查EMA50可用，StochRSI尚未预热时其条件为false、投票0。
+均线组和振荡组各自对可用项取均值，再平均两组；只有一组时取该组，两组都无值才无值。
+因此总体不是26项简单平均。输出可用项数量，可观察预热/缺值是否改变参与集合。
+标签：x<-.5为strong-sell；-.5<=x<-.1为sell；-.1<=x<=.1为neutral；
+.1<x<=.5为buy；x>.5为strong-buy。显示不含Pine的换行/尾随空格。
+输出总体与分组曲线、15项均线投票表、11项振荡投票表，以及所有底层数值。
+完整布尔条件在technical_ratings.py逐项保留，并由双方向分支测试核验。
+
+验证边界
+--------
+独立EMA/CCI/HMA/RMA计算、26项条件、分组权重与阈值、缺值、云图位移、前缀不变
+及未来扰动测试验证本地实现；不代替与Pine同源输出的兼容性测试。
+Buy/Sell是上游条件标签，不是上涨概率或交易建议；26项多数共享同一价量输入，
+不构成26份独立预测证据。安装本插件不表示TradingView背书。

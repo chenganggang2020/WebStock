@@ -1,0 +1,20 @@
+{
+  "schema": "webstock.plugin.native-acceptance.v1",
+  "runs": [
+    {
+      "pluginId": "org.webstock.panel-research",
+      "operationId": "market-breadth",
+      "version": "0.11.1",
+      "status": "verified",
+      "runId": "plugin-4bbdcb5d-59b3-4f1f-8895-b5390953b8f0",
+      "resultSha256": "43ce1e982a789a32addffdcdc1ce1e87f3a4868103ca20a52a6ed0a36da3bb6c",
+      "bars": 320,
+      "tables": [
+        {
+          "id": "indicators",
+          "rows": 80
+        }
+      ]
+    }
+  ]
+}

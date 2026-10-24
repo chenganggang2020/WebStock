@@ -16,6 +16,9 @@
 #include <cmath>
 
 #include "market_store.hpp"
+#include "market_history.hpp"
+#include <QUuid>
+#include <QCryptographicHash>
 #include "tencent_detail.hpp"
 namespace {
 // Daily flow only: recover a response-less connection close, never an HTTP
@@ -555,9 +558,20 @@ QJsonObject MarketFeed::hydrate(QJsonObject s) const {
           QString("auctionOpening"), QString("auctionClosing"),
           QString("auctionQuoteOpening"), QString("auctionQuoteClosing")}) {
       try {
-        if (!keys.contains(symbol+"-"+kind) &&
-            !QFile::exists(directory+"/"+symbol+"-"+kind+".json")) continue;
-        auto saved = read(symbol + "-" + kind);
+        QJsonObject saved;
+        if(QStringList{"day","week","month"}.contains(kind)){
+          QJsonObject identity{{"securityId",s["id"]},{"period",kind},{"adjustment","forward"},{"sourceId","tencent-kline"}};
+          saved=MarketStore(directory+"/market-v1.sqlite").read(marketHistory::key(identity));
+          if(saved.isEmpty()){identity["adjustment"]="unadjusted";saved=MarketStore(directory+"/market-v1.sqlite").read(marketHistory::key(identity));}
+          if(!saved.isEmpty()){
+            auto rows=saved["rows"].toArray();identity["startDate"]=rows.first().toObject()["label"];identity["endDate"]=QDateTime::currentDateTimeUtc().toTimeZone(QTimeZone("Asia/Shanghai")).date().addDays(-1).toString(Qt::ISODate);
+            marketHistory::validate(saved,identity);
+          }
+        }
+        if(saved.isEmpty()){
+          if (!keys.contains(symbol+"-"+kind) && !QFile::exists(directory+"/"+symbol+"-"+kind+".json")) continue;
+          saved = read(symbol + "-" + kind);
+        }
         if (saved.isEmpty()) continue;
         if (kind != "quote" && saved["timeUnit"] != "milliseconds") continue;
         if (!cacheIsNewer(saved,s[kind=="quote"?kind:kind+"Meta"].toObject(),
@@ -645,14 +659,14 @@ void MarketFeed::observe(const QJsonObject &item) {
   auto observed=rows[0].toObject();observed["transient"]=true;
   instruments.append(hydrate(observed));emit rosterChanged();
 }
-void MarketFeed::get(const QString &key, const QString &url,
+QNetworkReply* MarketFeed::get(const QString &key, const QString &url,
                      const QByteArray &referer,
                      std::function<void(QByteArray, QString)> done) {
   if (!acceptingWrites()) {
     done({}, "行情保存积压，暂停后续请求；请稍后重试");
-    return;
+    return nullptr;
   }
-  if (inFlight.contains(key)) return;
+  if (inFlight.contains(key)) return nullptr;
   inFlight.insert(key);
   QNetworkRequest request{QUrl(url)};
   request.setAttribute(QNetworkRequest::CacheLoadControlAttribute,
@@ -686,6 +700,7 @@ void MarketFeed::get(const QString &key, const QString &url,
     if (bytes.size() > 8 * 1024 * 1024) error = "行情响应超过限制";
     done(bytes, error);
   });
+  return reply;
 }
 void MarketFeed::finishEtf(quint64 seq, const QString& status,
                            const QString& error, const QJsonObject& data) {
@@ -807,6 +822,67 @@ void MarketFeed::refreshQuotes() {
         });
   }
 }
+QJsonObject MarketFeed::inspectHistory(const QJsonObject& query) const {
+  return marketHistory::inspect(MarketStore(historyStorePath()),query);
+}
+void MarketFeed::saveHistory(const QJsonObject& raw,QJsonObject snapshot,bool replace,std::function<void(QJsonObject,QString)> done){
+  const auto q=marketHistory::query(raw);marketHistory::validate(snapshot,q);
+  snapshot["replaceHistory"]=replace||q["adjustment"]!="unadjusted";
+  persist(q["securityId"].toString(),q["period"].toString(),marketHistory::key(q),snapshot,std::move(done));
+}
+MarketHistoryRequest* MarketFeed::fetchHistory(const QJsonObject& raw,bool replace,std::function<void(QJsonObject,QString)> done){
+  const auto q=marketHistory::query(raw);
+  if(q["sourceId"]!="tencent-kline")throw std::runtime_error("AKShare 请求必须由已安装并启用的数据源插件执行");
+  const auto id=q["securityId"].toString(),symbol=id.section(':',0,0).toLower()+id.section(':',2);
+  auto* request=new MarketHistoryRequest(this);
+  struct Batch {QDate start,end;QJsonObject latest;QJsonArray coverage,requests;QMap<qint64,QJsonObject> rows;};
+  auto batch=std::make_shared<Batch>();batch->start=QDate::fromString(q["startDate"].toString(),Qt::ISODate);
+  batch->end=std::min(batch->start.addDays(499),QDate::fromString(q["endDate"].toString(),Qt::ISODate));
+  auto finish=[request=QPointer<MarketHistoryRequest>(request),done](QJsonObject data,QString error){
+    if(!request)return;
+    if(request->cancelled)error="已取消；公共缓存保留，本次更新未完成";
+    request->deleteLater();done(data,error);
+  };
+  auto step=std::make_shared<std::function<void()>>();std::weak_ptr<std::function<void()>> next=step;
+  *step=[this,q,replace,symbol,batch,request=QPointer<MarketHistoryRequest>(request),finish,next]{
+    if(!request)return;
+    if(request->cancelled){finish({},"已取消");return;}
+    auto page=q;page["startDate"]=batch->start.toString(Qt::ISODate);page["endDate"]=batch->end.toString(Qt::ISODate);
+    const auto url="https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param="+symbol+","+q["period"].toString()+","+page["startDate"].toString()+","+page["endDate"].toString()+",640,"+(q["adjustment"]=="forward"?"qfq":"");
+    auto keep=next.lock();
+    request->reply=get("research-history:"+QUuid::createUuid().toString(),url,"https://gu.qq.com/",[this,q,page,replace,symbol,url,batch,request,finish,keep](QByteArray bytes,QString error){
+      if(!request)return;request->reply=nullptr;
+      if(request->cancelled||!error.isEmpty()){finish({},error+"；公共缓存保留，本次更新未成功");return;}
+      try{
+        auto data=marketdata::kline(document(bytes),symbol,q["period"].toString(),QDateTime::currentDateTimeUtc());
+        auto rows=data["rows"].toArray();bool overlap=false;
+        if(rows.size()>=640)throw std::runtime_error("来源达到返回上限，不能确认分段完整；旧版本保留");
+        for(auto v:rows){auto row=v.toObject();
+          if(row["label"].toString()<page["startDate"].toString()||row["label"].toString()>page["endDate"].toString())throw std::runtime_error("数据源返回请求区间外的行情，未保存");
+          auto time=qint64(row["time"].toDouble());
+          if(batch->rows.contains(time)){overlap=true;auto previous=batch->rows[time];
+            for(auto f:{"open","high","low","close","volume"})if(std::abs(previous[f].toDouble()-row[f].toDouble())>1e-7)throw std::runtime_error("分段重叠行情发生修订；未混合不同版本，请重新刷新");
+          }
+          batch->rows[time]=row;
+        }
+        if(!batch->latest.isEmpty()&&q["adjustment"]!="unadjusted"&&!overlap)throw std::runtime_error("复权分段缺少重叠校验，未保存不确定版本");
+        data=marketHistory::annotate(data,page,true,640);batch->latest=data;
+        for(auto c:data["queryCoverage"].toArray())batch->coverage.append(c);
+        batch->requests.append(QJsonObject{{"url",url},{"startDate",page["startDate"]},{"endDate",page["endDate"]},{"acquiredAt",data["checkedAt"]},{"rawResponseSha256",QString::fromLatin1(QCryptographicHash::hash(bytes,QCryptographicHash::Sha256).toHex())}});
+        auto end=QDate::fromString(q["endDate"].toString(),Qt::ISODate);
+        if(batch->end<end){
+          batch->start=q["adjustment"]=="unadjusted"?batch->end.addDays(1):QDate::fromString(rows.last().toObject()["label"].toString(),Qt::ISODate);
+          batch->end=std::min(batch->end.addDays(499),end);
+          QTimer::singleShot(0,request,[keep]{(*keep)();});return;
+        }
+        QJsonArray combined;for(auto row:batch->rows)combined.append(row);
+        data["rows"]=combined;data["queryCoverage"]=batch->coverage;data["sourceRequests"]=batch->requests;
+        data["sourceTruncated"]=false;saveHistory(q,data,replace,finish);
+      }catch(const std::exception& e){finish({},QString::fromUtf8(e.what()));}
+    });
+  };
+  QTimer::singleShot(0,request,[step]{(*step)();});return request;
+}
 void MarketFeed::chart(const QString &id, const QString &p, bool force) {
   QJsonObject selected;
   for (auto item : instruments)
@@ -850,7 +926,12 @@ void MarketFeed::chart(const QString &id, const QString &p, bool force) {
             result["error"] = error;
           } else {
             QPointer<MarketFeed> alive(this);
-            persist(id, p, symbol + "-" + p, result);
+            if(QStringList{"day","week","month"}.contains(p)&&!result["rows"].toArray().isEmpty()){
+              auto rows=result["rows"].toArray();QJsonObject q{{"securityId",id},{"period",p},{"sourceId","tencent-kline"},{"adjustment",result["adjustment"]=="qfq"?"forward":"unadjusted"},
+                {"startDate",rows.first().toObject()["label"]},{"endDate",QDateTime::currentDateTimeUtc().toTimeZone(QTimeZone("Asia/Shanghai")).date().addDays(-1).toString(Qt::ISODate)}};
+              try{result=marketHistory::annotate(result,q,false,640);saveHistory(q,result,false,{});}
+              catch(const std::exception&){persist(id,p,symbol+"-"+p,result);}
+            }else persist(id, p, symbol + "-" + p, result);
             if(!alive)return;
             break;
           }

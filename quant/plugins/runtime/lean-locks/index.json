@@ -1,0 +1,26 @@
+{
+  "schema": "webstock.lean.dependency-locks.v1",
+  "sourceCommit": "f3d841e60dfd010ee5fc293ea893e56952484108",
+  "files": {
+    "Algorithm/packages.lock.json": "ddf84d7a0dcbebefbac6b15f9544082fafa09e275c57b227e8948ce776dae010",
+    "Algorithm.CSharp/packages.lock.json": "4ba7276791fdfbe4fe739fc1aaf65448cde4127d74d33408c6e0342e2e2766dc",
+    "Algorithm.Framework/packages.lock.json": "407a6e19f089c9d62182cd364df998bcf8bd4ad2748a1c4b7cbcd2f9c5277bb2",
+    "AlgorithmFactory/packages.lock.json": "3e5d50eb5ac3beea889487a7d0c0f241a407c6ed6d4a2e39dcb7714c98452db5",
+    "Api/packages.lock.json": "d98d5f4577782f9c93be43737f3db3e8108b8bdc81532034b77e6b5e3f139202",
+    "Brokerages/packages.lock.json": "034e3c420142e7a9a54282814c9c1fcd8e2aadbc1d11cc4a320df988864faea7",
+    "Common/packages.lock.json": "0c948914fd2205bfc6c00c29f499479c23b75202ab5d5b1523809c72bb6c335f",
+    "Compression/packages.lock.json": "69fc8bf88ed83183e533800071388d8df7eb2030a048ff442b5d54efccba732e",
+    "Configuration/packages.lock.json": "bc4714796af0fda98c7b61f817526d564b526cac912ec4575e483b3f4c61cf52",
+    "DownloaderDataProvider/packages.lock.json": "1c712e3ebfb10c7ab8a810791d8754f89bd6383625e9af9b925bad07255c4e96",
+    "Engine/packages.lock.json": "228ef01e387290e2c4b06530a820bdd6074cb0f9a4437d2ae45ba4e65d721ef3",
+    "Indicators/packages.lock.json": "bbfef95cdb4fb342f589f418bf64384d01c14bbfcfbd2053127e69fcea962651",
+    "Launcher/packages.lock.json": "ec9ab9be17bff05e31c1532dd7531189423609767eddee69e8b7a2cd0826f986",
+    "Logging/packages.lock.json": "ec50b5cc17c4ccdcab1a63e9086dae7114141ff4e5f21c73c9ff11bedb195113",
+    "Messaging/packages.lock.json": "8dd8ad3cfaec3b521b08d92f741668d888ea939bc58d00294cde8715b6740b8f",
+    "Optimizer/packages.lock.json": "f54d429bc052e6e55ef773e904f52fc30cfaf506f1739696a1431bf59cb71f19",
+    "Optimizer.Launcher/packages.lock.json": "1bba4487ffeca2c8f50533d9c0c05a0f8bc46ceefafa81282fcd4ba2212b6e10",
+    "Queues/packages.lock.json": "2cdc77e3d8f254ad8b6a383bec6557bf5c17b05c9217aaf71ab9e15ed534faeb",
+    "Research/packages.lock.json": "699cd659183d5ef8868015b491a6583a17eee7959eb05f42e53316be02861217",
+    "ToolBox/packages.lock.json": "1c712e3ebfb10c7ab8a810791d8754f89bd6383625e9af9b925bad07255c4e96"
+  }
+}

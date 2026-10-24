@@ -1,0 +1,81 @@
+{
+  "schema": "webstock.plugin.native-acceptance.v1",
+  "runs": [
+    {
+      "pluginId": "org.webstock.portfolio-risk",
+      "operationId": "equity-drawdown",
+      "version": "0.17.0",
+      "status": "verified",
+      "runId": "plugin-919ba834-46df-4233-b9c6-7cdf2bee0899",
+      "resultSha256": "1fe70e10a3bf1c9bc83f7c1435f35f3d997e078125803120a01e8a309da4d775",
+      "bars": 320,
+      "inputSha256": "6aa49c558dcdf06e25ad5c53ec37d7ec763ea54c43771dce773e85d3affd0fc4",
+      "inputName": "synthetic-portfolio-equity.csv",
+      "tables": [
+        {
+          "id": "indicators",
+          "rows": 320
+        }
+      ]
+    },
+    {
+      "pluginId": "org.webstock.portfolio-risk",
+      "operationId": "target-volatility",
+      "version": "0.17.0",
+      "status": "verified",
+      "runId": "plugin-a8f57604-5779-477a-935c-05462ecd83d1",
+      "resultSha256": "39bb03541f4fa2fea605a2b9978d79cd6609d6a377083c48e70946ffb10c6f46",
+      "bars": 320,
+      "inputSha256": "6aa49c558dcdf06e25ad5c53ec37d7ec763ea54c43771dce773e85d3affd0fc4",
+      "inputName": "synthetic-portfolio-equity.csv",
+      "tables": [
+        {
+          "id": "indicators",
+          "rows": 320
+        }
+      ]
+    },
+    {
+      "pluginId": "org.webstock.portfolio-risk",
+      "operationId": "risk-budget",
+      "version": "0.17.0",
+      "status": "verified",
+      "runId": "plugin-695020fb-2672-4a04-b40f-c8c7cb44b961",
+      "resultSha256": "2ee515e382b0f60f92100c4be0e68ad6e74b2d3b2b63b4dac9a993d1ba73533b",
+      "bars": 1600,
+      "inputSha256": "52f995b51b8c829d1278ed4ccac6e7cd83c2d190b72e677819b0971d492786a1",
+      "inputName": "synthetic-econometric-panel.csv",
+      "tables": [
+        {
+          "id": "equity",
+          "rows": 400
+        },
+        {
+          "id": "target-weights",
+          "rows": 34
+        },
+        {
+          "id": "orders",
+          "rows": 34
+        },
+        {
+          "id": "positions",
+          "rows": 800
+        },
+        {
+          "id": "risk-audit",
+          "rows": 17
+        }
+      ],
+      "modelSemantics": {
+        "signals": 17,
+        "unavailableWindows": 0,
+        "execution": "next-input-close",
+        "fractionalQuantity": true,
+        "automaticTrading": false,
+        "cashInterest": 0.0,
+        "shortSelling": false
+      }
+    }
+  ]
+}
