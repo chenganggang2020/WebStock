@@ -70,6 +70,7 @@ def main():
             data=args.panel_data if engine=="panel-research" else args.data
             if engine=="event-research":data=args.event_data
             if operation in operation_inputs:data=Path(operation_inputs[operation])
+            if engine+':'+operation in operation_inputs:data=Path(operation_inputs[engine+':'+operation])
             ran=subprocess.run(base+["--run",manifest["id"]+"/"+operation,"--input",str(data)]+extra,env=environment,
                                capture_output=True,text=True,encoding="utf-8",timeout=240)
             records=[json.loads(line) for line in ran.stdout.splitlines() if line.startswith("{")]
@@ -87,6 +88,8 @@ def main():
             if "modelSemantics" in result:row["modelSemantics"]=result["modelSemantics"]
             if "inputSemantics" in result:row["inputSemantics"]=result["inputSemantics"]
             rows.append(row);print(json.dumps(row,ensure_ascii=False),flush=True)
+            args.evidence.parent.mkdir(parents=True,exist_ok=True)
+            args.evidence.write_text(json.dumps({"schema":"webstock.plugin.native-acceptance.v1","runs":rows},ensure_ascii=False,indent=2),encoding="utf-8")
     args.evidence.parent.mkdir(parents=True,exist_ok=True)
     args.evidence.write_text(json.dumps({"schema":"webstock.plugin.native-acceptance.v1","runs":rows},ensure_ascii=False,indent=2),encoding="utf-8")
 

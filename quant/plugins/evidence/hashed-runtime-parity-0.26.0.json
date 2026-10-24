@@ -1,0 +1,201 @@
+{
+  "schema": "webstock.plugin.runtime-parity.v1",
+  "absoluteTolerance": 1e-08,
+  "relativeTolerance": 1e-10,
+  "excludedCorrectedAdapter": "Hikyuu v1 was numerically invalid; v2 verified against independent dated cash/holding/mark ledger instead.",
+  "runs": [
+    {
+      "pluginId": "org.webstock.ml4t-backtest",
+      "operationId": "sma-cross",
+      "baselineRunId": "plugin-df58f75d-43e4-4c1c-96e6-53b5aab50181",
+      "rebuiltRunId": "plugin-07b6410e-3220-4803-908f-0860ff456543",
+      "comparedTables": [
+        "equity"
+      ],
+      "status": "matched"
+    },
+    {
+      "pluginId": "org.webstock.backtesting-py",
+      "operationId": "sma-cross",
+      "baselineRunId": "plugin-e2064bab-93a4-4d7a-8873-c0126d664767",
+      "rebuiltRunId": "plugin-18f804cc-cca3-4697-aeff-cdcd35f55c51",
+      "comparedTables": [
+        "equity"
+      ],
+      "status": "matched"
+    },
+    {
+      "pluginId": "org.webstock.vnpy-ctastrategy",
+      "operationId": "sma-limit",
+      "baselineRunId": "plugin-f5fed459-1bba-437c-953b-82844a777d6d",
+      "rebuiltRunId": "plugin-2371e274-a8eb-4095-a155-375756edef70",
+      "comparedTables": [
+        "equity"
+      ],
+      "status": "matched"
+    },
+    {
+      "pluginId": "org.webstock.backtrader",
+      "operationId": "sma-cross",
+      "baselineRunId": "plugin-f1a4725a-9b5a-4cce-9440-28e9a77caf14",
+      "rebuiltRunId": "plugin-2b5cf8dd-d426-4ca0-a721-160bd1198dd7",
+      "comparedTables": [
+        "equity"
+      ],
+      "status": "matched"
+    },
+    {
+      "pluginId": "org.webstock.wbt",
+      "operationId": "sma-weight",
+      "baselineRunId": "plugin-f994e058-f5dd-44c1-84d5-c5b67dc5d5f3",
+      "rebuiltRunId": "plugin-3f8a8dd2-4f48-4004-b3a4-c921a4c2aa4f",
+      "comparedTables": [
+        "weight-index"
+      ],
+      "status": "matched"
+    },
+    {
+      "pluginId": "org.webstock.rqalpha",
+      "operationId": "sma-close",
+      "baselineRunId": "plugin-bae071c8-3739-41e2-b198-17eaadd8008d",
+      "rebuiltRunId": "plugin-4f0fe1ff-f70f-435f-a99b-999c70d681bd",
+      "comparedTables": [
+        "equity"
+      ],
+      "status": "matched"
+    },
+    {
+      "pluginId": "org.webstock.qlib",
+      "operationId": "alpha158",
+      "baselineRunId": "plugin-dcd8caed-9b88-47f8-9432-57bcb7a48493",
+      "rebuiltRunId": "plugin-57cc728c-c9a0-466d-b8ab-e8c6c0091a2a",
+      "comparedTables": [
+        "features-1",
+        "features-2",
+        "features-3",
+        "features-4"
+      ],
+      "status": "matched"
+    },
+    {
+      "pluginId": "org.webstock.wondertrader",
+      "operationId": "sma-native",
+      "baselineRunId": "plugin-d90af025-bbb7-45ab-ae18-c0ac5eeac931",
+      "rebuiltRunId": "plugin-65fc199d-4f6f-4f57-b703-eb6743c127c7",
+      "comparedTables": [
+        "equity"
+      ],
+      "status": "matched"
+    },
+    {
+      "pluginId": "org.webstock.talib",
+      "operationId": "rsi",
+      "baselineRunId": "plugin-d7de50e8-b29d-4303-ad5a-422fef18524c",
+      "rebuiltRunId": "plugin-888e6793-5af9-4bc6-b0ce-19161a245719",
+      "comparedTables": [
+        "indicators"
+      ],
+      "status": "matched"
+    },
+    {
+      "pluginId": "org.webstock.wtpy",
+      "operationId": "daily-dsb",
+      "baselineRunId": "plugin-f7ebd690-260e-4fe8-9a39-bbc9339f81ca",
+      "rebuiltRunId": "plugin-9df9d0c9-4b0c-4be7-9a54-9045294f3527",
+      "comparedTables": [
+        "native-dsb-bars"
+      ],
+      "status": "matched"
+    },
+    {
+      "pluginId": "org.webstock.czsc",
+      "operationId": "online-bi",
+      "baselineRunId": "plugin-d57d2609-2921-4d3a-8fa6-a289ee7df676",
+      "rebuiltRunId": "plugin-ad54722a-80dc-4fe9-9c9c-a50eba6f99eb",
+      "comparedTables": [
+        "indicators"
+      ],
+      "status": "matched"
+    },
+    {
+      "pluginId": "org.webstock.bt",
+      "operationId": "sma-weight",
+      "baselineRunId": "plugin-ff8c7a7a-d569-4af1-ac29-6aaaffc24ce3",
+      "rebuiltRunId": "plugin-b599a96d-5ea2-4f8c-abca-974e2138d5c5",
+      "comparedTables": [
+        "equity"
+      ],
+      "status": "matched"
+    },
+    {
+      "pluginId": "org.webstock.quantaxis",
+      "operationId": "kdj",
+      "baselineRunId": "plugin-f9b576b2-2872-432d-b4d1-dadabffdc1b5",
+      "rebuiltRunId": "plugin-b9467495-8ded-4669-93aa-e17daabddfee",
+      "comparedTables": [
+        "indicators"
+      ],
+      "status": "matched"
+    },
+    {
+      "pluginId": "org.webstock.vnpy",
+      "operationId": "rsi",
+      "baselineRunId": "plugin-e188391b-629d-47aa-a091-14e514e403ad",
+      "rebuiltRunId": "plugin-da775eb6-645f-4a5c-9960-d2e9e1bae9d6",
+      "comparedTables": [
+        "indicators"
+      ],
+      "status": "matched"
+    },
+    {
+      "pluginId": "org.webstock.vectorbt",
+      "operationId": "sma-cross",
+      "baselineRunId": "plugin-fe154980-3183-46e4-b2e5-572cfc945d65",
+      "rebuiltRunId": "plugin-f39a7754-71d2-49a2-8f83-8c493a0b670c",
+      "comparedTables": [
+        "equity"
+      ],
+      "status": "matched"
+    },
+    {
+      "pluginId": "org.webstock.zipline-reloaded",
+      "operationId": "sma-close",
+      "baselineRunId": "plugin-a90633e6-0ece-4b91-a1b3-c84b4b78290b",
+      "rebuiltRunId": "plugin-f961eea4-5ffa-4d2f-bf77-43b1eb038901",
+      "comparedTables": [
+        "equity"
+      ],
+      "status": "matched"
+    },
+    {
+      "pluginId": "org.webstock.lean",
+      "operationId": "sma-close",
+      "baselineRunId": "plugin-bfc63aba-5524-4154-937d-f36efaae7768",
+      "rebuiltRunId": "plugin-fde644e3-e98b-44a3-b878-85a4310291bb",
+      "comparedTables": [
+        "equity"
+      ],
+      "status": "matched"
+    },
+    {
+      "pluginId": "org.webstock.deep-models",
+      "operationId": "lstm",
+      "baselineRunId": "plugin-bec2ef22-9110-40c1-ae7e-e8850cbc0f2d",
+      "rebuiltRunId": "plugin-ab384e23-e13e-4aa2-9c00-6302cef11005",
+      "comparedTables": [
+        "indicators"
+      ],
+      "status": "matched"
+    },
+    {
+      "pluginId": "org.webstock.statistical-models",
+      "operationId": "garch",
+      "baselineRunId": "plugin-dcfdb713-2c22-4d54-b1f9-4a8fab9f2ea9",
+      "rebuiltRunId": "plugin-baaaa8da-e401-4fdf-89c4-f87fa86a058f",
+      "comparedTables": [
+        "indicators"
+      ],
+      "status": "matched"
+    }
+  ]
+}

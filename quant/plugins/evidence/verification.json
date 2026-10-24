@@ -319,7 +319,7 @@
     "nativeWindow": "passed, quotes/classic and legacy focus redirect, real installed TA-Lib workflow",
     "visualReview": "Native overall technical-rating curve, 15/11 component tabs and numerical table; actual quotes/classic/focus run and frozen history reopening"
   },
-  "latestPackageVersion": "0.25.0",
+  "latestPackageVersion": "0.26.0",
   "additionalEvidence": [
     "native-acceptance-0.8.1.json",
     "native-akshare-0.7.0.json",
@@ -555,5 +555,64 @@
       "skipped": 0
     },
     "input": "672 synthetic quotes, 24 snapshots, 2 expiries, 7 strikes, calls/puts; not real option market data"
+  },
+  "fullProjectWindows": "full-project-windows-0.26.0.json",
+  "hashedRuntimeAcceptance": "native-hashed-all-0.26.0.json",
+  "hashedRuntimeParity": "hashed-runtime-parity-0.26.0.json",
+  "hashedRuntimeRebuild": {
+    "environments": 16,
+    "manifest": "hashed-runtime-rebuild-0.26.0.json",
+    "nonVcsRuntimeDistributionHashesRequired": true,
+    "vcs": "full commit pins",
+    "buildIsolationHashesLocked": false,
+    "secondMachineTested": false,
+    "lockContractTestsPassed": 2
+  },
+  "hikyuuCorrection": {
+    "packageVersion": "0.26.0",
+    "pythonTestsPassed": 5,
+    "fullWindowPassed": 3,
+    "fullWindowFailed": 0,
+    "fullWindowSkipped": 0,
+    "supersedes": "All prior Hikyuu v1 numerical evidence; earlier execution-only acceptance missed datetime precision conversion.",
+    "checks": [
+      "datetime64 ns normalization and engine date roundtrip",
+      "mandatory actual amount and matching zero-volume state",
+      "actual trades required by fixture",
+      "next-open fill dates",
+      "cent-rounded cash/holdings/close-mark reconciliation",
+      "prefix and future perturbation"
+    ],
+    "historicalInput": "Original fixture first 500 rows; full 4937-row source has 1993-07-23 and 1993-08-03 with zero amount but positive volume, rejected without filling."
+  },
+  "nativeFinalPlatform": {
+    "testedPackageVersion": "0.26.0",
+    "runtime": "fresh hash-required data-tools",
+    "passed": 18,
+    "failed": 0,
+    "skipped": 0
+  },
+  "historicalHikyuuViewerNotice": {
+    "obsoleteArchiveWarning": {
+      "passed": 3,
+      "failed": 0,
+      "skipped": 0
+    },
+    "correctedV2NoWarning": {
+      "passed": 3,
+      "failed": 0,
+      "skipped": 0
+    },
+    "originalArchiveUnmodified": true
+  },
+  "preview026": {
+    "programSha256": "f7613808cc6ac049600b71c90ee61085c4b5501ad67e739ccf9a39a81c58c2e2",
+    "installedPackages": 33,
+    "allPackageSourcesVerified": true,
+    "configuredRuntimeGroups": 16,
+    "isolatedDataRootVerified": true,
+    "automaticTasksStarted": false,
+    "secondMachineVerified": false,
+    "currentOnlineProvider": "AKShare Eastmoney proxy failure"
   }
 }

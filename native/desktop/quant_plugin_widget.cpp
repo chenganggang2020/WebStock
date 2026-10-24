@@ -238,7 +238,10 @@ void QuantPluginWidget::start(){
 void QuantPluginWidget::showResult(const QString& id){
     auto record=job_.reopen(id);while(results_->count()){auto w=results_->widget(0);results_->removeTab(0);w->deleteLater();}
     auto result=record.value("result").toObject();
+    const QString historicalCaution=result.value("pluginId")=="org.webstock.hikyuu"&&result.value("formulaVersion")=="hikyuu-sma-cross-next-open-v1"
+        ?QString("此旧版Hikyuu结果存在已确认的日期转换错误，资金曲线不可用于分析。请用0.26.0或更新插件重新运行；下方仅保留原始归档供核对。") : QString();
     for(auto v:result.value("tables").toArray()){auto table=v.toObject();auto panel=new QWidget;auto layout=new QVBoxLayout(panel);
+        if(!historicalCaution.isEmpty()){auto notice=new QLabel(historicalCaution);notice->setObjectName("pluginHistoricalCaution");notice->setTextFormat(Qt::PlainText);notice->setWordWrap(true);notice->setStyleSheet("background:#533c18;color:#ffe2a8;padding:10px;");layout->addWidget(notice);}
         auto saveTable=new QPushButton("导出此表 CSV");layout->addWidget(saveTable,0,Qt::AlignLeft);
         connect(saveTable,&QPushButton::clicked,this,[this,table]{guard([this,table]{auto path=QFileDialog::getSaveFileName(this,"导出当前结果表",table.value("id").toString()+".csv","CSV (*.csv)");if(!path.isEmpty())quantPlugin::write(path,quantPlugin::tableCsv(table));});});
         if(QStringList{"indicators","equity","weight-index","native-dsb-bars","market-data"}.contains(table.value("id").toString())||table.value("id").toString().startsWith("features-")){
@@ -267,8 +270,10 @@ void QuantPluginWidget::showResult(const QString& id){
         results_->addTab(panel,"生成的数据文件");
     }
     auto detail=new QPlainTextEdit;detail->setReadOnly(true);auto metadata=result;metadata.remove("tables");if(metadata.isEmpty())metadata=record;
+    if(!historicalCaution.isEmpty())metadata["viewerCaution"]=historicalCaution;
     if(metadata.contains("generatedData")){auto artifact=metadata.value("generatedData").toObject();artifact.remove("base64");metadata["generatedData"]=artifact;}
     detail->setPlainText(QString::fromUtf8(QJsonDocument(metadata).toJson(QJsonDocument::Indented)));results_->addTab(detail,"版本、数据与诊断");
     QStringList warnings;for(auto w:result.value("warnings").toArray())warnings<<w.toString();
+    if(!historicalCaution.isEmpty())warnings.prepend(historicalCaution);
     status_->setText(statusText(record.value("status").toString())+"。"+warnings.join(" ")+record.value("message").toString());
 }

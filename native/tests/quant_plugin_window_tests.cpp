@@ -16,10 +16,14 @@ private slots:
     void actualWindowEntryAndExecution(){
         auto python=qEnvironmentVariable("WEBSTOCK_TEST_PYTHON"),package=qEnvironmentVariable("WEBSTOCK_TEST_PACKAGE"),csv=qEnvironmentVariable("WEBSTOCK_TEST_CSV");
         if(python.isEmpty()||package.isEmpty()||csv.isEmpty())QSKIP("Real plugin integration fixture paths required");
+        const auto requested=qEnvironmentVariable("WEBSTOCK_TEST_OPERATION");
+        const auto waitMs=qBound(15000,qEnvironmentVariableIntValue("WEBSTOCK_TEST_WAIT_MS"),600000);
+        const auto parameterFile=qEnvironmentVariable("WEBSTOCK_TEST_PARAMETERS");
         for(auto layout:QStringList{"quotes","classic","focus"}){
             QTemporaryDir dir;QSettings settings(dir.filePath("review.ini"),QSettings::IniFormat);settings.sync();
             auto root=dir.filePath("quant-plugins");quantPlugin::Repository repository(root);
             auto installed=repository.install(quantPlugin::read(package));repository.configure(installed.value("id").toString(),python,true);
+            if(!parameterFile.isEmpty())repository.rememberParameters(installed.value("id").toString(),requested,quantPlugin::object(quantPlugin::read(parameterFile)));
             Window window(true,settings.fileName(),dir.path());window.resize(1500,950);window.show();window.setLayoutMode(layout);
             // The current application intentionally redirects legacy focus to classic.
             const auto expectedLayout=layout=="quotes"?QString("quotes"):QString("classic");
@@ -32,14 +36,25 @@ private slots:
             QVERIFY(entry);QTest::mouseClick(entry,Qt::LeftButton);
             auto widget=dynamic_cast<QuantPluginWidget*>(window.findChild<QWidget*>("quantPluginWidget"));QVERIFY(widget&&widget->isVisible());
             auto operations=widget->findChild<QComboBox*>("pluginOperation");QVERIFY(operations);
-            const auto requested=qEnvironmentVariable("WEBSTOCK_TEST_OPERATION");bool selected=false;
+            bool selected=false;
             for(int i=0;i<operations->count();++i)if(operations->itemData(i).toJsonObject().value("id")== (requested.isEmpty()?QString("rsi"):requested)){operations->setCurrentIndex(i);selected=true;}
             if(!requested.isEmpty())QVERIFY2(selected,"Requested operation is absent from installed package");
             widget->findChild<QLineEdit*>("pluginInput")->setText(csv);widget->findChild<QCheckBox*>("pluginClosedBars")->setChecked(true);
             QTest::mouseClick(widget->findChild<QPushButton*>("pluginRun"),Qt::LeftButton);
+            quantPlugin::Job verifier(root);
+            const QStringList terminalStates{"completed","failed","cancelled","timed-out"};
+            QTRY_VERIFY_WITH_TIMEOUT(!verifier.records().isEmpty()&&terminalStates.contains(verifier.records()[0].toObject().value("status").toString()),waitMs);
+            QCOMPARE(verifier.records().size(),1);auto record=verifier.records()[0].toObject();
+            if(record.value("status")!="completed"){
+                const auto output=qEnvironmentVariable("WEBSTOCK_TEST_SCREENSHOT");
+                if(!output.isEmpty()){QCoreApplication::processEvents();widget->window()->grab().save(output);}
+                QFAIL(qPrintable(QString::fromUtf8(QJsonDocument(record).toJson(QJsonDocument::Compact))));
+            }
             auto tabs=widget->findChild<QTabWidget*>("pluginResults");QTRY_VERIFY_WITH_TIMEOUT(tabs->count()>=2,15000);
+            if(qEnvironmentVariableIsSet("WEBSTOCK_EXPECT_OBSOLETE_HIKYUU")){
+                auto caution=widget->findChild<QLabel*>("pluginHistoricalCaution");QVERIFY(caution&&caution->text().contains("日期转换错误"));
+            }else QVERIFY(!widget->findChild<QLabel*>("pluginHistoricalCaution"));
             if(requested=="turnover-cost-model")QVERIFY(widget->findChild<QWidget*>("pluginCostProfile"));
-            quantPlugin::Job verifier(root);QCOMPARE(verifier.records().size(),1);auto record=verifier.records()[0].toObject();
             QCOMPARE(record.value("status").toString(),QString("completed"));
             auto output=qEnvironmentVariable("WEBSTOCK_TEST_SCREENSHOT");if(!output.isEmpty()&&layout=="classic"){
                 auto requestedTab=qEnvironmentVariable("WEBSTOCK_TEST_RESULT_TAB");

@@ -22,7 +22,7 @@ def save_package(output, manifest, sources):
     # immutable package independent of Git core.autocrlf on the build machine.
     content = {name: (HERE/source).read_text(encoding="utf-8").replace('\r\n','\n').replace('\r','\n').encode('utf-8') for name, source in sources.items()}
     manifest.update(schema="webstock.plugin.manifest.v1", protocolVersion=1,
-                    entrypoint="worker.py", runtime="python", version="0.25.0",
+                    entrypoint="worker.py", runtime="python", version="0.26.0",
                     files={name: hashlib.sha256(raw).hexdigest() for name,raw in content.items()})
     package = {"schema": "webstock.plugin.package.v1", "manifest": manifest,
                "files": {name: base64.b64encode(raw).decode("ascii") for name,raw in content.items()}}
@@ -120,11 +120,11 @@ def main():
          "panel_contract.py":"panel_contract.py","SESSION_EXECUTION.txt":"SESSION_EXECUTION.txt","THIRD_PARTY_NOTICES.txt":"THIRD_PARTY_NOTICES.txt"}))
     records.append(save_package(args.output,{"id":"org.webstock.hikyuu","name":"Hikyuu 回测引擎","license":"Apache-2.0 / MIT component notices",
         "source":"https://github.com/fasiondog/hikyuu","distributions":["hikyuu","pandas"],"operations":[{
-            "id":"sma-cross","title":"均线交叉 · 下一根开盘执行","formulaVersion":"hikyuu-sma-cross-next-open-v1",
-            "inputKind":"ohlcv-single-csv","outputKind":"backtest","description":"临时股票回测，零费用验收基线，未启用实盘。",
+            "id":"sma-cross","title":"均线交叉 · 下一根开盘执行","formulaVersion":"hikyuu-sma-cross-next-open-daily-ns-v2",
+            "inputKind":"ohlcv-single-csv","outputKind":"backtest","description":"日历日线及实际amount必需；日期读回、现金/持仓/权益逐根核对。零费用验收基线，见HIKYUU_ADAPTER.txt。",
             "parameters":[number("fast",10,title="快速均线"),number("slow",30,title="慢速均线"),
                           number("capital",100000.,1,1e10,title="初始资金"),number("quantity",100,1,1000000,title="每次买入数量")]}]},
-        {"worker.py":"worker.py","hikyuu_adapter.py":"hikyuu_adapter.py","THIRD_PARTY_NOTICES.txt":"THIRD_PARTY_NOTICES.txt"}))
+        {"worker.py":"worker.py","hikyuu_adapter.py":"hikyuu_adapter.py","HIKYUU_ADAPTER.txt":"HIKYUU_ADAPTER.txt","THIRD_PARTY_NOTICES.txt":"THIRD_PARTY_NOTICES.txt"}))
     for engine,title,license,source,distribution in [
         ("backtesting-py","Backtesting.py 回测引擎","AGPL-3.0","kernc/backtesting.py","backtesting"),
         ("backtrader","Backtrader 回测引擎","GPL-3.0","mementum/backtrader","backtrader"),

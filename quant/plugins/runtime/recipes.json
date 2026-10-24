@@ -9,7 +9,10 @@
       "packageCount": 38,
       "freshInstallationVerified": true,
       "sourceRepositories": [],
-      "verificationScope": "New non-editable environment on current Windows machine, existing Python and cached packages/source mirrors; original LEAN .NET runtime remains external."
+      "verificationScope": "New non-editable environment on current Windows machine, existing Python and cached packages/source mirrors; original LEAN .NET runtime remains external.",
+      "hashedRequirements": "data-tools.hashed.txt",
+      "hashedRequirementsSha256": "b5ba1d9d2707aef2ce7facfd5fa0718e7e8a1a703756d5a6a923262149e38105",
+      "hashScope": "All non-VCS runtime distributions; VCS uses full commit pins. Build-isolation dependencies are not fully hash locked."
     },
     "hikyuu": {
       "python": "3.12",
@@ -18,7 +21,10 @@
       "packageCount": 107,
       "freshInstallationVerified": true,
       "sourceRepositories": [],
-      "verificationScope": "New non-editable environment on current Windows machine, existing Python and cached packages/source mirrors; original LEAN .NET runtime remains external."
+      "verificationScope": "New non-editable environment on current Windows machine, existing Python and cached packages/source mirrors; original LEAN .NET runtime remains external.",
+      "hashedRequirements": "hikyuu.hashed.txt",
+      "hashedRequirementsSha256": "483931b35083cfc94f42822deadb845f264665af87215c551925ebae74cab005",
+      "hashScope": "All non-VCS runtime distributions; VCS uses full commit pins. Build-isolation dependencies are not fully hash locked."
     },
     "rqalpha": {
       "python": "3.12",
@@ -34,7 +40,10 @@
           "commit": "6a996af2876013615ceea141a97bad94ac4ab7f3"
         }
       ],
-      "verificationScope": "New non-editable environment on current Windows machine, existing Python and cached packages/source mirrors; original LEAN .NET runtime remains external."
+      "verificationScope": "New non-editable environment on current Windows machine, existing Python and cached packages/source mirrors; original LEAN .NET runtime remains external.",
+      "hashedRequirements": "rqalpha.hashed.txt",
+      "hashedRequirementsSha256": "4c27343ee5ee8d277de01c45210bfe4410dcd09c4c652f4c0a47f09b3997fed4",
+      "hashScope": "All non-VCS runtime distributions; VCS uses full commit pins. Build-isolation dependencies are not fully hash locked."
     },
     "vnpy": {
       "python": "3.12",
@@ -56,7 +65,10 @@
           "commit": "7a8768de9784dda35a7b261a7ade1dbfbff50919"
         }
       ],
-      "verificationScope": "New non-editable environment on current Windows machine, existing Python and cached packages/source mirrors; original LEAN .NET runtime remains external."
+      "verificationScope": "New non-editable environment on current Windows machine, existing Python and cached packages/source mirrors; original LEAN .NET runtime remains external.",
+      "hashedRequirements": "vnpy.hashed.txt",
+      "hashedRequirementsSha256": "851f64c29736f84c2fa7faead20a05693ee5aa3177e8b87819457bdc24f1301b",
+      "hashScope": "All non-VCS runtime distributions; VCS uses full commit pins. Build-isolation dependencies are not fully hash locked."
     },
     "qlib": {
       "python": "3.12",
@@ -65,7 +77,10 @@
       "packageCount": 193,
       "freshInstallationVerified": true,
       "sourceRepositories": [],
-      "verificationScope": "New non-editable environment on current Windows machine, existing Python and cached packages/source mirrors; original LEAN .NET runtime remains external."
+      "verificationScope": "New non-editable environment on current Windows machine, existing Python and cached packages/source mirrors; original LEAN .NET runtime remains external.",
+      "hashedRequirements": "qlib.hashed.txt",
+      "hashedRequirementsSha256": "1dfaac06ed0273cdf752c546e1e43432edf1465f13f028de5e902843291a8bb1",
+      "hashScope": "All non-VCS runtime distributions; VCS uses full commit pins. Build-isolation dependencies are not fully hash locked."
     },
     "vectorbt": {
       "python": "3.12",
@@ -81,7 +96,10 @@
           "commit": "8e30b8ce102f302bec0c0226e05b59714453bebd"
         }
       ],
-      "verificationScope": "New non-editable environment on current Windows machine, existing Python and cached packages/source mirrors; original LEAN .NET runtime remains external."
+      "verificationScope": "New non-editable environment on current Windows machine, existing Python and cached packages/source mirrors; original LEAN .NET runtime remains external.",
+      "hashedRequirements": "vectorbt.hashed.txt",
+      "hashedRequirementsSha256": "9364f6a31d98b1f2601ff04c98c7b98e532bae07e5f08fea3feba53aba972ffe",
+      "hashScope": "All non-VCS runtime distributions; VCS uses full commit pins. Build-isolation dependencies are not fully hash locked."
     },
     "backtesting-py": {
       "python": "3.12",
@@ -106,7 +124,10 @@
           "reason": "Upstream wheel omits a JS file that its plotting module reads at import time."
         }
       ],
-      "verificationScope": "New non-editable environment on current Windows machine, existing Python and cached packages/source mirrors; original LEAN .NET runtime remains external."
+      "verificationScope": "New non-editable environment on current Windows machine, existing Python and cached packages/source mirrors; original LEAN .NET runtime remains external.",
+      "hashedRequirements": "backtesting-py.hashed.txt",
+      "hashedRequirementsSha256": "498972706fb336c4025cc9873dba54b8a383c1363f2f515d478fdaec301ac190",
+      "hashScope": "All non-VCS runtime distributions; VCS uses full commit pins. Build-isolation dependencies are not fully hash locked."
     },
     "backtrader": {
       "python": "3.12",
@@ -122,7 +143,10 @@
           "commit": "b853d7c90b6721476eb5a5ea3135224e33db1f14"
         }
       ],
-      "verificationScope": "New non-editable environment on current Windows machine, existing Python and cached packages/source mirrors; original LEAN .NET runtime remains external."
+      "verificationScope": "New non-editable environment on current Windows machine, existing Python and cached packages/source mirrors; original LEAN .NET runtime remains external.",
+      "hashedRequirements": "backtrader.hashed.txt",
+      "hashedRequirementsSha256": "6fa0dfd96a9f1f62b6d8507095bf8cabfb12978f197f0d7133b0425823a9fa3f",
+      "hashScope": "All non-VCS runtime distributions; VCS uses full commit pins. Build-isolation dependencies are not fully hash locked."
     },
     "bt": {
       "python": "3.12",
@@ -131,7 +155,10 @@
       "packageCount": 26,
       "freshInstallationVerified": true,
       "sourceRepositories": [],
-      "verificationScope": "New non-editable environment on current Windows machine, existing Python and cached packages/source mirrors; original LEAN .NET runtime remains external."
+      "verificationScope": "New non-editable environment on current Windows machine, existing Python and cached packages/source mirrors; original LEAN .NET runtime remains external.",
+      "hashedRequirements": "bt.hashed.txt",
+      "hashedRequirementsSha256": "d709e14f1a3c869aefaef5040fb4ab354957094d77e01582bfb391eba5f4f9a4",
+      "hashScope": "All non-VCS runtime distributions; VCS uses full commit pins. Build-isolation dependencies are not fully hash locked."
     },
     "zipline-reloaded": {
       "python": "3.12",
@@ -140,7 +167,10 @@
       "packageCount": 71,
       "freshInstallationVerified": true,
       "sourceRepositories": [],
-      "verificationScope": "New non-editable environment on current Windows machine, existing Python and cached packages/source mirrors; original LEAN .NET runtime remains external."
+      "verificationScope": "New non-editable environment on current Windows machine, existing Python and cached packages/source mirrors; original LEAN .NET runtime remains external.",
+      "hashedRequirements": "zipline-reloaded.hashed.txt",
+      "hashedRequirementsSha256": "b2ce18df13e0c8849d5c2a9bde1ace7d2d59c41a6788eb353889f7d644d26f13",
+      "hashScope": "All non-VCS runtime distributions; VCS uses full commit pins. Build-isolation dependencies are not fully hash locked."
     },
     "ml4t-backtest": {
       "python": "3.12",
@@ -156,7 +186,10 @@
           "commit": "45becfb0985eb59e63c7e3d3f513dba372b103da"
         }
       ],
-      "verificationScope": "New non-editable environment on current Windows machine, existing Python and cached packages/source mirrors; original LEAN .NET runtime remains external."
+      "verificationScope": "New non-editable environment on current Windows machine, existing Python and cached packages/source mirrors; original LEAN .NET runtime remains external.",
+      "hashedRequirements": "ml4t-backtest.hashed.txt",
+      "hashedRequirementsSha256": "b5edde616ab0dad7334f6c038ce37cc19cb4d42cafcc0da08ab0a144632cf5dc",
+      "hashScope": "All non-VCS runtime distributions; VCS uses full commit pins. Build-isolation dependencies are not fully hash locked."
     },
     "czsc": {
       "python": "3.12",
@@ -165,7 +198,10 @@
       "packageCount": 41,
       "freshInstallationVerified": true,
       "sourceRepositories": [],
-      "verificationScope": "New non-editable environment on current Windows machine, existing Python and cached packages/source mirrors; original LEAN .NET runtime remains external."
+      "verificationScope": "New non-editable environment on current Windows machine, existing Python and cached packages/source mirrors; original LEAN .NET runtime remains external.",
+      "hashedRequirements": "czsc.hashed.txt",
+      "hashedRequirementsSha256": "0d081d93a9b2edf34bbad7a8b61f9c23261ad5b885f6aabb2b02ddb7649bd20e",
+      "hashScope": "All non-VCS runtime distributions; VCS uses full commit pins. Build-isolation dependencies are not fully hash locked."
     },
     "wtpy310": {
       "python": "3.10",
@@ -174,7 +210,10 @@
       "packageCount": 43,
       "freshInstallationVerified": true,
       "sourceRepositories": [],
-      "verificationScope": "New non-editable environment on current Windows machine, existing Python and cached packages/source mirrors; original LEAN .NET runtime remains external."
+      "verificationScope": "New non-editable environment on current Windows machine, existing Python and cached packages/source mirrors; original LEAN .NET runtime remains external.",
+      "hashedRequirements": "wtpy310.hashed.txt",
+      "hashedRequirementsSha256": "c95167e479e60a1fdc4f155cf447c3f5326320e7ac2ce5841bb8744ac479297b",
+      "hashScope": "All non-VCS runtime distributions; VCS uses full commit pins. Build-isolation dependencies are not fully hash locked."
     },
     "quantaxis311": {
       "python": "3.11",
@@ -190,7 +229,10 @@
           "commit": "232aa7ac9869966108f02a8fff85f1f7b09a9ce2"
         }
       ],
-      "verificationScope": "New non-editable environment on current Windows machine, existing Python and cached packages/source mirrors; original LEAN .NET runtime remains external."
+      "verificationScope": "New non-editable environment on current Windows machine, existing Python and cached packages/source mirrors; original LEAN .NET runtime remains external.",
+      "hashedRequirements": "quantaxis311.hashed.txt",
+      "hashedRequirementsSha256": "f7f3b7955a0dbb0e6896e8486d94288c0ef76e39c6fa0c0ccc82c0f55f345012",
+      "hashScope": "All non-VCS runtime distributions; VCS uses full commit pins. Build-isolation dependencies are not fully hash locked."
     },
     "statistical-models": {
       "python": "3.12",
@@ -199,7 +241,10 @@
       "packageCount": 20,
       "sourceRepositories": [],
       "freshInstallationVerified": true,
-      "verificationScope": "New environment rebuilt offline from exact 20-version snapshot; 10 tests and nine native operations verified"
+      "verificationScope": "New environment rebuilt offline from exact 20-version snapshot; 10 tests and nine native operations verified",
+      "hashedRequirements": "statistical-models.hashed.txt",
+      "hashedRequirementsSha256": "424b6d443abd038e2cc0c31f17161a60839faa1c479aee01e0bb19ef6378623c",
+      "hashScope": "All non-VCS runtime distributions; VCS uses full commit pins. Build-isolation dependencies are not fully hash locked."
     },
     "deep-models": {
       "python": "3.12",
@@ -208,7 +253,10 @@
       "packageCount": 15,
       "sourceRepositories": [],
       "freshInstallationVerified": true,
-      "verificationScope": "New independent Windows x64 Python 3.12 CPU environment rebuilt from 15 pinned dependencies, official torch wheel URL/hash. Six tests, three native operations and full native window passed."
+      "verificationScope": "New independent Windows x64 Python 3.12 CPU environment rebuilt from 15 pinned dependencies, official torch wheel URL/hash. Six tests, three native operations and full native window passed.",
+      "hashedRequirements": "deep-models.hashed.txt",
+      "hashedRequirementsSha256": "f15342aa1c1f89f37ef8454c73ca72bf9e15ce7e6f35df28d6bd01c90ecbb254",
+      "hashScope": "All non-VCS runtime distributions; VCS uses full commit pins. Build-isolation dependencies are not fully hash locked."
     }
   },
   "limitations": [

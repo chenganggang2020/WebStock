@@ -1,0 +1,482 @@
+{
+  "schema": "webstock.plugin.full-project-windows.v1",
+  "runs": [
+    {
+      "project": "hikyuu",
+      "pluginId": "org.webstock.hikyuu",
+      "packageVersion": "0.26.0",
+      "operation": "sma-cross",
+      "status": "verified",
+      "passed": 3,
+      "failed": 0,
+      "skipped": 0,
+      "exitCode": 0,
+      "testLogSha256": "0b71e1f545c8dd4a3c7b5113d3f56b90e103078ace31616b43ac7f0722afd113",
+      "packageSha256": "fcb4f833739207bcdc2f80ef07bd22b9f4ffa65c53f76dd3d5ac668bfb0fb0c4",
+      "layouts": [
+        "quotes",
+        "classic",
+        "focus-alias-to-classic"
+      ],
+      "checks": [
+        "actual research workspace opens plugin",
+        "run selected operation",
+        "native chart/tables",
+        "close/reopen archived result without replay"
+      ]
+    },
+    {
+      "project": "rqalpha",
+      "pluginId": "org.webstock.rqalpha",
+      "packageVersion": "0.25.0",
+      "operation": "sma-close",
+      "status": "verified",
+      "passed": 3,
+      "failed": 0,
+      "skipped": 0,
+      "exitCode": 0,
+      "testLogSha256": "524e5ed3e222f55bc6a0e93992884b7f407805ed02d37896f4e4d559ac61643e",
+      "packageSha256": "33bfb57db56251955b9f0f02d54598e350a03bc456523aca026d622484b85fd0",
+      "layouts": [
+        "quotes",
+        "classic",
+        "focus-alias-to-classic"
+      ],
+      "checks": [
+        "actual research workspace opens plugin",
+        "run selected operation",
+        "native chart/tables",
+        "close/reopen archived result without replay"
+      ]
+    },
+    {
+      "project": "vnpy",
+      "pluginId": "org.webstock.vnpy",
+      "packageVersion": "0.25.0",
+      "operation": "rsi",
+      "status": "verified",
+      "passed": 3,
+      "failed": 0,
+      "skipped": 0,
+      "exitCode": 0,
+      "testLogSha256": "c1956fb6830ece8f8375fa65360d5f39524e32e5817d8646cfb937461128f14c",
+      "packageSha256": "6b69b39543c1655306dc7412bc145f09c18f4d911ca6a78cec5a5c5aa7e1e825",
+      "layouts": [
+        "quotes",
+        "classic",
+        "focus-alias-to-classic"
+      ],
+      "checks": [
+        "actual research workspace opens plugin",
+        "run selected operation",
+        "native chart/tables",
+        "close/reopen archived result without replay"
+      ]
+    },
+    {
+      "project": "qlib",
+      "pluginId": "org.webstock.qlib",
+      "packageVersion": "0.25.0",
+      "operation": "alpha158",
+      "status": "verified",
+      "passed": 3,
+      "failed": 0,
+      "skipped": 0,
+      "exitCode": 0,
+      "testLogSha256": "c3a97dc67ffa54f9d7ae32cafb37fcf5563c65033636fbad2a6b69f77bb56928",
+      "packageSha256": "e08e8f63f992eca3f20dcef56de17b24bd66d917b04a4bd92073575ad8c1a94f",
+      "layouts": [
+        "quotes",
+        "classic",
+        "focus-alias-to-classic"
+      ],
+      "checks": [
+        "actual research workspace opens plugin",
+        "run selected operation",
+        "native chart/tables",
+        "close/reopen archived result without replay"
+      ]
+    },
+    {
+      "project": "lean",
+      "pluginId": "org.webstock.lean",
+      "packageVersion": "0.25.0",
+      "operation": "sma-close",
+      "status": "verified",
+      "passed": 3,
+      "failed": 0,
+      "skipped": 0,
+      "exitCode": 0,
+      "testLogSha256": "cd03f5ad7f0408acee105ee1529ba512f18bfc0e8ba41d310631bc001b0b65fa",
+      "packageSha256": "725f6581099bc3152117e8bd445dd9b8b4587122a1c87f54181e5386bbaa463f",
+      "layouts": [
+        "quotes",
+        "classic",
+        "focus-alias-to-classic"
+      ],
+      "checks": [
+        "actual research workspace opens plugin",
+        "run selected operation",
+        "native chart/tables",
+        "close/reopen archived result without replay"
+      ]
+    },
+    {
+      "project": "backtrader",
+      "pluginId": "org.webstock.backtrader",
+      "packageVersion": "0.25.0",
+      "operation": "sma-cross",
+      "status": "verified",
+      "passed": 3,
+      "failed": 0,
+      "skipped": 0,
+      "exitCode": 0,
+      "testLogSha256": "cc984a3581a10621f5f45c3d3b01b86822ac07f2cd4a2ab159a5eee198f4770b",
+      "packageSha256": "2cf46decdd39ea32dedd997efd8f4bec46a5ecc30171b4423ab47bcb6abe6676",
+      "layouts": [
+        "quotes",
+        "classic",
+        "focus-alias-to-classic"
+      ],
+      "checks": [
+        "actual research workspace opens plugin",
+        "run selected operation",
+        "native chart/tables",
+        "close/reopen archived result without replay"
+      ]
+    },
+    {
+      "project": "backtesting-py",
+      "pluginId": "org.webstock.backtesting-py",
+      "packageVersion": "0.25.0",
+      "operation": "sma-cross",
+      "status": "verified",
+      "passed": 3,
+      "failed": 0,
+      "skipped": 0,
+      "exitCode": 0,
+      "testLogSha256": "55dc938abd47b02127769743fa4cb86fbce2b983c4d3ae5b39f34191ff2d9cf3",
+      "packageSha256": "561e0349472ac3c4b90cb7df140be4de65e00a11a01f7f0575247d9e5d9baab7",
+      "layouts": [
+        "quotes",
+        "classic",
+        "focus-alias-to-classic"
+      ],
+      "checks": [
+        "actual research workspace opens plugin",
+        "run selected operation",
+        "native chart/tables",
+        "close/reopen archived result without replay"
+      ]
+    },
+    {
+      "project": "vectorbt",
+      "pluginId": "org.webstock.vectorbt",
+      "packageVersion": "0.25.0",
+      "operation": "sma-cross",
+      "status": "verified",
+      "passed": 3,
+      "failed": 0,
+      "skipped": 0,
+      "exitCode": 0,
+      "testLogSha256": "b9a844594e25073b04eeb7bfc4aef20601e7c3e3e92e6b66cb22ff044a5c3a93",
+      "packageSha256": "453612da17b77937b049f8425c98861bc2fb6311edaeabf6d4175e382bcb57aa",
+      "layouts": [
+        "quotes",
+        "classic",
+        "focus-alias-to-classic"
+      ],
+      "checks": [
+        "actual research workspace opens plugin",
+        "run selected operation",
+        "native chart/tables",
+        "close/reopen archived result without replay"
+      ]
+    },
+    {
+      "project": "bt",
+      "pluginId": "org.webstock.bt",
+      "packageVersion": "0.25.0",
+      "operation": "sma-weight",
+      "status": "verified",
+      "passed": 3,
+      "failed": 0,
+      "skipped": 0,
+      "exitCode": 0,
+      "testLogSha256": "255b7ac03e6f590c631c3356cfda406d9e510b1f464ccb1cf7c0517f5323f688",
+      "packageSha256": "3fa38f5600f23aa4f6f2b74797b5874dcc3a7bb45a221abc09f39161343d5627",
+      "layouts": [
+        "quotes",
+        "classic",
+        "focus-alias-to-classic"
+      ],
+      "checks": [
+        "actual research workspace opens plugin",
+        "run selected operation",
+        "native chart/tables",
+        "close/reopen archived result without replay"
+      ]
+    },
+    {
+      "project": "zipline-reloaded",
+      "pluginId": "org.webstock.zipline-reloaded",
+      "packageVersion": "0.25.0",
+      "operation": "sma-close",
+      "status": "verified",
+      "passed": 3,
+      "failed": 0,
+      "skipped": 0,
+      "exitCode": 0,
+      "testLogSha256": "389c15bb02aab4ed9dfe57981d9e0c07d6a2f018a5636aea8a5c27c42003a364",
+      "packageSha256": "529d51b799a396378b9c2de699fe293e58f4eae8ab643e3614ec65a25feadc83",
+      "layouts": [
+        "quotes",
+        "classic",
+        "focus-alias-to-classic"
+      ],
+      "checks": [
+        "actual research workspace opens plugin",
+        "run selected operation",
+        "native chart/tables",
+        "close/reopen archived result without replay"
+      ]
+    },
+    {
+      "project": "ml4t-backtest",
+      "pluginId": "org.webstock.ml4t-backtest",
+      "packageVersion": "0.25.0",
+      "operation": "sma-cross",
+      "status": "verified",
+      "passed": 3,
+      "failed": 0,
+      "skipped": 0,
+      "exitCode": 0,
+      "testLogSha256": "988c94285d2e9b69ede05c4a5abb997ec2fbce2c3265609b34976feae9d39696",
+      "packageSha256": "c1dff771a6a8ec35208483be1c58f73a6ab074b347048e9addf4bd3c5e181527",
+      "layouts": [
+        "quotes",
+        "classic",
+        "focus-alias-to-classic"
+      ],
+      "checks": [
+        "actual research workspace opens plugin",
+        "run selected operation",
+        "native chart/tables",
+        "close/reopen archived result without replay"
+      ]
+    },
+    {
+      "project": "wondertrader",
+      "pluginId": "org.webstock.wondertrader",
+      "packageVersion": "0.25.0",
+      "operation": "sma-native",
+      "status": "verified",
+      "passed": 3,
+      "failed": 0,
+      "skipped": 0,
+      "exitCode": 0,
+      "testLogSha256": "e2f3ebda7398030d85cecdf76a05a2444f7e0c362c2714425f9f8ade42f7e07a",
+      "packageSha256": "642eae252590fd3844a095954630b8a3fa9c1849518216e4f3381b1f4375b5b3",
+      "layouts": [
+        "quotes",
+        "classic",
+        "focus-alias-to-classic"
+      ],
+      "checks": [
+        "actual research workspace opens plugin",
+        "run selected operation",
+        "native chart/tables",
+        "close/reopen archived result without replay"
+      ]
+    },
+    {
+      "project": "quantaxis",
+      "pluginId": "org.webstock.quantaxis",
+      "packageVersion": "0.25.0",
+      "operation": "kdj",
+      "status": "verified",
+      "passed": 3,
+      "failed": 0,
+      "skipped": 0,
+      "exitCode": 0,
+      "testLogSha256": "db0ed8b22f55dce9c89819ed2b0f66931e886802f0c2a2fdabbe16ad3ea3059e",
+      "packageSha256": "fdbf0e22d72104de49dc5a00f0ae67588a5b8b5f18874c76ef16771afc6f8d05",
+      "layouts": [
+        "quotes",
+        "classic",
+        "focus-alias-to-classic"
+      ],
+      "checks": [
+        "actual research workspace opens plugin",
+        "run selected operation",
+        "native chart/tables",
+        "close/reopen archived result without replay"
+      ]
+    },
+    {
+      "project": "czsc",
+      "pluginId": "org.webstock.czsc",
+      "packageVersion": "0.25.0",
+      "operation": "online-bi",
+      "status": "verified",
+      "passed": 3,
+      "failed": 0,
+      "skipped": 0,
+      "exitCode": 0,
+      "testLogSha256": "e1d39c5b0639b83a066f6e335a4428ede0d63e597e434265ddb8c74b2d7328f9",
+      "packageSha256": "58b55b6aa8790f5fcc1fc80151d47651ae1d786f63d75a26430f0cebf6e46722",
+      "layouts": [
+        "quotes",
+        "classic",
+        "focus-alias-to-classic"
+      ],
+      "checks": [
+        "actual research workspace opens plugin",
+        "run selected operation",
+        "native chart/tables",
+        "close/reopen archived result without replay"
+      ]
+    },
+    {
+      "project": "vnpy-ctastrategy",
+      "pluginId": "org.webstock.vnpy-ctastrategy",
+      "packageVersion": "0.25.0",
+      "operation": "sma-limit",
+      "status": "verified",
+      "passed": 3,
+      "failed": 0,
+      "skipped": 0,
+      "exitCode": 0,
+      "testLogSha256": "5249ed9c0a814bcc005f6821a5e9cda1ec19d9e16b401f257006cdf29c440545",
+      "packageSha256": "c67a4dfe0ad775315213e6f6dbeb08b22b5a38bcb989aac28f055e5af3f088fa",
+      "layouts": [
+        "quotes",
+        "classic",
+        "focus-alias-to-classic"
+      ],
+      "checks": [
+        "actual research workspace opens plugin",
+        "run selected operation",
+        "native chart/tables",
+        "close/reopen archived result without replay"
+      ]
+    },
+    {
+      "project": "wtpy",
+      "pluginId": "org.webstock.wtpy",
+      "packageVersion": "0.25.0",
+      "operation": "daily-dsb",
+      "status": "verified",
+      "passed": 3,
+      "failed": 0,
+      "skipped": 0,
+      "exitCode": 0,
+      "testLogSha256": "bf62986304d996903f945e2b8b89475f1d0cab9f39293f40fc17b1f4b8ff1eac",
+      "packageSha256": "65637bd2c7ac04a456a833f426ad4002bb190874181565c853ef1a6fc44f771b",
+      "layouts": [
+        "quotes",
+        "classic",
+        "focus-alias-to-classic"
+      ],
+      "checks": [
+        "actual research workspace opens plugin",
+        "run selected operation",
+        "native chart/tables",
+        "close/reopen archived result without replay"
+      ]
+    },
+    {
+      "project": "wbt",
+      "pluginId": "org.webstock.wbt",
+      "packageVersion": "0.25.0",
+      "operation": "sma-weight",
+      "status": "verified",
+      "passed": 3,
+      "failed": 0,
+      "skipped": 0,
+      "exitCode": 0,
+      "testLogSha256": "0241c95e88ca6fb4422e1c70da4f4d8555e0e7a2367889f0d2a4dd8a82c375c2",
+      "packageSha256": "25f07f9b5667bef325ab4341395e3cc361e18b88addf26c4426da8ebb0b8d037",
+      "layouts": [
+        "quotes",
+        "classic",
+        "focus-alias-to-classic"
+      ],
+      "checks": [
+        "actual research workspace opens plugin",
+        "run selected operation",
+        "native chart/tables",
+        "close/reopen archived result without replay"
+      ]
+    },
+    {
+      "project": "talib",
+      "pluginId": "org.webstock.talib",
+      "packageVersion": "0.25.0",
+      "operation": "rsi",
+      "status": "verified",
+      "passed": 3,
+      "failed": 0,
+      "skipped": 0,
+      "exitCode": 0,
+      "testLogSha256": "e4f8a8f82681a2f8ceeb1e0643a38df214933252edc338a30dec040c7caac979",
+      "packageSha256": "1fe018842fb247b479fcd03a143e3b28aed61a7805f6f9f284277c87382f72fd",
+      "layouts": [
+        "quotes",
+        "classic",
+        "focus-alias-to-classic"
+      ],
+      "checks": [
+        "actual research workspace opens plugin",
+        "run selected operation",
+        "native chart/tables",
+        "close/reopen archived result without replay"
+      ]
+    },
+    {
+      "project": "akshare",
+      "pluginId": "org.webstock.akshare",
+      "packageVersion": "0.25.0",
+      "operation": "daily-eastmoney",
+      "status": "failed",
+      "passed": 2,
+      "failed": 1,
+      "skipped": 0,
+      "exitCode": 1,
+      "testLogSha256": "4f0741904e215591b605167257c64a1e8d2fbface8b5b8b6f11eb45c9ab22fc9",
+      "packageSha256": "2789920b2179c812983d7011be54fd16f9257ad4b15476ab299b07b20bd4de30",
+      "layouts": [
+        "quotes",
+        "classic",
+        "focus-alias-to-classic"
+      ],
+      "checks": [
+        "actual research workspace opens plugin",
+        "run selected operation",
+        "native chart/tables",
+        "close/reopen archived result without replay"
+      ],
+      "diagnostic": "********* Start testing of PluginWindowTests *********\nConfig: Using QtTest library 6.9.1, Qt 6.9.1 (x86_64-little_endian-llp64 shared (dynamic) release build; by GCC 13.1.0), windows 11\nPASS   : PluginWindowTests::initTestCase()\nQWARN  : PluginWindowTests::actualWindowEntryAndExecution() QFontDatabase: Cannot find font directory E:/WebStock-Lab/tools/qt/6.9.1/mingw_64/lib/fonts.\nNote that Qt no longer ships fonts. Deploy some (from https://dejavu-fonts.github.io/ for example) or switch to fontconfig.\nQWARN  : PluginWindowTests::actualWindowEntryAndExecution() This plugin does not support propagateSizeHints()\nQWARN  : PluginWindowTests::actualWindowEntryAndExecution() This plugin does not support raise()\nQWARN  : PluginWindowTests::actualWindowEntryAndExecution() This plugin does not support propagateSizeHints()\nFAIL!  : PluginWindowTests::actualWindowEntryAndExecution() {\"createdAt\":\"2026-10-24T01:42:25.699Z\",\"finishedAt\":\"2026-10-24T01:42:28.129Z\",\"message\":\"HTTPSConnectionPool(host='push2his.eastmoney.com', port=443): Max retries exceeded with url: /api/qt/stock/kline/get?fields1=f1%2Cf2%2Cf3%2Cf4%2Cf5%2Cf6&fields2=f51%2Cf52%2Cf53%2Cf54%2Cf55%2Cf56%2Cf57%2Cf58%2Cf59%2Cf60%2Cf61%2Cf116&ut=7eea3edcaed734bea9cbfc24409ed989&klt=101&fqt=0&secid=0.000001&beg=20200101&end=20201231 (Caused by ProxyError('Unable to connect to proxy', RemoteDisconnected('Remote end closed connection without response')))\",\"operationId\":\"daily-eastmoney\",\"pluginId\":\"org.webstock.akshare\",\"requestSha256\":\"e2862af3cf3a05e691e791cf233b84c3667a1c5cd043de3a7bf69762a29eba9e\",\"runId\":\"plugin-7d6d33f3-452d-4619-9977-4be79046d666\",\"runtimePath\":\"E:\\\\WebStock-Lab\\\\runtime-rebuild\\\\data-tools-081\\\\Scripts\\\\python.exe\",\"status\":\"failed\"}\nE:\\WebStock-Lab\\target\\WebStock\\native\\tests\\quant_plugin_window_tests.cpp(51) : failure location\nPASS   : PluginWindowTests::cleanupTestCase()\nTotals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 2940ms\n********* Finished testing of PluginWindowTests *********\n\n"
+    }
+  ],
+  "supersedes": {
+    "hikyuu": "0.25.0 window-only success did not certify datetime/ledger correctness; replaced by v2 at 0.26.0"
+  },
+  "sourceEvidence": [
+    {
+      "file": "project-windows-025-final",
+      "testExecutableSha256": "55fa9f81737a60c743478a83e778bbd19ba8db6e72f7609bba6f0cfc13d82475",
+      "historicalFixtureSha256": "9dc7b976ef19fae657ebaaa6d5a78f0de24071b27781f76a323dc4d0443239f8"
+    },
+    {
+      "file": "project-windows-025-remaining",
+      "testExecutableSha256": "55fa9f81737a60c743478a83e778bbd19ba8db6e72f7609bba6f0cfc13d82475",
+      "historicalFixtureSha256": "9dc7b976ef19fae657ebaaa6d5a78f0de24071b27781f76a323dc4d0443239f8"
+    },
+    {
+      "file": "hikyuu-window-026-corrected",
+      "testExecutableSha256": "55fa9f81737a60c743478a83e778bbd19ba8db6e72f7609bba6f0cfc13d82475",
+      "historicalFixtureSha256": "7a4cdc29a4b7aa2577b7bf7626c4e67996c8b7de2af1e4426c14aa0f90560b73"
+    }
+  ]
+}

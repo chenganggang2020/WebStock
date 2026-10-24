@@ -39,19 +39,28 @@ def main():
     if not uv:raise ValueError("Install uv or specify its executable using --uv")
     destination.parent.mkdir(parents=True,exist_ok=True)
     requirements=base/recipe["requirements"]
+    hashed=base/recipe["hashedRequirements"]
+    canonical_hash=hashlib.sha256(hashed.read_text(encoding='utf-8').replace('\r\n','\n').replace('\r','\n').encode('utf-8')).hexdigest()
+    if canonical_hash!=recipe['hashedRequirementsSha256']:raise ValueError('Hashed runtime requirements changed')
     offline=["--offline"] if args.offline else []
     subprocess.run([uv,*offline,"venv","--python",args.python or recipe["python"],str(destination)],check=True,timeout=300)
     python=destination/("Scripts/python.exe" if sys.platform=="win32" else "bin/python")
     log=destination/"webstock-install.log";record=destination/"webstock-runtime.json"
     state={"schema":"webstock.plugin.runtime-install.v1","recipe":args.recipe,"python":str(python),
         "createdAtUtc":datetime.now(timezone.utc).isoformat(),"requirementsSha256":hashlib.sha256(requirements.read_bytes()).hexdigest(),
-        "status":"installing","adapterVerification":"pending","wheelHashesLocked":False,"offline":args.offline}
+        "status":"installing","adapterVerification":"pending","wheelHashesLocked":True,
+        "hashScope":recipe['hashScope'],"buildIsolationHashesLocked":False,
+        "hashedRequirementsSha256":canonical_hash,"offline":args.offline}
     def save():record.write_text(json.dumps(state,ensure_ascii=False,indent=2)+'\n',encoding="utf-8")
     save()
     try:
-        install_requirements=requirements
+        # All registry/direct-URL runtime distributions install with mandatory
+        # hashes. VCS builds are a separate no-dependency phase with full commits.
+        contents='\n'.join(line for line in requirements.read_text(encoding='utf-8').splitlines() if 'git+' in line)+'\n'
+        source_count=len([line for line in contents.splitlines() if line.strip()])
+        install_requirements=destination/'webstock-source-requirements.txt'
         if args.source_root:
-            contents=requirements.read_text(encoding="utf-8");mirrors=[]
+            mirrors=[]
             for source in recipe.get("sourceRepositories",[]):
                 folder=(args.source_root/source["directoryName"]).resolve()
                 actual=subprocess.check_output(["git","-C",str(folder),"rev-parse",source["commit"]+"^{commit}"],text=True).strip()
@@ -60,11 +69,12 @@ def main():
                 if contents.count(original)!=1:raise ValueError("Source entry mismatch")
                 contents=contents.replace(original,"git+"+folder.as_uri()+"@"+source["commit"])
                 mirrors.append({**source,"localMirror":str(folder)})
-            install_requirements=destination/"webstock-install-requirements.txt"
-            install_requirements.write_text(contents,encoding="utf-8")
             state["sourceMirrors"]=mirrors;save()
+        install_requirements.write_text(contents,encoding='utf-8')
         with log.open("w",encoding="utf-8") as stream:
-            subprocess.run([uv,*offline,"pip","install","--python",str(python),"-r",str(install_requirements)],check=True,stdout=stream,stderr=subprocess.STDOUT,timeout=1800,env=child_environment)
+            subprocess.run([uv,*offline,"pip","install","--python",str(python),"--require-hashes","--no-deps","-r",str(hashed)],check=True,stdout=stream,stderr=subprocess.STDOUT,timeout=1800,env=child_environment)
+            if source_count:
+                subprocess.run([uv,*offline,"pip","install","--python",str(python),"--no-deps","-r",str(install_requirements)],check=True,stdout=stream,stderr=subprocess.STDOUT,timeout=1800,env=child_environment)
             subprocess.run([uv,"pip","check","--python",str(python)],check=True,stdout=stream,stderr=subprocess.STDOUT,timeout=60)
         restored=[]
         for asset in recipe.get("restoreSourceData",[]):

@@ -12,7 +12,8 @@
       "formula_implemented_and_tested": 103,
       "source_interface_implemented_and_tested": 7
     },
-    "installedPackages": 33
+    "installedPackages": 33,
+    "upstreamBoundary": "All 19 declared adapters, not every upstream API; capabilities are the installed operation manifests."
   },
   "completionDefinition": [
     "All 19 projects have runnable installed adapters with declared capabilities, inputs, versions and actual results.",
@@ -27,25 +28,26 @@
       "repo": "fasiondog/hikyuu",
       "role": "primary",
       "url": "https://github.com/fasiondog/hikyuu.git",
-      "status": "adapter_verified_in_cpp_host",
+      "status": "adapter_and_full_native_window_verified",
       "pluginId": "org.webstock.hikyuu",
-      "remaining": [
-        "wheel_hash_locks_and_clean_machine_distribution",
-        "expanded_capabilities_and_tests",
-        "full_program_per_engine_validation"
-      ]
+      "remaining": [],
+      "futureWork": [
+        "additional_upstream_capabilities_beyond_declared_adapter",
+        "second_machine_acceptance"
+      ],
+      "correctedIn": "0.26.0 daily ns bridge, mandatory actual amount, independent close-mark ledger; prior v1 numerical evidence invalidated"
     },
     {
       "name": "rqalpha",
       "repo": "ricequant/rqalpha",
       "role": "primary",
       "url": "https://github.com/ricequant/rqalpha.git",
-      "status": "adapter_verified_in_cpp_host",
+      "status": "adapter_and_full_native_window_verified",
       "pluginId": "org.webstock.rqalpha",
-      "remaining": [
-        "wheel_hash_locks_and_clean_machine_distribution",
-        "expanded_capabilities_and_tests",
-        "full_program_per_engine_validation"
+      "remaining": [],
+      "futureWork": [
+        "additional_upstream_capabilities_beyond_declared_adapter",
+        "second_machine_acceptance"
       ]
     },
     {
@@ -53,12 +55,12 @@
       "repo": "vnpy/vnpy",
       "role": "primary",
       "url": "https://github.com/vnpy/vnpy.git",
-      "status": "adapter_verified_in_cpp_host",
+      "status": "adapter_and_full_native_window_verified",
       "pluginId": "org.webstock.vnpy",
-      "remaining": [
-        "wheel_hash_locks_and_clean_machine_distribution",
-        "expanded_capabilities_and_tests",
-        "full_program_per_engine_validation"
+      "remaining": [],
+      "futureWork": [
+        "additional_upstream_capabilities_beyond_declared_adapter",
+        "second_machine_acceptance"
       ]
     },
     {
@@ -66,12 +68,12 @@
       "repo": "microsoft/qlib",
       "role": "primary",
       "url": "https://github.com/microsoft/qlib.git",
-      "status": "adapter_verified_in_cpp_host",
+      "status": "adapter_and_full_native_window_verified",
       "pluginId": "org.webstock.qlib",
-      "remaining": [
-        "wheel_hash_locks_and_clean_machine_distribution",
-        "expanded_capabilities_and_tests",
-        "full_program_per_engine_validation"
+      "remaining": [],
+      "futureWork": [
+        "additional_upstream_capabilities_beyond_declared_adapter",
+        "second_machine_acceptance"
       ]
     },
     {
@@ -79,12 +81,12 @@
       "repo": "QuantConnect/Lean",
       "role": "primary",
       "url": "https://github.com/QuantConnect/Lean.git",
-      "status": "adapter_verified_in_cpp_host",
+      "status": "adapter_and_full_native_window_verified",
       "pluginId": "org.webstock.lean",
-      "remaining": [
-        "wheel_hash_locks_and_clean_machine_distribution",
-        "expanded_capabilities_and_tests",
-        "full_program_per_engine_validation"
+      "remaining": [],
+      "futureWork": [
+        "additional_upstream_capabilities_beyond_declared_adapter",
+        "second_machine_acceptance"
       ]
     },
     {
@@ -92,12 +94,12 @@
       "repo": "mementum/backtrader",
       "role": "primary",
       "url": "https://github.com/mementum/backtrader.git",
-      "status": "adapter_verified_in_cpp_host",
+      "status": "adapter_and_full_native_window_verified",
       "pluginId": "org.webstock.backtrader",
-      "remaining": [
-        "wheel_hash_locks_and_clean_machine_distribution",
-        "expanded_capabilities_and_tests",
-        "full_program_per_engine_validation"
+      "remaining": [],
+      "futureWork": [
+        "additional_upstream_capabilities_beyond_declared_adapter",
+        "second_machine_acceptance"
       ]
     },
     {
@@ -105,12 +107,12 @@
       "repo": "kernc/backtesting.py",
       "role": "primary",
       "url": "https://github.com/kernc/backtesting.py.git",
-      "status": "adapter_verified_in_cpp_host",
+      "status": "adapter_and_full_native_window_verified",
       "pluginId": "org.webstock.backtesting-py",
-      "remaining": [
-        "wheel_hash_locks_and_clean_machine_distribution",
-        "expanded_capabilities_and_tests",
-        "full_program_per_engine_validation"
+      "remaining": [],
+      "futureWork": [
+        "additional_upstream_capabilities_beyond_declared_adapter",
+        "second_machine_acceptance"
       ]
     },
     {
@@ -118,12 +120,12 @@
       "repo": "polakowo/vectorbt",
       "role": "primary",
       "url": "https://github.com/polakowo/vectorbt.git",
-      "status": "adapter_verified_in_cpp_host",
+      "status": "adapter_and_full_native_window_verified",
       "pluginId": "org.webstock.vectorbt",
-      "remaining": [
-        "wheel_hash_locks_and_clean_machine_distribution",
-        "expanded_capabilities_and_tests",
-        "full_program_per_engine_validation"
+      "remaining": [],
+      "futureWork": [
+        "additional_upstream_capabilities_beyond_declared_adapter",
+        "second_machine_acceptance"
       ]
     },
     {
@@ -131,12 +133,12 @@
       "repo": "pmorissette/bt",
       "role": "primary",
       "url": "https://github.com/pmorissette/bt.git",
-      "status": "adapter_verified_in_cpp_host",
+      "status": "adapter_and_full_native_window_verified",
       "pluginId": "org.webstock.bt",
-      "remaining": [
-        "wheel_hash_locks_and_clean_machine_distribution",
-        "expanded_capabilities_and_tests",
-        "full_program_per_engine_validation"
+      "remaining": [],
+      "futureWork": [
+        "additional_upstream_capabilities_beyond_declared_adapter",
+        "second_machine_acceptance"
       ]
     },
     {
@@ -144,12 +146,12 @@
       "repo": "stefan-jansen/zipline-reloaded",
       "role": "primary",
       "url": "https://github.com/stefan-jansen/zipline-reloaded.git",
-      "status": "adapter_verified_in_cpp_host",
+      "status": "adapter_and_full_native_window_verified",
       "pluginId": "org.webstock.zipline-reloaded",
-      "remaining": [
-        "wheel_hash_locks_and_clean_machine_distribution",
-        "expanded_capabilities_and_tests",
-        "full_program_per_engine_validation"
+      "remaining": [],
+      "futureWork": [
+        "additional_upstream_capabilities_beyond_declared_adapter",
+        "second_machine_acceptance"
       ]
     },
     {
@@ -157,12 +159,12 @@
       "repo": "ml4t/backtest",
       "role": "primary",
       "url": "https://github.com/ml4t/backtest.git",
-      "status": "adapter_verified_in_cpp_host",
+      "status": "adapter_and_full_native_window_verified",
       "pluginId": "org.webstock.ml4t-backtest",
-      "remaining": [
-        "wheel_hash_locks_and_clean_machine_distribution",
-        "expanded_capabilities_and_tests",
-        "full_program_per_engine_validation"
+      "remaining": [],
+      "futureWork": [
+        "additional_upstream_capabilities_beyond_declared_adapter",
+        "second_machine_acceptance"
       ]
     },
     {
@@ -170,12 +172,12 @@
       "repo": "wondertrader/wondertrader",
       "role": "primary",
       "url": "https://github.com/wondertrader/wondertrader.git",
-      "status": "adapter_verified_in_cpp_host",
+      "status": "adapter_and_full_native_window_verified",
       "pluginId": "org.webstock.wondertrader",
-      "remaining": [
-        "wheel_hash_locks_and_clean_machine_distribution",
-        "expanded_capabilities_and_tests",
-        "full_program_per_engine_validation"
+      "remaining": [],
+      "futureWork": [
+        "additional_upstream_capabilities_beyond_declared_adapter",
+        "second_machine_acceptance"
       ]
     },
     {
@@ -183,12 +185,12 @@
       "repo": "yutiansut/QUANTAXIS",
       "role": "primary",
       "url": "https://github.com/yutiansut/QUANTAXIS.git",
-      "status": "adapter_verified_in_cpp_host",
+      "status": "adapter_and_full_native_window_verified",
       "pluginId": "org.webstock.quantaxis",
-      "remaining": [
-        "wheel_hash_locks_and_clean_machine_distribution",
-        "expanded_capabilities_and_tests",
-        "full_program_per_engine_validation"
+      "remaining": [],
+      "futureWork": [
+        "additional_upstream_capabilities_beyond_declared_adapter",
+        "second_machine_acceptance"
       ]
     },
     {
@@ -196,12 +198,12 @@
       "repo": "waditu/czsc",
       "role": "primary",
       "url": "https://github.com/waditu/czsc.git",
-      "status": "adapter_verified_in_cpp_host",
+      "status": "adapter_and_full_native_window_verified",
       "pluginId": "org.webstock.czsc",
-      "remaining": [
-        "wheel_hash_locks_and_clean_machine_distribution",
-        "expanded_capabilities_and_tests",
-        "full_program_per_engine_validation"
+      "remaining": [],
+      "futureWork": [
+        "additional_upstream_capabilities_beyond_declared_adapter",
+        "second_machine_acceptance"
       ]
     },
     {
@@ -209,12 +211,12 @@
       "repo": "vnpy/vnpy_ctastrategy",
       "role": "companion",
       "url": "https://github.com/vnpy/vnpy_ctastrategy.git",
-      "status": "adapter_verified_in_cpp_host",
+      "status": "adapter_and_full_native_window_verified",
       "pluginId": "org.webstock.vnpy-ctastrategy",
-      "remaining": [
-        "wheel_hash_locks_and_clean_machine_distribution",
-        "expanded_capabilities_and_tests",
-        "full_program_per_engine_validation"
+      "remaining": [],
+      "futureWork": [
+        "additional_upstream_capabilities_beyond_declared_adapter",
+        "second_machine_acceptance"
       ]
     },
     {
@@ -222,12 +224,12 @@
       "repo": "wondertrader/wtpy",
       "role": "companion",
       "url": "https://github.com/wondertrader/wtpy.git",
-      "status": "adapter_verified_in_cpp_host",
+      "status": "adapter_and_full_native_window_verified",
       "pluginId": "org.webstock.wtpy",
-      "remaining": [
-        "wheel_hash_locks_and_clean_machine_distribution",
-        "expanded_capabilities_and_tests",
-        "full_program_per_engine_validation"
+      "remaining": [],
+      "futureWork": [
+        "additional_upstream_capabilities_beyond_declared_adapter",
+        "second_machine_acceptance"
       ]
     },
     {
@@ -235,12 +237,12 @@
       "repo": "zengbin93/wbt",
       "role": "companion",
       "url": "https://github.com/zengbin93/wbt.git",
-      "status": "adapter_verified_in_cpp_host",
+      "status": "adapter_and_full_native_window_verified",
       "pluginId": "org.webstock.wbt",
-      "remaining": [
-        "wheel_hash_locks_and_clean_machine_distribution",
-        "expanded_capabilities_and_tests",
-        "full_program_per_engine_validation"
+      "remaining": [],
+      "futureWork": [
+        "additional_upstream_capabilities_beyond_declared_adapter",
+        "second_machine_acceptance"
       ]
     },
     {
@@ -248,12 +250,12 @@
       "repo": "TA-Lib/ta-lib",
       "role": "helper",
       "url": "https://github.com/TA-Lib/ta-lib.git",
-      "status": "adapter_verified_in_cpp_host",
+      "status": "adapter_and_full_native_window_verified",
       "pluginId": "org.webstock.talib",
-      "remaining": [
-        "wheel_hash_locks_and_clean_machine_distribution",
-        "expanded_capabilities_and_tests",
-        "full_program_per_engine_validation"
+      "remaining": [],
+      "futureWork": [
+        "additional_upstream_capabilities_beyond_declared_adapter",
+        "second_machine_acceptance"
       ]
     },
     {
@@ -261,38 +263,44 @@
       "repo": "akfamily/akshare",
       "role": "helper",
       "url": "https://github.com/akfamily/akshare.git",
-      "status": "adapter_verified_in_cpp_host",
+      "status": "adapter_implemented__earlier_native_success__current_provider_proxy_failure",
       "pluginId": "org.webstock.akshare",
-      "remaining": [
-        "wheel_hash_locks_and_clean_machine_distribution",
-        "expanded_capabilities_and_tests",
-        "full_program_per_engine_validation",
-        "external_provider_availability"
-      ]
+      "remaining": [],
+      "futureWork": [
+        "additional_upstream_capabilities_beyond_declared_adapter",
+        "second_machine_acceptance"
+      ],
+      "externalDependency": "Current Eastmoney ProxyError preserved; not a successful current online acceptance."
     }
   ],
   "milestones": [
     {
       "id": "plugin-platform",
-      "status": "native_platform_and_fresh_python_runtime_rebuilds_verified",
-      "pending": [
-        "wheel_hash_locks",
-        "clean_second_machine_acceptance"
-      ],
+      "status": "native_platform_and_16_hash_required_runtime_rebuilds_verified",
+      "pending": [],
       "checks": [
         "16 fresh Python environments",
         "pinned LEAN source fresh checkout + 20 NuGet locks + locked offline restore",
-        "native LEAN accounting curve matches baseline"
+        "native LEAN accounting curve matches baseline",
+        "all non-VCS runtime distributions require SHA256",
+        "source installations use complete Git commits",
+        "19 unchanged adapter/model numerical results match prior runtimes",
+        "corrected Hikyuu v2 independent date/cash/position/equity tests"
+      ],
+      "limitations": [
+        "Build-isolation tool dependencies not fully hash locked",
+        "No independent second-machine acceptance"
       ]
     },
     {
       "id": "full-native-program",
-      "status": "full_program_built_and_native_window_plugin_flow_tested",
+      "status": "18_offline_project_windows_verified__akshare_current_network_failure_observed",
       "checks": [
         "quotes and classic layouts plus legacy focus alias",
         "open plugin through actual research workspace",
         "run installed TA-Lib from Qt input form",
-        "close and reopen validated history without replay"
+        "close and reopen validated history without replay",
+        "each of 18 offline upstream projects runs through actual window, three layouts, history reopen; Hikyuu corrected v2"
       ],
       "limits": "Not a full application-page audit or production-installed desktop acceptance."
     },
@@ -303,8 +311,8 @@
     },
     {
       "id": "all-engine-coverage",
-      "status": "19_of_19_have_verified_initial_adapters",
-      "note": "Initial declared capabilities only. Latest AKShare network checks failed after an earlier successful 243-row native run."
+      "status": "19_declared_adapters_implemented__18_current_offline_acceptances__akshare_earlier_success_current_network_failure",
+      "note": "Hikyuu v1 date/funds evidence superseded by v2; AKShare earlier 243-row run retained but current proxy failure is not counted as current online success."
     },
     {
       "id": "historical-panel-input",
@@ -491,7 +499,16 @@
         "native acknowledgement and result archive roundtrip"
       ],
       "limits": "European continuous-yield model only; declared input cohort and provenance, no American pricing, VIX, arbitrage-free smile fitting or guaranteed trading edge."
+    },
+    {
+      "id": "final-delivery-review",
+      "status": "in_progress",
+      "remaining": [
+        "publish 0.26 checkpoint",
+        "install and deploy validated hashed runtimes",
+        "final user installation guide and scope review"
+      ]
     }
   ],
-  "latestPackageVersion": "0.25.0"
+  "latestPackageVersion": "0.26.0"
 }

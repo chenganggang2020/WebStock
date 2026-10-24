@@ -17,7 +17,8 @@ param(
     [string]$ObservationExamples,
     [string]$CostCsv,
     [string]$LimitExamples,
-    [string]$OptionCsv
+    [string]$OptionCsv,
+    [string]$HikyuuCsv
 )
 $ErrorActionPreference = 'Stop'
 if (Test-Path -LiteralPath $Destination) { throw 'Destination exists; use a new preview directory.' }
@@ -48,6 +49,7 @@ if ($PortfolioCsv) { Copy-Item -LiteralPath $PortfolioCsv -Destination (Join-Pat
 if ($IntradayCsv) { Copy-Item -LiteralPath $IntradayCsv -Destination (Join-Path $taskRelease 'synthetic-intraday-sessions.csv') }
 if ($FactorCsv) { Copy-Item -LiteralPath $FactorCsv -Destination (Join-Path $taskRelease 'synthetic-factor-panel.csv') }
 if ($OptionCsv) { Copy-Item -LiteralPath $OptionCsv -Destination (Join-Path $taskRelease 'synthetic-option-chain.csv') }
+if ($HikyuuCsv) { Copy-Item -LiteralPath $HikyuuCsv -Destination (Join-Path $taskRelease 'historical-hikyuu-first500.csv') }
 if ($CostCsv) { Copy-Item -LiteralPath $CostCsv -Destination (Join-Path $taskRelease 'synthetic-cost-model.csv') }
 if ($LimitExamples) {
     $taskLimits = Join-Path $taskRelease 'synthetic-limit-tests'
@@ -90,6 +92,8 @@ Technical Ratings v3条件插件可选historical-fixture.csv；它使用明确�
 筹码成本假设模型选择synthetic-cost-model.csv，含合成自由流通股和重置数据；可查看历史摘要与末端成本直方图，非真实股东账本。
 历史涨跌停/封板插件选择synthetic-limit-tests内同名功能文件；日线统计与完整事件状态分开，输入含合成历史限制价，见LIMIT_RESEARCH.txt。
 欧式期权研究选择synthetic-option-chain.csv；可查看指定合约IV、25Delta偏斜和到期排名的ATM/PCR，报价为合成验证数据，见OPTION_RESEARCH.txt。
+Hikyuu选择historical-hikyuu-first500.csv：原样本前500根保留实际amount；完整旧样本有两根量额状态矛盾，会被拒绝。
+0.26.0已修复Hikyuu日期单位并加入逐日账本核对，旧版本Hikyuu结果需重跑，见HIKYUU_ADAPTER.txt。
 
 本预览使用本目录内独立data，不修改原安装版的账户与数据库。
 移动整个目录后，需要把stock-data-root.json的directory更新到移动后的data绝对路径。
@@ -104,6 +108,9 @@ $taskRepo = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..\..')).Path
 Copy-Item -LiteralPath (Join-Path $taskRepo 'quant\plugins\THIRD_PARTY_NOTICES.txt') -Destination $taskRelease
 Copy-Item -LiteralPath (Join-Path $taskRepo 'quant\plugins\implementation-plan.json') -Destination $taskRelease
 Copy-Item -LiteralPath (Join-Path $taskRepo 'quant\plugins\README.txt') -Destination (Join-Path $taskRelease 'plugin-readme.txt')
+Copy-Item -LiteralPath (Join-Path $taskRepo 'quant\plugins\QUICK_START.txt') -Destination $taskRelease
+Copy-Item -LiteralPath (Join-Path $taskRepo 'quant\plugins\indicator-scope.json') -Destination $taskRelease
+Copy-Item -LiteralPath (Join-Path $taskRepo 'quant\plugins\evidence\verification.json') -Destination $taskRelease
 Copy-Item -LiteralPath (Join-Path $taskRepo 'quant\plugins\TEMPORAL_FORMULAS.txt') -Destination $taskRelease
 Copy-Item -LiteralPath (Join-Path $taskRepo 'quant\plugins\PANEL_INPUT.txt') -Destination $taskRelease
 Copy-Item -LiteralPath (Join-Path $taskRepo 'quant\plugins\FUNDAMENTAL_INPUT.txt') -Destination $taskRelease
@@ -120,6 +127,7 @@ Copy-Item -LiteralPath (Join-Path $taskRepo 'quant\plugins\PATTERN_RESEARCH.txt'
 Copy-Item -LiteralPath (Join-Path $taskRepo 'quant\plugins\COST_DISTRIBUTION.txt') -Destination $taskRelease
 Copy-Item -LiteralPath (Join-Path $taskRepo 'quant\plugins\LIMIT_RESEARCH.txt') -Destination $taskRelease
 Copy-Item -LiteralPath (Join-Path $taskRepo 'quant\plugins\OPTION_RESEARCH.txt') -Destination $taskRelease
+Copy-Item -LiteralPath (Join-Path $taskRepo 'quant\plugins\HIKYUU_ADAPTER.txt') -Destination $taskRelease
 Copy-Item -LiteralPath (Join-Path $taskRepo 'quant\plugins\MPL-2.0.txt') -Destination $taskRelease
 $taskSetup = Join-Path $taskRelease 'runtime-setup'
 New-Item -ItemType Directory -Path $taskSetup | Out-Null

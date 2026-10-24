@@ -1,0 +1,81 @@
+{
+  "schema": "webstock.plugin.native-acceptance.v1",
+  "runs": [
+    {
+      "pluginId": "org.webstock.deep-models",
+      "operationId": "lstm",
+      "version": "0.26.0",
+      "status": "verified",
+      "runId": "plugin-ab384e23-e13e-4aa2-9c00-6302cef11005",
+      "resultSha256": "c686371f0dd2cffcfb7f8e661848b81d4d894c6ca0aafe541f69a78b6ec715b9",
+      "bars": 1000,
+      "inputSha256": "ecb475376307a9555810b20f5ca81a4fe01df35d0145cf8e9dfbfa7c4ea71933",
+      "inputName": "historical-first1000-statistical.csv",
+      "tables": [
+        {
+          "id": "indicators",
+          "rows": 836
+        },
+        {
+          "id": "training-audit",
+          "rows": 14
+        },
+        {
+          "id": "training-preprocessing",
+          "rows": 98
+        },
+        {
+          "id": "training-loss",
+          "rows": 280
+        },
+        {
+          "id": "matured-evaluation",
+          "rows": 831
+        }
+      ],
+      "modelSemantics": {
+        "fits": 14,
+        "nodes": 1,
+        "targetHorizon": 5,
+        "cpuOnly": true,
+        "trainingUsesFutureLabels": false,
+        "graphUsesFutureReturns": false,
+        "fixedEpochs": 20,
+        "executionIncluded": false
+      }
+    },
+    {
+      "pluginId": "org.webstock.statistical-models",
+      "operationId": "garch",
+      "version": "0.26.0",
+      "status": "verified",
+      "runId": "plugin-baaaa8da-e401-4fdf-89c4-f87fa86a058f",
+      "resultSha256": "95fa8df3910c7610b46657e857bc053f7ce0839bf0b4ec0318e08288325beba8",
+      "bars": 1000,
+      "inputSha256": "ecb475376307a9555810b20f5ca81a4fe01df35d0145cf8e9dfbfa7c4ea71933",
+      "inputName": "historical-first1000-statistical.csv",
+      "tables": [
+        {
+          "id": "indicators",
+          "rows": 38
+        },
+        {
+          "id": "training-audit",
+          "rows": 38
+        },
+        {
+          "id": "fitted-parameters",
+          "rows": 152
+        }
+      ],
+      "modelSemantics": {
+        "trailingRows": 252,
+        "forecastEvery": 20,
+        "fitCount": 38,
+        "unavailableFits": 0,
+        "horizonBars": 1,
+        "historicalStatesRepainted": false
+      }
+    }
+  ]
+}
