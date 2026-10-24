@@ -48,7 +48,7 @@ inline Hit hitTest(QPointF at,const QRectF& rect,const QMap<QString,Layer>& laye
   }}return best;
 }
 inline void paint(QPainter& p,const QRectF& rect,const QMap<QString,Layer>& layers,int start,int end,
-                  const std::function<double(int)>& x,const std::function<double(double)>& y) {
+                  const std::function<double(int)>& x,const std::function<double(double)>& y,const QColor& background) {
   p.save();p.setClipRect(rect);
   for(const auto& layer:layers){
     for(const auto& line:layer.lines){QPainterPath path;bool joined=false;int prior=-2;
@@ -59,9 +59,15 @@ inline void paint(QPainter& p,const QRectF& rect,const QMap<QString,Layer>& laye
     // Paint the selected connection last so an overlapping line cannot hide it.
     for(bool selected:{false,true})for(const auto&s:layer.segments){
       if(s.to.x()<start||s.from.x()>=end||(s.id==layer.selectedId&&!s.id.isEmpty())!=selected)continue;
-      auto tone=s.color;if(!selected)tone.setAlpha(160);
+      auto tone=s.color;tone.setAlpha(255);
       QPointF a(x(int(s.from.x())),y(s.from.y())),b(x(int(s.to.x())),y(s.to.y()));
-      p.setPen(QPen(tone,selected?2.8:1.4,selected?Qt::SolidLine:Qt::DashLine));p.drawLine(a,b);
+      // A narrow backdrop separates the connection from candles and indicators.
+      // Ordinary trades stay clearly visible even when none is selected.
+      const double width=selected?4.2:2.8;
+      p.setPen(QPen(background,width+2,Qt::SolidLine,Qt::RoundCap));p.drawLine(a,b);
+      QPen connection(tone,width,Qt::SolidLine,Qt::RoundCap);
+      if(!selected)connection.setDashPattern({3,1.6});
+      p.setPen(connection);p.drawLine(a,b);
       if(selected){p.setBrush(Qt::NoBrush);p.drawEllipse(a,9,9);p.drawEllipse(b,9,9);}
     }
     for(const auto&m:layer.markers){if(m.index<start||m.index>=end)continue;QPointF c(x(m.index),y(m.price));QPolygonF shape;
