@@ -61,6 +61,28 @@ class NativeReportTests(unittest.TestCase):
             self.assertIn(term, html)
         json.dumps(self.result, allow_nan=False)
 
+    def test_connections_and_inspection_match_closed_trade_ledger(self):
+        view = self.result['view']
+        ledger = next(t for t in self.result['tables'] if t['id'] == 'closed-trades')
+        columns = [c['name'] if isinstance(c, dict) else c for c in ledger['columns']]
+        trades = [dict(zip(columns, row)) for row in ledger['rows']]
+        self.assertEqual(len(view['segments']), len(trades))
+        cards = {c['id']: c for c in view['inspections']}
+        for i, (segment, trade) in enumerate(zip(view['segments'], trades), 1):
+            self.assertEqual(segment['id'], f'trade-{i}')
+            for endpoint, prefix in [('from', 'Entry'), ('to', 'Exit')]:
+                self.assertEqual(segment[endpoint+'Date'], trade[prefix+'Time'][:10])
+                self.assertEqual(segment[endpoint+'Price'], trade[prefix+'Price'])
+            self.assertEqual(segment['color'], '#ef717a' if trade['PnL'] > 0 else '#43b99c' if trade['PnL'] < 0 else '#91a4bd')
+            card = cards[segment['id']]
+            self.assertIn(f'{trade["PnL"]:+,.2f}', card['value'])
+            self.assertIn(f'{trade["Commission"]:.2f}', card['fields'][3]['value'])
+            self.assertIn(f'{int(abs(trade["Size"])):,}', card['fields'][2]['value'])
+        for marker in view['markers']:
+            if marker['category'] == 'fill':
+                self.assertIn(marker['id'], cards)
+                self.assertEqual(marker['color'], '#9bbce4')
+
     def test_invalid_warmup_and_parameters(self):
         with self.assertRaises(ValueError): calculate(self.frame, {**self.p, 'fast':30})
         with self.assertRaises(ValueError): calculate(self.frame.head(20), self.p)
@@ -83,6 +105,11 @@ class NativeReportTests(unittest.TestCase):
         self.assertEqual(len(tables['closed-trades']['rows']), 0)
         self.assertEqual(len(tables['fills']['rows']), 1)
         self.assertEqual(tables['fills']['rows'][0][2], 'buy')
+        self.assertEqual(output['view']['segments'], [])
+        self.assertEqual(len(output['view']['inspections']), 1)
+        self.assertEqual(output['view']['inspections'][0]['value'], '持仓中')
+        self.assertEqual(output['view']['inspections'][0]['fields'][1]['value'], '尚未卖出\n—')
+        self.assertEqual(output['view']['markers'][-1]['id'], output['view']['inspections'][0]['id'])
 
 
 if __name__ == '__main__':

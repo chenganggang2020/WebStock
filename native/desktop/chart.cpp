@@ -275,32 +275,11 @@ void Chart::paintEvent(QPaintEvent *) {
   int end = std::clamp(endIndex, 1, int(bars.size())),
       start = std::max(0, end - visibleCount), n = end - start;
   auto r = priceRect();
-  double step = r.width() / n, lo = INFINITY, hi = -INFINITY;
-  for (int i = start; i < end; ++i)
-    if (market::valid(bars[i])) {
-      lo = std::min(lo, bars[i].low);
-      hi = std::max(hi, bars[i].high);
-      if (vwapEnabled && i < int(vwapData.values.size()) && std::isfinite(vwapData.values[i])) {
-        lo=std::min(lo,vwapData.values[i]);hi=std::max(hi,vwapData.values[i]);
-      }
-      if (!minute && overlay)
-        for (const auto &data : maData)
-          if (std::isfinite(data[i])) {
-            lo = std::min(lo, data[i]);
-            hi = std::max(hi, data[i]);
-          }
-    }
+  double step = r.width() / n;
+  const auto bounds=priceBounds(start,end);double lo=bounds.first,hi=bounds.second;
   if (!std::isfinite(lo)) {
     return;
   }
-  chartExtension::range(extensionLayers,start,end,lo,hi);
-  if (minute && previousClose > 0) {
-    lo = std::min(lo, previousClose);
-    hi = std::max(hi, previousClose);
-  }
-  double pad = std::max({(hi - lo) * .10, std::abs(hi) * .003, 1e-6});
-  lo -= pad;
-  hi += pad;
   auto x = [&](int i) { return barX(i); };
   auto y = [&](double v) {
     return r.bottom() - (v - lo) / (hi - lo) * r.height();
@@ -706,6 +685,32 @@ void Chart::selectAt(double xx) {
   update();
   emit barSelected(selected);
 }
+QPair<double,double> Chart::priceBounds(int start,int end) const {
+  double lo=INFINITY,hi=-INFINITY;
+  for(int i=start;i<end;++i)if(market::valid(bars[i])){
+    lo=std::min(lo,bars[i].low);hi=std::max(hi,bars[i].high);
+    if(vwapEnabled&&i<int(vwapData.values.size())&&std::isfinite(vwapData.values[i])){lo=std::min(lo,vwapData.values[i]);hi=std::max(hi,vwapData.values[i]);}
+    if(!minute&&overlay)for(const auto&data:maData)if(i<int(data.size())&&std::isfinite(data[i])){lo=std::min(lo,data[i]);hi=std::max(hi,data[i]);}
+  }
+  if(!std::isfinite(lo))return {lo,hi};
+  chartExtension::range(extensionLayers,start,end,lo,hi);
+  if(minute&&previousClose>0){lo=std::min(lo,previousClose);hi=std::max(hi,previousClose);}
+  double pad=std::max({(hi-lo)*.10,std::abs(hi)*.003,1e-6});return {lo-pad,hi+pad};
+}
+QPointF Chart::extensionPoint(int index,double price) const {
+  if(bars.empty())return {};
+  int end=std::clamp(endIndex,1,int(bars.size())),start=std::max(0,end-visibleCount);
+  const auto range=priceBounds(start,end);auto r=priceRect();
+  return {barX(index),r.bottom()-(price-range.first)/(range.second-range.first)*r.height()};
+}
+chartExtension::Hit Chart::extensionItemAt(QPointF point) const {
+  if(bars.empty()||minute)return {};
+  int end=std::clamp(endIndex,1,int(bars.size())),start=std::max(0,end-visibleCount);
+  const auto range=priceBounds(start,end);if(!std::isfinite(range.first))return {};
+  auto r=priceRect();
+  return chartExtension::hitTest(point,r,extensionLayers,start,end,[&](int i){return barX(i);},
+    [&](double price){return r.bottom()-(price-range.first)/(range.second-range.first)*r.height();});
+}
 void Chart::wheelEvent(QWheelEvent *e) {
   if (bars.empty()) return;
   if (minute) {
@@ -723,9 +728,11 @@ void Chart::mousePressEvent(QMouseEvent *e) {
   press = e->pos();
   startEnd = endIndex;
   dragging = true;
+  extensionDragged = false;
   selectAt(e->position().x());
 }
 void Chart::mouseMoveEvent(QMouseEvent *e) {
+  if(dragging&&(e->position()-QPointF(press)).manhattanLength()>4)extensionDragged=true;
   if (dragging && minute) {
     selectAt(e->position().x());
     return;
@@ -739,7 +746,11 @@ void Chart::mouseMoveEvent(QMouseEvent *e) {
     update();
   }
 }
-void Chart::mouseReleaseEvent(QMouseEvent *) { dragging = false; lastInspectX = NAN; }
+void Chart::mouseReleaseEvent(QMouseEvent *e) {
+  bool clicked=dragging&&!extensionDragged&&e->button()==Qt::LeftButton&&(e->position()-QPointF(press)).manhattanLength()<=4;
+  dragging=false;lastInspectX=NAN;
+  if(clicked){auto hit=extensionItemAt(e->position());emit extensionItemSelected(hit.owner,hit.id);}
+}
 void Chart::keyPressEvent(QKeyEvent *e) {
   if (e->key() == Qt::Key_Home)
     latest();

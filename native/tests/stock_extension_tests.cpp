@@ -29,6 +29,21 @@ struct Harness {
 class StockExtensionTests:public QObject {
   Q_OBJECT
 private slots:
+  void chartHitTestingFollowsViewportAndIgnoresDrag(){
+    Chart chart;stock(chart);chart.resize(900,480);chart.visibleCount=80;chart.endIndex=640;
+    chartExtension::Layer layer;layer.segments.append({{570,10.5},{625,11.2},QColor("#ef717a"),"one"});
+    layer.markers.append({570,10.5,"up","entry","fill",Qt::blue,"one","买"});chart.setExtensionLayer("plugin",layer);
+    auto midpoint=[&]{return (chart.extensionPoint(570,10.5)+chart.extensionPoint(625,11.2))/2;};
+    QCOMPARE(chart.extensionItemAt(midpoint()).id,QString("one"));QVERIFY(chart.extensionItemAt({0,0}).id.isEmpty());
+    QCOMPARE(chart.extensionItemAt(chart.extensionPoint(570,10.5)).owner,QString("plugin"));
+    chart.resize(1200,620);chart.visibleCount=50;chart.endIndex=630;
+    QCOMPARE(chart.extensionItemAt(midpoint()).id,QString("one"));
+    chart.show();QCoreApplication::processEvents();QSignalSpy click(&chart,&Chart::extensionItemSelected);
+    auto point=midpoint().toPoint();QTest::mouseClick(&chart,Qt::LeftButton,Qt::NoModifier,point);
+    QCOMPARE(click.size(),1);QCOMPARE(click.last()[1].toString(),QString("one"));
+    click.clear();QTest::mousePress(&chart,Qt::LeftButton,Qt::NoModifier,point);QTest::mouseMove(&chart,point+QPoint(30,0));QTest::mouseRelease(&chart,Qt::LeftButton,Qt::NoModifier,point+QPoint(30,0));QCOMPARE(click.size(),0);
+    chart.removeExtensionLayer("plugin");QVERIFY(chart.extensionItemAt(midpoint()).id.isEmpty());
+  }
   void installDisableUninstallAreOwned(){
     Harness h;QCOMPARE(h.window.findChildren<QPushButton*>(QRegularExpression("^extensionAction_")).size(),0);h.host->install(package());h.host->install(package("org.test.second"));h.host->open("org.test.first");QCOMPARE(h.window.findChildren<StockExtensionPanel*>().size(),1);
     chartExtension::Layer layer;layer.markers.append({639,11.2,"up","test","fill",Qt::red});h.chart->setExtensionLayer("org.test.first",layer);h.chart->setExtensionLayer("org.test.second",layer);
@@ -72,10 +87,25 @@ private slots:
   }
   void realStockRoundTrip(){
     const auto runtime=qEnvironmentVariable("WEBSTOCK_EXTENSION_PYTHON"),bundle=qEnvironmentVariable("WEBSTOCK_EXTENSION_PACKAGE");if(runtime.isEmpty()||bundle.isEmpty())QSKIP("Set real-engine runtime and generated package paths");
-    Harness h;write(h.host->root()+"/runtime-defaults.json",QJsonObject{{"org.webstock.backtesting-py",runtime}});h.host->install(read(bundle));h.host->open("org.webstock.backtesting-py");auto panel=h.window.findChild<StockExtensionPanel*>();QVERIFY(panel);auto run=panel->findChild<QPushButton*>("extensionRun");QVERIFY2(run->isEnabled(),qPrintable(panel->findChild<QLabel*>("extensionStatus")->text()));run->click();
+    Harness h;write(h.host->root()+"/runtime-defaults.json",QJsonObject{{"org.webstock.backtesting-py",runtime}});h.host->install(read(bundle));h.host->open("org.webstock.backtesting-py");h.window.show();QCoreApplication::processEvents();auto panel=h.window.findChild<StockExtensionPanel*>();QVERIFY(panel);auto run=panel->findChild<QPushButton*>("extensionRun");QVERIFY2(run->isEnabled(),qPrintable(panel->findChild<QLabel*>("extensionStatus")->text()));run->click();
     QTRY_VERIFY_WITH_TIMEOUT(!panel->isRunning(),90000);const auto runId=panel->property("runId").toString();QVERIFY2(!runId.isEmpty(),qPrintable(panel->findChild<QLabel*>("extensionStatus")->text()));Job audit(h.host->root());auto result=audit.reopen(runId)["result"].toObject();QCOMPARE(result["bars"].toInt(),640);auto view=result["view"].toObject();QCOMPARE(view["metrics"].toArray()[2].toObject()["value"].toString(),QString("12"));QCOMPARE(view["metrics"].toArray()[3].toObject()["value"].toString(),QString("99,610.10"));
-    QVERIFY(h.chart->extensionLayers.contains("org.webstock.backtesting-py"));QCOMPARE(h.chart->extensionLayers["org.webstock.backtesting-py"].markers.size(),51);QCOMPARE(h.chart->bars.size(),size_t(640));
+    const QString plugin="org.webstock.backtesting-py";
+    QVERIFY(h.chart->extensionLayers.contains(plugin));QCOMPARE(h.chart->extensionLayers[plugin].markers.size(),25);QCOMPARE(h.chart->extensionLayers[plugin].segments.size(),12);QCOMPARE(h.chart->bars.size(),size_t(640));
+    panel->findChild<QCheckBox*>("extensionSignals")->setChecked(true);QCOMPARE(h.chart->extensionLayers[plugin].markers.size(),51);
+    auto segment=h.chart->extensionLayers[plugin].segments.last();h.chart->visibleCount=qMax(40,int(segment.to.x()-segment.from.x())+24);h.chart->endIndex=qMin(640,int(segment.to.x())+12);h.chart->repaint();
+    h.window.setProperty("stockTheme","navy");
+    auto point=(h.chart->extensionPoint(int(segment.from.x()),segment.from.y())+h.chart->extensionPoint(int(segment.to.x()),segment.to.y()))/2;
+    QTest::mouseClick(h.chart,Qt::LeftButton,Qt::NoModifier,point.toPoint());auto card=h.chart->findChild<QFrame*>("extensionInspectionCard");QVERIFY(card);QCOMPARE(card->property("itemId").toString(),segment.id);QVERIFY(card->isVisible());QCOMPARE(h.chart->extensionLayers[plugin].selectedId,segment.id);
+    QStringList words;for(auto label:card->findChildren<QLabel*>())words<<label->text();QVERIFY(words.join(" ").contains("扣费净盈亏"));QVERIFY(words.join(" ").contains("交易费用"));
+    QCOMPARE(card->palette().color(QPalette::WindowText),QColor("#e6edf5"));QVERIFY(card->styleSheet().contains("#1c2838"));
+    card->findChild<QToolButton*>("closeExtensionInspection")->click();QVERIFY(!h.chart->findChild<QFrame*>("extensionInspectionCard"));QVERIFY(h.chart->extensionLayers[plugin].selectedId.isEmpty());
+    panel->findChild<QCheckBox*>("extensionConnections")->setChecked(false);QVERIFY(h.chart->extensionLayers[plugin].segments.isEmpty());panel->findChild<QCheckBox*>("extensionConnections")->setChecked(true);
+    // Table selection shows the same inspection, including an unclosed entry.
+    auto table=panel->findChild<QTableWidget*>("extensionTable_fills");QVERIFY(table);table->cellClicked(table->rowCount()-1,0);card=h.chart->findChild<QFrame*>("extensionInspectionCard");QVERIFY(card);QCOMPARE(card->findChild<QLabel*>("inspectionValue")->text(),QString("持仓中"));QVERIFY(card->property("itemId").toString()!=segment.id);
+    panel->hide();QVERIFY(!h.chart->findChild<QFrame*>("extensionInspectionCard"));QVERIFY(h.chart->extensionLayers.isEmpty());h.host->open(plugin);QCOMPARE(h.chart->extensionLayers[plugin].segments.size(),12);
+    table=panel->findChild<QTableWidget*>("extensionTable_closed-trades");table->cellClicked(0,0);QVERIFY(h.chart->findChild<QFrame*>("extensionInspectionCard"));
     auto changed=stock(*h.chart);changed["id"]="SH:stock:600000";h.host->setContext(changed);QVERIFY(h.chart->extensionLayers.isEmpty());QVERIFY(panel->property("runId").toString().isEmpty());
+    QVERIFY(!h.chart->findChild<QFrame*>("extensionInspectionCard"));
     h.host->uninstall("org.webstock.backtesting-py");QVERIFY(!h.window.findChild<StockExtensionPanel*>());QCOMPARE(audit.reopen(runId)["status"].toString(),QString("completed"));QVERIFY(!QFileInfo::exists(h.host->root()+"/packages/org.webstock.backtesting-py"));
   }
 };

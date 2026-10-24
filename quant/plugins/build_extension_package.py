@@ -20,13 +20,13 @@ def build(output):
     ]
     manifest = {
         'schema': 'webstock.plugin.manifest.v1', 'protocolVersion': 1,
-        'id': 'org.webstock.backtesting-py', 'version': '0.29.1', 'name': 'Backtesting.py 策略回测',
+        'id': 'org.webstock.backtesting-py', 'version': '0.30.0', 'name': 'Backtesting.py 策略回测',
         'license': 'AGPL-3.0', 'runtime': 'python', 'entrypoint': 'backtesting_report_worker.py',
         'nativeReport': 'webstock.native-report.v1',
         'distributions': ['backtesting', 'numpy', 'pandas', 'bokeh'],
         'ui': {
             'apiVersion': 1, 'placement': 'chart', 'title': '策略回测', 'toolbarLabel': '策略',
-            'summary': '在当前 K 线上查看信号、模拟买卖点和收益',
+            'summary': '在 K 线上连起买卖点，点击查看每笔交易的净盈亏',
             'rules': '使用当前股票完整日 K。收盘信号，下一根开盘模拟成交。\n'
                      '只做多；单次股数和费用可调。尚未完整模拟 A 股 T+1、涨跌停和历史税费。',
             'preview': [

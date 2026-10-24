@@ -5,13 +5,15 @@
 #include <QMap>
 class Chart;class CompactActions;class QVBoxLayout;class QMenu;class QPushButton;
 class QComboBox;class QDateEdit;class QLabel;class QCheckBox;class QTabWidget;
-class ExtensionPlot;class QDialog;
+class ExtensionPlot;class QDialog;class QFrame;
 
 class StockExtensionPanel final:public QWidget {
   Q_OBJECT
   quantPlugin::Repository repository_;
   quantPlugin::Job job_;
   QPointer<Chart> chart_;
+  QPointer<QFrame> inspectionCard_;
+  QString selectedItem_;
   QString id_,contextKey_,runKey_,runId_;
   QJsonObject manifest_,context_,result_,runQuery_,runParameters_;
   QMap<QString,QWidget*> fields_;
@@ -19,7 +21,7 @@ class StockExtensionPanel final:public QWidget {
   QDateEdit *start_,*end_;
   QLabel *status_,*dataLabel_,*inspection_,*legend_;
   QPushButton *run_,*cancel_,*report_,*history_;
-  QCheckBox *lines_,*marks_;
+  QCheckBox *lines_,*marks_,*signals_,*connections_;
   QWidget *form_,*metrics_;
   QVBoxLayout* metricLayout_;
   QTabWidget* results_;
@@ -27,6 +29,9 @@ class StockExtensionPanel final:public QWidget {
   QJsonObject operation()const;
   void parameters();void run();void completed();void render();void layers();void clearResult();void availability();
   void showDetails();void showHistory();void inspect(int index);
+  void selectItem(const QString& id);void closeInspection();void placeInspection();
+  bool eventFilter(QObject* watched,QEvent* event)override;
+  void hideEvent(QHideEvent* event)override;
   void guard(std::function<void()> action);
 public:
   StockExtensionPanel(QString root,QString id,Chart* chart,QWidget* parent=nullptr);
