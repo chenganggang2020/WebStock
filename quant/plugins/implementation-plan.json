@@ -9,11 +9,11 @@
     "indicatorFamilies": 110,
     "source": "indicator-scope.json",
     "indicatorReadiness": {
-      "formula_implemented_and_tested": 96,
+      "formula_implemented_and_tested": 97,
       "partial": 2,
-      "pending": 12
+      "pending": 11
     },
-    "installedPackages": 26
+    "installedPackages": 27
   },
   "completionDefinition": [
     "All 19 projects have runnable installed adapters with declared capabilities, inputs, versions and actual results.",
@@ -299,7 +299,7 @@
     },
     {
       "id": "indicator-coverage",
-      "status": "201_talib_49_core_20_panel_5_event_6_learning_9_statistical_3_deep_3_portfolio_risk_operations_verified",
+      "status": "201_talib_49_core_20_panel_5_event_6_learning_9_statistical_3_deep_3_portfolio_risk_operations_verified__3_factor_model_operations_verified",
       "note": "Function counts are not catalogue-family completion counts."
     },
     {
@@ -392,7 +392,20 @@
         "all 201 TA-Lib and 49 core operations prefix invariant"
       ],
       "limits": "Fixed scheduled entries are research inputs; no full market execution or externally certified session calendar."
+    },
+    {
+      "id": "factor-composition-and-ranking",
+      "status": "three_operations_verified_in_cpp_host_and_full_windows",
+      "checks": [
+        "prior-window full-SVD PCA and independent eigensolve",
+        "all fitted loadings and train-only scaling recorded",
+        "point-in-time factor inputs, signed ex-ante weights and average ranks",
+        "cutoff ties included without symbol-order preference",
+        "next-input-close fees/cash/positions reconcile",
+        "prefix invariance and future perturbation"
+      ],
+      "limits": "Fixed research universe and external availability claims; not full A-share execution, certified PIT data or return superiority."
     }
   ],
-  "latestPackageVersion": "0.18.0"
+  "latestPackageVersion": "0.19.1"
 }

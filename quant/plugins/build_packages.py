@@ -20,7 +20,7 @@ def number(key, default, minimum=2, maximum=10000, title=None, kind=None):
 def save_package(output, manifest, sources):
     content = {name: (HERE/source).read_bytes() for name, source in sources.items()}
     manifest.update(schema="webstock.plugin.manifest.v1", protocolVersion=1,
-                    entrypoint="worker.py", runtime="python", version="0.18.0",
+                    entrypoint="worker.py", runtime="python", version="0.19.1",
                     files={name: hashlib.sha256(raw).hexdigest() for name,raw in content.items()})
     package = {"schema": "webstock.plugin.package.v1", "manifest": manifest,
                "files": {name: base64.b64encode(raw).decode("ascii") for name,raw in content.items()}}
@@ -340,6 +340,25 @@ def main():
         "source":"https://github.com/chenganggang2020/WebStock","distributions":["numpy","pandas"],"operations":risk},
         {"worker.py":"worker.py","portfolio_contract.py":"portfolio_contract.py","portfolio_risk.py":"portfolio_risk.py","panel_contract.py":"panel_contract.py",
          "PORTFOLIO_RISK.txt":"PORTFOLIO_RISK.txt","PANEL_INPUT.txt":"PANEL_INPUT.txt","THIRD_PARTY_NOTICES.txt":"THIRD_PARTY_NOTICES.txt"}))
+    factor=[]
+    for key,title in {"trailing-pca":"PCA · 仅过去窗口训练", "factor-score":"多因子截面评分 · 明确权重", "ranked-portfolio":"排名组合 · 次根收盘调仓"}.items():
+        if key=='trailing-pca':
+            fields=[number("trainingRows",128,30,2000,title="训练窗口根数"),number("retrainEvery",63,1,1000,title="重新训练间隔"),number("components",3,1,7,title="保留主成分数")]
+        else:
+            fields=[{"id":"symbols","title":"事先指定研究证券（英文逗号）","type":"text","format":"text","minLength":3,"maxLength":512,"default":"000001,000002,000003"},
+                {"id":"factorColumns","title":"因子列名（英文逗号）","type":"text","format":"text","minLength":3,"maxLength":512,"default":"factor_momentum,factor_lowvol"},
+                {"id":"factorWeights","title":"对应有符号权重（英文逗号）","type":"text","format":"text","minLength":3,"maxLength":256,"default":"1,1"}]
+            if key=='ranked-portfolio':fields.extend([number("topCount",2,1,16,title="取排名前几名（包含边界并列）"),
+                number("minimumScore",.1,-1.,1.,title="最低入选分数"),number("rebalanceEvery",20,1,1000,title="每隔多少根评估调仓"),
+                number("maxExposure",1.,.01,1.,title="总敞口上限"),number("maxSecurityWeight",.6,.01,1.,title="单证券目标上限"),
+                number("capital",100000.,1.,1e10,title="初始虚拟资金"),number("feeBps",5.,0.,100.,title="单边费用基点")])
+        factor.append({"id":key,"title":title,"formulaVersion":"webstock-factor-"+key+"-v1","parameters":fields,
+            "inputKind":"ohlcv-single-csv" if key=='trailing-pca' else "market-panel-csv","outputKind":"backtest" if key=='ranked-portfolio' else 'indicator',
+            "description":"PCA输出训练审计与载荷；外部因子需要逐值可知时间。组合保留选择、费用和现金账本。见FACTOR_MODELS.txt。"})
+    records.append(save_package(args.output,{"id":"org.webstock.factor-models","name":"WebStock 因子合成与排名组合","license":"Project source terms; scikit-learn BSD-3-Clause",
+        "source":"https://github.com/chenganggang2020/WebStock","distributions":["numpy","pandas","scikit-learn"],"operations":factor},
+        {"worker.py":"worker.py","factor_models.py":"factor_models.py","learning_models.py":"learning_models.py","portfolio_risk.py":"portfolio_risk.py","panel_contract.py":"panel_contract.py",
+         "FACTOR_MODELS.txt":"FACTOR_MODELS.txt","PANEL_INPUT.txt":"PANEL_INPUT.txt","THIRD_PARTY_NOTICES.txt":"THIRD_PARTY_NOTICES.txt"}))
     (args.output/"index.json").write_text(json.dumps(records,ensure_ascii=False,indent=2),encoding="utf-8")
     print(json.dumps(records,ensure_ascii=False))
 

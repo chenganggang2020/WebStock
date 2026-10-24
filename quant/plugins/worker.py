@@ -143,6 +143,9 @@ def validate_parameters(operation, supplied):
 
 
 def compute(manifest, operation, frame, parameters):
+    if manifest["id"] == "org.webstock.factor-models":
+        from factor_models import calculate
+        return calculate(operation["id"],frame,parameters)
     if manifest["id"] == "org.webstock.portfolio-risk":
         from portfolio_risk import calculate
         return calculate(operation["id"],frame,parameters)

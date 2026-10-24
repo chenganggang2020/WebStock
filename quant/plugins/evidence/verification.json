@@ -139,6 +139,20 @@
       "passed": 6,
       "failed": 0,
       "operations": 2
+    },
+    "factorModels": {
+      "passed": 8,
+      "failed": 0,
+      "skipped": 0,
+      "checks": [
+        "independent covariance eigendecomposition and serialized PCA loadings",
+        "current bar excluded from PCA fit",
+        "prefix invariance and future perturbation",
+        "rank-deficient/zero-volume windows remain unavailable",
+        "average ties, signed weights, symbol-order invariance",
+        "next-close cash/fees/position reconciliation",
+        "missing data and future availability rejected"
+      ]
     }
   },
   "integrationRuns": [
@@ -279,9 +293,9 @@
     "legacyIndicators": "passed",
     "pluginPlatform": "passed, 15 QtTest cases, 0 skipped",
     "nativeWindow": "passed, quotes/classic and legacy focus redirect, real installed TA-Lib workflow",
-    "visualReview": "Position stop and intraday RVOL full native windows; selected-column finite interval, internal gaps remain disconnected"
+    "visualReview": "Native PCA curves, cross-sectional factor score table, ranked-portfolio equity/orders; actual quotes/classic/focus entry and frozen history reopening"
   },
-  "latestPackageVersion": "0.18.0",
+  "latestPackageVersion": "0.19.1",
   "additionalEvidence": [
     "native-acceptance-0.8.1.json",
     "native-akshare-0.7.0.json",
@@ -367,6 +381,24 @@
       "skipped": 0
     },
     "rvol-at-time": {
+      "passed": 3,
+      "failed": 0,
+      "skipped": 0
+    }
+  },
+  "nativeFactorAcceptance": "native-factor-0.19.1.json",
+  "nativeFactorWindows": {
+    "trailing-pca": {
+      "passed": 3,
+      "failed": 0,
+      "skipped": 0
+    },
+    "factor-score": {
+      "passed": 3,
+      "failed": 0,
+      "skipped": 0
+    },
+    "ranked-portfolio": {
       "passed": 3,
       "failed": 0,
       "skipped": 0

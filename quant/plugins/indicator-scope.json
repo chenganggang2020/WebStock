@@ -1923,9 +1923,13 @@
       "overlap": "PCA 高解释方差不等于高收益预测力。",
       "evidence": "研究设计；合成规则未训练",
       "refs": "https://www.nber.org/papers/w25398\nhttps://quant.10jqka.com.cn/view/help/8",
-      "status": "pending",
-      "implementations": [],
-      "implementationNote": "未完成；不以目录条目或近似名称充当实现。"
+      "status": "formula_implemented_and_tested",
+      "implementations": [
+        "factor-models:trailing-pca",
+        "factor-models:factor-score",
+        "factor-models:ranked-portfolio"
+      ],
+      "implementationNote": "原版sklearn尾随PCA仅用观察根以前数据训练；外部因子逐值可知时间、平均秩和事先权重；并列纳入排名组合，下一输入收盘成交和现金费用账本。8项独立/前缀/账本测试与3项原生运行通过；不证明收益优势。"
     },
     {
       "id": 106,

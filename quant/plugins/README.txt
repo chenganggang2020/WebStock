@@ -48,7 +48,7 @@ isclosed若提供则必须全为true或1；运行前用户需确认仅含已完�
 ------------------------------------------------
 TA-Lib 0.8.2；Hikyuu 2.8.3；Backtrader 1.9.78.123；vectorbt 1.2.0。
 当前Backtesting.py使用固定源码提交的非可编辑独立环境；结果记录实际distribution版本。
-每次结果保存引擎版本和主要Python依赖版本。setup_runtime.py按15组依赖/源码快照安装新环境；Python wheel哈希锁定尚待完成。
+每次结果保存引擎版本和主要Python依赖版本。setup_runtime.py按16组依赖/源码快照安装新环境；全部Python wheel哈希锁定尚待完成。
 Windows不同Python版本的环境应分开配置。WonderTrader原实验使用Python3.10，后续不会强行混入当前环境。
 
 构建
@@ -57,12 +57,12 @@ Windows不同Python版本的环境应分开配置。WonderTrader原实验使用P
 WEBVIEW2_SDK 指向原分支要求的官方Microsoft.Web.WebView2 1.0.4258.31提取目录。
 独立宿主：cmake -S native/plugin-host -B <构建目录> -DCMAKE_PREFIX_PATH=<Qt路径>
 然后构建 WebStockPluginHost 和 quant_plugin_tests。
-此宿主已在Qt6.6/MinGW11的隔离环境中编译和测试；完整程序有更高版本要求。
+此宿主及完整程序均已在Qt6.9.1/MinGW13.1隔离环境编译和测试。
 
 验证
 ----
 Python：tests/test_plugins.py <插件包目录>
-逐项执行201个TA-Lib函数，并检查201+37个指标在追加未来K线后历史值不变化。
+逐项执行201个TA-Lib函数，并检查201+49个指标在追加未来K线后历史值不变化。
 另外检查历史边界、零成交量、RSI版本区分、不合法输入和真实成交额要求。
 Qt：quant_plugin_tests，设置 WEBSTOCK_TEST_PYTHON、WEBSTOCK_TEST_PACKAGE（TA-Lib包）、
 WEBSTOCK_TEST_CSV 可执行真实插件及进程树取消测试；未设置时这些测试明确skip。
@@ -200,3 +200,11 @@ LSTM/Transformer各在C++宿主使用1000根历史样本完成14次训练；GCN�
 同时刻RVOL要求会话锚点/交易slot/实际可知时间/日历版本；支持regular和cumulative，历史缺失及累计缺口保留空值。
 新增6项手算/时序/缺口测试通过，原12项测试覆盖201项TA-Lib及全部49核心功能；2项功能通过原生宿主和完整窗口运行/历史恢复。
 曲线按当前列实际有值的首末时点显示，内部空值保持断开，明细不删行。输入约定见SESSION_EXECUTION.txt。
+
+0.19.1：新增因子合成与排名组合插件，共27包；目录97类已实现测试、2类部分、11类待实现。
+PCA使用原版sklearn完整SVD，训练/标准化只用观察根以前的尾随窗口，保存所有模型载荷和训练审计。
+截面评分接受2..8项逐值声明可知时间的因子，平均秩与事先有符号权重明确；因子缺失拒绝，成员不足保留不可用。
+排名组合按最低分及topCount选股，边界并列全部纳入并等权，次根收盘调仓，保留费用/现金/持仓和订单。
+8项独立矩阵、前缀、未来扰动、并列处理与账本测试通过；3项原生宿主运行、每项完整窗口3条QtTest用例通过，无跳过。
+PCA在4937根旧历史样本完成77次拟合；合成面板400时点的组合产生20次选择、28条订单。这些数量不是收益有效性证据。
+沿用qlib独立环境，未增加新依赖。新预览含synthetic-factor-panel.csv，输入和解释见FACTOR_MODELS.txt。

@@ -1,0 +1,120 @@
+{
+  "schema": "webstock.plugin.native-acceptance.v1",
+  "runs": [
+    {
+      "pluginId": "org.webstock.factor-models",
+      "operationId": "trailing-pca",
+      "version": "0.19.1",
+      "status": "verified",
+      "runId": "plugin-dae3e1d8-3adb-415b-9420-06d278a16bfd",
+      "resultSha256": "123c7ae12c4dc9618e1abba7d59121e3de7dcc894db0ad3e1473d1b9cd01722f",
+      "bars": 4937,
+      "inputSha256": "9dc7b976ef19fae657ebaaa6d5a78f0de24071b27781f76a323dc4d0443239f8",
+      "inputName": "historical-fixture.csv",
+      "tables": [
+        {
+          "id": "indicators",
+          "rows": 4937
+        },
+        {
+          "id": "training-audit",
+          "rows": 77
+        },
+        {
+          "id": "loadings",
+          "rows": 1617
+        }
+      ],
+      "modelSemantics": {
+        "fitAttempts": 77,
+        "successfulFits": 77,
+        "training": "prior-closed-bars-only",
+        "whiten": false
+      }
+    },
+    {
+      "pluginId": "org.webstock.factor-models",
+      "operationId": "factor-score",
+      "version": "0.19.1",
+      "status": "verified",
+      "runId": "plugin-bbca82e9-872f-477f-a467-498b4cacdccd",
+      "resultSha256": "0f9ce343706ee3502954890f1726b4a5b7aacf73c7bb6439dd16d749dc0c07b3",
+      "bars": 1600,
+      "inputSha256": "66105bb9b554fb333fd19333332fca5f9ffd17a57cc57f1d838bde9e964b2c92",
+      "inputName": "synthetic-factor-panel.csv",
+      "tables": [
+        {
+          "id": "scores",
+          "rows": 1200
+        },
+        {
+          "id": "factor-specification",
+          "rows": 2
+        }
+      ],
+      "modelSemantics": {
+        "symbols": [
+          "000001",
+          "000002",
+          "000003"
+        ],
+        "rankingUniverse": "selected-current-members",
+        "factorWeightsLearned": false,
+        "execution": "none",
+        "automaticTrading": false
+      }
+    },
+    {
+      "pluginId": "org.webstock.factor-models",
+      "operationId": "ranked-portfolio",
+      "version": "0.19.1",
+      "status": "verified",
+      "runId": "plugin-1f06efc3-a5e1-4f94-84ef-e9cadbcc7fff",
+      "resultSha256": "7d32264162f4205e62bbccde57b4a77acfd1446609b0ee22287a0d939e54cfaf",
+      "bars": 1600,
+      "inputSha256": "66105bb9b554fb333fd19333332fca5f9ffd17a57cc57f1d838bde9e964b2c92",
+      "inputName": "synthetic-factor-panel.csv",
+      "tables": [
+        {
+          "id": "equity",
+          "rows": 400
+        },
+        {
+          "id": "scores",
+          "rows": 1200
+        },
+        {
+          "id": "target-weights",
+          "rows": 60
+        },
+        {
+          "id": "orders",
+          "rows": 28
+        },
+        {
+          "id": "positions",
+          "rows": 1200
+        },
+        {
+          "id": "selection-audit",
+          "rows": 20
+        },
+        {
+          "id": "factor-specification",
+          "rows": 2
+        }
+      ],
+      "modelSemantics": {
+        "symbols": [
+          "000001",
+          "000002",
+          "000003"
+        ],
+        "rankingUniverse": "selected-current-members",
+        "factorWeightsLearned": false,
+        "execution": "next-input-close",
+        "automaticTrading": false
+      }
+    }
+  ]
+}
