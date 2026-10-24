@@ -76,6 +76,7 @@ WebStock 量化插件本机预览版
 因子合成插件中PCA选择historical-fixture.csv；截面评分及排名组合选择synthetic-factor-panel.csv，公式见FACTOR_MODELS.txt。
 Technical Ratings v3条件插件可选historical-fixture.csv；它使用明确的本地数值口径，尚未验证与TradingView网站逐点一致。
 外部研究数据插件选择synthetic-observation-tests内对应功能文件；均为合成数据，演示发布/修订/撤回，非供应商公式复现。
+收缩与确认形态插件可选择historical-fixture.csv；候选只在拐点确认时出现，含每段比例与规则审计，见PATTERN_RESEARCH.txt。
 
 本预览使用本目录内独立data，不修改原安装版的账户与数据库。
 移动整个目录后，需要把stock-data-root.json的directory更新到移动后的data绝对路径。
@@ -102,6 +103,7 @@ Copy-Item -LiteralPath (Join-Path $taskRepo 'quant\plugins\SESSION_EXECUTION.txt
 Copy-Item -LiteralPath (Join-Path $taskRepo 'quant\plugins\FACTOR_MODELS.txt') -Destination $taskRelease
 Copy-Item -LiteralPath (Join-Path $taskRepo 'quant\plugins\TECHNICAL_RATINGS.txt') -Destination $taskRelease
 Copy-Item -LiteralPath (Join-Path $taskRepo 'quant\plugins\OBSERVATION_INPUT.txt') -Destination $taskRelease
+Copy-Item -LiteralPath (Join-Path $taskRepo 'quant\plugins\PATTERN_RESEARCH.txt') -Destination $taskRelease
 Copy-Item -LiteralPath (Join-Path $taskRepo 'quant\plugins\MPL-2.0.txt') -Destination $taskRelease
 $taskSetup = Join-Path $taskRelease 'runtime-setup'
 New-Item -ItemType Directory -Path $taskSetup | Out-Null

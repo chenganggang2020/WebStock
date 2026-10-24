@@ -22,7 +22,7 @@ def save_package(output, manifest, sources):
     # immutable package independent of Git core.autocrlf on the build machine.
     content = {name: (HERE/source).read_text(encoding="utf-8").replace('\r\n','\n').replace('\r','\n').encode('utf-8') for name, source in sources.items()}
     manifest.update(schema="webstock.plugin.manifest.v1", protocolVersion=1,
-                    entrypoint="worker.py", runtime="python", version="0.21.0",
+                    entrypoint="worker.py", runtime="python", version="0.22.1",
                     files={name: hashlib.sha256(raw).hexdigest() for name,raw in content.items()})
     package = {"schema": "webstock.plugin.package.v1", "manifest": manifest,
                "files": {name: base64.b64encode(raw).decode("ascii") for name,raw in content.items()}}
@@ -383,6 +383,21 @@ def main():
         "source":"https://github.com/chenganggang2020/WebStock","distributions":["numpy","pandas"],"operations":observations},
         {"worker.py":"worker.py","external_observations.py":"external_observations.py","observation_contract.py":"observation_contract.py","panel_contract.py":"panel_contract.py",
          "OBSERVATION_INPUT.txt":"OBSERVATION_INPUT.txt","THIRD_PARTY_NOTICES.txt":"THIRD_PARTY_NOTICES.txt"}))
+    patterns=[]
+    for key,title in {'squeeze-regression':'BB-KC收缩 / 回归动量 · 公开定义','impulse-candidate':'五段推进候选 · 确认收盘拐点','harmonic-candidate':'谐波比例候选 · 确认收盘拐点'}.items():
+        if key=='squeeze-regression':fields=[number('period',20,2,1000,title='通道周期'),number('momentumPeriod',20,2,1000,title='回归动量周期'),
+            number('bbMultiple',2.,.1,10.,title='BB标准差倍数'),number('kcMultiple',1.5,.1,10.,title='KC平均TR倍数')]
+        else:
+            fields=[number('reversalPct',5.,.01,99.,title='确认反转幅度（%）')]
+            if key=='harmonic-candidate':fields.extend([
+                {'id':'pattern','title':'明确比例模板','type':'choice','default':'abcd','choices':['abcd','retracement-618-786','retracement-382-500-886','extension-786-1270','extension-382-618-1618']},
+                number('tolerancePct',5.,0.,20.,title='比例相对容差（%）')])
+        patterns.append({'id':key,'title':title,'formulaVersion':'webstock-'+key+'-v1','parameters':fields,'inputKind':'ohlcv-single-csv','outputKind':'indicator',
+            'description':'明确的本地计算规则；候选在拐点确认时输出，保留比例/规则审计，不回填极值日。见PATTERN_RESEARCH.txt。'})
+    records.append(save_package(args.output,{'id':'org.webstock.pattern-research','name':'WebStock 收缩与确认形态研究','license':'Project source terms',
+        'source':'https://github.com/chenganggang2020/WebStock','distributions':['numpy','pandas'],'operations':patterns},
+        {'worker.py':'worker.py','pattern_research.py':'pattern_research.py','temporal_indicators.py':'temporal_indicators.py',
+         'PATTERN_RESEARCH.txt':'PATTERN_RESEARCH.txt','THIRD_PARTY_NOTICES.txt':'THIRD_PARTY_NOTICES.txt'}))
     (args.output/"index.json").write_text(json.dumps(records,ensure_ascii=False,indent=2),encoding="utf-8")
     print(json.dumps(records,ensure_ascii=False))
 

@@ -34,7 +34,7 @@ def main():
         "panel-research":("data-tools","market-breadth"),"event-research":("data-tools","quote-liquidity"),"learning-models":("qlib","ridge"),
         "statistical-models":("statistical-models","garch"),"deep-models":("deep-models","lstm"),"portfolio-risk":("data-tools","equity-drawdown"),
         "factor-models":("qlib","trailing-pca"),"technical-ratings":("data-tools","technical-ratings-v3"),
-        "external-observations":("data-tools","money-flow-vintages")}
+        "external-observations":("data-tools","money-flow-vintages"),"pattern-research":("data-tools","squeeze-regression")}
     environment=dict(os.environ,QT_QPA_PLATFORM="offscreen",PYTHONUTF8="1")
     runtime_map=json.loads(args.runtime_map.read_text(encoding="utf-8")) if args.runtime_map else {}
     operation_inputs=json.loads(args.operation_inputs.read_text(encoding="utf-8")) if args.operation_inputs else {}

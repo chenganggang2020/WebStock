@@ -319,7 +319,7 @@
     "nativeWindow": "passed, quotes/classic and legacy focus redirect, real installed TA-Lib workflow",
     "visualReview": "Native overall technical-rating curve, 15/11 component tabs and numerical table; actual quotes/classic/focus run and frozen history reopening"
   },
-  "latestPackageVersion": "0.21.0",
+  "latestPackageVersion": "0.22.1",
   "additionalEvidence": [
     "native-acceptance-0.8.1.json",
     "native-akshare-0.7.0.json",
@@ -460,5 +460,32 @@
       "skipped": 0
     },
     "inputFixture": "85 synthetic releases per family; seven families; not real provider data"
+  },
+  "nativePatternAcceptance": "native-patterns-0.22.1.json",
+  "nativePatternWindows": {
+    "squeeze-regression": {
+      "passed": 3,
+      "failed": 0,
+      "skipped": 0,
+      "testedPackageVersion": "0.22.1"
+    },
+    "impulse-candidate": {
+      "passed": 3,
+      "failed": 0,
+      "skipped": 0,
+      "testedPackageVersion": "0.22.1"
+    },
+    "harmonic-candidate": {
+      "passed": 3,
+      "failed": 0,
+      "skipped": 0,
+      "testedPackageVersion": "0.22.1"
+    }
+  },
+  "patternTests": {
+    "pythonPassed": 8,
+    "pythonFailed": 0,
+    "initialNativeEvidence": "native-patterns-0.22.0.json",
+    "subsequentFix": "0.22.1 admits machine-rounding at exact ratio boundaries; all three native operations/windows rerun"
   }
 }

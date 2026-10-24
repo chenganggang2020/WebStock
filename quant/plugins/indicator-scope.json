@@ -718,11 +718,12 @@
       "overlap": "不能把 Squeeze、带宽、ATR 当三份独立证据。",
       "evidence": "厂商说明；非独立效果证据",
       "refs": "https://toslc.thinkorswim.com/center/reference/Tech-Indicators/studies-library/T-U/TTM-Squeeze.html",
-      "status": "partial",
+      "status": "formula_implemented_and_tested",
       "implementations": [
-        "core-indicators:bb-kc-squeeze"
+        "core-indicators:bb-kc-squeeze",
+        "pattern-research:squeeze-regression"
       ],
-      "implementationNote": "已实现明确口径的BB/KC包含关系，未复制TTM专有动量柱。"
+      "implementationNote": "明确的BB/KC本地口径及公开Donchian/SMA/尾随回归动量已实现测试；不宣称复制TTM专有系统或Pine/StockCharts逐点数值。"
     },
     {
       "id": 40,
@@ -1736,11 +1737,13 @@
       "overlap": "与拐点、趋势、比例结构相关。",
       "evidence": "名称索引；不作统一有效性结论",
       "refs": "https://tradingview.com/pine-script-docs/concepts/repainting/",
-      "status": "partial",
+      "status": "formula_implemented_and_tested",
       "implementations": [
-        "czsc:online-bi"
+        "czsc:online-bi",
+        "pattern-research:impulse-candidate",
+        "pattern-research:harmonic-candidate"
       ],
-      "implementationNote": "仅CZSC逐根观察，波浪和谐波明确规则待实现"
+      "implementationNote": "CZSC逐根观察、非截短五段收盘推进候选和5组明确谐波比例模板已实现测试。只用已确认拐点，保留规则/比例/延迟审计；不验证完整Elliott递归子浪或所有商业形态变体。"
     },
     {
       "id": 96,

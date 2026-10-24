@@ -9,12 +9,11 @@
     "indicatorFamilies": 110,
     "source": "indicator-scope.json",
     "indicatorReadiness": {
-      "formula_implemented_and_tested": 98,
-      "partial": 2,
+      "formula_implemented_and_tested": 100,
       "source_interface_implemented_and_tested": 7,
       "pending": 3
     },
-    "installedPackages": 29
+    "installedPackages": 30
   },
   "completionDefinition": [
     "All 19 projects have runnable installed adapters with declared capabilities, inputs, versions and actual results.",
@@ -300,7 +299,7 @@
     },
     {
       "id": "indicator-coverage",
-      "status": "201_talib_49_core_20_panel_5_event_6_learning_9_statistical_3_deep_3_portfolio_risk_operations_verified__3_factor_model_operations_verified__1_public_v3_rating_conditions_operation_verified__7_external_source_interfaces_verified",
+      "status": "201_talib_49_core_20_panel_5_event_6_learning_9_statistical_3_deep_3_portfolio_risk_operations_verified__3_factor_model_operations_verified__1_public_v3_rating_conditions_operation_verified__7_external_source_interfaces_verified__3_explicit_pattern_operations_verified",
       "note": "Function counts differ from family counts; source interfaces are tracked separately from reproduced formulas."
     },
     {
@@ -434,7 +433,20 @@
         "LF-canonical immutable package source bytes"
       ],
       "limits": "Source interfaces, not supplier formula reproduction, automated source acquisition, sentiment-model training or certified point-in-time provenance."
+    },
+    {
+      "id": "explicit-squeeze-and-confirmed-patterns",
+      "status": "three_operations_verified_in_cpp_host_and_full_windows",
+      "checks": [
+        "independent OLS and band arithmetic",
+        "both-direction impulse constraints",
+        "five ratio templates and floating boundary handling",
+        "last-pivot confirmation timing",
+        "all-table prefix invariance and future perturbation",
+        "native history reopening"
+      ],
+      "limits": "Declared local kernels and continuous confirmed-close candidates; no full Elliott subdivision, commercial recognition parity or verified predictive advantage."
     }
   ],
-  "latestPackageVersion": "0.21.0"
+  "latestPackageVersion": "0.22.1"
 }

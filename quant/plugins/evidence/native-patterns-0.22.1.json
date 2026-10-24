@@ -1,0 +1,86 @@
+{
+  "schema": "webstock.plugin.native-acceptance.v1",
+  "runs": [
+    {
+      "pluginId": "org.webstock.pattern-research",
+      "operationId": "squeeze-regression",
+      "version": "0.22.1",
+      "status": "verified",
+      "runId": "plugin-74d1cb31-8c0d-48db-83cf-7ed1c5a14a6c",
+      "resultSha256": "223d04f1d7d278cdf8740c96dd8367a8d6a8f192935d4127cc592a300452d366",
+      "bars": 4937,
+      "inputSha256": "9dc7b976ef19fae657ebaaa6d5a78f0de24071b27781f76a323dc4d0443239f8",
+      "inputName": "historical-fixture.csv",
+      "tables": [
+        {
+          "id": "indicators",
+          "rows": 4937
+        }
+      ]
+    },
+    {
+      "pluginId": "org.webstock.pattern-research",
+      "operationId": "impulse-candidate",
+      "version": "0.22.1",
+      "status": "verified",
+      "runId": "plugin-00355b4e-2c0c-4155-83d1-3ff43ed92959",
+      "resultSha256": "76aca7b56fad737fccc91af71c046b3f79e58dcefa0eb738983521df991f454a",
+      "bars": 4937,
+      "inputSha256": "9dc7b976ef19fae657ebaaa6d5a78f0de24071b27781f76a323dc4d0443239f8",
+      "inputName": "historical-fixture.csv",
+      "tables": [
+        {
+          "id": "indicators",
+          "rows": 4937
+        },
+        {
+          "id": "candidate-audit",
+          "rows": 384
+        },
+        {
+          "id": "confirmed-pivots",
+          "rows": 389
+        }
+      ],
+      "modelSemantics": {
+        "pivotInput": "close-only-percentage-reversal",
+        "signalTiming": "last pivot confirmation bar; no backfill",
+        "pattern": "non-truncated-five-leg-arithmetic-candidate",
+        "ratioToleranceFraction": null,
+        "fullElliottSubdivisionVerified": false
+      }
+    },
+    {
+      "pluginId": "org.webstock.pattern-research",
+      "operationId": "harmonic-candidate",
+      "version": "0.22.1",
+      "status": "verified",
+      "runId": "plugin-293ec131-2626-471b-bd2e-472b19eb7ab5",
+      "resultSha256": "8f4fdd92a43eccede7d3b572f8be8149c14f5fb367b91450e6d87d667869ef67",
+      "bars": 4937,
+      "inputSha256": "9dc7b976ef19fae657ebaaa6d5a78f0de24071b27781f76a323dc4d0443239f8",
+      "inputName": "historical-fixture.csv",
+      "tables": [
+        {
+          "id": "indicators",
+          "rows": 4937
+        },
+        {
+          "id": "candidate-audit",
+          "rows": 386
+        },
+        {
+          "id": "confirmed-pivots",
+          "rows": 389
+        }
+      ],
+      "modelSemantics": {
+        "pivotInput": "close-only-percentage-reversal",
+        "signalTiming": "last pivot confirmation bar; no backfill",
+        "pattern": "abcd",
+        "ratioToleranceFraction": 0.05,
+        "fullElliottSubdivisionVerified": false
+      }
+    }
+  ]
+}
