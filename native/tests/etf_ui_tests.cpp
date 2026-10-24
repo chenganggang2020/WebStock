@@ -7,7 +7,11 @@
 #include <QListWidget>
 #include <QPushButton>
 #include <QCheckBox>
+#include <QDateEdit>
 #include <QTimer>
+#include <QDialog>
+#include <QScrollArea>
+#include <QScrollBar>
 #include <QTabWidget>
 #include <QTableWidget>
 #include <QTemporaryDir>
@@ -40,12 +44,131 @@ class EtfUiTests : public QObject {
     QVERIFY(page.grab().save(dir + "/" + name + ".png"));
   }
 private slots:
+  void capturedReportAndOriginalImage() {
+    const auto file=qEnvironmentVariable("NATIVE_ETF_CAPTURE");if(file.isEmpty())QSKIP("Requires captured official news response");
+    QFile input(file);QVERIFY(input.open(QIODevice::ReadOnly));const auto payload=QJsonDocument::fromJson(input.readAll()).object();
+    const auto news=payload["news"].toObject();const auto report=etfDaily::content(payload,{{"code","202610233904868678"},{"title",news["title"]},{"stime",news["showtime"]},{"source","东方财富Choice数据"}},QDateTime::currentDateTimeUtc());
+    QCOMPARE(report["asOf"].toString(),QString("2026-10-22"));
+    QTemporaryDir dir;etfDaily::Store store(dir.filePath("etf.sqlite"));QVERIFY(store.saveVerifiedHistory(report,QDateTime::currentDateTimeUtc()));
+    EtfPage page(dir.filePath("etf.sqlite"),true);page.resize(1450,900);page.show();
+    QCOMPARE(page.findChild<QTableWidget*>("etfSubscriptions")->rowCount(),3);QCOMPARE(page.findChild<QTableWidget*>("etfRedemptions")->rowCount(),3);
+    shot(page,"actual-etf-report");
+    if(qEnvironmentVariable("NATIVE_ETF_IMAGE_LIVE")!="1")return;
+    page.findChild<QPushButton*>("etfOriginalImage")->click();auto* dialog=page.findChild<QDialog*>("etfSourceImageDialog");QVERIFY(dialog);
+    auto* scroll=dialog->findChild<QScrollArea*>();auto* picture=qobject_cast<QLabel*>(scroll->widget());QVERIFY(picture);
+    QTRY_VERIFY_WITH_TIMEOUT(!picture->pixmap().isNull(),18000);QCOMPARE(picture->pixmap().size(),QSize(1000,3362));
+    const auto out=qEnvironmentVariable("NATIVE_ETF_SHOTS");if(!out.isEmpty()){QVERIFY(dialog->grab().save(out+"/actual-etf-source-top.png"));scroll->verticalScrollBar()->setValue(scroll->verticalScrollBar()->maximum());QTest::qWait(50);QVERIFY(dialog->grab().save(out+"/actual-etf-source-bottom.png"));}
+    dialog->close();
+  }
   void initTestCase() {
     if (qEnvironmentVariable("QT_QPA_PLATFORM") == "offscreen") {
       QVERIFY(QFontDatabase::addApplicationFont("C:/Windows/Fonts/msyh.ttc") >=
               0);
       QApplication::setFont(QFont("Microsoft YaHei", 10));
     }
+  }
+  void subscriptionsAndRedemptionsShareOneRow() {
+    QTemporaryDir dir;
+    const auto json = dir.filePath("source-report.json");
+    write(json, fixture());
+    EtfPage page(dir.filePath("etf.sqlite"), false);
+    page.previewImport(json);
+    page.confirmImport();
+    page.resize(1600, 900);
+    page.show();
+    QVERIFY(QTest::qWaitForWindowExposed(&page));
+    auto *subscriptions = page.findChild<QTableWidget *>("etfSubscriptions");
+    auto *redemptions = page.findChild<QTableWidget *>("etfRedemptions");
+    QVERIFY(subscriptions && redemptions);
+    const auto left = subscriptions->mapTo(&page, QPoint());
+    const auto right = redemptions->mapTo(&page, QPoint());
+    QVERIFY2(right.x() >= left.x() + subscriptions->width(),
+             "Subscriptions belong on the left; redemptions on the right");
+    QVERIFY2(qAbs(left.y() - right.y()) <= 4,
+             "Both ranking tables should start on the same row");
+    QVERIFY(subscriptions->width() >= 350);
+    QVERIFY(redemptions->width() >= 350);
+    // The real source fixture publishes three entries per side. Layout must
+    // not manufacture a complete ranking or drop any of those source entries.
+    QCOMPARE(subscriptions->rowCount(), 3);
+    QCOMPARE(redemptions->rowCount(), 3);
+    shot(page, "windows-etf-side-by-side");
+  }
+  void reportCalendarUsesPriorStoredTradingDay() {
+    QTemporaryDir dir;
+    const auto database = dir.filePath("etf.sqlite");
+    EtfPage page(database, false);
+    // Date-only test variants of the source fixture, not live source evidence.
+    // Keep its real three-entry coverage unchanged.
+    auto friday = fixture();
+    friday["articleId"] = "202609140000000001";
+    friday["sourceUrl"] = etfDaily::articleUrl(friday["articleId"].toString());
+    friday["title"] = "ETF追踪丨9月11日股票型ETF净赎回20亿元";
+    friday["asOf"] = "2026-09-11";
+    friday["publishedAt"] = "2026-09-14T08:00:59+08:00";
+    auto monday = friday;
+    monday["articleId"] = "202609150000000002";
+    monday["sourceUrl"] = etfDaily::articleUrl(monday["articleId"].toString());
+    monday["title"] = "ETF追踪丨9月14日股票型ETF净赎回20亿元";
+    monday["asOf"] = "2026-09-14";
+    monday["publishedAt"] = "2026-09-15T08:00:59+08:00";
+    for (const auto &report : {friday, monday}) {
+      const auto file = dir.filePath(report["asOf"].toString() + ".json");
+      write(file, report);
+      page.previewImport(file);
+      page.confirmImport();
+    }
+    const auto before = etfDaily::Store(database).history();
+    auto *calendar = page.findChild<QDateEdit *>("etfReportDate");
+    QVERIFY2(calendar && calendar->calendarPopup(),
+             "ETF report history needs a calendar date picker");
+    calendar->setDate(QDate(2026, 9, 12));
+    QTRY_VERIFY(page.findChild<QLabel *>("etfSummary")->text().contains("9月11日"));
+    QVERIFY(!page.findChild<QLabel *>("etfSummary")->text().contains("9月14日"));
+    QCOMPARE(page.findChild<QTableWidget *>("etfSubscriptions")->rowCount(), 3);
+    QString visibleDates;
+    for (auto *label : page.findChildren<QLabel *>())
+      visibleDates += label->text() + '\n';
+    QVERIFY2(visibleDates.contains("2026-09-11"),
+             "The actual Friday data date must remain visible on Saturday");
+    QCOMPARE(etfDaily::Store(database).history(), before);
+  }
+  void reportCalendarEmptySelectionSurvivesReload() {
+    QTemporaryDir dir;
+    const auto database = dir.filePath("etf.sqlite");
+    const auto json = dir.filePath("source-report.json");
+    write(json, fixture());
+    EtfPage page(database, false);
+    page.previewImport(json);
+    page.confirmImport();
+    auto *calendar = page.findChild<QDateEdit *>("etfReportDate");
+    auto *subscriptions = page.findChild<QTableWidget *>("etfSubscriptions");
+    QVERIFY(calendar && subscriptions);
+    const auto before = etfDaily::Store(database).history();
+    calendar->setDate(QDate(2026, 9, 8));
+    QCOMPARE(subscriptions->rowCount(), 0);
+    page.load();
+    QCOMPARE(calendar->date(), QDate(2026, 9, 8));
+    QVERIFY2(subscriptions->rowCount() == 0,
+             "Reload must not show the September 9 report under September 8");
+    QCOMPARE(etfDaily::Store(database).history(), before);
+  }
+  void reportListSelectionSynchronizesCalendar() {
+    QTemporaryDir dir;
+    const auto database = dir.filePath("etf.sqlite");
+    const auto json = dir.filePath("source-report.json");
+    write(json, fixture());
+    EtfPage page(database, false);
+    page.previewImport(json);
+    page.confirmImport();
+    auto *calendar = page.findChild<QDateEdit *>("etfReportDate");
+    auto *history = page.findChild<QListWidget *>("etfHistory");
+    QVERIFY(calendar && history);
+    calendar->setDate(QDate(2026, 9, 8));
+    QCOMPARE(history->currentRow(), -1);
+    history->setCurrentRow(0);
+    QCOMPARE(page.findChild<QTableWidget *>("etfSubscriptions")->rowCount(), 3);
+    QCOMPARE(calendar->date(), QDate(2026, 9, 9));
   }
   void existingLayoutsAndInternalPage() {
     Window w(true);

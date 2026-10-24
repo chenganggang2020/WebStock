@@ -3,6 +3,7 @@
 #include "comparison_choice_list.hpp"
 #include "securities_legacy_store.hpp"
 #include "securities_catalog_cache.hpp"
+#include "sector_watch_store.hpp"
 #include "compact_actions.hpp"
 #include "market_refresh_policy.hpp"
 #include "page_snapshot_reader.hpp"
@@ -61,7 +62,7 @@ void MarketComparisonPage::hideEvent(QHideEvent*event){refreshTimer->stop();feed
 void MarketComparisonPage::showEvent(QShowEvent*event){QWidget::showEvent(event);readCache();scheduleRefresh();}
 QJsonArray MarketComparisonPage::selected()const{QJsonArray out;for(int n=0;n<choices->count();++n)if(choices->item(n)->checkState()==Qt::Checked)out.append(choices->item(n)->data(Qt::UserRole).toJsonObject());return out;}
 QString MarketComparisonPage::mode()const{return tabs->currentIndex()==1?QString("leading"):tabs->currentIndex()==2?QString("pace"):period->currentData().toString();}
-void MarketComparisonPage::loadCatalog(){QJsonArray items=marketComparison::indexDefinitions();QString warning;try{regionEvidence=regionFeed->read();for(auto v:regionEvidence["catalog"].toObject()["items"].toArray())items.append(v);}catch(const std::exception&e){warning=QString("地区缓存拒绝：")+e.what();}if(!catalogFile.isEmpty()){QFile f(catalogFile);try{if(f.exists()){if(f.size()>8*1024*1024||!f.open(QIODevice::ReadOnly))throw std::runtime_error("板块目录不可读或超限");auto imported=boardSeries::legacyCatalog(f.readAll());for(auto v:imported["items"].toArray())items.append(v);for(auto v:imported["unsupported"].toArray()){auto row=v.toObject();if(row["provider"].toString().startsWith("sina-public-"))items.append(marketComparison::composite::definition(row));}if(!imported["unsupported"].toArray().isEmpty()&&feed->compositeDatasetIdentity().isEmpty())warning="当前成分等权估算缺少本机前复权基线；自身指数与估算不按同名合并。";}}catch(const std::exception&e){warning=QString("目录拒绝：")+e.what();}}for(auto v:catalog)if(v.toObject()["kind"]=="stock")items.append(v);auto old=selected();catalog=items;rebuildChoices();restoring=true;for(auto v:old){QJsonValue key=v.toObject()["key"];bool found=false;for(int n=0;n<choices->count();++n)if(choices->item(n)->data(Qt::UserRole).toJsonObject()["key"]==key){choices->item(n)->setCheckState(Qt::Checked);found=true;break;}if(!found){auto d=v.toObject();auto*item=new QListWidgetItem(displayName(d)+" · 原选择",choices);item->setData(Qt::UserRole,d);item->setFlags(item->flags()|Qt::ItemIsUserCheckable);item->setCheckState(Qt::Checked);}}restoring=false;filterChoices();if(!warning.isEmpty())status->setText(warning);}
+void MarketComparisonPage::loadCatalog(){QJsonArray items=marketComparison::indexDefinitions();QString warning;try{regionEvidence=regionFeed->read();for(auto v:regionEvidence["catalog"].toObject()["items"].toArray())items.append(v);}catch(const std::exception&e){warning=QString("地区缓存拒绝：")+e.what();}if(!catalogFile.isEmpty()){QFile f(catalogFile);try{if(f.exists()){if(f.size()>8*1024*1024||!f.open(QIODevice::ReadOnly))throw std::runtime_error("板块目录不可读或超限");auto imported=boardSeries::legacyCatalog(f.readAll());for(auto v:imported["items"].toArray())items.append(v);for(auto v:imported["unsupported"].toArray()){auto row=v.toObject();if(row["provider"].toString().startsWith("sina-public-"))items.append(marketComparison::composite::definition(row));}if(!imported["unsupported"].toArray().isEmpty()&&feed->compositeDatasetIdentity().isEmpty())warning="当前成分等权估算缺少本机前复权基线；自身指数与估算不按同名合并。";}}catch(const std::exception&e){warning=QString("目录拒绝：")+e.what();}}for(auto v:boardCatalogItems)items.append(v);for(auto v:catalog)if(v.toObject()["kind"]=="stock")items.append(v);auto old=selected();catalog=items;rebuildChoices();restoring=true;for(auto v:old){QJsonValue key=v.toObject()["key"];bool found=false;for(int n=0;n<choices->count();++n)if(choices->item(n)->data(Qt::UserRole).toJsonObject()["key"]==key){choices->item(n)->setCheckState(Qt::Checked);found=true;break;}if(!found){auto d=v.toObject();auto*item=new QListWidgetItem(displayName(d)+" · 原选择",choices);item->setData(Qt::UserRole,d);item->setFlags(item->flags()|Qt::ItemIsUserCheckable);item->setCheckState(Qt::Checked);}}restoring=false;filterChoices();if(!warning.isEmpty())status->setText(warning);}
 void MarketComparisonPage::setCatalogItems(const QJsonArray&items){auto keep=selected();const auto before=catalog.size();QSet<QString>keys;for(auto v:catalog)keys.insert(v.toObject()["key"].toString());for(auto v:items)try{auto d=marketComparison::definition(v.toObject());if(!keys.contains(d["key"].toString())){keys.insert(d["key"].toString());catalog.append(d);}}catch(const std::exception&e){status->setText(QString("目录条目拒绝：")+e.what());}if(catalog.size()!=before){rebuildChoices();restoring=true;for(auto v:keep){auto d=v.toObject();QListWidgetItem*found=nullptr;for(int n=0;n<choices->count();++n)if(choices->item(n)->data(Qt::UserRole).toJsonObject()["key"]==d["key"]){found=choices->item(n);break;}if(!found){found=new QListWidgetItem(displayName(d)+" · 原明确身份",choices);found->setData(Qt::UserRole,d);found->setFlags(found->flags()|Qt::ItemIsUserCheckable);}if(found->data(Qt::UserRole).toJsonObject()!=d){found->setData(Qt::UserRole,d);found->setText(displayName(d)+" · 原明确身份");found->setToolTip(displayName(d)+" · "+d["key"].toString());}found->setCheckState(Qt::Checked);}restoring=false;}filterChoices();readCache();scheduleRefresh();}
 void MarketComparisonPage::rebuildChoices(){QSignalBlocker guard(choices);choices->clear();QSet<QString>keys;for(auto v:catalog)try{auto d=marketComparison::definition(v.toObject());if(keys.contains(d["key"].toString()))continue;keys.insert(d["key"].toString());auto*item=new QListWidgetItem(displayName(d),choices);item->setToolTip(displayName(d)+" · "+d["key"].toString());item->setData(Qt::UserRole,d);item->setFlags(item->flags()|Qt::ItemIsUserCheckable);item->setCheckState(Qt::Unchecked);item->setIcon(marketComparison::seriesIcon(d["key"].toString()));}catch(const std::exception&){} filterChoices();}
 void MarketComparisonPage::filterChoices(){
@@ -71,6 +72,26 @@ void MarketComparisonPage::filterChoices(){
   item->setHidden(!match);matches+=match;
  }
  search->setToolTip(QString("匹配 %1 项；过滤不会取消已选标的").arg(matches));
+}
+void MarketComparisonPage::reloadBoardCatalog(const QString& database){
+ if(!boardCatalogReader)boardCatalogReader=new PageSnapshotReader(this,{},[this](QJsonObject result,QString error){
+  setProperty("boardCatalogLoading",false);setProperty("boardCatalogError",error);
+  if(!error.isEmpty()){status->setText("本机板块目录未重载，保留已有选择："+error);return;}
+  const auto items=result["items"].toArray();
+  if(items==boardCatalogItems)return; // An unchanged catalogue must not refilter/recalculate the retained page.
+  boardCatalogItems=items;setCatalogItems(items);
+ });
+ setProperty("boardCatalogLoading",true);
+ boardCatalogReader->requestCancellable([database](const PageSnapshotReader::Cancel& cancel){
+  QJsonArray items;sectorWatch::Store store(database);
+  for(const auto& taxonomy:QStringList{"industry","concept"}){
+   const auto snapshot=store.read(sectorWatch::query("eastmoney-public-board",taxonomy),cancel)["snapshot"].toObject();
+   if(snapshot["coverageComplete"]==true)for(auto value:snapshot["items"].toArray()){
+    auto row=value.toObject();row["key"]="eastmoney-"+taxonomy+":"+row["code"].toString();items.append(row);
+   }
+  }
+  return QJsonObject{{"items",items}};
+ });
 }
 void MarketComparisonPage::loadSecurities(){
  const auto root=QFileInfo(directory).absolutePath();

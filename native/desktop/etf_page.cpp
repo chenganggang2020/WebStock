@@ -1,4 +1,8 @@
 #include "etf_page.hpp"
+#include "trading_day_selection.hpp"
+#include <QDateEdit>
+#include <QDialog>
+#include <QScrollArea>
 #include <QCheckBox>
 #include <QDesktopServices>
 #include <QFile>
@@ -79,6 +83,9 @@ EtfPage::EtfPage(QString file, bool enabled, QWidget *parent)
       exportFile(file);
   });
   tools->addStretch();
+  calendar=new QDateEdit(QDateTime::currentDateTimeUtc().toOffsetFromUtc(28800).date(),this);
+  calendar->setObjectName("etfReportDate");calendar->setCalendarPopup(true);calendar->setDisplayFormat("yyyy-MM-dd");
+  tools->addWidget(calendar);
   state = new QLabel;
   state->setObjectName("etfState");
   state->setWordWrap(true);
@@ -121,11 +128,13 @@ EtfPage::EtfPage(QString file, bool enabled, QWidget *parent)
   dates->setTextFormat(Qt::PlainText);
   dates->setWordWrap(true);
   body->addWidget(dates);
-  auto *ranks = new QSplitter(Qt::Vertical, content);
+  auto *ranks = new QSplitter(Qt::Horizontal, content);
+  ranks->setObjectName("etfRankColumns");
   body->addWidget(ranks, 1);
   auto grid = [&](QString title, QString name) {
     auto *box = new QWidget(ranks);
     auto *layout = new QVBoxLayout(box);
+    layout->setContentsMargins(2,0,2,0);
     layout->addWidget(new QLabel(title));
     auto *t = new QTableWidget(0, 4, box);
     t->setObjectName(name);
@@ -141,13 +150,13 @@ EtfPage::EtfPage(QString file, bool enabled, QWidget *parent)
     layout->addWidget(t);
     return t;
   };
-  buys = grid("股票型ETF · 净申购前三", "etfSubscriptions");
-  sells = grid("股票型ETF · 净赎回前三", "etfRedemptions");
+  buys = grid("净申购 · 原文可核验条目", "etfSubscriptions");
+  sells = grid("净赎回 · 原文可核验条目", "etfRedemptions");
   selected =
       new QLabel("双击ETF可在已有自选中打开；旧资料未记录市场时不猜测。");
   selected->setTextFormat(Qt::PlainText);
   selected->setWordWrap(true);
-  body->addWidget(selected);
+  selected->hide();
   auto *links = new QHBoxLayout;
   body->addLayout(links);
   article = new QPushButton("查看来源原文");
@@ -161,10 +170,28 @@ EtfPage::EtfPage(QString file, bool enabled, QWidget *parent)
   };
   connect(article, &QPushButton::clicked, this,
           [openLink] { openLink(false); });
-  connect(image, &QPushButton::clicked, this, [openLink] { openLink(true); });
-  auto *note = new QLabel("ETF一级市场申购赎回 · 不是个股主力资金 / "
-                          "二级市场成交额。正文仅两组前三；原图未结构化，不补造"
-                          "全榜。来源公开可访问不代表取得行情再分发授权。");
+  image->setObjectName("etfOriginalImage");
+  connect(image, &QPushButton::clicked, this, [this] {
+    const auto url=report["originalImageUrl"].toString();
+    if(!networkEnabled||!etfDaily::allowedUrl(url,true))return;
+    auto* dialog=new QDialog(this);dialog->setAttribute(Qt::WA_DeleteOnClose);
+    dialog->setObjectName("etfSourceImageDialog");dialog->setWindowTitle("ETF 日报原图 · "+report["asOf"].toString());dialog->resize(1050,850);
+    auto* layout=new QVBoxLayout(dialog);auto* status=new QLabel("正在读取来源原图；图中条目以原文公布范围为准",dialog);layout->addWidget(status);
+    auto* scroll=new QScrollArea(dialog);auto* content=new QLabel;content->setAlignment(Qt::AlignTop|Qt::AlignLeft);scroll->setWidget(content);layout->addWidget(scroll,1);
+    auto* manager=new QNetworkAccessManager(dialog);QNetworkRequest request{QUrl(url)};
+    request.setTransferTimeout(15000);request.setAttribute(QNetworkRequest::RedirectPolicyAttribute,QNetworkRequest::ManualRedirectPolicy);
+    auto* reply=manager->get(request);
+    connect(reply,&QIODevice::readyRead,dialog,[reply]{if(reply->bytesAvailable()>10*1024*1024)reply->abort();});
+    connect(reply,&QNetworkReply::finished,dialog,[reply,status,content,url]{
+      const auto bytes=reply->readAll();QPixmap picture;
+      if(reply->error()!=QNetworkReply::NoError||reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt()!=200||reply->url().toString()!=url||bytes.size()>10*1024*1024||!picture.loadFromData(bytes))status->setText("原图读取失败；表格和已保存日报保持原样。");
+      else{content->setPixmap(picture);content->resize(picture.size());status->setText("来源原图 · 可滚动查看全部图内条目；不是全市场榜单");}
+      reply->deleteLater();
+    });
+    dialog->show();
+  });
+  auto *note = new QLabel("一级市场申赎 · 正文公布前三，完整覆盖范围以来源原图为准");
+  note->setToolTip("不是个股主力资金或二级市场成交额。原图未结构化提取，不补造全榜；公开访问不代表取得行情再分发授权。");
   note->setWordWrap(true);
   body->addWidget(note);
   preview = new QPlainTextEdit;
@@ -208,8 +235,16 @@ EtfPage::EtfPage(QString file, bool enabled, QWidget *parent)
       emit quoteRequested(x["market"].toString() +
                           ":etf:" + x["code"].toString());
     });
-  connect(days, &QListWidget::currentRowChanged, this, [this] { render(); });
-  split->setSizes({250, 1100});
+  connect(days, &QListWidget::currentRowChanged, this, [this](int row) {
+    if(row>=0&&row<records.size()){const auto day=QDate::fromString(records[row].toObject()["report"].toObject()["asOf"].toString(),Qt::ISODate);if(day.isValid()){QSignalBlocker block(calendar);calendar->setDate(day);}}
+    render();
+  });
+  connect(calendar,&QDateEdit::dateChanged,this,[this](QDate chosen){
+    const auto limit=tradingDaySelection::effective(chosen).toString(Qt::ISODate);QString best;int index=-1;
+    for(int i=0;i<records.size();++i){const auto day=records[i].toObject()["report"].toObject()["asOf"].toString();if(day<=limit&&day>best){best=day;index=i;}}
+    {QSignalBlocker block(days);days->setCurrentRow(index);}render();
+  });
+  split->setSizes({200, 1150});
   load();
   auto *timer = new QTimer(this);
   timer->setObjectName("etfScheduleTimer");
@@ -225,13 +260,14 @@ void EtfPage::load() {
     records = store.history();
     QSignalBlocker b(days);
     days->clear();
-    int selected = 0;
+    int selected = -1;QString best;
+    const auto limit=tradingDaySelection::effective(calendar->date()).toString(Qt::ISODate);
     for (auto v : records) {
       auto r = v.toObject()["report"].toObject();
       days->addItem(r["asOf"].toString() + " · " +
                     r["publishedAt"].toString().mid(11, 5));
-      if (r["articleId"] == prior)
-        selected = days->count() - 1;
+      const auto day=r["asOf"].toString();
+      if(day<=limit&&day>best){best=day;selected=days->count()-1;}
     }
     days->setCurrentRow(days->count() ? selected : -1);
     b.unblock();
@@ -254,13 +290,14 @@ void EtfPage::render() {
       QSignalBlocker block(scheduleEnabled);
       scheduleEnabled->setChecked(s["scheduleEnabled"].toBool(false));
     }
-    scheduleState->setText(
+    const auto scheduleDescription=
         QString(s["scheduleEnabled"].toBool() ? "已启用" : "已关闭") +
         " · 应用运行时检查（关闭本子页仍执行）；北京时间已知交易日 "
         "08:50 / 09:00 / 09:10 / 09:20，晚启动当天补查一次。" +
         (s["lastScheduledAt"].isString()
              ? "\n最近计划尝试 " + local(s["lastScheduledAt"])
-             : QString()));
+             : QString());
+    scheduleState->setText(s["scheduleEnabled"].toBool()?"仅应用运行期间":"已关闭");scheduleState->setToolTip(scheduleDescription);
     QString status = "最近尝试 " + local(s["lastAttemptAt"]) +
                      " · 最近内容更新 " + local(s["lastSuccessAt"]);
     if (s["attemptStatus"] == "running")
@@ -284,13 +321,14 @@ void EtfPage::render() {
                      QString("\n全部ETF净额 %1  · 股票型ETF净额 %2  亿元")
                          .arg(report["totalNetFlow"].toDouble(), 0, 'f', 2)
                          .arg(report["stockEtfNetFlow"].toDouble(), 0, 'f', 2));
-    dates->setText(quality + "\n数据日 " + report["asOf"].toString() +
+    const auto provenance=quality + "\n数据日 " + report["asOf"].toString() +
                    " · 发布 " + local(report["publishedAt"]) + "\n本条核对 " +
                    local(entry["checkedAt"]) + " · 内容保存 " +
                    local(entry["succeededAt"]) +
                    (report["sourceNotice"].isString()
                         ? "\n" + report["sourceNotice"].toString()
-                        : QString()));
+                        : QString());
+    dates->setText("数据 "+report["asOf"].toString()+" · "+quality+" · "+tradingDaySelection::caption(calendar->date()));dates->setToolTip(provenance);
     int k = 0;
     for (auto *t : {buys, sells}) {
       auto a = report[k++ == 0 ? "subscriptions" : "redemptions"].toArray();

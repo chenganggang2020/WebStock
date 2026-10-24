@@ -11,7 +11,8 @@ namespace marketComparison{QJsonObject paceFrame(const QJsonObject&);}
 class MarketComparisonPage final:public QWidget {
  Q_OBJECT
  QTimer* refreshTimer;QHash<QString,qint64> attempted;int refreshFailures=0;
- PageSnapshotReader *cacheReader=nullptr,*compositeReader=nullptr,*securitiesReader=nullptr;
+ PageSnapshotReader *cacheReader=nullptr,*compositeReader=nullptr,*securitiesReader=nullptr,*boardCatalogReader=nullptr;
+ QJsonArray boardCatalogItems;
  QString desiredCompositeSha;bool compositeSelectionExplicit=false;
  QString directory,catalogFile;bool allow,restoring=false;QJsonArray catalog;QJsonObject shown;
  marketComparison::Feed*feed;QListWidget*choices;QLineEdit*search;QComboBox*period,*window,*basis,*leadingIndex;QLabel*status,*paceStatus,*leadingStatus,*count;QTableWidget*matrix;QTextBrowser*sources;QTabWidget*tabs;QPushButton*refresh;
@@ -25,6 +26,7 @@ public:
  explicit MarketComparisonPage(const QString&ownedDirectory,const QString&legacyBoardCatalogFile={},bool allowNetwork=true,QWidget*parent=nullptr,QNetworkAccessManager*transport=nullptr);
  ~MarketComparisonPage()override;
  void setCatalogItems(const QJsonArray&);
+ void reloadBoardCatalog(const QString& database);
  void setCompositeDatasets(const QJsonArray&);
  QJsonObject saveState()const;
  QJsonObject sourceEvidence()const;

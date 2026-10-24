@@ -7,6 +7,33 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 public final class EtfMonitorModel {
  private EtfMonitorModel(){}
+ static String sourceDay(JSONObject snapshot) {
+  String latest="";JSONArray items=snapshot.optJSONArray("items");
+  for(int n=0;items!=null&&n<items.length();n++) {
+   JSONObject item=items.optJSONObject(n);if(item==null)continue;
+   String day=object(item,"quote").optString("tradeDate");
+   if(TradingDaySelection.parse(day)!=null&&day.compareTo(latest)>0)latest=day;
+   JSONArray minutes=object(item,"minuteInput").optJSONArray("rows");
+   for(int i=0;minutes!=null&&i<minutes.length();i++) {
+    JSONObject row=minutes.optJSONObject(i);if(row==null||!(row.opt("time") instanceof Number))continue;
+    long stamp=row.optLong("time");if(stamp<=0)continue;
+    day=Instant.ofEpochMilli(stamp).atOffset(ZoneOffset.ofHours(8)).toLocalDate().toString();
+    if(day.compareTo(latest)>0)latest=day;
+   }
+  }
+  return latest;
+ }
+ static String frameOnOrBefore(JSONObject archive,LocalDate chosen)throws Exception {
+  String limit=TradingDaySelection.effective(chosen).toString(),best="",id="";
+  JSONArray frames=archive.getJSONArray("frames");
+  for(int n=0;n<frames.length();n++) {
+   String candidateId=frames.getJSONObject(n).getString("id");
+   String day=sourceDay(frame(archive,candidateId));
+   // A late-received old quote must not replace a newer source date.
+   if(!day.isEmpty()&&day.compareTo(limit)<=0&&day.compareTo(best)>=0){best=day;id=candidateId;}
+  }
+  return id;
+ }
  static void need(boolean ok,String reason)throws Exception{if(!ok)throw new Exception(reason);}
  static String hash(byte[] b)throws Exception{StringBuilder s=new StringBuilder();for(byte n:MessageDigest.getInstance("SHA-256").digest(b))s.append(String.format(Locale.ROOT,"%02x",n&255));return s.toString();}
  static boolean secret(String s){return Pattern.compile("(sk-|bearer|api[_-]?key|password|authorization|token[=:]|https?://|[a-z]:[\\\\/])",Pattern.CASE_INSENSITIVE).matcher(s).find();}

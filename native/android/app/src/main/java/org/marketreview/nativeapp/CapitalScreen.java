@@ -4,6 +4,7 @@ import android.graphics.Color;
 import android.view.*;
 import android.widget.*;
 import java.util.*;
+import java.time.*;
 import org.json.*;
 
 /** A native independent funds screen; the ledger and source classification are distinct. */
@@ -11,7 +12,9 @@ final class CapitalScreen extends LinearLayout {
   final MainActivity owner;
   final Spinner symbols, modes, dates;
   final SeekBar cursor;
-  final Button refresh;
+  final Button refresh, calendar;
+  String chosenDay = "";
+  int displayedHistoryIndex;
   final List<String> historyDates = new ArrayList<>();
   String renderKey = "";
   int renderCount = -1;
@@ -64,6 +67,24 @@ final class CapitalScreen extends LinearLayout {
     historyDates.add("");
     dates.setAdapter(choices(Arrays.asList("当前来源")));
     root.addView(dates, new LinearLayout.LayoutParams(-1, owner.dp(44)));
+    LinearLayout dayTools = new LinearLayout(owner);
+    calendar = new Button(owner);
+    calendar.setTag("fundCalendar");
+    calendar.setText("日历回看");
+    dayTools.addView(calendar, new LayoutParams(0, owner.dp(48), 1));
+    Button current = new Button(owner);
+    current.setText("当前来源");
+    dayTools.addView(current, new LayoutParams(0, owner.dp(48), 1));
+    root.addView(dayTools);
+    calendar.setOnClickListener(v -> {
+      LocalDate initial = TradingDaySelection.parse(chosenDay);
+      if (initial == null) initial = LocalDate.now(ZoneOffset.ofHours(8));
+      new DatePickerDialog(owner, (picker, y, m, d) -> {
+        chosenDay = LocalDate.of(y, m + 1, d).toString();
+        render();
+      }, initial.getYear(), initial.getMonthValue() - 1, initial.getDayOfMonth()).show();
+    });
+    current.setOnClickListener(v -> { chosenDay = ""; dates.setSelection(0); request(false); });
     LinearLayout replay = new LinearLayout(owner);
     Button imports = new Button(owner), play = new Button(owner);
     imports.setText("导入档案");
@@ -140,8 +161,11 @@ final class CapitalScreen extends LinearLayout {
     dates.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
       public void onNothingSelected(AdapterView<?> p) {}
       public void onItemSelected(AdapterView<?> p, View v, int i, long id) {
-        if (!rendering)
+        if (!rendering && i != displayedHistoryIndex && i >= 0 && i < historyDates.size()) {
+          displayedHistoryIndex = i;
+          chosenDay = historyDates.get(i);
           render();
+        }
       }
     });
     cursor.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
@@ -188,10 +212,14 @@ final class CapitalScreen extends LinearLayout {
     }, 300);
   }
   String historyDate() {
+    LocalDate chosen = TradingDaySelection.parse(chosenDay);
+    if (chosen != null) return TradingDaySelection.effective(chosen).toString();
     int i = dates.getSelectedItemPosition();
     return i >= 0 && i < historyDates.size() ? historyDates.get(i) : "";
   }
+  String selectedDate() { return chosenDay.isEmpty() ? historyDate() : chosenDay; }
   void selectHistory(String date) {
+    chosenDay = date;
     render();
     int i = historyDates.indexOf(date);
     if (i >= 0)
@@ -242,18 +270,30 @@ final class CapitalScreen extends LinearLayout {
         String id = ids.get(symbols.getSelectedItemPosition()), chosen = historyDate();
         List<String> next = new ArrayList<>();
         next.add("");
-        next.addAll(owner.feed.capitalDates(id));
+          next.addAll(owner.feed.capitalDates(id));
         if (!next.equals(historyDates)) {
           historyDates.clear();
           historyDates.addAll(next);
           List<String> labels = new ArrayList<>();
           for (String date : next) labels.add(date.isEmpty() ? "当前来源" : date + " · 本机档案");
           dates.setAdapter(choices(labels));
-          dates.setSelection(Math.max(0, historyDates.indexOf(chosen)));
+          displayedHistoryIndex = Math.max(0, historyDates.indexOf(chosen));
+          dates.setSelection(displayedHistoryIndex);
         }
         if (!historyDate().isEmpty()) {
-          meta = owner.feed.capitalHistory(id, historyDate());
-          data = MarketData.array(meta, "rows");
+          JSONArray daily = new JSONArray();
+          if (p.equals("capitalDay"))
+            for (int i = 0; i < data.length(); i++) {
+              JSONObject value = data.optJSONObject(i);
+              if (value != null && value.optString("label").equals(historyDate())) daily.put(value);
+            }
+          if (daily.length() > 0) {
+            data = daily;
+            meta = new JSONObject(meta.toString()).put("dataDate", historyDate());
+          } else {
+            meta = owner.feed.capitalHistory(id, historyDate());
+            data = MarketData.array(meta, "rows");
+          }
         }
       }
       boolean history = !historyDate().isEmpty();
@@ -301,6 +341,10 @@ final class CapitalScreen extends LinearLayout {
         summary.append(" · 回放 " + rows.size() + "/" + count + "\n"
             + rows.get(rows.size() - 1).optString("label") + " · 非实时");
       adapter.notifyDataSetChanged();
+      LocalDate chosen = TradingDaySelection.parse(chosenDay);
+      calendar.setText(chosen == null ? "日历回看" : chosenDay);
+      if (chosen != null)
+        state.append("\n" + TradingDaySelection.recordCaption(chosen, rows.isEmpty() ? "" : meta.optString("dataDate")));
       if(snapshot && !owner.testing) state.append("\n资金源时刻未知；抓取 "+meta.optString("checkedAt")+"（不是数据时刻），不生成分时曲线。");
     } catch (Exception e) {
       state.setText("资金读取未完成：" + e.getMessage());

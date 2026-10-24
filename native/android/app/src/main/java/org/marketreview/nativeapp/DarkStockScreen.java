@@ -70,6 +70,14 @@ final class DarkStockScreen extends LinearLayout {
         | android.text.InputType.TYPE_DATETIME_VARIATION_DATE);
     date.setText(LocalDate.now(ZoneOffset.ofHours(8)).toString());
     dates.addView(date, new LayoutParams(0, owner.dp(48), 1));
+    button(dates, "日历", () -> {
+      LocalDate initial = TradingDaySelection.parse(date.getText().toString().trim());
+      if (initial == null) initial = LocalDate.now(ZoneOffset.ofHours(8));
+      new android.app.DatePickerDialog(owner, (picker, y, m, d) -> {
+        date.setText(LocalDate.of(y, m + 1, d).toString());
+        load();
+      }, initial.getYear(), initial.getMonthValue() - 1, initial.getDayOfMonth()).show();
+    }).setTag("darkStockCalendar");
     button(dates, "读本机", this::load);
     LinearLayout actions = row(controls);
     refresh = button(actions, "更新共享榜", this::refreshSource);
@@ -208,7 +216,10 @@ final class DarkStockScreen extends LinearLayout {
     cancel();
     cacheReadPending = false;
     String selectedKey = selected >= 0 && selected < rows.size() ? rows.get(selected).optString("key") : "";
-    observations.openCaptured(snapshot, selectedKey, date.getText().toString().trim());
+    String chosen = date.getText().toString().trim();
+    LocalDate selectedDay = TradingDaySelection.parse(chosen);
+    observations.openCaptured(snapshot, selectedKey, snapshot.optString("tradingDay",
+        selectedDay == null ? chosen : TradingDaySelection.effective(selectedDay).toString()));
     observationsShown = true;
     controlScroll.setVisibility(GONE);
     body.setVisibility(GONE);
@@ -433,12 +444,13 @@ final class DarkStockScreen extends LinearLayout {
     clearPending();
     cacheReadPending = false;
     final long token = generation;
-    String d = date.getText().toString().trim();
-    if (!DarkRotation.dateOK(d)) {
+    String chosen = date.getText().toString().trim();
+    if (!DarkRotation.dateOK(chosen)) {
       resultState = "日期须为yyyy-MM-dd";
       render();
       return;
     }
+    final String d = TradingDaySelection.effective(LocalDate.parse(chosen)).toString();
     pendingPage = targetPage;
     pendingKey = targetKey;
     cacheReadPending = !network;
@@ -471,8 +483,9 @@ final class DarkStockScreen extends LinearLayout {
       postResult(token, () -> {
         snapshot = result;
         cacheReadPending = false;
-        resultState = failure.isEmpty() ? (network ? "共享榜单已保存" : "本机缓存，不隐式更新")
-                                        : "未更新，旧缓存保留：" + failure;
+        resultState = TradingDaySelection.recordCaption(LocalDate.parse(chosen), result.optString("tradingDay")) + "\n"
+            + (failure.isEmpty() ? (network ? "共享榜单已保存" : "本机缓存，不隐式更新")
+                                : "未更新，旧缓存保留：" + failure);
         refresh.setEnabled(networkEnabled);
         scan = null;
         page = pendingPage >= 0 ? pendingPage : 0;

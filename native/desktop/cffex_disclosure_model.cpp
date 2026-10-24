@@ -18,8 +18,12 @@ QJsonValue difference(QJsonValue a,QJsonValue b){if(a.isNull()||b.isNull())retur
 }
 QString hash(const QByteArray& bytes){return QString::fromLatin1(QCryptographicHash::hash(bytes,QCryptographicHash::Sha256).toHex());}
 QJsonObject request(const QString& date,const QString& product){auto d=day(date);need(QSet<QString>{"IF","IH","IC","IM"}.contains(product),"仅支持IF/IH/IC/IM指定品种");return {{"date",date},{"product",product},{"url","https://www.cffex.com.cn/sj/ccpm/"+d.toString("yyyyMM")+"/"+d.toString("dd")+"/"+product+".xml"},{"maxBytes",2*1024*1024}};}
+QString publicUrl(const QJsonObject& query){
+ auto expected=request(query["date"].toString(),query["product"].toString());need(query==expected,"请求日期/品种/来源不符");
+ return QString("http://")+expected["url"].toString().mid(8);
+}
 QJsonObject parse(const QByteArray& raw,const QJsonObject& query,const QString& url,const QString& checkedAt,const QString& origin){
- auto expected=request(query["date"].toString(),query["product"].toString());need(query==expected&&url==expected["url"].toString(),"请求日期/品种/实际来源URL不符");
+ auto expected=request(query["date"].toString(),query["product"].toString());need(query==expected&&(url==expected["url"].toString()||url==publicUrl(expected)),"请求日期/品种/实际来源URL不符");
  auto receipt=QDateTime::fromString(checkedAt,Qt::ISODateWithMs);need(receipt.isValid()&&QRegularExpression("(Z|[+-][0-9]{2}:[0-9]{2})$").match(checkedAt).hasMatch()&&day(query["date"].toString())<=receipt.toOffsetFromUtc(28800).date(),"接收时点无效或请求日期在未来");
  need(QSet<QString>{"import-unverified","fixture-constructed","host-fetch-response"}.contains(origin),"原文来源状态无效");need(!raw.isEmpty()&&raw.size()<=2*1024*1024,"原文长度无效");
  QStringDecoder decoder(QStringDecoder::Utf8,QStringConverter::Flag::ConvertInitialBom);QString text=decoder(raw);need(!decoder.hasError()&&!text.contains(QChar(0)),"仅接收完整UTF8原文");need(!QRegularExpression("<!DOCTYPE|<!ENTITY",QRegularExpression::CaseInsensitiveOption).match(text).hasMatch(),"拒绝DTD/外部实体");

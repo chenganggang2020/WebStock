@@ -13,6 +13,7 @@ class QPlainTextEdit;
 class QPushButton;
 class QNetworkReply;
 class QCheckBox;
+class QDateEdit;
 class EtfPage final : public QWidget {
   Q_OBJECT
 public:
@@ -44,6 +45,7 @@ private:
   QCheckBox *scheduleEnabled;
   QLabel *scheduleState;
   QListWidget *days;
+  QDateEdit *calendar;
   QTableWidget *buys, *sells;
   QLabel *state, *summary, *dates, *selected;
   QPlainTextEdit *preview;

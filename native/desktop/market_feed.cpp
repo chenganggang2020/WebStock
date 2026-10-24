@@ -254,6 +254,9 @@ MarketFeed::MarketFeed(QString dir, QObject *parent, QNetworkAccessManager *inje
   writes->pool->setMaxThreadCount(1);
   writes->directory = directory;
   writes->owner = this;
+  quoteTimer.setSingleShot(true);
+  connect(&quoteTimer,&QTimer::timeout,this,&MarketFeed::pumpQuotes);
+  connect(this,&MarketFeed::persistenceChanged,this,[this]{scheduleQuotes();});
   if(!loadRoster)return;
   try {
     auto root = read("watchlist");
@@ -263,6 +266,7 @@ MarketFeed::MarketFeed(QString dir, QObject *parent, QNetworkAccessManager *inje
   }
 }
 MarketFeed::~MarketFeed() {
+  quoteActive=false;quoteTimer.stop();
   cancelSamples();
   {
     QMutexLocker lock(&writes->mutex);
@@ -318,19 +322,29 @@ QJsonObject MarketFeed::persistenceStats() const {
           {"historyRows",double(writes->historyRows)},{"maxQueueMs",double(writes->maxQueueMs)},
           {"maxCommitMs",double(writes->maxCommitMs)},{"totalCommitMs",double(writes->totalCommitMs)},
           {"closed",writes->closed},{"idle",!writes->running && writes->outstanding==0},
-          {"canAccept",!writes->closed && !writes->backpressure && !writes->retained &&
-             writes->outstanding < WriteRequestLimit && writes->bytes < WriteByteLimit}};
+          {"canAccept",!writes->closed &&
+             writes->outstanding + writes->retained < WriteRequestLimit &&
+             writes->bytes + writes->retainedBytes < WriteByteLimit}};
 }
 bool MarketFeed::acceptingWrites() const {
   return persistenceStats()["canAccept"].toBool();
 }
 void MarketFeed::stopPersistence() {
+  quoteTimer.stop();
   cancelSamples();
   {
     QMutexLocker lock(&writes->mutex);
     writes->closed=true;
   }
   notifyPersistenceDrained();
+}
+void MarketFeed::resumePersistence() {
+  {
+    QMutexLocker lock(&writes->mutex);
+    if(writes->dispose)return;
+    writes->closed=false;writes->drainedNotified=false;
+  }
+  scheduleQuotes();
 }
 QJsonArray MarketFeed::failedPersistence() const {
   QJsonArray rows;
@@ -361,8 +375,11 @@ bool MarketFeed::retryFailedPersistence() {
 }
 void MarketFeed::discardFailedPersistence() {
   failedWrites.clear();
-  QMutexLocker lock(&writes->mutex);
-  writes->retained=0;writes->retainedBytes=0;writes->backpressure=false;
+  {
+    QMutexLocker lock(&writes->mutex);
+    writes->retained=0;writes->retainedBytes=0;writes->backpressure=false;
+  }
+  scheduleQuotes();
 }
 void MarketFeed::notifyPersistenceDrained() {
   {
@@ -381,7 +398,7 @@ void MarketFeed::persist(const QString &id, const QString &p,
   bool accepted = false, start = false;
   {
     QMutexLocker lock(&writes->mutex);
-    accepted = (recoveryOf || (!writes->closed && !writes->retained)) &&
+    accepted = (recoveryOf || !writes->closed) &&
                writes->outstanding + writes->retained < WriteRequestLimit &&
                bytes <= WriteByteLimit - writes->bytes - writes->retainedBytes;
     if (accepted) {
@@ -636,20 +653,26 @@ void MarketFeed::add(const QJsonObject &item) {
         {{"schema", "native-watchlist/v1"}, {"instruments", rows}});
   apply(visible);
 }
-void MarketFeed::observe(const QJsonObject &item) {
+void MarketFeed::observe(const QJsonObject &item, bool loadSavedHistory) {
   const auto rows=marketdata::roster(
       {{"schema","native-watchlist/v1"},{"instruments",QJsonArray{item}}});
   const QString id=rows[0].toObject().value("id").toString();
   for(const auto &existing:instruments)if(existing.toObject()["id"]==id)return;
   if(instruments.size()>=3000)throw std::runtime_error("自选与临时观察合计不能超过3000只");
   auto observed=rows[0].toObject();observed["transient"]=true;
-  instruments.append(hydrate(observed));emit rosterChanged();
+  if(loadSavedHistory)observed=hydrate(observed);
+  else for(auto key:{"day","dayMeta","minute","minuteMeta","capitalDay","capitalDayMeta"})
+    if(item.contains(key))observed[key]=item[key];
+  instruments.append(observed);emit rosterChanged();
 }
 void MarketFeed::get(const QString &key, const QString &url,
                      const QByteArray &referer,
                      std::function<void(QByteArray, QString)> done) {
   if (!acceptingWrites()) {
-    done({}, "行情保存积压，暂停后续请求；请稍后重试");
+    const auto stats=persistenceStats();
+    done({},stats["closed"].toBool()?QString("行情保存已暂停；请完成保存恢复后重试"):
+      stats["retainedFailures"].toInt()>0?QString("有%1笔行情保存失败待恢复，保存容量已满；原记录保留").arg(stats["retainedFailures"].toInt()):
+      QString("正在保存%1笔行情；队列释放后可继续更新").arg(stats["outstanding"].toInt()));
     return;
   }
   if (inFlight.contains(key)) return;
@@ -771,41 +794,62 @@ void MarketFeed::refreshEtf(const QString& id, const QString& p,
   } catch (...) { finishEtf(seq, "failed", "ETF请求未启动"); }
 }
 void MarketFeed::refreshQuotes() {
-  QStringList symbols;
-  for (auto item : instruments) symbols << item.toObject()["symbol"].toString();
-  for (int start = 0; start < symbols.size(); start += 50) {
-    auto batch = symbols.mid(start, 50);
-    get("quote:" + batch.join(','),
-        "https://hq.sinajs.cn/list=" + batch.join(','),
-        "https://finance.sina.com.cn/",
-        [this, batch](QByteArray bytes, QString error) {
-          auto quotes =
-              error.isEmpty()
-                  ? marketdata::quotes(
-                        marketdata::decodeQuote(bytes),
-                        QDateTime::currentDateTimeUtc().toString(Qt::ISODate))
-                  : QJsonObject{};
-          for (int i = 0; i < instruments.size(); ++i) {
-            auto s = instruments[i].toObject();
-            auto symbol = s["symbol"].toString();
-            if (!batch.contains(symbol)) continue;
-            auto q = quotes[symbol].toObject();
-            if (q.isEmpty()) {
-              q = s["quote"].toObject();
-              q["cached"] = true;
-              q["error"] = error.isEmpty() ? "源未返回有效报价" : error;
-            } else {
-              QPointer<MarketFeed> alive(this);
-              persist(s["id"].toString(), "quote", symbol + "-quote", q);
-              if(!alive)return;
-              continue;
-            }
-            s["quote"] = q;
-            instruments[i] = s;
-          }
-          emit updated(QString());
-        });
+  if(quoteActive)return;
+  quoteTargets.clear();QSet<QString> seen;
+  for(auto value:instruments){
+    const auto row=value.toObject();const auto id=row["id"].toString(),symbol=row["symbol"].toString();
+    if(id.isEmpty()||symbol.isEmpty()||seen.contains(id))continue;
+    seen.insert(id);quoteTargets.append({id,symbol});
   }
+  quoteNext=0;quoteActive=!quoteTargets.isEmpty();pumpQuotes();
+}
+void MarketFeed::scheduleQuotes() {
+  if(quoteActive&&!quoteFetching&&!quoteTimer.isActive()&&!persistenceStats()["closed"].toBool())quoteTimer.start(0);
+}
+void MarketFeed::pumpQuotes() {
+  if(!quoteActive||quoteFetching||persistenceStats()["closed"].toBool())return;
+  // Keep only one received batch in memory. Other chart writes can consume
+  // capacity while the request is in flight, so recheck before each admission.
+  while(!quotePending.isEmpty()){
+    const auto entry=quotePending.first().toObject();const auto id=entry["id"].toString(),symbol=entry["symbol"].toString();
+    int row=-1;for(int i=0;i<instruments.size();++i)if(instruments[i].toObject()["id"]==id&&instruments[i].toObject()["symbol"]==symbol){row=i;break;}
+    if(row<0){quotePending.removeFirst();continue;}
+    const auto quote=entry["quote"].toObject();const qint64 bytes=QJsonDocument(quote).toJson(QJsonDocument::Compact).size();
+    if(bytes>WriteByteLimit){
+      auto item=instruments[row].toObject(),old=item["quote"].toObject();old["cached"]=true;old["error"]="单条报价超过保存容量，未接纳；原记录保留";item["quote"]=old;instruments[row]=item;quotePending.removeFirst();continue;
+    }
+    const auto state=persistenceStats();
+    if(state["closed"].toBool()||state["outstanding"].toInt()+state["retainedFailures"].toInt()>=WriteRequestLimit||bytes>WriteByteLimit-qint64(state["pendingBytes"].toDouble())-qint64(state["retainedBytes"].toDouble()))return;
+    quotePending.removeFirst();++quotePendingWrites;QPointer<MarketFeed> alive(this);
+    persist(id,"quote",symbol+"-quote",quote,[this](QJsonObject,QString){
+      --quotePendingWrites;
+      if(!quotePendingWrites&&quotePending.isEmpty()&&!quoteFetching&&quoteNext>=quoteTargets.size()){quoteActive=false;quoteTargets.clear();}
+      else scheduleQuotes();
+    });
+    if(!alive)return;
+  }
+  // A batch is complete only after its writes have settled, including failures
+  // retained for recovery. Never enqueue the whole watchlist in one event turn.
+  if(quotePendingWrites)return;
+  if(quoteNext>=quoteTargets.size()){quoteActive=false;quoteTargets.clear();return;}
+  const auto state=persistenceStats();if(!state["canAccept"].toBool())return;
+  const int count=qMin(50,WriteRequestLimit-state["outstanding"].toInt()-state["retainedFailures"].toInt());
+  const auto batch=quoteTargets.mid(quoteNext,count);quoteNext+=batch.size();QStringList symbols;for(const auto& target:batch)symbols.append(target.second);symbols.removeDuplicates();
+  quoteFetching=true;
+  get("quote:"+symbols.join(','),"https://hq.sinajs.cn/list="+symbols.join(','),"https://finance.sina.com.cn/",
+      [this,batch](QByteArray bytes,QString error){
+    quoteFetching=false;QJsonObject quotes;
+    if(error.isEmpty())try{quotes=marketdata::quotes(marketdata::decodeQuote(bytes),QDateTime::currentDateTimeUtc().toString(Qt::ISODate));}catch(const std::exception& e){error=QString::fromUtf8(e.what());}
+    for(const auto& target:batch){
+      int row=-1;for(int i=0;i<instruments.size();++i)if(instruments[i].toObject()["id"]==target.first&&instruments[i].toObject()["symbol"]==target.second){row=i;break;}
+      if(row<0)continue;
+      auto quote=quotes[target.second].toObject();
+      if(quote.isEmpty()){
+        auto item=instruments[row].toObject();quote=item["quote"].toObject();quote["cached"]=true;quote["error"]=error.isEmpty()?QString("源未返回有效报价"):error;item["quote"]=quote;instruments[row]=item;
+      }else quotePending.append(QJsonObject{{"id",target.first},{"symbol",target.second},{"quote",quote}});
+    }
+    QPointer<MarketFeed> alive(this);pumpQuotes();if(alive)emit updated(QString());
+  });
 }
 void MarketFeed::chart(const QString &id, const QString &p, bool force) {
   QJsonObject selected;

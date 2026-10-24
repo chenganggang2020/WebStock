@@ -20,13 +20,25 @@ class PublicMarketRuntime final:public QObject {
  QList<Job> jobs;QTimer timer;GlobalMarketTransport global;marketOverview::Feed overview;QThreadPool workers;
  std::shared_ptr<std::atomic_bool> cancelled=std::make_shared<std::atomic_bool>(false);
  QJsonObject last;
- QJsonArray stocks;int stockCursor=0;MarketFeed* stockFeed=nullptr;QHash<QString,qint64> stockDue;
+ QJsonArray stocks,visibleStocks;int stockCursor=0,minuteCursor=0,capitalCursor=0;MarketFeed* stockFeed=nullptr;QHash<QString,qint64> stockDue,minuteDue,capitalDue;
  void collectStock(){
-  if(!stockFeed||stockFeed->capitalDayBusy()||stocks.isEmpty())return;
+  if(!stockFeed||stocks.isEmpty())return;
   const auto now=QDateTime::currentMSecsSinceEpoch();
+  // A slow capital request must not hold the whole quote/chart queue. At most
+  // one item per lane per tick; visible rows get minute data without selection.
+  const auto& minuteRows=visibleStocks.isEmpty()?stocks:visibleStocks;
+  for(int n=0;n<minuteRows.size();++n){const int i=(minuteCursor+n)%minuteRows.size();const auto row=minuteRows[i].toObject();const auto id=row["id"].toString();if(minuteDue.value(id)>now)continue;
+   minuteCursor=(i+1)%minuteRows.size();minuteDue[id]=now+60000;
+   try{stockFeed->observe(row,false);stockFeed->chart(id,"minute");}catch(const std::exception& e){last={{"source","stock-background"},{"id",id},{"error",QString::fromUtf8(e.what())}};}break;
+  }
   for(int n=0;n<stocks.size();++n){const int i=(stockCursor+n)%stocks.size();const auto row=stocks[i].toObject();const auto id=row["id"].toString();if(stockDue.value(id)>now)continue;
    stockCursor=(i+1)%stocks.size();stockDue[id]=now+300000;
-   try{stockFeed->observe(row);stockFeed->chart(id,"day");stockFeed->capitalFlow(id,"day");}catch(const std::exception& e){last={{"source","stock-background"},{"id",id},{"error",QString::fromUtf8(e.what())}};}return;
+   try{stockFeed->observe(row,false);stockFeed->chart(id,"day");}catch(const std::exception& e){last={{"source","stock-background"},{"id",id},{"error",QString::fromUtf8(e.what())}};}break;
+  }
+  if(stockFeed->capitalDayBusy())return;
+  for(int n=0;n<stocks.size();++n){const int i=(capitalCursor+n)%stocks.size();const auto row=stocks[i].toObject();const auto id=row["id"].toString();if(capitalDue.value(id)>now||id.contains(":etf:"))continue;
+   capitalCursor=(i+1)%stocks.size();capitalDue[id]=now+300000;
+   try{stockFeed->observe(row,false);stockFeed->capitalFlow(id,"day");}catch(const std::exception& e){last={{"source","stock-background"},{"id",id},{"error",QString::fromUtf8(e.what())}};}break;
   }
  }
  void later(int ms=1000){if(enabled&&!stopped)timer.start(ms);}
@@ -57,8 +69,47 @@ class PublicMarketRuntime final:public QObject {
   later();
  }
 public:
+ QJsonArray stockView(const QJsonArray& observed)const{
+  QJsonArray rows=observed;QSet<QString> ids;for(auto value:observed)ids.insert(value.toObject()["id"].toString());
+  if(stockFeed)for(auto value:stockFeed->instruments){const auto id=value.toObject()["id"].toString();if(!ids.contains(id)){ids.insert(id);rows.append(value);}}
+  return rows;
+ }
+ static QJsonObject mergeStockHistory(QJsonObject existing,const QJsonObject& incoming){
+  if(existing["id"].toString().isEmpty()||existing["id"]!=incoming["id"])return existing;
+  for(const auto& period:QStringList{"day","minute","capitalDay"}){
+   const auto metaKey=period+"Meta";const auto meta=incoming[metaKey].toObject();
+   const auto previous=existing[metaKey].toObject();
+   auto sourceTime=[](const QJsonArray& rows){qint64 latest=0;for(auto value:rows){const auto row=value.toObject();if(row.contains("valid")&&!row["valid"].toBool())continue;latest=qMax(latest,qint64(row["time"].toDouble()));}return latest;};
+   const auto incomingTime=sourceTime(incoming[period].toArray()),previousTime=sourceTime(existing[period].toArray());
+   const auto incomingDate=meta["dataDate"].toString(),previousDate=previous["dataDate"].toString();
+   // Each period has its own source clock. A minute completion can carry an
+   // older day/capital snapshot from the collector's independent memory.
+   bool older=!incomingDate.isEmpty()&&!previousDate.isEmpty()&&incomingDate<previousDate;
+   if(incomingTime&&previousTime)older|=incomingTime<previousTime;
+   if(!older&&incomingTime==previousTime&&incomingDate==previousDate){
+    const auto checked=QDateTime::fromString(meta["checkedAt"].toString(),Qt::ISODateWithMs);
+    const auto previousChecked=QDateTime::fromString(previous["checkedAt"].toString(),Qt::ISODateWithMs);
+    older=checked.isValid()&&previousChecked.isValid()&&checked<previousChecked;
+   }
+   // An unloaded/failed collector is not an empty successful history. Preserve
+   // the host's rows and their original provenance, carrying only diagnostics.
+   if(!older&&!incoming[period].toArray().isEmpty()&&(meta["error"].toString().isEmpty()||existing[period].toArray().isEmpty())){
+    existing[period]=incoming[period];existing[metaKey]=meta;
+   }else if(!meta["error"].toString().isEmpty()){
+    auto retained=existing[metaKey].toObject();retained["cached"]=true;retained["error"]=meta["error"];
+    for(auto key:{"lastAttemptAt","lastTransportAttempts"})if(meta.contains(key))retained[key]=meta[key];
+    existing[metaKey]=retained;
+   }
+  }
+  return existing;
+ }
  std::function<void(QString)> updated;
  std::function<void(QJsonObject)> stockUpdated;
+ void setVisibleStocks(const QJsonArray& rows){
+  QJsonArray next;QStringList ids,previous;for(auto v:visibleStocks)previous.append(v.toObject()["id"].toString());
+  for(auto v:rows){const auto id=v.toObject()["id"].toString();if(id.contains(":stock:")||id.contains(":index:")||id.contains(":etf:")){next.append(v);ids.append(id);}}
+  visibleStocks=next;if(ids!=previous)minuteCursor=0;
+ }
  explicit PublicMarketRuntime(QString directory,bool allow,QObject* parent=nullptr,QNetworkAccessManager* transport=nullptr):QObject(parent),root(std::move(directory)),enabled(allow),global(this,transport),overview(this,transport){
   setObjectName("publicMarketRuntime");workers.setMaxThreadCount(1);timer.setSingleShot(true);connect(&timer,&QTimer::timeout,this,[this]{tick();});connect(&overview,&marketOverview::Feed::finished,this,[this](QJsonObject snapshot){finishOverview(snapshot);});
   for(const auto& v:globalMarket::catalog())for(const auto& period:QStringList{"intraday","daily"})jobs.append({v.toObject()["key"].toString(),period});
@@ -70,5 +121,5 @@ public:
  }
  ~PublicMarketRuntime()override{stop();delete stockFeed;stockFeed=nullptr;workers.clear();workers.waitForDone();}
  void stop(){stopped=true;cancelled->store(true);timer.stop();global.cancel();overview.cancel();if(stockFeed){stockFeed->cancelCapitalDay();stockFeed->cancelSamples();}}
- QJsonObject evidence()const{return {{"enabled",enabled&&!stopped},{"lastAttempt",last},{"jobs",jobs.size()},{"stocks",stocks.size()},{"busy",saving||overview.busy()||global.busy()},{"scope","global-overview-watchlist-day-and-capital"}};}
+ QJsonObject evidence()const{return {{"enabled",enabled&&!stopped},{"lastAttempt",last},{"jobs",jobs.size()},{"stocks",stocks.size()},{"visibleStocks",visibleStocks.size()},{"busy",saving||overview.busy()||global.busy()},{"scope","global-overview-visible-minute-watchlist-day-and-capital"}};}
 };

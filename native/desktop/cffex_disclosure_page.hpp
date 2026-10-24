@@ -2,7 +2,7 @@
 #include "cffex_disclosure_store.hpp"
 #include <QWidget>
 #include <functional>
-class QLineEdit;class QComboBox;class QTextEdit;class QPushButton;class QTableWidget;class QLabel;class QStackedWidget;
+class QDateEdit;class QComboBox;class QTextEdit;class QPushButton;class QTableWidget;class QLabel;class QStackedWidget;
 namespace cffexDisclosure {
 class Page final:public QWidget {
 public:
@@ -14,7 +14,7 @@ public:
  QString activeToken()const{return active;}
 private:
  Host host;Store store;QJsonObject archive,current,pending;QString active;
- QLineEdit*date;QComboBox*product;QComboBox*history;QComboBox*contract;QTextEdit*evidence;QPushButton*saveButton;QPushButton*rawButton;
+ QDateEdit*date;QComboBox*product;QComboBox*history;QComboBox*contract;QTextEdit*evidence;QPushButton*saveButton;QPushButton*rawButton;
  QTableWidget*table;QLabel*summary;QLabel*status;QStackedWidget*stack;
  void show(const QJsonObject&);void render();void reload();void notice(const QString&);
 };

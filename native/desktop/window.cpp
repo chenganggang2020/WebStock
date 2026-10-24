@@ -350,6 +350,32 @@ QPushButton* Window::button(const QString& text, const QString& id,
   b->setObjectName(id);
   b->setMinimumHeight(26);
   b->setCursor(Qt::PointingHandCursor);
+  static const QHash<QString,QString> help{
+    {"theme","选择浅色或深色主题，涨跌颜色随主题保持清晰。"},
+    {"toggleWatchlistGroups","展开或收起分组列表，不改变自选和持仓。"},
+    {"manage","编辑本机自选与分组；先预览更改再保存。"},
+    {"overlay","显示或隐藏当前周期的移动平均线；周期可在参数中修改。"},
+    {"nine","显示或隐藏九转计数；计数是图表条件标记，不代表买卖指令。"},
+    {"latest","回到当前图表最新已取得的数据位置。"},
+    {"openChart","进入当前标的图表分析。"},
+    {"funds","打开当前标的资金历史，查看主力分类及明暗盘模型数据。"},
+    {"auction","查看当前标的开盘和收盘集合竞价记录。"},
+    {"parameters","调整均线和副图指标参数。"},
+    {"explain","说明当前指标的计算口径、触发条件与缺数情况。"},
+    {"footerDetails","查看当前图表选点的条件与依据，返回可继续看图。"},
+    {"openStockResearch","打开当前公司的研究资料与已保存分析。"},
+    {"dualCharts","并列查看当前周期和周K；窄窗口保留单图。"},
+    {"refreshLive","更新报价及当前图表；失败保留已保存数据并显示原时间。"},
+    {"openMarketOverview","查看指数小图、市场概况及来源实际返回的板块数据。"},
+    {"openMarketComparison","对比所选指数、板块或股票走势与收益率相关系数。"},
+    {"openGlobalMarket","查看全球指数、期货CFD及汇率；交易时段与来源时间单独显示。"},
+    {"openLegacyHighFrequency","只读查看旧程序已保存的5秒、30秒档案；不能补出从未采集的过去行情。"},
+    {"openSectorWatch","选择独立板块来源并查看目录、成员和K线。"},
+    {"openRecent","返回最近查看的标的。"},
+    {"importWatchlist","从文件预览导入自选；导入前应保留现有清单备份。"},
+    {"exportWatchlist","导出当前自选为JSON，可供其他端导入。"}
+  };
+  if(help.contains(id))b->setToolTip(help.value(id));
   return b;
 }
 Window::Window(bool test, const QString& testSettingsFile,
@@ -675,7 +701,11 @@ Window::Window(bool test, const QString& testSettingsFile,
   cl->addWidget(quote);
   auto* tools = new QHBoxLayout;
   periodButtons = new QButtonGroup(this);
-  for (auto pair : {qMakePair(QString("minute"), QString("分时")),
+  auto* periodRow=new QWidget;auto* periodLayout=new QHBoxLayout(periodRow);
+  periodRow->setObjectName("chartPeriodRow");periodLayout->setContentsMargins(0,0,0,0);periodLayout->setSpacing(4);
+  for (auto pair : {qMakePair(QString("minute5s"), QString("5秒")),
+                    qMakePair(QString("minute30s"), QString("30秒")),
+                    qMakePair(QString("minute"), QString("1分钟")),
                     qMakePair(QString("day"), QString("日K")),
                     qMakePair(QString("week"), QString("周K")),
                     qMakePair(QString("month"), QString("月K")),
@@ -683,10 +713,19 @@ Window::Window(bool test, const QString& testSettingsFile,
     auto* b = button(pair.second, "period" + pair.first);
     b->setCheckable(true);
     periodButtons->addButton(b);
-    tools->addWidget(b);
+    periodLayout->addWidget(b);
+    b->setToolTip(pair.first.startsWith("minute")&&pair.first!="minute"?
+      "按所选秒数汇总公开分笔；仅展示来源实际返回或本机已采集时段，缺口不补价。":
+      pair.first=="year"?"将来源月线按自然年汇总为年K；当年未收盘部分保留形成中标记。":
+      "切换图表周期；显示该周期的已保存数据，并请求公开来源更新。");
     connect(b, &QPushButton::clicked, this,
             [this, pair] { setPeriod(pair.first); });
   }
+  periodLayout->addStretch();
+  auto* periodScroll=new QScrollArea;periodScroll->setObjectName("chartPeriodScroll");
+  periodScroll->setWidget(periodRow);periodScroll->setWidgetResizable(true);periodScroll->setFrameShape(QFrame::NoFrame);
+  periodScroll->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);periodScroll->setFixedHeight(periodRow->sizeHint().height()+8);
+  cl->addWidget(periodScroll);
   auto* ema = button("均线", "overlay");
   ema->setCheckable(true);
   ema->setChecked(true);
@@ -741,13 +780,11 @@ Window::Window(bool test, const QString& testSettingsFile,
   precision->addItem("分时：腾讯5秒汇总", 5);
   precision->addItem("分时：腾讯30秒汇总", 30);
   precision->setToolTip("从腾讯公开分笔回补当日价格，再增量更新；不是交易所完整逐笔，未返回的时段不补价。");
-  indicators->addWidget(precision);
+  precision->setParent(indicatorRow);precision->hide();
   connect(precision, &QComboBox::currentIndexChanged, this,
           [this, precision](int) {
             samplingSeconds = precision->currentData().toInt();
-            setPeriod("minute");
-            if (feed && samplingSeconds)
-              feed->sample(activeId, samplingSeconds);
+            setPeriod(samplingSeconds?QString("minute%1s").arg(samplingSeconds):QString("minute"));
           });
   auto* fundButton = button("资金", "funds");
   indicators->addWidget(fundButton);
@@ -1031,8 +1068,20 @@ Window::Window(bool test, const QString& testSettingsFile,
   if(!testing){
     publicMarketRuntime=new PublicMarketRuntime(QFileInfo(businessStore->filePath()).absolutePath(),true,this);
     publicMarketRuntime->setStocks(instruments);
+    QJsonArray initiallyVisible;for(int r=0;r<stocks->rowCount();++r){const auto id=stocks->item(r,0)->data(Qt::UserRole).toString();for(auto v:instruments)if(v.toObject()["id"]==id){initiallyVisible.append(v);break;}}
+    publicMarketRuntime->setVisibleStocks(initiallyVisible);
     if(feed)connect(feed,&MarketFeed::rosterChanged,publicMarketRuntime,[this]{publicMarketRuntime->setStocks(feed->instruments);});
-    publicMarketRuntime->stockUpdated=[this](QJsonObject row){if(!feed)return;const auto id=row["id"].toString();if(id.contains(":index:"))feed->observe(row);for(int i=0;i<feed->instruments.size();++i){auto s=feed->instruments[i].toObject();if(s["id"]!=id)continue;for(auto key:{"day","dayMeta","capitalDay","capitalDayMeta"})if(row.contains(key))s[key]=row[key];feed->instruments[i]=s;emit feed->updated(id);break;}};
+    publicMarketRuntime->stockUpdated=[this](QJsonObject row){
+      if(!feed)return;const auto id=row["id"].toString();
+      // Collection must not register an observation (or trigger roster IO).
+      // Interactive first open still hydrates all saved chart periods normally.
+      for(int i=0;i<feed->instruments.size();++i){
+        const auto existing=feed->instruments[i].toObject();if(existing["id"]!=id)continue;
+        feed->instruments[i]=PublicMarketRuntime::mergeStockHistory(existing,row);emit feed->updated(id);return;
+      }
+      if(auto* page=pages.value("funds"))if(auto* widget=page->findChild<QWidget*>("capitalRoster"))
+        static_cast<CapitalWorkbenchRoster*>(widget)->updateSources(publicMarketRuntime->stockView(feed->instruments));
+    };
     publicMarketRuntime->updated=[this](QString source){
       if(source=="overview"){if(auto* page=qobject_cast<MarketOverviewPage*>(pages.value("marketOverview")))page->reloadSaved();}
       else if(auto* page=qobject_cast<GlobalMarketPage*>(pages.value("globalMarket")))page->reloadSaved(source);
@@ -1097,7 +1146,7 @@ void Window::closeEvent(QCloseEvent* event){
    auto* message=new QMessageBox(QMessageBox::Warning,"行情保存未完成",
        QString("有%1份已接纳数据尚未成功保存，原始请求已保留。").arg(unresolved),QMessageBox::NoButton,this);
    message->setObjectName("marketPersistenceCloseFailure");message->setAttribute(Qt::WA_DeleteOnClose);
-   message->setInformativeText("可重试或导出恢复数据。只有明确选择放弃未保存数据，才会直接退出；行情请求暂时停止。");
+   message->setInformativeText("可重试或导出恢复数据；选择留在窗口后继续更新其他行情，失败原件仍保留。");
    auto* stay=message->addButton("留在窗口",QMessageBox::RejectRole);stay->setObjectName("marketPersistenceStay");
    auto* retry=message->addButton("重试保存",QMessageBox::ActionRole);retry->setObjectName("marketPersistenceRetry");
    auto* exportData=message->addButton("导出恢复数据",QMessageBox::ActionRole);exportData->setObjectName("marketPersistenceExport");
@@ -1108,12 +1157,13 @@ void Window::closeEvent(QCloseEvent* event){
     message->setObjectName({});message->close();
     if(selected==discard){
      for(auto source:sources)if(source)source->discardFailedPersistence();
-     if(!saveCloseState())return;
+     if(!saveCloseState()){for(auto source:sources)if(source)source->resumePersistence();return;}
      persistenceCloseReady=true;QTimer::singleShot(0,this,[this]{close();});
     }else if(selected==retry){
      for(auto source:sources)if(source&&!source->failedPersistence().isEmpty())source->retryFailedPersistence();
      QTimer::singleShot(0,this,[this]{close();});
     }else if(selected==exportData){
+     for(auto source:sources)if(source)source->resumePersistence();
      // Return from QMessageBox::buttonClicked before a nested file-dialog loop
      // can process the message's deferred deletion.
      QTimer::singleShot(0,this,[this,sources]{
@@ -1128,12 +1178,15 @@ void Window::closeEvent(QCloseEvent* event){
       statusBar()->showMessage("恢复数据导出失败；内存原始请求仍保留，窗口未退出");
      else statusBar()->showMessage("恢复数据已导出；尚未放弃内存请求，窗口未退出");
      });
+    }else{
+     for(auto source:sources)if(source)source->resumePersistence();
     }
    });
    message->open();return;
   }
   if(!saveCloseState()){
    persistenceClosing=false;if(centralWidget())centralWidget()->setEnabled(true);
+   for(auto source:sources)if(source)source->resumePersistence();
    return;
   }
   persistenceCloseReady=true;QTimer::singleShot(0,this,[this]{close();});
@@ -1218,6 +1271,7 @@ void Window::fillStocks() {
   // and edit actions still read and validate the current store.
   if(!liveQuoteRefresh)setProperty("watchlistQuoteDirectory",directory);
   QString group=directory.value("selectedName").toString(),query=search->text().trimmed();
+  QJsonArray visibleInstruments;
   for (auto v : instruments) {
     auto s = v.toObject();
     QString id = s["id"].toString(), name = s["name"].toString();
@@ -1227,6 +1281,7 @@ void Window::fillStocks() {
     if (!observed&&!watchlistHostAdapter::includes(directory,id)) continue;
     if (!query.isEmpty() && !name.contains(query) && !id.contains(query))
       continue;
+    visibleInstruments.append(s);
     auto a = s["day"].toArray();
     auto last = displayedQuote(s, testing);
     double price = marketdata::value(last, "price"),
@@ -1276,6 +1331,7 @@ void Window::fillStocks() {
         stocks->item(r, c)->setForeground(quoteForeground(quoteTheme, pct));
     }
   }
+  if(publicMarketRuntime)publicMarketRuntime->setVisibleStocks(visibleInstruments);
   context->setText(QString("%1 · %2 只%3")
                        .arg(group)
                        .arg(stocks->rowCount())
@@ -1424,9 +1480,9 @@ void Window::loadInstrument(const QString& id, bool reset) {
 }
 void Window::setPeriod(const QString& next) {
   if(!legacyHighFrequencyFrame.isEmpty()){if(auto* current=findChild<QPushButton*>(legacyHighFrequencyFrame.value("schema")=="quant-parquet-chart/v1"?"periodday":"periodminute"))current->setChecked(true);statusBar()->showMessage("旧历史日期与粒度保持；请先明确返回当前资料再切换周期。",8000);return;}
-  period = next == "minute" && samplingSeconds
-               ? QString("minute%1s").arg(samplingSeconds)
-               : next;
+  period = next;
+  samplingSeconds=next=="minute5s"?5:next=="minute30s"?30:0;
+  if(auto* precision=findChild<QComboBox*>("minutePrecision")){QSignalBlocker block(precision);precision->setCurrentIndex(precision->findData(samplingSeconds));}
   if(feed)feed->cancelSamples();
   loadChart(chart, period, true);
   auto* b = findChild<QPushButton*>("period" + next);
@@ -1760,7 +1816,13 @@ bool Window::closeInternalReader() {
 }
 void Window::home() {
   workspaceTabs->setCurrentWidget(ui->body);
-  if(livePanePending){livePanePending=false;fillStocks();loadInstrument(activeId,false);}
+  if(livePanePending){
+    livePanePending=false;
+    // Hidden quote updates do not change group membership. Roster/edit actions
+    // already refresh the verified directory through syncLive(true).
+    QScopedValueRollback<bool> quoteOnly(liveQuoteRefresh,true);
+    fillStocks();loadInstrument(activeId,false);
+  }
 }
 void Window::recordViewedInstrument() {
   if (instrument.isEmpty() || instrument["id"].toString() != activeId) return;
@@ -2773,17 +2835,8 @@ void Window::marketComparisonView() {
         }catch(const std::exception& e){statusBar()->showMessage(QString::fromUtf8(e.what()));}
       });
     }
-    QJsonArray records;
-    try {
-      sectorWatch::Store store(dataRoot+"/sector-watch-v1.sqlite");
-      for(auto taxonomy:{QString("industry"),QString("concept")}){
-        const auto snapshot=store.read(sectorWatch::query("eastmoney-public-board",taxonomy))["snapshot"].toObject();
-        if(snapshot["coverageComplete"]==true)for(auto v:snapshot["items"].toArray()){
-          auto row=v.toObject();row["key"]="eastmoney-"+taxonomy+":"+row["code"].toString();records.append(row);
-        }
-      }
-    }catch(const std::exception& e){statusBar()->showMessage("本机板块目录未采用："+QString::fromUtf8(e.what()));}
-    page->setCatalogItems(records);activatePage(page);
+    activatePage(page);
+    page->reloadBoardCatalog(dataRoot+"/sector-watch-v1.sqlite");
   }catch(const std::exception& e){statusBar()->showMessage("大盘对比未打开："+QString::fromUtf8(e.what()));}
 }
 void Window::globalMarketView() {
@@ -3127,12 +3180,16 @@ void Window::funds() {
   dates->setMinimumContentsLength(22);
   dates->setSizeAdjustPolicy(QComboBox::AdjustToContents);
   dates->addItem("当前来源", "");
+  dates->hide(); // Keep archive identity internally; the user selects a calendar.
+  auto* fundCalendar=new QDateEdit(QDateTime::currentDateTimeUtc().toOffsetFromUtc(28800).date(),d);
+  fundCalendar->setObjectName("fundHistoryDate");fundCalendar->setCalendarPopup(true);fundCalendar->setDisplayFormat("yyyy-MM-dd");
+  auto* latestFunds=button("最新数据","fundLatestData",d);
   auto* imports = button("导入旧资金档案", "importFunds", d);
   imports->setProperty("settingsControl",true);
   auto* play = button("播放 / 暂停", "playFunds", d);
   auto* cursor = new QSlider(Qt::Horizontal, d);
   cursor->setObjectName("fundCursor");
-  historyTools->addWidget(dates);
+  historyTools->addWidget(fundCalendar);historyTools->addWidget(latestFunds);
   historyTools->addWidget(imports);
   historyTools->addWidget(play);
   historyTools->addWidget(cursor, 1);
@@ -3154,6 +3211,7 @@ void Window::funds() {
   from->setObjectName("capitalHistoryFrom");through->setObjectName("capitalHistoryThrough");for(auto* field:{from,through}){field->setDisplayFormat("yyyy-MM-dd");field->setCalendarPopup(true);field->setMaximumDate(QDateTime::currentDateTimeUtc().toOffsetFromUtc(28800).date());}
   auto* historyFetch=button("回补明暗日线","capitalHistoryBackfill",lower);auto* historyCancel=button("取消回补","capitalHistoryCancel",lower);historyCancel->setEnabled(false);
   auto* backfillState=new QLabel("历史按日取完整榜单；仅来源模型估算。原观察保留，不能还原过去逐笔轨迹。",lower);backfillState->setObjectName("capitalHistoryState");backfillState->setWordWrap(true);
+  backfillState->setToolTip(backfillState->text());backfillState->clear();
   backfillRow->addWidget(new QLabel("明暗历史范围",lower));backfillRow->addWidget(from);backfillRow->addWidget(through);backfillRow->addWidget(historyFetch);backfillRow->addWidget(historyCancel);backfillRow->addStretch();layout->insertLayout(2,backfillRow);layout->insertWidget(3,backfillState);
   historyFetch->setEnabled(!testing);connect(historyFetch,&QPushButton::clicked,roster,[roster,from,through]{roster->backfill(from->date(),through->date());});connect(historyCancel,&QPushButton::clicked,roster,[roster]{roster->cancelBackfill();});
   roster->backfillChanged=[this,historyFetch,historyCancel,backfillState](QString text,bool busy){backfillState->setText(text);historyFetch->setEnabled(!busy&&!testing);historyCancel->setEnabled(busy);};
@@ -3176,7 +3234,7 @@ void Window::funds() {
   note->setWordWrap(true);
   layout->addWidget(note);
   auto render = [this, d, symbols, modes, state, summary, table, dates, cursor,
-                 displayed, selectedKey, refresh, archive, lastInput, timeline,roster,selectedTitle,metric,note] {
+                 displayed, selectedKey, refresh, archive, lastInput, timeline,roster,selectedTitle,metric,note,fundCalendar] {
     if (!d->isVisible() || workspaceTabs->currentWidget() != d) return;
     QJsonObject selected;
     auto id = symbols->currentData().toString();
@@ -3198,6 +3256,10 @@ void Window::funds() {
     QString p = modes->currentData() == "snapshot" ? "capitalSnapshot" : modes->currentData() == "day" ? "capitalDay" : "capitalMinute";
     auto meta = selected[p + "Meta"].toObject();
     auto rows = selected[p].toArray();
+    if(p=="capitalDay"&&fundCalendar->property("chosen").toBool()){
+      QJsonArray bounded;const auto limit=tradingDaySelection::effective(fundCalendar->date()).toString(Qt::ISODate);
+      for(auto value:rows)if(value.toObject()["label"].toString().left(10)<=limit)bounded.append(value);rows=bounded;
+    }
     bool history = !dates->currentData().toString().isEmpty();
     if (history) {
       const bool matches = (*archive)["id"] == id && (*archive)["date"] == dates->currentData().toString();
@@ -3205,7 +3267,7 @@ void Window::funds() {
       rows = meta["rows"].toArray();
       if (matches && !(*archive)["error"].toString().isEmpty()) meta["error"] = (*archive)["error"];
     }
-    QJsonObject input{{"id",id},{"mode",p},{"date",dates->currentData().toString()},
+    QJsonObject input{{"id",id},{"mode",p},{"date",dates->currentData().toString()},{"calendar",fundCalendar->property("chosen").toBool()?fundCalendar->date().toString(Qt::ISODate):QString()},
                       {"meta",meta},{"rows",rows},{"cursor",cursor->value()},{"modelHistory",roster->historicalModelRows()},{"candles",selected["day"]}};
     if (*lastInput == input) return;
     *lastInput = input;
@@ -3248,9 +3310,14 @@ void Window::funds() {
     cursor->setEnabled(history && count > 1);
     if (history)
       while (rows.size() > cursor->value() + 1) rows.removeLast();
-    const auto modelHistory=roster->historicalModelRows();
+    auto modelHistory=roster->historicalModelRows();auto candles=selected["day"].toArray();
+    if(fundCalendar->property("chosen").toBool()){
+      const auto limit=tradingDaySelection::effective(fundCalendar->date()).toString(Qt::ISODate);
+      auto bounded=[limit](QJsonArray values){QJsonArray out;for(auto v:values){auto row=v.toObject();const auto day=row["tradingDay"].toString(row["label"].toString().left(10));if(!day.isEmpty()&&day<=limit)out.append(v);}return out;};
+      modelHistory=bounded(modelHistory);candles=bounded(candles);
+    }
     const bool dailyChart=(!history&&p=="capitalDay")||rows.isEmpty();
-    timeline->setRows(dailyChart?capitalWorkbench::dailySeries(rows,modelHistory,selected["day"].toArray()):rows);
+    timeline->setRows(dailyChart?capitalWorkbench::dailySeries(rows,modelHistory,candles):rows);
     table->setRowCount(rows.size());
     const QStringList fields{
         "mainNet",  "superNet",     "largeNet",           "mediumNet",
@@ -3303,6 +3370,8 @@ void Window::funds() {
     if(!testing&&!meta["checkedAt"].toString().isEmpty())state->setText(state->text()+" · 记录获取时刻 "+QDateTime::fromString(meta["checkedAt"].toString(),Qt::ISODate).toOffsetFromUtc(28800).toString("MM-dd HH:mm:ss")+"（非数据日期）");
     if(id.contains(":index:"))state->setText(state->text()+"\n指数来源分类资金，非指数成交额，也非本软件成分股估算。");
     if(dailyChart&&!modelHistory.isEmpty())summary->setText(summary->text()+" · 明暗历史独立可用（最后留存观察，非本次更新）。");
+    state->setToolTip(state->text());state->setText(state->text().section('\n',0,0));
+    note->setToolTip(note->text());note->setText("万元 · 主力分类与明暗模型独立，不相加；缺值不补零");
   };
   auto* reader = new CapitalArchiveReader(d, feed ? feed->capitalArchivePath() : QString(),
       [symbols, dates, archive, render, state, lastInput](QString id, QString date, QJsonObject result, QString error) {
@@ -3353,12 +3422,20 @@ void Window::funds() {
     capitalPages->setCurrentIndex(1);symbols->setCurrentIndex(symbols->findData(id));render();
   };
   roster->modelChanged=[render](QJsonArray,QString){render();};
-  roster->setCurrent(symbols->currentData().toString());roster->updateSources(feed?feed->instruments:instruments);
+  roster->setCurrent(symbols->currentData().toString());roster->updateSources(publicMarketRuntime?publicMarketRuntime->stockView(feed?feed->instruments:instruments):(feed?feed->instruments:instruments));
   connect(modes, &QComboBox::currentIndexChanged, d,
           [request](int) { request(false); });
   connect(refresh, &QPushButton::clicked, d, [request] { request(true); });
   connect(dates, &QComboBox::currentIndexChanged, d,
           [this, render, readArchive](int) { if(feed)feed->cancelCapitalDay(); render(); readArchive(); });
+  connect(fundCalendar,&QDateEdit::dateChanged,d,[fundCalendar,dates,modes,render,roster](QDate chosen){
+    fundCalendar->setProperty("chosen",true);fundCalendar->setToolTip(tradingDaySelection::caption(chosen));
+    roster->findChild<QDateEdit*>("capitalModelDate")->setDate(chosen);
+    if(modes->currentData()=="day"||modes->currentData()=="dark"){dates->setCurrentIndex(0);render();return;}
+    const auto day=tradingDaySelection::effective(chosen).toString(Qt::ISODate);int pos=dates->findData(day);
+    if(pos<0){dates->addItem(day,day);pos=dates->count()-1;}dates->setCurrentIndex(pos);
+  });
+  connect(latestFunds,&QPushButton::clicked,d,[fundCalendar,dates,render]{fundCalendar->setProperty("chosen",false);dates->setCurrentIndex(0);render();});
   connect(cursor, &QSlider::valueChanged, d, [render](int) { render(); });
   connect(play, &QPushButton::clicked, d, [timer, cursor] {
     if (timer->isActive())
@@ -3406,7 +3483,7 @@ void Window::funds() {
   connect(close, &QPushButton::clicked, this, &Window::home);
   if (feed)
     connect(feed, &MarketFeed::updated, d,
-            [this,roster,symbols, render](const QString& id) { roster->updateSources(feed->instruments);if (id == symbols->currentData()) render(); });
+            [this,roster,symbols, render](const QString& id) { roster->updateSources(publicMarketRuntime?publicMarketRuntime->stockView(feed->instruments):feed->instruments);if (id == symbols->currentData()) render(); });
   if (feed)
     connect(feed, &MarketFeed::capitalArchiveChanged, d,
             [symbols, readArchive](const QString& id) { if (id == symbols->currentData()) readArchive(); });

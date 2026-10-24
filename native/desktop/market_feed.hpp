@@ -4,6 +4,7 @@
 #include <QSet>
 #include <QPointer>
 #include <QThreadPool>
+#include <QTimer>
 #include <functional>
 #include <memory>
 #include <QMap>
@@ -21,7 +22,10 @@ class MarketFeed final : public QObject {
   void importFile(const QString &file);
   void exportFile(const QString &file) const;
   void add(const QJsonObject &item);
-  void observe(const QJsonObject &item);
+  // Collectors can reuse the host's validated in-memory day/capital data without
+  // rereading every stored period on the GUI thread. Interactive opens retain
+  // the existing saved-history behavior by default; neither mode saves a roster.
+  void observe(const QJsonObject &item, bool loadSavedHistory = true);
   void refreshQuotes();
   void refreshEtf(const QString& fullId, const QString& period, const QString& token,
                   std::function<void(QJsonObject)> completed);
@@ -46,6 +50,7 @@ class MarketFeed final : public QObject {
   QJsonObject persistenceStats() const;
   // Call before process exit; wait for persistenceDrained without blocking UI.
   void stopPersistence();
+  void resumePersistence(); // Cancel closing without discarding retained failures.
   // GUI-thread recovery actions. Retained inputs count against admission limits.
   QJsonArray failedPersistence() const;
   bool retryFailedPersistence();
@@ -62,6 +67,13 @@ class MarketFeed final : public QObject {
   QNetworkAccessManager network;
   QNetworkAccessManager *transport;
   QSet<QString> inFlight;
+  QList<QPair<QString,QString>> quoteTargets;
+  QJsonArray quotePending;
+  QTimer quoteTimer;
+  int quoteNext = 0, quotePendingWrites = 0;
+  bool quoteActive = false, quoteFetching = false;
+  void pumpQuotes();
+  void scheduleQuotes();
   QPointer<QObject> capitalDayJob;
   QString capitalDayId;
   struct WriteQueue;

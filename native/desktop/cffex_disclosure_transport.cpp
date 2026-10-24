@@ -20,7 +20,9 @@ void CffexDisclosureTransport::start(const QString&token,const QJsonObject&q,Don
  need(q==cffexDisclosure::request(q["date"].toString(),q["product"].toString()),"请求不属于明确日期和品种");
  need(QDate::fromString(q["date"].toString(),Qt::ISODate)<=QDateTime::currentDateTimeUtc().toOffsetFromUtc(28800).date(),"不能读取未来日期");
  auto j=std::make_shared<Job>();j->token=token;j->query=q;j->done=std::move(done);active=j;
- QNetworkRequest request{QUrl(q["url"].toString())};request.setRawHeader("Accept-Encoding","identity");request.setRawHeader("Connection","close");request.setRawHeader("User-Agent","NativeMarketReview/0.38");request.setAttribute(QNetworkRequest::RedirectPolicyAttribute,QNetworkRequest::ManualRedirectPolicy);request.setTransferTimeout(12000);
+ // This exact public CFFEX endpoint serves the XML over HTTP. No credentials,
+ // arbitrary downgrade or redirect is allowed; preserve the actual source URL.
+ QNetworkRequest request{QUrl(cffexDisclosure::publicUrl(q))};request.setRawHeader("Accept-Encoding","identity");request.setRawHeader("Connection","close");request.setRawHeader("User-Agent","NativeMarketReview/0.38");request.setAttribute(QNetworkRequest::RedirectPolicyAttribute,QNetworkRequest::ManualRedirectPolicy);request.setTransferTimeout(12000);
  j->elapsed.start();j->reply=network->get(request);j->reply->setReadBufferSize(65536);
  j->deadline=new QTimer(this);j->deadline->setSingleShot(true);connect(j->deadline,&QTimer::timeout,this,[this,j]{fail(j,"读取超过15秒，未重试");});j->deadline->start(15000);
  connect(j->reply,&QIODevice::readyRead,this,[this,j]{consume(j);});connect(j->reply,&QNetworkReply::finished,this,[this,j]{finish(j);});
@@ -29,7 +31,7 @@ void CffexDisclosureTransport::start(const QString&token,const QJsonObject&q,Don
 }
 void CffexDisclosureTransport::consume(const std::shared_ptr<Job>&j){if(!running(j)||!j->reply)return;try{
  need(j->elapsed.elapsed()<15000,"读取超过15秒处理预算");int status=j->reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();if(status!=200){fail(j,QString("HTTP %1；未取得完整披露，未改日期重试").arg(status));return;}
- need(j->reply->url()==QUrl(j->query["url"].toString()),"来源URL改变，拒绝响应");auto enc=j->reply->rawHeader("Content-Encoding").trimmed().toLower();need(enc.isEmpty()||enc=="identity","响应压缩方式不符合identity请求");
+ need(j->reply->url()==QUrl(cffexDisclosure::publicUrl(j->query)),"来源URL改变，拒绝响应");auto enc=j->reply->rawHeader("Content-Encoding").trimmed().toLower();need(enc.isEmpty()||enc=="identity","响应压缩方式不符合identity请求");
  auto length=j->reply->header(QNetworkRequest::ContentLengthHeader);if(length.isValid()){bool ok=false;auto n=length.toLongLong(&ok);need(ok&&n>=0&&n<=Limit,"声明长度无效或超过2MiB");}
  while(j->reply->bytesAvailable()>0){auto bytes=j->reply->read(Limit-j->bytes.size()+1);need(!bytes.isEmpty()&&j->bytes.size()+bytes.size()<=Limit,"原文超过2MiB或读取未前进");j->bytes+=bytes;}
  }catch(const std::exception&e){fail(j,QString::fromUtf8(e.what()));}}

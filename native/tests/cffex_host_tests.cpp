@@ -28,14 +28,34 @@ public:QList<Reply*> replies;
 class CffexHostTests:public QObject {
  Q_OBJECT
 private slots:
+ void liveOfficialDisclosure(){
+  if(qEnvironmentVariable("NATIVE_CFFEX_LIVE")!="1")QSKIP("Explicit bounded live check only");
+  QTemporaryDir dir;CffexDisclosureTransport transport;QJsonObject actual;QString failure;bool finished=false;
+  QPointer<cffexDisclosure::Page> target;
+  cffexDisclosure::Page page({[&](QString token,QJsonObject query){transport.start(token,query,[&](QString completed,QJsonObject report,QString error){actual=report;failure=error;finished=true;if(target){if(error.isEmpty())target->accept(completed,report);else target->fail(completed,error);}});},[&](QString token){transport.cancel(token);}},dir.filePath("archive.json"));target=&page;
+  page.resize(1450,950);page.QWidget::show();page.findChild<QDateEdit*>("cffexDate")->setDate(QDate(2026,10,24));page.findChild<QPushButton*>("cffexFetch")->click();
+  QTRY_VERIFY_WITH_TIMEOUT(finished,20000);QVERIFY2(failure.isEmpty(),qPrintable(failure));QCOMPARE(actual["origin"].toString(),QString("host-fetch-response"));QCOMPARE(actual["contracts"].toArray().size(),4);
+  int rows=0;for(auto value:actual["contracts"].toArray())rows+=value.toObject()["rows"].toArray().size();QCOMPARE(rows,240);
+  const auto output=qEnvironmentVariable("NATIVE_QA_OUTPUT");if(!output.isEmpty()){
+   QFile receipt(output+"/cffex-live.json");QVERIFY(receipt.open(QIODevice::WriteOnly));receipt.write(QJsonDocument(actual).toJson());receipt.close();QTest::qWait(50);QVERIFY(page.grab().save(output+"/actual-cffex.png"));
+  }
+ }
+ void officialEndpointAndClosedDay(){
+  QTemporaryDir dir;Network network;CffexDisclosureTransport transport(nullptr,&network);
+  cffexDisclosure::Page page({[&](QString token,QJsonObject query){transport.start(token,query,[](QString,QJsonObject,QString){});},[&](QString token){transport.cancel(token);}},dir.filePath("archive.json"));
+  auto* date=page.findChild<QDateEdit*>("cffexDate");QVERIFY2(date&&date->calendarPopup(),"Disclosure date needs a calendar");
+  date->setDate(QDate(2026,10,24));page.findChild<QPushButton*>("cffexFetch")->click();
+  QCOMPARE(network.replies.size(),1);QCOMPARE(network.replies[0]->request().url().toString(),QString("http://www.cffex.com.cn/sj/ccpm/202610/23/IF.xml"));
+  QVERIFY(page.findChild<QLabel*>("cffexStatus")->text().contains("休市"));page.cancel();
+ }
  void internalEntry(){
   QTemporaryDir dir;Network network;Window w(true,dir.filePath("settings.ini"),dir.path());w.cffexTestNetwork=&network;w.resize(1600,1000);w.show();w.etfDailyView();
   auto*entry=w.findChild<QPushButton*>("openCffexDisclosure");QVERIFY(entry);entry->click();auto*p=dynamic_cast<cffexDisclosure::Page*>(w.pages.value("cffexDisclosure"));QVERIFY(p);QVERIFY(p->isVisible());QCOMPARE(network.replies.size(),0);
   QString path=QFileInfo(w.businessStore->filePath()).absolutePath()+"/cffex-disclosure-v1.json";cffexDisclosure::Store store(path);QVERIFY(!QFile::exists(path));
-  p->findChild<QLineEdit*>("cffexDate")->setText("2026-08-28");p->findChild<QPushButton*>("cffexFetch")->click();QCOMPARE(network.replies.size(),1);auto*r=network.replies.last();QCOMPARE(r->request().url().toString(),QString("https://www.cffex.com.cn/sj/ccpm/202608/28/IF.xml"));r->deliver(fixture());
+  p->findChild<QDateEdit*>("cffexDate")->setDate(QDate(2026,8,28));p->findChild<QPushButton*>("cffexFetch")->click();QCOMPARE(network.replies.size(),1);auto*r=network.replies.last();QCOMPARE(r->request().url().toString(),QString("http://www.cffex.com.cn/sj/ccpm/202608/28/IF.xml"));r->deliver(fixture());
   QCOMPARE(p->findChild<QTableWidget*>("cffexRows")->rowCount(),3);QVERIFY(!QFile::exists(path));p->findChild<QPushButton*>("cffexSave")->click();QCOMPARE(store.read()["frames"].toArray().size(),1);
   auto record=QJsonDocument::fromJson(store.read()["frames"].toArray()[0].toObject()["json"].toString().toUtf8()).object();QCOMPARE(record["origin"].toString(),QString("fixture-constructed"));
-  for(QString mode:{"quotes","classic","focus"}){w.setLayoutMode(mode);w.cffexDisclosureView();QVERIFY(p->isVisible());QCOMPARE(w.layoutMode(),mode);QTest::qWait(50);bool scopeVisible=false;for(auto*label:p->findChildren<QLabel*>())if(label->text().contains("不是全市场净流入"))scopeVisible=label->height()>=label->fontMetrics().lineSpacing()*2;QVERIFY(scopeVisible);if(!qEnvironmentVariable("NATIVE_QA_OUTPUT").isEmpty())QVERIFY(w.grab().save(qEnvironmentVariable("NATIVE_QA_OUTPUT")+"/qt-v38-cffex-"+mode+".png"));}
+  for(QString mode:{"quotes","classic","focus"}){w.setLayoutMode(mode);w.cffexDisclosureView();QVERIFY(p->isVisible());QCOMPARE(w.layoutMode(),mode=="quotes"?QString("quotes"):QString("classic"));QTest::qWait(50);bool scopeVisible=false;for(auto*label:p->findChildren<QLabel*>())if(label->text().contains("不是全市场净流入"))scopeVisible=label->height()>=label->fontMetrics().lineSpacing()*2;QVERIFY(scopeVisible);if(!qEnvironmentVariable("NATIVE_QA_OUTPUT").isEmpty())QVERIFY(w.grab().save(qEnvironmentVariable("NATIVE_QA_OUTPUT")+"/qt-v38-cffex-"+mode+".png"));}
   p->findChild<QPushButton*>("cffexFetch")->click();auto*late=network.replies.last();w.home();QVERIFY(late->aborted);late->deliver(fixture());QCOMPARE(store.read()["frames"].toArray().size(),1);
   w.cffexDisclosureView();p->findChild<QPushButton*>("cffexFetch")->click();network.replies.last()->deliver({},503);QVERIFY(p->findChild<QLabel*>("cffexStatus")->text().contains("失败"));QCOMPARE(store.read()["frames"].toArray().size(),1);
   QVERIFY(p->selectHistory(1));p->openOriginal();QVERIFY(w.closeInternalReader());QVERIFY(!w.closeInternalReader());p->openOriginal();auto state=p->saveState();w.save();QFile reading(path+".reading.json");QVERIFY(reading.open(QIODevice::ReadOnly));auto saved=QJsonDocument::fromJson(reading.readAll()).object();QCOMPARE(saved["report"],record);p->back();p->restoreState(saved);QVERIFY(p->back());QCOMPARE(network.replies.size(),3);w.home();

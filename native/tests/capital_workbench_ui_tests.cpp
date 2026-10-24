@@ -9,6 +9,44 @@
 class CapitalUiTests:public QObject {
  Q_OBJECT
 private slots:
+ void requestedDateShowsOnlyApplicableTradingDay_data(){
+  QTest::addColumn<QDate>("requested");QTest::addColumn<bool>("showsFriday");
+  QTest::newRow("closed-saturday-shows-friday")<<QDate(2026,10,24)<<true;
+  QTest::newRow("missing-open-monday-does-not-borrow-friday")<<QDate(2026,10,26)<<false;
+ }
+ void requestedDateShowsOnlyApplicableTradingDay(){
+  QFETCH(QDate,requested);QFETCH(bool,showsFriday);
+  QTemporaryDir data;QVERIFY(data.isValid());const auto directory=data.filePath("dark-stocks-v1");
+  // Synthetic, independently dated fixture: this checks page behavior, not a live-source update.
+  QJsonObject raw{{"errid",0},{"1","20261023"},{"2",1},{"data",QJsonArray{
+   QJsonObject{{"3",1},{"4","600487"},{"16","测试股票"},{"6",-230000},{"7",250000},{"8",20000},{"14",0.0425},{"13",10230}}
+  }}};
+  darkStock::Assembly assembled("2026-10-23","2026-10-23T07:00:00Z");
+  assembled.append(darkStock::normalize(raw,"2026-10-23",1,"2026-10-23T07:00:01Z"),1000);
+  const auto saved=assembled.finish();darkStock::Store store(directory);store.save(saved);
+  QJsonObject security{{"id","SH:stock:600487"},{"symbol","sh600487"},{"name","测试股票"},
+   {"quote",QJsonObject{{"tradeDate","2026-10-23"},{"changePercent",4.25}}},
+   {"capitalDay",QJsonArray{QJsonObject{{"label","2026-10-23"},{"mainNet",1234500},{"superNet",2000000},{"largeNet",-765500},{"mediumNet",-100000},{"smallNet",-1134500}}}},
+   {"capitalDayMeta",QJsonObject{{"cached",true},{"dataDate","2026-10-23"}}}};
+  CapitalWorkbenchRoster roster(directory,QJsonArray{security},false);roster.resize(1600,700);roster.show();
+  auto* date=roster.findChild<QDateEdit*>("capitalModelDate");auto* table=roster.findChild<QTableWidget*>("capitalRosterTable");auto* state=roster.findChild<QLabel*>("capitalModelState");
+  QVERIFY(date);QVERIFY(table);QVERIFY(state);QVERIFY(date->calendarPopup());date->setDate(requested);roster.load(false);
+  QTRY_VERIFY_WITH_TIMEOUT(state->text().contains(requested.toString(Qt::ISODate))&&!state->text().contains("正在"),5000);
+  QCOMPARE(date->date(),requested);QCOMPARE(table->rowCount(),1);
+  if(showsFriday){
+   QCOMPARE(table->item(0,1)->text(),QString("4.25"));
+   const QStringList amounts{"123.45","-23.00","25.00","200.00","-76.55","-10.00","-113.45"};
+   for(int column=2;column<=8;++column)QCOMPARE(table->item(0,column)->text(),amounts[column-2]);
+   QVERIFY(table->item(0,9)->text().startsWith("2026-10-23"));QVERIFY(table->item(0,10)->text().startsWith("2026-10-23"));
+   QVERIFY(state->text().contains("2026-10-23"));
+  }else{
+   for(int column=1;column<=8;++column)QCOMPARE(table->item(0,column)->text(),QString("—"));
+   QCOMPARE(table->item(0,9)->text(),QString("该日未取得"));QCOMPARE(table->item(0,10)->text(),QString("该日未取得"));
+  }
+  QVERIFY(!state->text().contains("本次完整获取"));QVERIFY(!state->text().contains("今天更新成功"));
+  QCOMPARE(store.read("2026-10-23"),saved);QVERIFY(store.read(requested.toString(Qt::ISODate)).isEmpty());
+  roster.close();
+ }
  void actualNewPagesEvidence(){
   const auto output=qEnvironmentVariable("NEW_MARKET_EVIDENCE");QVERIFY(!output.isEmpty());QFile f(output+"/actual-instruments.json");QVERIFY(f.open(QIODevice::ReadOnly));const auto actual=QJsonDocument::fromJson(f.readAll()).array();QVERIFY(!actual.isEmpty());
   QTemporaryDir settings;Window w(true,settings.filePath("settings.ini"),output+"/qa-profile");w.testing=false;w.instruments=actual;w.resize(1900,1200);w.show();w.funds();

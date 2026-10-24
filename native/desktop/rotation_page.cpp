@@ -1,4 +1,5 @@
 #include "rotation_page.hpp"
+#include "trading_day_selection.hpp"
 #include "rotation_sampling_session.hpp"
 #include <QFileInfo>
 #include <QDir>
@@ -100,7 +101,7 @@ void RotationPage::discoverDate(){
 void RotationPage::fail(const QString& message){bool running=sampling;auto start=roundStart;int completed=roundSnapshots.size();stop();if(running)samplingState->setText("已停止："+message+"；尝试 "+local(start)+QString(" · 已读%1/2范围；本轮未提交，旧档案保留").arg(completed));state->setText("未更新，保留原档案："+message);}
 void RotationPage::stop(){++generation;++analysisGeneration;analysisCancelled->store(true);cancelled->store(true);cancelled=std::make_shared<std::atomic_bool>(false);sampling=false;samplingTimer->stop();roundSnapshots={};if(reply){reply->abort();reply=nullptr;}if(!savePending)scanBusy=false;samplingStart->setEnabled((allowNetwork||bool(hooks.page))&&!savePending);samplingStop->setEnabled(false);samplingState->setText("采样已停止");cancel->setEnabled(false);refresh->setEnabled(allowNetwork&&!savePending);}
 void RotationPage::load(){
-  auto token=++generation;auto d=date->date().toString(Qt::ISODate),s=scope->currentData().toString();bool daily=kind->currentIndex()==1;
+  auto token=++generation;auto d=tradingDaySelection::effective(date->date()).toString(Qt::ISODate),s=scope->currentData().toString();bool daily=kind->currentIndex()==1;
   snapshots={};render();state->setText("读取本机档案…");auto path=file;
   QPointer<RotationPage> weak(this);QThreadPool::globalInstance()->start([weak,token,path,d,s,daily]{QJsonArray data;QString error;try{data=darkRotation::Store(path).read(d,s,daily);}catch(const std::exception& e){error=QString::fromUtf8(e.what());}
     deliver(weak,[token,data,error](RotationPage* p){if(token!=p->generation)return;if(!error.isEmpty()){p->fail(error);return;}p->snapshots=data;QSignalBlocker b(p->cursor);p->cursor->setRange(0,std::max(0,int(data.size())-1));p->cursor->setValue(p->cursor->maximum());p->render();});
@@ -155,7 +156,7 @@ void RotationPage::exportArchive(const QString& path){
   QPointer<RotationPage> weak(this);QThreadPool::globalInstance()->start([weak,token,path,data]{QString error;try{require(path.endsWith(".jsonl",Qt::CaseInsensitive),"导出须选择新的.jsonl文件");QFile f(path);require(f.open(QIODevice::WriteOnly|QIODevice::NewOnly),"只能导出到新文件，不覆盖现有档案或数据库");try{for(auto v:data){auto b=QJsonDocument(v.toObject()).toJson(QJsonDocument::Compact)+"\n";require(f.write(b)==b.size(),"导出写入失败");}require(f.flush(),"导出提交失败");}catch(...){f.close();f.remove();throw;}}catch(const std::exception& e){error=QString::fromUtf8(e.what());}deliver(weak,[token,error](RotationPage* p){if(token==p->generation)p->state->setText(error.isEmpty()?"已导出当前范围原始采样；来源时刻与缺数状态保留":"未导出："+error);});});
 }
 void RotationPage::refreshSource(){
-  if((!allowNetwork&&!hooks.page)||!isVisible()||window()->isMinimized()||!foreground()||sampling||scanBusy||savePending)return;auto d=date->date().toString(Qt::ISODate),s=scope->currentData().toString();bool daily=kind->currentIndex()==1;
+  if((!allowNetwork&&!hooks.page)||!isVisible()||window()->isMinimized()||!foreground()||sampling||scanBusy||savePending)return;auto d=tradingDaySelection::effective(date->date()).toString(Qt::ISODate),s=scope->currentData().toString();bool daily=kind->currentIndex()==1;
   auto at=now().toUTC();
   if(!daily&&(!foreground()||!sessionAllowed(at.toString(Qt::ISODateWithMs),at.toString(Qt::ISODateWithMs)))){fail("当前不是已知交易日的盘中采样时段，请切换日榜；历史查询不回填分时。");return;}
   auto key=d+":"+s;auto ms=at.toMSecsSinceEpoch();if(attempts.contains(key)&&ms-attempts[key]<60000){fail("同范围至少间隔60秒，请先查看本机记录。");return;}attempts[key]=ms;

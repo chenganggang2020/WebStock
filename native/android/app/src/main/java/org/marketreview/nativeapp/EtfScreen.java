@@ -33,8 +33,8 @@ final class EtfScreen extends LinearLayout {
   final LinearLayout controls, body, approvals;
   final ScrollView controlScroll;
   final Spinner days;
-  final TextView state, summary, dates, preview;
-  final Button refresh, confirm, source, image;
+  final TextView state, summary, dates, preview, coverage;
+  final Button refresh, confirm, source, image, calendar;
   final CheckBox automatic;
   final TextView scheduleState;
   final EtfSchedule.Clock scheduleClock;
@@ -52,9 +52,14 @@ final class EtfScreen extends LinearLayout {
       scheduleHandler.postDelayed(this, 30000);
     }
   };
-  final ListView list;
-  final BaseAdapter adapter;
+  final ListView list, redemptionList;
+  final BaseAdapter adapter, redemptionAdapter;
   final List<JSONObject> rows = new ArrayList<>();
+  final List<JSONObject> subscriptions = new ArrayList<>(), redemptions = new ArrayList<>();
+  JSONArray displayRecords = new JSONArray();
+  String chosenDay = "";
+  boolean datePinned;
+  int displayedIndex = -1;
   JSONArray records = new JSONArray(), pending = new JSONArray(),
             exportSnapshot;
   JSONObject report = new JSONObject();
@@ -113,6 +118,10 @@ final class EtfScreen extends LinearLayout {
     days = new Spinner(owner);
     days.setTag("etfHistory");
     controls.addView(days, new LayoutParams(-1, owner.dp(48)));
+    LinearLayout dateTools = row(controls);
+    calendar = button(dateTools, "日历", this::pickDate);
+    calendar.setTag("etfReportDate");
+    button(dateTools, "最新记录", () -> { datePinned = false; selectedId = ""; historyOptions(); render(); });
     summary = text("本机尚无ETF日报", 16);
     summary.setTag("etfSummary");
     controls.addView(summary);
@@ -121,9 +130,9 @@ final class EtfScreen extends LinearLayout {
     state = text("读取本机资料…", 11);
     state.setTag("etfState");
     controls.addView(state);
-    controls.addView(text("一级市场净申赎 · 亿元 · " +
-                          "非个股主力资金\n正文仅两组前三，不以原图补造全榜",
-                          11));
+    coverage = text("一级市场净申赎 · 亿元 · 非个股主力资金", 11);
+    coverage.setTag("etfCoverage");
+    controls.addView(coverage);
     LinearLayout links = row(controls);
     source = button(links, "来源原文", () -> external(false));
     image = button(links, "原图", () -> external(true));
@@ -136,53 +145,79 @@ final class EtfScreen extends LinearLayout {
     confirm = button(approvals, "确认导入", this::confirmImport);
     confirm.setEnabled(false);
     button(approvals, "清除预览", this::invalidatePreview);
-    body.addView(text("股票型ETF净申购 / 净赎回前三 · 点行打开已有自选", 12));
-    list = new ListView(owner);
-    list.setTag("etfTable");
-    list.setDividerHeight(owner.dp(1));
-    adapter = new BaseAdapter() {
-      public int getCount() { return rows.size(); }
-      public Object getItem(int i) { return rows.get(i); }
-      public long getItemId(int i) { return i; }
-      public View getView(int i, View old, ViewGroup parent) {
-        JSONObject r = rows.get(i);
-        TextView t = text(
-            (i < 3 ? "申购 " : "赎回 ") + (i % 3 + 1) + "  " +
-                r.optString("name") + "\n" + r.optString("market", "市场未知") +
-                " · " + r.optString("code") + "       " +
-                String.format(Locale.ROOT, "%+.2f 亿元", r.optDouble("value")),
-            14);
-        t.setMinHeight(owner.dp(60));
-        t.setPadding(owner.dp(6), owner.dp(6), owner.dp(6), owner.dp(6));
-        t.setTextColor(r.optDouble("value") < 0 ? Color.rgb(21, 151, 127)
-                                                : Color.rgb(205, 56, 70));
-        return t;
-      }
-    };
-    list.setAdapter(adapter);
-    body.addView(list, new LayoutParams(-1, 0, 1));
-    list.setOnItemClickListener((p, v, i, id) -> {
-      JSONObject r = rows.get(i);
-      if (!r.has("market")) {
-        state.setText("旧资料没有记录市场，不按代码猜测。可在自选中搜索确认。");
-        return;
-      }
-      owner.openBusinessInstrument(r.optString("market") +
-                                   ":etf:" + r.optString("code"));
-    });
+    LinearLayout columns = new LinearLayout(owner);
+    columns.setTag("etfRankColumns");
+    body.addView(columns, new LayoutParams(-1, 0, 1));
+    LinearLayout buys = new LinearLayout(owner), sells = new LinearLayout(owner);
+    buys.setOrientation(VERTICAL); sells.setOrientation(VERTICAL);
+    columns.addView(buys, new LayoutParams(0, -1, 1));
+    View divider = new View(owner);
+    divider.setBackgroundColor(owner.darkTheme() ? 0xff64748b : 0xff94a3b8);
+    columns.addView(divider, new LayoutParams(owner.dp(1), -1));
+    columns.addView(sells, new LayoutParams(0, -1, 1));
+    buys.addView(text("净申购 · 原文条目", 12));
+    sells.addView(text("净赎回 · 原文条目", 12));
+    list = new ListView(owner); list.setTag("etfTable");
+    redemptionList = new ListView(owner); redemptionList.setTag("etfRedemptions");
+    adapter = rankAdapter(subscriptions); redemptionAdapter = rankAdapter(redemptions);
+    list.setAdapter(adapter); redemptionList.setAdapter(redemptionAdapter);
+    for (ListView table : new ListView[] {list, redemptionList}) {
+      table.setDivider(new android.graphics.drawable.ColorDrawable(owner.darkTheme() ? 0xff64748b : 0xff94a3b8));
+      table.setDividerHeight(owner.dp(1));
+    }
+    buys.addView(list, new LayoutParams(-1, 0, 1));
+    sells.addView(redemptionList, new LayoutParams(-1, 0, 1));
+    list.setOnItemClickListener((p, v, i, id) -> openRank(subscriptions.get(i)));
+    redemptionList.setOnItemClickListener((p, v, i, id) -> openRank(redemptions.get(i)));
     days.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
       public void onNothingSelected(AdapterView<?> p) {}
       public void onItemSelected(AdapterView<?> p, View v, int i, long id) {
-        if (!rendering && i >= 0 && i < records.length()) {
-          selectedId =
-              records.optJSONObject(i).optJSONObject("report").optString(
-                  "articleId");
+        if (!rendering && i != displayedIndex && i >= 0 && i < displayRecords.length()) {
+          displayedIndex = i;
+          JSONObject chosen = displayRecords.optJSONObject(i).optJSONObject("report");
+          selectedId = chosen.optString("articleId");
+          chosenDay = chosen.optString("asOf");
+          datePinned = true;
           render();
         }
       }
     });
     applyColors();
     load();
+  }
+  BaseAdapter rankAdapter(List<JSONObject> values) {
+    return new BaseAdapter() {
+      public int getCount() { return values.size(); }
+      public Object getItem(int i) { return values.get(i); }
+      public long getItemId(int i) { return i; }
+      public View getView(int i, View old, ViewGroup parent) {
+        JSONObject r = values.get(i);
+        TextView t = text((i + 1) + "  " + r.optString("name") + "\n"
+            + r.optString("market", "市场未知") + " · " + r.optString("code") + "\n"
+            + String.format(Locale.ROOT, "%+.2f 亿元", r.optDouble("value")), 13);
+        t.setMinHeight(owner.dp(72));
+        t.setPadding(owner.dp(6), owner.dp(6), owner.dp(6), owner.dp(6));
+        t.setTextColor(r.optDouble("value") < 0 ? Color.rgb(21, 151, 127) : Color.rgb(205, 56, 70));
+        return t;
+      }
+    };
+  }
+  void openRank(JSONObject r) {
+    if (!r.has("market")) {
+      state.setText("旧资料没有记录市场，不按代码猜测。可在自选中搜索确认。");
+      return;
+    }
+    owner.openBusinessInstrument(r.optString("market") + ":etf:" + r.optString("code"));
+  }
+  void pickDate() {
+    LocalDate initial = TradingDaySelection.parse(chosenDay);
+    if (initial == null) initial = LocalDate.now(ZoneOffset.ofHours(8));
+    new android.app.DatePickerDialog(owner, (picker, year, month, day) -> selectDate(LocalDate.of(year, month + 1, day)),
+        initial.getYear(), initial.getMonthValue() - 1, initial.getDayOfMonth()).show();
+  }
+  void selectDate(LocalDate day) {
+    chosenDay = day.toString(); datePinned = true; selectedId = "";
+    historyOptions(); render();
   }
   int ink() {
     return owner.darkTheme() ? Color.rgb(218, 229, 245) : Color.rgb(31, 48, 72);
@@ -192,9 +227,10 @@ final class EtfScreen extends LinearLayout {
     colors(controls);
     colors(body);
     adapter.notifyDataSetChanged();
+    redemptionAdapter.notifyDataSetChanged();
   }
   void colors(View view) {
-    if (view == list)
+    if (view == list || view == redemptionList)
       return;
     if (view instanceof Button) {
       Button b = (Button)view;
@@ -324,29 +360,7 @@ final class EtfScreen extends LinearLayout {
   void apply(JSONArray data, JSONObject s) {
     applySchedule(s);
     records = data;
-    rendering = true;
-    List<String> labels = new ArrayList<>();
-    int at = 0;
-    for (int i = 0; i < data.length(); i++) {
-      JSONObject r = data.optJSONObject(i).optJSONObject("report");
-      labels.add(r.optString("asOf") + " · " + r.optString("title"));
-      if (r.optString("articleId").equals(selectedId))
-        at = i;
-    }
-    if (labels.isEmpty())
-      labels.add("本机无历史日报");
-    days.setAdapter(new ArrayAdapter<String>(
-        owner, android.R.layout.simple_spinner_dropdown_item, labels) {
-      public View getView(int i, View v, ViewGroup p) {
-        TextView t = (TextView)super.getView(i, v, p);
-        t.setTextColor(ink());
-        t.setTextSize(12);
-        t.setSingleLine(true);
-        return t;
-      }
-    });
-    days.setSelection(at);
-    rendering = false;
+    historyOptions();
     render();
     String status = "尝试 " + local(s.optString("lastAttemptAt")) + " · 更新 " +
                     local(s.optString("lastSuccessAt"));
@@ -355,6 +369,37 @@ final class EtfScreen extends LinearLayout {
     if (!s.optString("lastError").isEmpty())
       status += "\n未更新：" + s.optString("lastError");
     state.setText(status);
+  }
+  void historyOptions() {
+    rendering = true;
+    List<String> sourceDays = new ArrayList<>();
+    for (int i = 0; i < records.length(); i++)
+      sourceDays.add(records.optJSONObject(i).optJSONObject("report").optString("asOf"));
+    LocalDate chosen = TradingDaySelection.parse(chosenDay);
+    String best = datePinned && chosen != null ? TradingDaySelection.latestOnOrBefore(sourceDays, chosen) : "";
+    List<String> labels = new ArrayList<>();
+    displayRecords = new JSONArray();
+    int at = -1;
+    for (int i = 0; i < records.length(); i++) {
+      JSONObject entry = records.optJSONObject(i), r = entry.optJSONObject("report");
+      String day = r.optString("asOf");
+      if (datePinned && (best.isEmpty() || day.compareTo(best) > 0)) continue;
+      displayRecords.put(entry);
+      labels.add(day + " · " + r.optString("title"));
+      if (at < 0 || (day.equals(best) && r.optString("articleId").equals(selectedId)))
+        at = displayRecords.length() - 1;
+    }
+    if (labels.isEmpty()) labels.add("该日期前无已保存来源日报");
+    days.setAdapter(new ArrayAdapter<String>(owner, android.R.layout.simple_spinner_dropdown_item, labels) {
+      public View getView(int i, View v, ViewGroup p) {
+        TextView t = (TextView)super.getView(i, v, p);
+        t.setTextColor(ink()); t.setTextSize(12); t.setSingleLine(true);
+        return t;
+      }
+    });
+    displayedIndex = at;
+    days.setSelection(Math.max(0, at));
+    rendering = false;
   }
   static String local(String s) {
     try {
@@ -369,16 +414,21 @@ final class EtfScreen extends LinearLayout {
   }
   void render() {
     rows.clear();
+    subscriptions.clear();
+    redemptions.clear();
     report = new JSONObject();
-    int i = days.getSelectedItemPosition();
+    int i = displayedIndex;
     source.setEnabled(false);
     image.setEnabled(false);
     summary.setText("本机尚无ETF日报；可手动更新或导入");
-    dates.setText("");
-    if (i >= 0 && i < records.length()) {
-      JSONObject e = records.optJSONObject(i);
+    LocalDate chosen = TradingDaySelection.parse(chosenDay);
+    dates.setText(chosen == null ? "" : TradingDaySelection.recordCaption(chosen, ""));
+    coverage.setText("一级市场净申赎 · 无可核验结构化条目");
+    if (i >= 0 && i < displayRecords.length()) {
+      JSONObject e = displayRecords.optJSONObject(i);
       report = e.optJSONObject("report");
       selectedId = report.optString("articleId");
+      if (!datePinned) chosenDay = report.optString("asOf");
       LocalDate expected =
           EtfDaily.previousDay(LocalDate.now(ZoneOffset.ofHours(8)));
       String quality = e.optString("origin").equals("imported-cache")
@@ -391,7 +441,8 @@ final class EtfScreen extends LinearLayout {
           Locale.ROOT, "全部ETF净额 %+.2f\n股票型ETF净额 %+.2f  亿元",
           report.optDouble("totalNetFlow"),
           report.optDouble("stockEtfNetFlow")));
-      dates.setText(quality + "\n数据 " + report.optString("asOf") +
+      chosen = TradingDaySelection.parse(chosenDay);
+      dates.setText((chosen == null ? "" : TradingDaySelection.recordCaption(chosen, report.optString("asOf")) + "\n") + quality + "\n数据 " + report.optString("asOf") +
                     " · 发布 " + local(report.optString("publishedAt")) +
                     "\n核对 " + local(e.optString("checkedAt")) + " · 保存 " +
                     local(e.optString("succeededAt")) +
@@ -400,13 +451,20 @@ final class EtfScreen extends LinearLayout {
                          : ""));
       for (String key : new String[] {"subscriptions", "redemptions"}) {
         JSONArray a = report.optJSONArray(key);
-        for (int j = 0; a != null && j < a.length(); j++)
+        for (int j = 0; a != null && j < a.length(); j++) {
           rows.add(a.optJSONObject(j));
+          (key.equals("subscriptions") ? subscriptions : redemptions).add(a.optJSONObject(j));
+        }
       }
+      coverage.setText("正文结构化：申购 " + subscriptions.size() + " 条 / 赎回 " + redemptions.size()
+          + " 条；原图可能另有 TOP10，未结构化，不代表全榜。"
+          + (report.isNull("originalImageUrl") ? " 本条无可用原图。" : " 可查看来源原图。"));
       source.setEnabled(true);
       image.setEnabled(!report.isNull("originalImageUrl"));
     }
     adapter.notifyDataSetChanged();
+    redemptionAdapter.notifyDataSetChanged();
+    calendar.setText(chosenDay.isEmpty() ? "日历" : chosenDay);
   }
   void refreshSource() {
     if (!networkEnabled || fetch != null)
@@ -690,11 +748,16 @@ final class EtfScreen extends LinearLayout {
   Bundle save() {
     Bundle b = new Bundle();
     b.putString("selected", selectedId);
+    b.putString("chosenDay", chosenDay);
+    b.putBoolean("datePinned", datePinned);
     return b;
   }
   void restore(Bundle b) {
-    if (b != null)
+    if (b != null) {
       selectedId = b.getString("selected", "");
+      chosenDay = b.getString("chosenDay", "");
+      datePinned = b.getBoolean("datePinned", false) && TradingDaySelection.parse(chosenDay) != null;
+    }
     load();
   }
 }

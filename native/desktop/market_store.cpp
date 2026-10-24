@@ -26,7 +26,8 @@ struct Connection {
   QSqlDatabase db = QSqlDatabase::addDatabase("QSQLITE", name);
   explicit Connection(const QString &file, bool readOnly = false, int busyMs = 100) {
     db.setDatabaseName(file);
-    if (readOnly) db.setConnectOptions(QString("QSQLITE_OPEN_READONLY;QSQLITE_BUSY_TIMEOUT=%1").arg(busyMs));
+    db.setConnectOptions((readOnly?QString("QSQLITE_OPEN_READONLY;"):QString())+
+                         QString("QSQLITE_BUSY_TIMEOUT=%1").arg(readOnly?busyMs:5000));
     if (!db.open()) {
       db = {};
       QSqlDatabase::removeDatabase(name);
@@ -43,7 +44,11 @@ void schema(QSqlDatabase &db) {
   QSqlQuery q(db);
   require(q.exec("PRAGMA user_version"));
   require(q.next() && q.value(0).toInt() <= 1);
+  const int version=q.value(0).toInt();q.finish();
   require(q.exec("PRAGMA busy_timeout=5000"));
+  // Existing stores already have this schema. Avoid an unnecessary schema
+  // write for each quote while other feed instances are saving to this file.
+  if(version==1)return;
   // Conservative rollback journal: no dependency on platform WAL versions.
   require(q.exec("PRAGMA journal_mode=DELETE"));
   require(q.exec("PRAGMA synchronous=FULL"));
@@ -146,7 +151,10 @@ QJsonObject MarketStore::save(const QString &key,
   if (info) *info = {};
   Connection c(file);
   schema(c.db);
-  require(c.db.transaction());
+  // Serialize writers before reading the previous snapshot. A deferred
+  // read-then-write upgrade can fail immediately when another feed is writing.
+  QSqlQuery begin(c.db);
+  require(begin.exec("BEGIN IMMEDIATE"));
   try {
     auto old = ::read(c.db, key, info);
     auto checked =

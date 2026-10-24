@@ -73,10 +73,8 @@ struct MarketOverviewPage::Private {
   auto indexTools=new QHBoxLayout;
   auto indexChoice=new QComboBox(q);indexChoice->setObjectName("overviewIndexChoice");
   indexSelector=indexChoice;
+  indexChoice->hide(); // The visible mini-chart strip selects the index.
   for(auto value:chartIndices()){auto item=value.toObject();indexChoice->addItem(item["name"].toString(),item["symbol"].toString());}
-  auto indexOpen=new QPushButton("查看指数 K 线 / 分时",q);indexOpen->setObjectName("overviewOpenIndex");
-  indexTools->addWidget(new QLabel("大盘指数",q));indexTools->addWidget(indexChoice);indexTools->addWidget(indexOpen);
-  auto secondsHistory=new QPushButton("5秒 / 30秒历史",q);secondsHistory->setObjectName("overviewSecondHistory");indexTools->addWidget(secondsHistory);QObject::connect(secondsHistory,&QPushButton::clicked,q,[this]{if(active&&q->isVisible())emit q->openSecondHistory();});
   // One horizontal toolbar; archive controls and detailed tables remain behind
   // the disclosure, not under the primary chart.
   auto details=new QWidget(q);auto detailsLayout=new QVBoxLayout(details);auto archives=new QHBoxLayout;
@@ -90,14 +88,24 @@ struct MarketOverviewPage::Private {
   boardTools=row->parentWidget()->parentWidget()->parentWidget();boardTools->setObjectName("overviewBoardTools");boardTools->hide();
   auto cards=new QWidget(overview);auto cardLayout=new QHBoxLayout(cards);cardLayout->setContentsMargins(0,0,0,0);cardLayout->setSpacing(6);
   auto cardsScroll=new QScrollArea(overview);cardsScroll->setObjectName("overviewThumbnails");cardsScroll->setWidgetResizable(true);cardsScroll->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);cardsScroll->setWidget(cards);cardsScroll->setFixedHeight(116);ov->insertWidget(0,cardsScroll);
+  cardLayout->setSizeConstraint(QLayout::SetMinimumSize);
+  QScroller::grabGesture(cardsScroll->viewport(),QScroller::LeftMouseButtonGesture);
+  cardsScroll->setToolTip("点击小图切换指数；向左右拖动可查看其余指数。");
   int cardIndex=0;for(auto item:chartIndices()){auto card=new IndexThumbnail(item.toObject(),cards);cardLayout->addWidget(card);thumbnails.append(card);const int selected=cardIndex++;QObject::connect(card,&QAbstractButton::clicked,q,[this,selected]{if(indexSelector->currentIndex()!=selected)indexSelector->setCurrentIndex(selected);else renderThumbnails();});}
-  QObject::connect(indexOpen,&QPushButton::clicked,q,[this,indexChoice]{
-   if(!active||!q->isVisible()||!q->isEnabled())return;
-   emit q->openIndex(indexChoice->currentData().toString());
-  });
   indexPeriod=new QComboBox(q);indexPeriod->setObjectName("overviewChartPeriod");
-  indexPeriod->addItem("今日分时 · 1分钟","minute");indexPeriod->addItem("日K","day");indexPeriod->addItem("周K","week");indexPeriod->addItem("月K","month");indexPeriod->addItem("腾讯5秒汇总","minute5s");indexPeriod->addItem("腾讯30秒汇总","minute30s");
-  indexTools->insertWidget(2,indexPeriod);auto chartUpdate=new QPushButton("更新图表",q);chartUpdate->setObjectName("overviewChartRefresh");indexTools->insertWidget(3,chartUpdate);
+  indexPeriod->addItem("1分钟","minute");indexPeriod->addItem("日K","day");indexPeriod->addItem("周K","week");indexPeriod->addItem("月K","month");indexPeriod->addItem("5秒","minute5s");indexPeriod->addItem("30秒","minute30s");indexPeriod->addItem("年K","year");indexPeriod->hide();
+  auto periodButtons=new QButtonGroup(q);
+  for(const auto& key:QStringList{"minute5s","minute30s","minute","day","week","month","year"}){
+   const int position=indexPeriod->findData(key);auto b=new QPushButton(indexPeriod->itemText(position),q);
+   b->setObjectName("overviewPeriod_"+key);b->setCheckable(true);b->setChecked(position==indexPeriod->currentIndex());periodButtons->addButton(b,position);indexTools->addWidget(b);
+   b->setToolTip(key=="minute5s"||key=="minute30s"?"按秒汇总公开分笔和已有采样；仅展示实际取得时段，不补造历史。":"在本页切换所选指数周期，保留实际数据日期。年K由来源月线按自然年汇总。");
+   QObject::connect(b,&QPushButton::clicked,q,[this,position]{indexPeriod->setCurrentIndex(position);});
+  }
+  QObject::connect(indexPeriod,&QComboBox::currentIndexChanged,q,[periodButtons](int position){if(auto* b=periodButtons->button(position))b->setChecked(true);});
+  auto chartUpdate=new QPushButton("更新图表",q);chartUpdate->setObjectName("overviewChartRefresh");indexTools->addWidget(chartUpdate);
+  refresh->setToolTip("更新市场概况、指数报价和分时小图；保留失败部分的原日期数据。");
+  stop->setToolTip("取消当前页面请求，保留已经保存的数据。");
+  chartUpdate->setToolTip("重新请求当前指数和周期；刷新失败不会清空已有图表。");
    indexChart=new Chart(overview);indexChart->setObjectName("overviewIndexChart");indexChart->setMinimumHeight(260);indexState=new QLabel(overview);indexState->setWordWrap(true);indexState->setTextFormat(Qt::PlainText);indexState->setObjectName("overviewChartState");ov->insertWidget(1,indexState);ov->insertWidget(2,indexChart,1);
    indexReadout=new QLabel(overview);indexReadout->setObjectName("overviewChartReadout");indexReadout->setTextFormat(Qt::PlainText);indexReadout->setWordWrap(false);indexReadout->setMinimumWidth(0);indexReadout->setSizePolicy(QSizePolicy::Ignored,QSizePolicy::Fixed);indexReadout->setFixedHeight(indexReadout->fontMetrics().lineSpacing()*2+4);ov->insertWidget(2,indexReadout);updateReadout(-1);
    QObject::connect(indexChart,&Chart::barSelected,q,[this](int index){updateReadout(index);});
@@ -176,7 +184,7 @@ struct MarketOverviewPage::Private {
  void cancel(){cancelLegacy();automatic.stop();cancelled->store(true);++generation;feed->cancel();busy=false;controls();}
  void run(std::function<QJsonObject(const Cancel&)> work,std::function<void(QJsonObject)> done){cancel();cancelled=std::make_shared<std::atomic_bool>(false);auto flag=cancelled;auto token=generation;QPointer<MarketOverviewPage> guard=q;busy=true;controls();workers.start([this,guard,flag,token,work=std::move(work),done=std::move(done)]{QJsonObject result;QString why;try{result=work([flag]{return flag->load();});}catch(const std::exception& e){why=QString::fromUtf8(e.what());}if(!guard)return;QMetaObject::invokeMethod(guard,[this,guard,flag,token,result,why,done]{if(!guard||flag->load()||token!=generation)return;busy=false;if(why.isEmpty())done(result);else state->setText(why);controls();},Qt::QueuedConnection);});}
  void accept(QJsonObject r){legacyRows=r.value("legacyHotspotCatalog").toArray();archive=r.value("archive").toObject();snapshot=r.value("snapshot").toObject();cache=r.value("cacheSections").toObject();rendering=true;frames->clear();frames->addItem("最新市场快照","");auto rows=archive.value("frames").toArray();for(int i=rows.size()-1;i>=0;--i){auto f=rows[i].toObject();frames->addItem(f.value("fetchedAt").toString()+" · "+f.value("archiveProvenance").toString(),f.value("id").toString());}for(const auto& v:legacyRows){auto row=v.toObject();frames->addItem(row["snapshotDate"].toString()+" · 旧热点 #"+QString::number(qint64(row["legacyId"].toDouble()))+" · "+row["generatedAt"].toString(),row["id"].toString());}int index=frames->findData(selectedFrame);if(index<0&&selectedFrame.startsWith("legacy-hotspot:")){frames->addItem("原旧热点记录缺失 · 未替换为今日",selectedFrame);index=frames->count()-1;state->setText("原旧热点记录已不在本机库；保留空白历史选择，未联网。");}if(index<0){index=0;selectedFrame.clear();state->setText("原历史观测已不在档案，显示明确标记的本机最新观测；未联网");}frames->setCurrentIndex(index);rendering=false;render();requestLegacy();requestChart(false);}
- void load(){if(!active)return;run([this](const Cancel& c){return store.readPage(c);},[this](QJsonObject r){accept(r);if(!deferred.isEmpty())beginPreview();else scheduleAutomatic();});}
+ void load(){if(!active)return;run([this](const Cancel& c){return store.readPage(c);},[this](QJsonObject r){accept(r);if(selectedFrame.isEmpty())state->setText(snapshot.isEmpty()&&cache.isEmpty()?"本机尚无市场观测，请更新公开源":"已载入本机观测 · 非本次联网更新，日期见各项");if(!deferred.isEmpty())beginPreview();else scheduleAutomatic();});}
  void beginPreview(){if(deferred.isEmpty()||!active)return;auto bytes=deferred;run([this,bytes](const Cancel& c){auto r=store.readPage(c);activeCheck(c);r.insert("preview",marketOverview::preview(bytes,r.value("archive").toObject()));activeCheck(c);return r;},[this](QJsonObject r){pending=r.value("preview").toObject();deferred.clear();accept(r);tabs->setCurrentIndex(4);importState->setText(QString("预览新增%1次观测，尚未写库；确认时核对档案版本").arg(pending.value("added").toInt()));});}
  static void activeCheck(const Cancel& c){marketOverview::active(c);}
  QJsonObject currentLegacyEntry()const{for(auto v:legacyRows)if(v.toObject()["id"].toString()==selectedFrame)return v.toObject();return {};}

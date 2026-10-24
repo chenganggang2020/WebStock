@@ -1594,7 +1594,7 @@ void creatorAiClose(){
       public String period(){return period;}
       public String source(){return sourceLabel(period);}
       public String[] indicators(){return INDICATORS.clone();}
-      public void period(String value){MainActivity.this.period(value);}
+      public void period(String value){samplingSeconds=value.equals("minute5s")?5:value.equals("minute30s")?30:0;MainActivity.this.period(value);if(feed!=null&&samplingSeconds>0&&!sourceEvidenceNavigation)feed.sample(str(instrument,"id"),samplingSeconds);}
       public void indicator(String value){selectIndicator(value);}
       public void parameters(){MainActivity.this.parameters();}
       public void configure(){MainActivity.this.configure();}
@@ -1792,12 +1792,14 @@ void creatorAiClose(){
       }
       public void afterTextChanged(Editable e) {}
     });
-    add(periods, "分时", () -> period("minute"));
-    add(periods, "日K", () -> period("day"));
-    add(periods, "周K", () -> period("week"));
-    add(periods, "月K", () -> period("month"));
-    add(periods, "年K", () -> period("year"));
-    add(periods, "最新", () -> chart.latest());
+    ChartPeriodBar periodBar = new ChartPeriodBar(this, (key, seconds) -> {
+      samplingSeconds = seconds;
+      period(key);
+      if (feed != null && seconds > 0 && !sourceEvidenceNavigation)
+        feed.sample(str(instrument, "id"), seconds);
+    });
+    periods.addView(periodBar, new LinearLayout.LayoutParams(0, -1, 1));
+    add(actions, "最新", () -> chart.latest()).setTooltipText("回到最新已取得的数据位置，不补造缺失行情");
     for (String s : INDICATORS) add(indicators, s, () -> selectIndicator(s));
     indicatorSelector = new Spinner(this);
     indicatorSelector.setTag("indicatorSelector");
@@ -1838,25 +1840,6 @@ void creatorAiClose(){
     });
     add(actions, "资金", this::funds);
     add(actions, "竞价", this::auctionView);
-    add(actions, "精度",
-        ()
-            -> new AlertDialog.Builder(this)
-                   .setTitle("分时精度 · 非逐笔服务")
-                   .setSingleChoiceItems(
-                       new String[] {"来源1分钟历史", "本机5秒快照（仅前台当前标的）",
-                           "本机30秒快照（5秒轮询聚合）"},
-                       samplingSeconds == 5        ? 1
-                           : samplingSeconds == 30 ? 2
-                                                   : 0,
-                       (d, n) -> {
-                         samplingSeconds = n == 1 ? 5 : n == 2 ? 30 : 0;
-                         d.dismiss();
-                         period("minute");
-                         if (feed != null && samplingSeconds > 0)
-                           feed.sample(str(instrument, "id"), samplingSeconds);
-                       })
-                   .setNegativeButton("取消", null)
-                   .show());
     add(actions, "横屏", () -> {
       manualLandscape = true;
       setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE);
@@ -2725,6 +2708,11 @@ void watchlistBridgeRestoreViews()throws Exception {
   }
   void refreshButtons() {
     for (int i = 0; i < periods.getChildCount(); i++) {
+      if (periods.getChildAt(i) instanceof ChartPeriodBar) {
+        ((ChartPeriodBar)periods.getChildAt(i)).refresh(period, dark);
+        continue;
+      }
+      if (!(periods.getChildAt(i) instanceof Button)) continue;
       Button b = (Button) periods.getChildAt(i);
       boolean selected = b.getText().toString().equals(chart.period)
           || b.getText().toString().equals("分时") && period.startsWith("minute");
@@ -3871,7 +3859,7 @@ boolean unifiedBackupFileResult(int request,int result,Intent data){
       if (pos >= 0 && pos < capitalScreen.ids.size())
         b.putString("fundId", capitalScreen.ids.get(pos));
       b.putInt("fundMode", capitalScreen.modes.getSelectedItemPosition());
-      b.putString("fundDate", capitalScreen.historyDate());
+      b.putString("fundDate", capitalScreen.selectedDate());
       b.putInt("fundCursor", capitalScreen.cursor.getProgress());
       b.putParcelable("fundScroll", capitalScreen.list.onSaveInstanceState());
     }

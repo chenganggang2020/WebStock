@@ -16,6 +16,7 @@ final class ChartFullscreenController {
   final Activity activity;final Host host;final MarketChart chart;
   final ChartFullscreenState state=new ChartFullscreenState();
   final LinearLayout root,detail,header,controls;
+  final ChartPeriodBar periodBar;
   final TextView title;final Button exit,source,period,indicator,parameters,nine,latest,entry;
   final Map<View,Integer> normalVisibility=new LinkedHashMap<>();
   boolean disposed,windowHeld,pendingRestore,applying;int previousFlags,previousUi,previousBehavior;
@@ -29,15 +30,17 @@ final class ChartFullscreenController {
     exit=button(header,"退出","chartFullscreenExit",this::back,dp(60));
     title=new TextView(activity);title.setTextSize(13);title.setSingleLine(true);title.setEllipsize(android.text.TextUtils.TruncateAt.END);header.addView(title,new LinearLayout.LayoutParams(0,-2,1));
     source=button(header,"来源","chartFullscreenSource",this::source,dp(60));
-    controls=new LinearLayout(activity);controls.setTag("chartFullscreenControls");controls.setVisibility(View.GONE);detail.addView(controls,0,new LinearLayout.LayoutParams(-1,dp(48)));
-    period=button(controls,"周期","chartFullscreenPeriod",this::periods,0);
-    indicator=button(controls,"指标","chartFullscreenIndicator",this::indicators,0);
-    parameters=button(controls,"参数","chartFullscreenParameters",()->{if(allowed())host.parameters();},0);
-    nine=button(controls,"九转","chartFullscreenNine",()->{chart.nine=!chart.nine;MarketChart reference=activity.findViewById(R.id.reference);reference.nine=chart.nine;chart.invalidate();reference.invalidate();refresh();},0);
-    latest=button(controls,"最新","chartFullscreenLatest",()->{chart.latest();refresh();},0);
+    controls=new LinearLayout(activity);controls.setOrientation(LinearLayout.VERTICAL);controls.setTag("chartFullscreenControls");controls.setVisibility(View.GONE);detail.addView(controls,0,new LinearLayout.LayoutParams(-1,dp(96)));
+    periodBar=new ChartPeriodBar(activity,(key,seconds)->{if(allowed())host.period(seconds>0?"minute"+seconds+"s":key);});controls.addView(periodBar,new LinearLayout.LayoutParams(-1,dp(48)));
+    LinearLayout actions=new LinearLayout(activity);controls.addView(actions,new LinearLayout.LayoutParams(-1,dp(48)));
+    period=button(actions,"周期","chartFullscreenPeriod",this::periods,0);period.setVisibility(View.GONE);
+    indicator=button(actions,"指标","chartFullscreenIndicator",this::indicators,0);
+    parameters=button(actions,"参数","chartFullscreenParameters",()->{if(allowed())host.parameters();},0);
+    nine=button(actions,"九转","chartFullscreenNine",()->{chart.nine=!chart.nine;MarketChart reference=activity.findViewById(R.id.reference);reference.nine=chart.nine;chart.invalidate();reference.invalidate();refresh();},0);
+    latest=button(actions,"最新","chartFullscreenLatest",()->{chart.latest();refresh();},0);
     LinearLayout periods=activity.findViewById(R.id.periods);
     entry=new Button(activity);entry.setText("全屏");entry.setTextSize(12);entry.setPadding(0,0,0,0);entry.setMinWidth(0);entry.setTag("chartFullscreenOpen");
-    periods.addView(entry,new LinearLayout.LayoutParams(0,dp(48),1));
+    periods.addView(entry,new LinearLayout.LayoutParams(dp(60),dp(48)));
     entry.setOnClickListener(v->{if(!disposed&&entry.isShown()&&host.foreground()&&host.chartPage())enter();});
     chart.inputGate=()->!disposed&&(!state.open()||allowed());
     chart.addOnAttachStateChangeListener(new View.OnAttachStateChangeListener(){public void onViewAttachedToWindow(View view){view.post(()->resume());}public void onViewDetachedFromWindow(View view){if(!disposed)pause();}});
@@ -97,7 +100,7 @@ final class ChartFullscreenController {
   }
   void refresh(){
     if(disposed)return;title.setText(host.title()+" · "+chart.period+(chart.viewportRestoreError.isEmpty()?"":" · 位置未恢复"));title.setContentDescription(host.title()+" · "+host.source()+" "+chart.viewportRestoreError);
-    period.setText(chart.minute?"分时 ▾":chart.period+" ▾");indicator.setText(chart.indicator+" ▾");nine.setText(chart.nine?"九转开":"九转关");
+    periodBar.refresh(host.period(),host.dark());period.setText(chart.minute?"分时 ▾":chart.period+" ▾");indicator.setText(chart.indicator+" ▾");nine.setText(chart.nine?"九转开":"九转关");
     int ink=host.dark()?0xffdce5f0:0xff172b45,bg=host.dark()?0xff111a26:Color.WHITE;
     header.setBackgroundColor(bg);controls.setBackgroundColor(bg);title.setTextColor(ink);
     for(Button b:Arrays.asList(exit,source,period,indicator,parameters,nine,latest,entry)){b.setTextColor(ink);b.setBackground(new android.graphics.drawable.RippleDrawable(android.content.res.ColorStateList.valueOf(host.dark()?0x44ffffff:0x33172b45),new android.graphics.drawable.ColorDrawable(bg),null));}

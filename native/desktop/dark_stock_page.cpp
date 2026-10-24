@@ -1,4 +1,5 @@
 #include "dark_stock_page.hpp"
+#include "trading_day_selection.hpp"
 #include "financial_delegate.hpp"
 #include "dark_stock.hpp"
 #include "dark_stock_rank.hpp"
@@ -244,7 +245,7 @@ void DarkStockPage::run(bool network) {
   cancel();
   auto token = generation;
   auto flag = cancelled;
-  auto d = date->date().toString(Qt::ISODate), dir = directory;
+  auto d = tradingDaySelection::effective(date->date()).toString(Qt::ISODate), dir = directory;
   resultState = network ? "正在共享扫描；切股票不重复请求" : "读取本机缓存…";
   render();
   refresh->setEnabled(allowNetwork && !network);

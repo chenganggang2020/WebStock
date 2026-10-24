@@ -33,6 +33,7 @@ class QComboBox;
 class QToolBar;
 class WatchlistWorkspaceStore;
 class PublicMarketRuntime;
+struct EtfPrefetchState;
 class Window final : public QMainWindow {
   Q_OBJECT
  public:
@@ -96,8 +97,10 @@ class Window final : public QMainWindow {
   QString etfRefreshToken;
   MarketFeed* etfObservationFeed=nullptr;
   QNetworkAccessManager* etfTestNetwork=nullptr;
+  std::shared_ptr<EtfPrefetchState> etfPrefetch;
   void etfMonitorView();
   void refreshEtfMonitor(QString token,QJsonObject selection);
+  void prefetchEtfMonitor(const QDateTime& now);
 // Add forward declarations and private fields/methods in Window; no other field changes.
 std::shared_ptr<WatchlistWorkspaceStore> watchlistGroupStore;
 QJsonObject watchlistBridgeRawInputs() const;

@@ -4,6 +4,7 @@
 #include "financial_delegate.hpp"
 #include "dark_stock.hpp"
 #include "dark_observation.hpp"
+#include "trading_day_selection.hpp"
 #include <QtWidgets>
 #include <atomic>
 #include <functional>
@@ -68,12 +69,13 @@ public:
  void notifyModel(){if(modelChanged)modelChanged(modelRows(),modelStatus());}
  void load(bool online){
   cancel();cancelled=std::make_shared<std::atomic_bool>(false);auto token=cancelled;const auto seq=generation;
-  const auto day=date->date().toString(Qt::ISODate);const auto dir=directory;QPointer<CapitalWorkbenchRoster> self(this);
+  const auto day=tradingDaySelection::effective(date->date()).toString(Qt::ISODate);const auto dir=directory;QPointer<CapitalWorkbenchRoster> self(this);
   state->setText(online?"正在核验完整明暗榜；完成前不覆盖原记录…":"正在读取原日期记录…");refresh->setEnabled(false);
   workers.start([self,seq,day,dir,token,online]{QJsonObject result;QString error;
    try{darkStock::Store store(dir);result=online?store.refresh(day,[token]{return token->load();}):store.read(day);if(result.isEmpty())result=store.latestOnOrBefore(day);}catch(const std::exception& e){error=QString::fromUtf8(e.what());try{result=darkStock::Store(dir).latestOnOrBefore(day);}catch(...){} }
    QMetaObject::invokeMethod(qApp,[self,seq,day,result,error,online]{if(!self||self->generation!=seq)return;self->snapshot=result;self->models.clear();for(auto v:result["rows"].toArray())self->models[v.toObject()["key"].toString()]=v.toObject();
-    const auto actual=result["tradingDay"].toString();self->state->setText(QString("明暗盘模型估算 · %1 · 数据交易日 %2 · %3 行 · 请求日 %4%5").arg(online&&error.isEmpty()&&actual==day?"本次完整获取":"已保存历史（非本次更新成功）",actual).arg(result["rows"].toArray().size()).arg(day,error.isEmpty()?QString():" · 更新失败："+error));
+    const auto actual=result["tradingDay"].toString();self->state->setText(QString("%1 · 数据 %2 · %3%4").arg(online&&error.isEmpty()&&actual==day?"本次完整获取":"已保存历史",actual,tradingDaySelection::caption(self->date->date()),error.isEmpty()?QString():" · 更新失败"));
+    self->state->setToolTip(QString("明暗盘为来源模型估算；%1 行。已保存历史不代表本次更新成功。%2").arg(result["rows"].toArray().size()).arg(error));
     self->refresh->setEnabled(self->network);self->render();self->readHistory(self->active.section(':',0,0).toLower()+self->active.section(':',2));
    },Qt::QueuedConnection);
   });
@@ -93,7 +95,7 @@ private:
   for(auto v:source){auto s=v.toObject();if(scope->currentIndex()==0&&!s["id"].toString().contains(":stock:"))continue;if((s["name"].toString()+s["symbol"].toString()).contains(search->text().trimmed(),Qt::CaseInsensitive))current.append(s);}
 page=std::min(page,std::max(0,(int(current.size())-1)/100));QSignalBlocker block(table);table->setUpdatesEnabled(false);table->setCurrentCell(-1,-1);table->setRowCount(std::min(100,int(current.size())-page*100));int match=-1;
   for(int i=0;i<table->rowCount();++i){auto s=current[page*100+i].toObject();auto id=s["id"].toString();if(latest.contains(id))s=latest[id];const auto model=s["id"].toString().contains(":stock:")?models.value(s["symbol"].toString()):QJsonObject{};
-auto rows=s["capitalDay"].toArray();auto meta=s["capitalDayMeta"].toObject();const auto day=date->date().toString(Qt::ISODate);const auto last=capitalWorkbench::onDay(rows,day);const auto sameDayModel=snapshot["tradingDay"]==day?model:QJsonObject{};auto change=capitalWorkbench::changePercent(s["quote"].toObject()["tradeDate"]==day?s:QJsonObject{},sameDayModel);
+auto rows=s["capitalDay"].toArray();auto meta=s["capitalDayMeta"].toObject();const auto day=tradingDaySelection::effective(date->date()).toString(Qt::ISODate);const auto last=capitalWorkbench::onDay(rows,day);const auto sameDayModel=snapshot["tradingDay"]==day?model:QJsonObject{};auto change=capitalWorkbench::changePercent(s["quote"].toObject()["tradeDate"]==day?s:QJsonObject{},sameDayModel);
    QStringList values{s["name"].toString()+"  "+s["symbol"].toString().mid(2),change.isDouble()?QString::number(change.toDouble(),'f',2):"—",amount(last["mainNet"]),amount(capitalWorkbench::yuan(sameDayModel["darkNetCents"])),amount(capitalWorkbench::yuan(sameDayModel["visibleNetCents"])),amount(last["superNet"]),amount(last["largeNet"]),amount(last["mediumNet"]),amount(last["smallNet"]),last.isEmpty()?"该日未取得":last["label"].toString()+(meta["cached"].toBool()?" · 已保存":""),sameDayModel.isEmpty()?"该日未取得":snapshot["tradingDay"].toString()+" / "+QDateTime::fromString(sameDayModel["receivedAt"].toString(),Qt::ISODateWithMs).toOffsetFromUtc(28800).toString("MM-dd HH:mm:ss")};
    for(int c=0;c<values.size();++c)table->setItem(i,c,new QTableWidgetItem(values[c]));table->item(i,0)->setData(Qt::UserRole,s);if(id==active)match=i;
   }
