@@ -7,6 +7,7 @@
 #include "chart_annotations.hpp"
 #include "legacy_indicators.hpp"
 #include "vwap.hpp"
+#include "chart_extension.hpp"
 #include <QJsonArray>
 #include <QJsonObject>
 class QComboBox;
@@ -51,6 +52,9 @@ class Chart final : public QWidget {
   QRectF volumeRect() const;
   QRectF indicatorRect() const;
   double barX(int i) const;
+  QMap<QString,chartExtension::Layer> extensionLayers;
+  void setExtensionLayer(const QString& owner,const chartExtension::Layer& layer) { extensionLayers[owner]=layer;update(); }
+  void removeExtensionLayer(const QString& owner) { extensionLayers.remove(owner);update(); }
  signals:
   void barSelected(int index);
   void indicatorChanged(const QString& name);

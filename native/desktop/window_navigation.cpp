@@ -1,4 +1,5 @@
 #include "window.hpp"
+#include "stock_extension_host.hpp"
 #include "ui_mainwindow.h"
 #include "navigation_model.hpp"
 #include <QtWidgets>
@@ -77,6 +78,8 @@ void Window::setupNavigation(){
  });
  if(auto* refresh=findChild<QPushButton*>("refreshLive")){row->addWidget(refresh);refresh->show();}
  menu->addSeparator();menu->addMenu(paletteMenu);
+ auto* plugins=menu->addAction("插件管理");plugins->setObjectName("openPluginManager");
+ connect(plugins,&QAction::triggered,this,[this]{if(extensions)extensions->showManager();else QMessageBox::information(this,"插件","插件目录未就绪，请检查数据位置。");});
  auto* pageDetails=menu->addMenu("当前页面 · 来源与记录");pageDetails->setObjectName("pageSourceSettings");
  // Qt does not open an empty submenu, so populate it when its parent opens.
  connect(menu,&QMenu::aboutToShow,this,[this,pageDetails]{

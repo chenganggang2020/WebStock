@@ -33,6 +33,7 @@ class QComboBox;
 class QToolBar;
 class WatchlistWorkspaceStore;
 class PublicMarketRuntime;
+class StockExtensionHost;
 struct EtfPrefetchState;
 class Window final : public QMainWindow {
   Q_OBJECT
@@ -42,6 +43,7 @@ class Window final : public QMainWindow {
   ~Window();
   Chart* chart;
   Chart* referenceChart;
+  StockExtensionHost* extensions = nullptr;
   QListWidget* groups;
   QTableWidget* stocks;
   QLabel* quote;

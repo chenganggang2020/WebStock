@@ -61,6 +61,7 @@ Chart::Chart(QWidget *p) : QWidget(p) {
 }
 void Chart::setSeries(std::vector<market::Bar> data, QStringList dates,
                       bool isMinute, bool reset) {
+  extensionLayers.clear();
   const bool firstData = bars.empty();
   const bool followEnd = firstData || endIndex >= int(bars.size());
   int oldLatest = int(bars.size()) - 1;
@@ -292,6 +293,7 @@ void Chart::paintEvent(QPaintEvent *) {
   if (!std::isfinite(lo)) {
     return;
   }
+  chartExtension::range(extensionLayers,start,end,lo,hi);
   if (minute && previousClose > 0) {
     lo = std::min(lo, previousClose);
     hi = std::max(hi, previousClose);
@@ -453,6 +455,7 @@ void Chart::paintEvent(QPaintEvent *) {
     }
     p.setPen(QPen(QColor("#ca8c13"),1.4));p.drawPath(path);
   }
+  chartExtension::paint(p,r,extensionLayers,start,end,x,y);
   if(annotationsEnabled&&annotationError.isEmpty()&&annotationData.status=="available"&&annotationData.selected==selected&&selected>=start&&selected<end){
     auto level=[&](double value,QString label,QColor color){if(!std::isfinite(value)||value<lo||value>hi)return;p.setPen(QPen(color,.8,Qt::DashLine));p.drawLine(QPointF(r.left(),y(value)),QPointF(r.right(),y(value)));mark(label+" "+QString::number(value,'f',priceDecimals),r.right()-52,y(value)-3,color);};
     level(annotationData.r1,"R1",QColor("#b16c4e"));level(annotationData.s1,"S1",QColor("#53879c"));

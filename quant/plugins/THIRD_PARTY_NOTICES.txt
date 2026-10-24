@@ -1,0 +1,37 @@
+WebStock plugin adapters execute separately installed engines. A plugin package
+contains WebStock adapter source, not the third-party engine binaries or data.
+Retain the installed distributions' notices and licenses when distributing them.
+Process separation does not remove license obligations.
+
+TA-Lib: https://github.com/TA-Lib/ta-lib (BSD-3-Clause)
+TA-Lib Python: https://github.com/TA-Lib/ta-lib-python (BSD-2-Clause)
+Hikyuu: https://github.com/fasiondog/hikyuu (Apache-2.0 root, MIT components)
+NumPy: https://numpy.org/doc/stable/license.html (BSD-3-Clause)
+scikit-learn: https://github.com/scikit-learn/scikit-learn/blob/main/COPYING (BSD-3-Clause); original estimators imported from the configured runtime.
+LightGBM: https://github.com/microsoft/LightGBM/blob/master/LICENSE (MIT); original CPU model training/prediction imported from the configured runtime.
+statsmodels: https://github.com/statsmodels/statsmodels/blob/main/LICENSE.txt (BSD-3-Clause).
+hmmlearn: https://github.com/hmmlearn/hmmlearn/blob/main/LICENSE.txt (BSD-3-Clause).
+arch: https://github.com/bashtage/arch/blob/main/LICENSE.md (NCSA/University of Illinois); original volatility estimators imported from the configured runtime.
+pandas: https://github.com/pandas-dev/pandas/blob/main/LICENSE (BSD-3-Clause)
+Backtesting.py: https://github.com/kernc/backtesting.py (AGPL-3.0)
+Backtrader: https://github.com/mementum/backtrader (GPL-3.0)
+vectorbt: https://github.com/polakowo/vectorbt (Apache-2.0 + Commons Clause)
+bt: https://github.com/pmorissette/bt (MIT)
+WBT: https://github.com/zengbin93/wbt (MIT)
+CZSC: https://github.com/waditu/czsc (Apache-2.0)
+QUANTAXIS: https://github.com/yutiansut/QUANTAXIS (MIT)
+ML4T Backtest: https://github.com/ml4t/backtest (MIT)
+VeighNa: https://github.com/vnpy/vnpy (MIT)
+VeighNa CTA: https://github.com/vnpy/vnpy_ctastrategy (MIT)
+Qlib: https://github.com/microsoft/qlib (MIT)
+Zipline Reloaded: https://github.com/stefan-jansen/zipline-reloaded (Apache-2.0)
+RQAlpha: https://github.com/ricequant/rqalpha (Apache-2.0 with additional commercial-use restrictions; inspect installed LICENSE)
+WonderTrader: https://github.com/wondertrader/wondertrader (MIT)
+wtpy: https://github.com/wondertrader/wtpy (MIT; includes separately installed native engine binaries)
+
+No exchange data license, vendor proprietary formula, or commercial redistribution
+permission is implied by installation. Packages make no return guarantees.
+TradingView TechnicalRating v3 (2024-11-29), https://www.tradingview.com/script/jDWyb5PG-TechnicalRating/ and TradingView/ta/9, https://www.tradingview.com/script/BICzyhq0-ta/ — MPL-2.0, copyright TradingView. technical_ratings.py is a Python adaptation of the public rating conditions with a declared local numerical kernel, supplied in Source Code Form under MPL-2.0; see the bundled MPL-2.0.txt and TECHNICAL_RATINGS.txt. This is not an official TradingView product and does not claim verified numerical parity with Pine built-ins or the live screener. Other host/adapter files retain their own source terms.
+PyTorch https://github.com/pytorch/pytorch — BSD-3-Clause plus separately attributed bundled components; inspect the installed torch distribution's LICENSE and notices. CPU runtime remains outside .wspkg. LSTM and Transformer use original torch.nn; GCN is a WebStock continuous-return adaptation of Kipf/Welling's published propagation rule (https://arxiv.org/abs/1609.02907), not its classification experiment or a pretrained financial model.
+AKShare https://github.com/akfamily/akshare — MIT. Adapter calls the original stock_zh_a_hist API. Eastmoney is the declared external data provider; no data redistribution license is inferred from AKShare's software license. Downloaded results retain acquisition metadata and source-returned values.
+LEAN https://github.com/QuantConnect/Lean — Apache-2.0. Uses the user's original local .NET Release build, with a WebStock custom daily-data algorithm and proportional-fee model. No LEAN DLLs or upstream Data assets are bundled in .wspkg. Result records original engine assembly hashes. Runtime dependencies retain their respective upstream notices.

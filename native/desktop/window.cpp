@@ -1,4 +1,5 @@
 #include "window.hpp"
+#include "stock_extension_host.hpp"
 #include "capital_timeline.hpp"
 #include "capital_workbench_roster.hpp"
 #include "public_market_runtime.hpp"
@@ -870,6 +871,12 @@ Window::Window(bool test, const QString& testSettingsFile,
   charts->addWidget(chart);
   charts->addWidget(referenceChart);
   cl->addWidget(charts, 1);
+  try{
+    extensions=new StockExtensionHost(dataDirectory+"/extensions-v1",chart,indicators,cl,this);
+    connect(extensions,&StockExtensionHost::dayRequested,this,[this]{home();if(period!="day")setPeriod("day");});
+    connect(extensions,&StockExtensionHost::refreshRequested,this,[this]{if(feed)feed->chart(activeId,"day",true);});
+    connect(extensions,&StockExtensionHost::error,this,[this](const QString& message){statusBar()->showMessage(message,10000);});
+  }catch(const std::exception& e){statusBar()->showMessage("插件未载入："+QString::fromUtf8(e.what()),10000);}
   focusFooter = new QWidget;
   focusFooter->setObjectName("focusFooter");
   auto* footerLayout = new QHBoxLayout(focusFooter);
@@ -1199,7 +1206,7 @@ void Window::closeEvent(QCloseEvent* event){
  for(auto source:waiting)if(source)connect(source,&MarketFeed::persistenceDrained,this,done,Qt::SingleShotConnection);
  for(auto source:waiting)if(source)source->stopPersistence();
 }
-Window::~Window() { if(publicMarketRuntime){delete publicMarketRuntime;publicMarketRuntime=nullptr;} if(auto*p=pages.take("industryTopic"))delete p; if(industryTopicRuntime){industryTopicRuntime->stop();delete industryTopicRuntime;industryTopicRuntime=nullptr;} if(auto*p=dynamic_cast<KnowledgeAiHostPage*>(pages.value("knowledgeAiHost")))p->close(); if(unifiedBackupLane)unifiedBackupLane->closeOwner(); if(auto*p=dynamic_cast<cffexDisclosure::Page*>(pages.value("cffexDisclosure")))p->cancel(); if(auto*p=dynamic_cast<ArchiveVideoReviewPage*>(pages.value("archiveVideo")))p->close(); if(auto*p=dynamic_cast<FuturesMonitorPage*>(pages.value("futuresMonitor")))p->cancel();etfRefreshToken.clear();if(auto*p=qobject_cast<EtfMonitorPage*>(pages.value("etfMonitor")))p->setActive(false);delete collectionPipeline; collectionPipeline=nullptr; save(); }
+Window::~Window() { delete extensions;extensions=nullptr; if(publicMarketRuntime){delete publicMarketRuntime;publicMarketRuntime=nullptr;} if(auto*p=pages.take("industryTopic"))delete p; if(industryTopicRuntime){industryTopicRuntime->stop();delete industryTopicRuntime;industryTopicRuntime=nullptr;} if(auto*p=dynamic_cast<KnowledgeAiHostPage*>(pages.value("knowledgeAiHost")))p->close(); if(unifiedBackupLane)unifiedBackupLane->closeOwner(); if(auto*p=dynamic_cast<cffexDisclosure::Page*>(pages.value("cffexDisclosure")))p->cancel(); if(auto*p=dynamic_cast<ArchiveVideoReviewPage*>(pages.value("archiveVideo")))p->close(); if(auto*p=dynamic_cast<FuturesMonitorPage*>(pages.value("futuresMonitor")))p->cancel();etfRefreshToken.clear();if(auto*p=qobject_cast<EtfMonitorPage*>(pages.value("etfMonitor")))p->setActive(false);delete collectionPipeline; collectionPipeline=nullptr; save(); }
 bool Window::saveCloseState(){
  try {
   for(auto* page:findChildren<QWidget*>()){
@@ -1411,6 +1418,7 @@ void Window::loadChart(Chart* c, const QString& p, bool reset) {
   c->annotationRows=a;c->annotationMeta=instrument[p+"Meta"].toObject();c->annotationMeta["hostInstrumentId"]=instrument["id"];c->annotationMeta["hostPeriod"]=p;if(!c->annotationMeta.contains("instrumentId"))c->annotationMeta["instrumentId"]=instrument["id"];if(!c->annotationMeta.contains("period"))c->annotationMeta["period"]=p;
   c->vwapRows=a;c->vwapMeta=instrument[p+"Meta"].toObject();c->vwapPeriod=p;
   if(!unchanged)c->setSeries(bars, dates, p.startsWith("minute"), reset);
+  if(c==chart&&extensions)extensions->setContext({{"id",instrument["id"]},{"name",instrument["name"]},{"period",p},{"rows",a},{"meta",instrument[p+"Meta"]},{"testing",testing}});
 }
 void Window::loadInstrument(const QString& id, bool reset) {
   if(!legacyHighFrequencyFrame.isEmpty()){activeId=legacyHighFrequencyFrame["id"].toString();statusBar()->showMessage("旧历史仍在主图；请先明确返回当前资料再切换证券。",8000);return;}
