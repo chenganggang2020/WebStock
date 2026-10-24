@@ -9,11 +9,10 @@
     "indicatorFamilies": 110,
     "source": "indicator-scope.json",
     "indicatorReadiness": {
-      "formula_implemented_and_tested": 102,
-      "source_interface_implemented_and_tested": 7,
-      "pending": 1
+      "formula_implemented_and_tested": 103,
+      "source_interface_implemented_and_tested": 7
     },
-    "installedPackages": 32
+    "installedPackages": 33
   },
   "completionDefinition": [
     "All 19 projects have runnable installed adapters with declared capabilities, inputs, versions and actual results.",
@@ -299,7 +298,7 @@
     },
     {
       "id": "indicator-coverage",
-      "status": "201_talib_49_core_20_panel_5_event_6_learning_9_statistical_3_deep_3_portfolio_risk_operations_verified__3_factor_model_operations_verified__1_public_v3_rating_conditions_operation_verified__7_external_source_interfaces_verified__3_explicit_pattern_operations_verified__1_declared_cost_distribution_operation_verified__2_historical_limit_operations_verified",
+      "status": "all_110_families_mapped__103_explicit_formula_families_and_7_source_interface_families_verified",
       "note": "Function counts differ from family counts; source interfaces are tracked separately from reproduced formulas."
     },
     {
@@ -475,7 +474,24 @@
         "same-time sequence prefixes and future perturbation"
       ],
       "limits": "Externally declared rules/completeness; displayed-book state only, no full trading/execution engine or inferred hidden liquidity."
+    },
+    {
+      "id": "european-option-snapshots",
+      "status": "three_operations_verified_in_cpp_host_and_full_windows",
+      "checks": [
+        "strict quote/spot/curve/volume/OI availability and units",
+        "independent SciPy surface inversion",
+        "known price and put-call parity",
+        "finite-difference delta gamma vega",
+        "bounded IV statuses and stale quotes",
+        "auditable delta/log-strike interpolation without extrapolation",
+        "volume/OI PCR separate with zero denominator unavailable",
+        "selected contract/expiry charting",
+        "all-table chronological prefixes",
+        "native acknowledgement and result archive roundtrip"
+      ],
+      "limits": "European continuous-yield model only; declared input cohort and provenance, no American pricing, VIX, arbitrage-free smile fitting or guaranteed trading edge."
     }
   ],
-  "latestPackageVersion": "0.24.0"
+  "latestPackageVersion": "0.25.0"
 }

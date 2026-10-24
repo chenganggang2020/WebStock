@@ -319,7 +319,7 @@
     "nativeWindow": "passed, quotes/classic and legacy focus redirect, real installed TA-Lib workflow",
     "visualReview": "Native overall technical-rating curve, 15/11 component tabs and numerical table; actual quotes/classic/focus run and frozen history reopening"
   },
-  "latestPackageVersion": "0.24.0",
+  "latestPackageVersion": "0.25.0",
   "additionalEvidence": [
     "native-acceptance-0.8.1.json",
     "native-akshare-0.7.0.json",
@@ -524,5 +524,36 @@
     "pythonPassed": 9,
     "pythonFailed": 0,
     "inputs": "120 synthetic daily member rows and 120 synthetic displayed-book observations; not real historical rules or market data"
+  },
+  "nativeOptionAcceptance": "native-options-0.25.0.json",
+  "nativeOptionWindows": {
+    "option-iv": {
+      "passed": 3,
+      "failed": 0,
+      "skipped": 0,
+      "testedPackageVersion": "0.25.0"
+    },
+    "option-skew": {
+      "passed": 3,
+      "failed": 0,
+      "skipped": 0,
+      "testedPackageVersion": "0.25.0"
+    },
+    "option-term-pcr": {
+      "passed": 3,
+      "failed": 0,
+      "skipped": 0,
+      "testedPackageVersion": "0.25.0"
+    }
+  },
+  "optionTests": {
+    "pythonPassed": 8,
+    "pythonFailed": 0,
+    "nativePlatform": {
+      "passed": 18,
+      "failed": 0,
+      "skipped": 0
+    },
+    "input": "672 synthetic quotes, 24 snapshots, 2 expiries, 7 strikes, calls/puts; not real option market data"
   }
 }

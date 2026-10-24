@@ -152,7 +152,8 @@ QuantPluginWidget::QuantPluginWidget(QString root,QWidget* parent):QWidget(paren
         const bool events=operation_.value("inputKind")=="market-events-csv";
         const bool portfolio=operation_.value("inputKind")=="portfolio-equity-csv";
         const bool observations=operation_.value("inputKind")=="research-observations-csv";
-        closed_->setText(observations?(checked?"已确认：数据发布及修订当时可知":"确认数据发布及修订当时可知"):portfolio?(checked?"已确认：权益、费用与出入金当时可知":"确认权益、费用与出入金当时可知"):events?(checked?"已确认：事件已发生且当时可知":"确认输入事件已发生且当时可知"):(checked?"已确认：仅包含已完成K线":"确认输入仅包含已完成的K线"));});
+    const bool options=operation_.value("inputKind")=="option-chain-csv";
+        closed_->setText(options?(checked?"已确认：期权报价及模型输入当时可知":"确认期权报价及模型输入当时可知"):observations?(checked?"已确认：数据发布及修订当时可知":"确认数据发布及修订当时可知"):portfolio?(checked?"已确认：权益、费用与出入金当时可知":"确认权益、费用与出入金当时可知"):events?(checked?"已确认：事件已发生且当时可知":"确认输入事件已发生且当时可知"):(checked?"已确认：仅包含已完成K线":"确认输入仅包含已完成的K线"));});
     timeout_=new QSpinBox;timeout_->setRange(5,3600);timeout_->setValue(600);form->addRow("最长运行秒数",timeout_);
     auto parameterPanel=new QWidget;parameters_=new QFormLayout(parameterPanel);parameters_->setContentsMargins(0,0,0,0);form->addRow(parameterPanel);
     auto right=new QWidget;auto rightLayout=new QVBoxLayout(right);history_=new QListWidget;history_->setObjectName("pluginHistory");history_->setMaximumHeight(140);rightLayout->addWidget(history_);
@@ -196,11 +197,12 @@ void QuantPluginWidget::selectOperation(){
     const bool events=operation_.value("inputKind")=="market-events-csv";
     const bool portfolio=operation_.value("inputKind")=="portfolio-equity-csv";
     const bool observations=operation_.value("inputKind")=="research-observations-csv";
+    const bool options=operation_.value("inputKind")=="option-chain-csv";
     form_->setRowVisible(input_->parentWidget(),!query);form_->setRowVisible(adjustment_,operation_.value("inputKind")=="ohlcv-single-csv");form_->setRowVisible(closed_,!query);
     closed_->setChecked(false);
-    closed_->setText(observations?"确认数据发布及修订当时可知":portfolio?"确认权益、费用与出入金当时可知":events?"确认输入事件已发生且当时可知":"确认输入仅包含已完成的K线");
+    closed_->setText(options?"确认期权报价及模型输入当时可知":observations?"确认数据发布及修订当时可知":portfolio?"确认权益、费用与出入金当时可知":events?"确认输入事件已发生且当时可知":"确认输入仅包含已完成的K线");
     if(auto label=qobject_cast<QLabel*>(form_->labelForField(input_->parentWidget())))
-        label->setText(observations?"研究数据发布 / 修订 CSV":portfolio?"策略权益 / 出入金 CSV":events?"逐笔成交 / 盘口 CSV":operation_.value("inputKind")=="market-panel-csv"?"历史多证券 CSV":"历史K线 CSV");
+        label->setText(options?"期权链报价 / 曲线假设 CSV":observations?"研究数据发布 / 修订 CSV":portfolio?"策略权益 / 出入金 CSV":events?"逐笔成交 / 盘口 CSV":operation_.value("inputKind")=="market-panel-csv"?"历史多证券 CSV":"历史K线 CSV");
     QJsonObject saved;
     if(!operation_.isEmpty()){
         auto p=repository_.plugin(plugins_->currentData().toString());
@@ -230,7 +232,7 @@ void QuantPluginWidget::start(){
     repository_.configure(plugins_->currentData().toString(),runtime_->text(),enabled_->isChecked());QJsonObject parameters;
     for(auto i=fields_.begin();i!=fields_.end();++i){if(auto s=qobject_cast<QDoubleSpinBox*>(i.value()))parameters[i.key()]=s->value();else if(auto edit=qobject_cast<QLineEdit*>(i.value()))parameters[i.key()]=edit->text();else parameters[i.key()]=QJsonValue::fromVariant(qobject_cast<QComboBox*>(i.value())->currentData());}
     job_.start(plugins_->currentData().toString(),operation_.value("id").toString(),input_->text(),parameters,
-               {{"closedBarsOnly",closed_->isChecked()},{"knownEventsOnly",closed_->isChecked()},{"knownValuationsOnly",closed_->isChecked()},{"knownObservationsOnly",closed_->isChecked()},{"adjustment",adjustment_->currentData().toString()},
+               {{"closedBarsOnly",closed_->isChecked()},{"knownEventsOnly",closed_->isChecked()},{"knownValuationsOnly",closed_->isChecked()},{"knownObservationsOnly",closed_->isChecked()},{"knownQuotesOnly",closed_->isChecked()},{"adjustment",adjustment_->currentData().toString()},
                 {"timezone","unspecified"},{"volumeUnit","unspecified"},{"source","user-selected local CSV"}},timeout_->value());
 }
 void QuantPluginWidget::showResult(const QString& id){

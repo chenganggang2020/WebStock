@@ -147,6 +147,28 @@ out=dict(schema='webstock.plugin.result.v1',status='completed',automaticTrading=
         QTemporaryDir target;Job imported(target.path());QCOMPARE(imported.importResult(reader.exportResult(id)),id);
         QCOMPARE(imported.reopen(id).value("result").toObject(),result);QVERIFY(!imported.active());
     }
+    void optionsRequireOwnAcknowledgementAndArchive(){
+        auto python=qEnvironmentVariable("WEBSTOCK_TEST_PYTHON"),packageFile=qEnvironmentVariable("WEBSTOCK_TEST_OPTION_PACKAGE"),csv=qEnvironmentVariable("WEBSTOCK_TEST_OPTION_CSV");
+        if(python.isEmpty()||packageFile.isEmpty()||csv.isEmpty())QSKIP("Set option chain fixtures");
+        QTemporaryDir dir;Repository repo(dir.path());auto p=repo.install(read(packageFile));repo.configure(p.value("id").toString(),python,true);
+        Job rejected(dir.path());QVERIFY_EXCEPTION_THROWN(rejected.start(p.value("id").toString(),"option-iv",csv,{},{{"closedBarsOnly",true},{"knownEventsOnly",true},{"knownObservationsOnly",true}}),std::runtime_error);
+        QVERIFY(rejected.records().isEmpty());
+        QuantPluginWidget widget(dir.path());widget.resize(1280,850);widget.show();
+        auto closed=widget.findChild<QCheckBox*>("pluginClosedBars");QVERIFY(closed->text().contains("期权"));QVERIFY(!closed->isChecked());
+        widget.findChild<QLineEdit*>("pluginInput")->setText(csv);closed->setChecked(true);
+        QTest::mouseClick(widget.findChild<QPushButton*>("pluginRun"),Qt::LeftButton);
+        Job reader(dir.path());QTRY_VERIFY_WITH_TIMEOUT(!reader.records().isEmpty()&&reader.records()[0].toObject().value("status")=="completed",30000);
+        auto id=reader.records()[0].toObject().value("runId").toString();auto result=reader.reopen(id).value("result").toObject();
+        auto policy=result.value("dataPolicy").toObject();QCOMPARE(policy.value("kind").toString(),QString("option-chain-csv"));
+        QVERIFY(policy.value("knownQuotesOnly").toBool());QVERIFY(!policy.contains("closedBarsOnly"));QVERIFY(!policy.contains("knownEventsOnly"));
+        QVERIFY(!policy.contains("knownValuationsOnly"));QVERIFY(!policy.contains("knownObservationsOnly"));QVERIFY(!policy.contains("adjustment"));
+        QCOMPARE(policy.value("volumeUnit").toString(),QString("contract"));
+        QCOMPARE(result.value("tables").toArray()[0].toObject().value("rows").toArray().size(),24);
+        auto plot=widget.findChild<QComboBox*>("pluginPlotColumn");QCOMPARE(plot->currentText(),QString("midIV"));
+        QTemporaryDir target;Job imported(target.path());QCOMPARE(imported.importResult(reader.exportResult(id)),id);
+        QCOMPARE(imported.reopen(id).value("result").toObject(),result);QVERIFY(!imported.active());
+        widget.findChild<QComboBox*>("pluginOperation")->setCurrentIndex(1);QVERIFY(!closed->isChecked());
+    }
     void observationRevisionsRequireOwnAcknowledgementAndArchive(){
         auto python=qEnvironmentVariable("WEBSTOCK_TEST_PYTHON"),packageFile=qEnvironmentVariable("WEBSTOCK_TEST_OBSERVATION_PACKAGE"),csv=qEnvironmentVariable("WEBSTOCK_TEST_OBSERVATION_CSV");
         if(python.isEmpty()||packageFile.isEmpty()||csv.isEmpty())QSKIP("Set observation revision adapter fixtures");

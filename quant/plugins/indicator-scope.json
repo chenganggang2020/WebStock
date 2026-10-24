@@ -1614,9 +1614,13 @@
       "overlap": "风险中性信息不等于真实收益概率。",
       "evidence": "VIX 官方定义；其余需定版本",
       "refs": "https://www.cboe.com/tradable-products/vix",
-      "status": "pending",
-      "implementations": [],
-      "implementationNote": "未完成；不以目录条目或近似名称充当实现。"
+      "status": "formula_implemented_and_tested",
+      "implementations": [
+        "option-research:option-iv",
+        "option-research:option-skew",
+        "option-research:option-term-pcr"
+      ],
+      "implementationNote": "欧式BSM连续r/q与ACT/365F；双边报价/中点有界IV和模型希腊值；绝对现货25Delta看跌减看涨IV、远期平值看涨IV期限插值、分成交量和OI的PCR。仅声明可知同步合约群组，不外推，不是美式或VIX，不作收益承诺。"
     },
     {
       "id": 89,

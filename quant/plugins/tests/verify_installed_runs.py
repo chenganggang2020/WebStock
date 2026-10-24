@@ -15,6 +15,7 @@ def main():
     for name in ("host","packages","environment-root","data","state","evidence"):
         p.add_argument("--"+name,type=Path,required=True)
     p.add_argument("--only",help="Comma-separated project ids; default all packages")
+    p.add_argument("--install-only",action="store_true",help="Install/configure all selected packages without running or fetching market data")
     p.add_argument("--operations",help="Comma-separated operation ids for the selected project")
     p.add_argument("--allow-network",action="store_true",help="Explicitly include online data providers")
     p.add_argument("--lean-directory",type=Path,help="Local LEAN source tree with Release build and Data")
@@ -35,7 +36,7 @@ def main():
         "statistical-models":("statistical-models","garch"),"deep-models":("deep-models","lstm"),"portfolio-risk":("data-tools","equity-drawdown"),
         "factor-models":("qlib","trailing-pca"),"technical-ratings":("data-tools","technical-ratings-v3"),
         "external-observations":("data-tools","money-flow-vintages"),"pattern-research":("data-tools","squeeze-regression"),
-        "cost-distribution":("data-tools","turnover-cost-model"),"limit-research":("data-tools","limit-breadth")}
+        "cost-distribution":("data-tools","turnover-cost-model"),"limit-research":("data-tools","limit-breadth"),"option-research":("data-tools","option-iv")}
     environment=dict(os.environ,QT_QPA_PLATFORM="offscreen",PYTHONUTF8="1")
     runtime_map=json.loads(args.runtime_map.read_text(encoding="utf-8")) if args.runtime_map else {}
     operation_inputs=json.loads(args.operation_inputs.read_text(encoding="utf-8")) if args.operation_inputs else {}
@@ -44,13 +45,13 @@ def main():
         manifest=json.loads(package.read_text(encoding="utf-8"))["manifest"]
         engine=manifest["id"].split(".")[-1]
         if args.only and engine not in args.only.split(","):continue
-        if engine=="panel-research" and not args.panel_data:
+        if engine=="panel-research" and not args.panel_data and not args.install_only:
             print("Skipped panel research; pass --panel-data to include it",flush=True);continue
-        if engine=="event-research" and not args.event_data:
+        if engine=="event-research" and not args.event_data and not args.install_only:
             print("Skipped event research; pass --event-data to include it",flush=True);continue
-        if engine=="akshare" and not args.allow_network:
+        if engine=="akshare" and not args.allow_network and not args.install_only:
             print("Skipped AKShare online request; pass --allow-network to include it",flush=True);continue
-        if engine=="lean" and not args.lean_directory:
+        if engine=="lean" and not args.lean_directory and not args.install_only:
             print("Skipped LEAN; pass --lean-directory to include it",flush=True);continue
         runtime,operation=mapping[engine]
         exe=Path(runtime_map[runtime]) if runtime in runtime_map else args.environment_root/runtime/"Scripts/python.exe"
@@ -58,6 +59,9 @@ def main():
         installed=subprocess.run(base+["--install",str(package),"--runtime",str(exe)],env=environment,
                                  capture_output=True,text=True,encoding="utf-8",timeout=60)
         if installed.returncode:raise RuntimeError(installed.stderr+installed.stdout)
+        if args.install_only:
+            rows.append({"pluginId":manifest['id'],"version":manifest['version'],"status":"installed_not_executed"})
+            print('Installed '+manifest['id'],flush=True);continue
         for operation in args.operations.split(",") if args.operations else [operation]:
             extra=[]
             if engine=="lean":
@@ -75,7 +79,7 @@ def main():
             assert result["pluginVersion"]==manifest["version"]
             op=next(x for x in manifest["operations"] if x["id"]==operation)
             assert result["formulaVersion"]==op["formulaVersion"]
-            assert result["bars"] >= (2 if op['inputKind']=='research-observations-csv' else 101)
+            assert result["bars"] >= (2 if op['inputKind'] in ('research-observations-csv','option-chain-csv') else 101)
             row={"pluginId":manifest["id"],"operationId":operation,"version":manifest["version"],"status":"verified",
                  "runId":record["runId"],"resultSha256":record["resultSha256"],"bars":result["bars"],
                  "inputSha256":result["inputSha256"],"inputName":data.name,

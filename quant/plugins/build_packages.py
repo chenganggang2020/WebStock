@@ -22,7 +22,7 @@ def save_package(output, manifest, sources):
     # immutable package independent of Git core.autocrlf on the build machine.
     content = {name: (HERE/source).read_text(encoding="utf-8").replace('\r\n','\n').replace('\r','\n').encode('utf-8') for name, source in sources.items()}
     manifest.update(schema="webstock.plugin.manifest.v1", protocolVersion=1,
-                    entrypoint="worker.py", runtime="python", version="0.24.0",
+                    entrypoint="worker.py", runtime="python", version="0.25.0",
                     files={name: hashlib.sha256(raw).hexdigest() for name,raw in content.items()})
     package = {"schema": "webstock.plugin.package.v1", "manifest": manifest,
                "files": {name: base64.b64encode(raw).decode("ascii") for name,raw in content.items()}}
@@ -414,6 +414,16 @@ def main():
              'inputKind':'market-events-csv','outputKind':'indicator','description':'需带空侧盘口、当日最近成交、历史限制价与顺序的快照。采样数据不输出事件次数。见LIMIT_RESEARCH.txt。'}]},
         {'worker.py':'worker.py','limit_research.py':'limit_research.py','panel_contract.py':'panel_contract.py',
          'LIMIT_RESEARCH.txt':'LIMIT_RESEARCH.txt','PANEL_INPUT.txt':'PANEL_INPUT.txt','THIRD_PARTY_NOTICES.txt':'THIRD_PARTY_NOTICES.txt'}))
+    option_operations=[]
+    for key,title in {'option-iv':'欧式期权 IV / 模型希腊值','option-skew':'25Delta 偏斜 · 看跌减看涨','option-term-pcr':'远期平值 IV 期限 / Put-Call 比率'}.items():
+        fields=[number('maxAgeSeconds',900,0,86400,title='报价与现货最长年龄（秒）'),number('maxVolatility',5.,.01,10.,title='IV求解上限（小数）')]
+        fields.append({'id':'contractId','title':'绘图合约ID','type':'text','format':'text','default':'C100E1','minLength':1,'maxLength':128} if key=='option-iv' else number('expiryRank',1,1,100,title='绘图到期排名（近到远）'))
+        option_operations.append({'id':key,'title':title,'formulaVersion':'webstock-'+key+'-v1','inputKind':'option-chain-csv','outputKind':'indicator','parameters':fields,
+            'description':'欧式、连续r/q、ACT/365F、每标的单位报价。仅已知同步快照；不外推，不混接不同合约。见OPTION_RESEARCH.txt。'})
+    records.append(save_package(args.output,{'id':'org.webstock.option-research','name':'WebStock 欧式期权研究','license':'Project source terms',
+        'source':'https://github.com/chenganggang2020/WebStock','distributions':['numpy','pandas'],'operations':option_operations},
+        {'worker.py':'worker.py','option_research.py':'option_research.py','panel_contract.py':'panel_contract.py',
+         'OPTION_RESEARCH.txt':'OPTION_RESEARCH.txt','THIRD_PARTY_NOTICES.txt':'THIRD_PARTY_NOTICES.txt'}))
     (args.output/"index.json").write_text(json.dumps(records,ensure_ascii=False,indent=2),encoding="utf-8")
     print(json.dumps(records,ensure_ascii=False))
 

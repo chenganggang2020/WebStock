@@ -143,6 +143,9 @@ def validate_parameters(operation, supplied):
 
 
 def compute(manifest, operation, frame, parameters):
+    if manifest["id"] == "org.webstock.option-research":
+        from option_research import calculate
+        return calculate(operation["id"],frame,parameters)
     if manifest["id"] == "org.webstock.limit-research":
         from limit_research import calculate
         return calculate(operation['id'],frame,parameters)
@@ -275,6 +278,9 @@ def main():
     if query:
         if read_json(source)!={"schema":"webstock.plugin.query.v1","operationId":operation["id"],"parameters":parameters}:
             raise ValueError("Frozen query differs from parameters")
+    elif operation["inputKind"]=="option-chain-csv":
+        if request["input"].get("knownQuotesOnly") is not True or request["input"].get("kind")!="option-chain-csv":
+            raise ValueError("Known option quote acknowledgement and input kind required")
     elif operation["inputKind"]=="research-observations-csv":
         if request["input"].get("knownObservationsOnly") is not True or request["input"].get("kind")!="research-observations-csv":
             raise ValueError("Known observation acknowledgement and input kind required")
@@ -289,6 +295,9 @@ def main():
     print(json.dumps({"event": "progress", "message": "核验完成，正在计算", "percent": 15}), flush=True)
     if query:
         frame=None
+    elif operation["inputKind"]=="option-chain-csv":
+        from option_research import load_options
+        frame=load_options(source)
     elif operation["inputKind"]=="research-observations-csv":
         from observation_contract import load_observations
         frame=load_observations(source)
