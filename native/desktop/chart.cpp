@@ -61,6 +61,7 @@ Chart::Chart(QWidget *p) : QWidget(p) {
 }
 void Chart::setSeries(std::vector<market::Bar> data, QStringList dates,
                       bool isMinute, bool reset) {
+  extensionLayers.clear();
   const bool firstData = bars.empty();
   const bool followEnd = firstData || endIndex >= int(bars.size());
   int oldLatest = int(bars.size()) - 1;
@@ -259,8 +260,8 @@ void Chart::paintEvent(QPaintEvent *) {
   QPainter p(this);
   p.setRenderHint(QPainter::Antialiasing);
   const auto theme=appearance::theme(window()->property("stockTheme").toString().isEmpty()?(dark?"navy":"soft"):window()->property("stockTheme").toString());
-  QColor bg=theme.bg,text=theme.text,muted=theme.muted,grid=theme.border,up=theme.up,down=theme.down;
-  grid.setAlpha(100);
+  QColor bg=theme.bg,text=theme.text,muted=theme.muted,grid=theme.grid,up=theme.up,down=theme.down;
+  if(!theme.preset)grid.setAlpha(100);
   p.fillRect(rect(), bg);
   p.setFont(QFont("Microsoft YaHei UI", 9));
   p.setPen(text);
@@ -274,35 +275,20 @@ void Chart::paintEvent(QPaintEvent *) {
   int end = std::clamp(endIndex, 1, int(bars.size())),
       start = std::max(0, end - visibleCount), n = end - start;
   auto r = priceRect();
-  double step = r.width() / n, lo = INFINITY, hi = -INFINITY;
-  for (int i = start; i < end; ++i)
-    if (market::valid(bars[i])) {
-      lo = std::min(lo, bars[i].low);
-      hi = std::max(hi, bars[i].high);
-      if (vwapEnabled && i < int(vwapData.values.size()) && std::isfinite(vwapData.values[i])) {
-        lo=std::min(lo,vwapData.values[i]);hi=std::max(hi,vwapData.values[i]);
-      }
-      if (!minute && overlay)
-        for (const auto &data : maData)
-          if (std::isfinite(data[i])) {
-            lo = std::min(lo, data[i]);
-            hi = std::max(hi, data[i]);
-          }
-    }
+  double step = r.width() / n;
+  const auto bounds=priceBounds(start,end);double lo=bounds.first,hi=bounds.second;
   if (!std::isfinite(lo)) {
     return;
   }
-  if (minute && previousClose > 0) {
-    lo = std::min(lo, previousClose);
-    hi = std::max(hi, previousClose);
-  }
-  double pad = std::max({(hi - lo) * .10, std::abs(hi) * .003, 1e-6});
-  lo -= pad;
-  hi += pad;
   auto x = [&](int i) { return barX(i); };
   auto y = [&](double v) {
     return r.bottom() - (v - lo) / (hi - lo) * r.height();
   };
+  if(theme.preset){
+    p.setPen(QPen(grid,1));
+    for(int j=1;j<4;++j){double yy=r.top()+j*r.height()/4;p.drawLine(QPointF(r.left(),yy),QPointF(r.right(),yy));}
+    if(theme.hollowUp)for(int j=1;j<6;++j){double xx=r.left()+j*r.width()/6;p.drawLine(QPointF(xx,r.top()),QPointF(xx,r.bottom()));}
+  }
   p.setPen(muted);
   p.drawText(
       QRectF(2, 2, width() - 4, 25), Qt::AlignVCenter,
@@ -366,7 +352,7 @@ void Chart::paintEvent(QPaintEvent *) {
     }
     QColor color = b.close >= b.open ? up : down;
     double xx = x(i);
-    p.setPen(QPen(color, 1));
+    p.setPen(QPen(color, theme.id=="clear"?1.4:1));
     if (minute) {
       bool lunch = i > start && std::abs(barX(i) - barX(i - 1)) < 1e-8;
       if (lunch) {
@@ -380,10 +366,10 @@ void Chart::paintEvent(QPaintEvent *) {
       connected = true;
     } else {
       p.drawLine(QPointF(xx, y(b.high)), QPointF(xx, y(b.low)));
-      const double bodyWidth = std::clamp(step * .40, 1., 4.);
+      const double bodyWidth = std::clamp(step * (theme.preset?.64:.40), 1., theme.preset?10.:4.);
       QRectF body(xx - bodyWidth / 2, y(std::max(b.open, b.close)), bodyWidth,
                   std::max(1.5, std::abs(y(b.open) - y(b.close))));
-      p.fillRect(body, color);
+      if(theme.hollowUp&&b.close>=b.open){p.setBrush(bg);p.drawRect(body);p.setBrush(Qt::NoBrush);}else p.fillRect(body, color);
     }
     if (overlay && std::isfinite(overlayData[i])) {
       if (!emaConnected)
@@ -439,7 +425,7 @@ void Chart::paintEvent(QPaintEvent *) {
           path.moveTo(x(i), y(maData[k][i]));
         joined = true;
       }
-      p.setPen(QPen(QColor(colors[int(k) % colors.size()]), 1.2));
+      p.setPen(QPen(appearance::plotColor(theme,QColor(colors[int(k) % colors.size()])),theme.preset?theme.lineWidth:1.2));
       p.drawPath(path);
     }
   }
@@ -451,8 +437,9 @@ void Chart::paintEvent(QPaintEvent *) {
       if(joined)path.lineTo(x(i),y(vwapData.values[i]));else path.moveTo(x(i),y(vwapData.values[i]));
       joined=true;
     }
-    p.setPen(QPen(QColor("#ca8c13"),1.4));p.drawPath(path);
+    p.setPen(QPen(appearance::plotColor(theme,QColor("#ca8c13")),theme.preset?theme.lineWidth:1.4));p.drawPath(path);
   }
+  chartExtension::paint(p,r,extensionLayers,start,end,x,y,bg,theme);
   if(annotationsEnabled&&annotationError.isEmpty()&&annotationData.status=="available"&&annotationData.selected==selected&&selected>=start&&selected<end){
     auto level=[&](double value,QString label,QColor color){if(!std::isfinite(value)||value<lo||value>hi)return;p.setPen(QPen(color,.8,Qt::DashLine));p.drawLine(QPointF(r.left(),y(value)),QPointF(r.right(),y(value)));mark(label+" "+QString::number(value,'f',priceDecimals),r.right()-52,y(value)-3,color);};
     level(annotationData.r1,"R1",QColor("#b16c4e"));level(annotationData.s1,"S1",QColor("#53879c"));
@@ -461,7 +448,7 @@ void Chart::paintEvent(QPaintEvent *) {
   }
   p.restore();
   if(vwapEnabled) {
-    p.setPen(QColor("#ca8c13"));p.setFont(QFont("Microsoft YaHei UI",8));
+    p.setPen(appearance::plotColor(theme,QColor("#ca8c13")));p.setFont(QFont("Microsoft YaHei UI",8));
     const int at=selected>=start&&selected<end?selected:end-1;
     const QString mode=vwapMode=="actual-amount"?"真实均价":vwapMode=="hlc3-approx"?"HLC3近似":"收盘价加权近似";
     const QString value=at<int(vwapData.values.size())&&std::isfinite(vwapData.values[at])?QString::number(vwapData.values[at],'f',priceDecimals):"—";
@@ -513,7 +500,7 @@ void Chart::paintEvent(QPaintEvent *) {
         const auto &line = *lines[j];
         const QString label = QStringList{"K", "D", "J"}[int(j)] + " " +
             (at < int(line.size()) && std::isfinite(line[at]) ? QString::number(line[at], 'f', 2) : "—");
-        p.setPen(QColor(colors[int(j)]));
+        p.setPen(appearance::plotColor(theme,QColor(colors[int(j)])));
         p.drawText(QPointF(legendX, indicatorArea.top() - 8), label);
         legendX += p.fontMetrics().horizontalAdvance(label) + 12;
       }
@@ -543,14 +530,14 @@ void Chart::paintEvent(QPaintEvent *) {
         const bool before = i > start && std::isfinite(line[i - 1]);
         const bool after = i + 1 < end && i + 1 < int(line.size()) && std::isfinite(line[i + 1]);
         if (!before && !after) {
-          p.setPen(QPen(QColor(colors[int(j)]), 3.6, Qt::SolidLine, Qt::RoundCap));
+          p.setPen(QPen(appearance::plotColor(theme,QColor(colors[int(j)])), 3.6, Qt::SolidLine, Qt::RoundCap));
           p.drawPoint(QPointF(x(i), subY(line[i])));
         }
         if (joined) path.lineTo(x(i), subY(line[i]));
         else path.moveTo(x(i), subY(line[i]));
         joined = true;
       }
-      p.setPen(QPen(QColor(colors[int(j)]), 1.4));
+      p.setPen(QPen(appearance::plotColor(theme,QColor(colors[int(j)])),theme.preset?theme.lineWidth:1.4));
       p.drawPath(path);
     }
     p.restore();
@@ -642,10 +629,10 @@ void Chart::paintEvent(QPaintEvent *) {
       sc = true;
     }
   }
-  p.setPen(QPen(QColor("#4f87d6"), 1.4));
+  p.setPen(QPen(theme.fast,theme.preset?theme.lineWidth:1.4));
   p.drawPath(sub);
   p.drawPath(dp);
-  p.setPen(QPen(QColor("#cf982b"), 1.4));
+  p.setPen(QPen(theme.slow,theme.preset?theme.lineWidth:1.4));
   p.drawPath(ap);
   }
   p.setFont(QFont("Consolas", 8));
@@ -703,6 +690,32 @@ void Chart::selectAt(double xx) {
   update();
   emit barSelected(selected);
 }
+QPair<double,double> Chart::priceBounds(int start,int end) const {
+  double lo=INFINITY,hi=-INFINITY;
+  for(int i=start;i<end;++i)if(market::valid(bars[i])){
+    lo=std::min(lo,bars[i].low);hi=std::max(hi,bars[i].high);
+    if(vwapEnabled&&i<int(vwapData.values.size())&&std::isfinite(vwapData.values[i])){lo=std::min(lo,vwapData.values[i]);hi=std::max(hi,vwapData.values[i]);}
+    if(!minute&&overlay)for(const auto&data:maData)if(i<int(data.size())&&std::isfinite(data[i])){lo=std::min(lo,data[i]);hi=std::max(hi,data[i]);}
+  }
+  if(!std::isfinite(lo))return {lo,hi};
+  chartExtension::range(extensionLayers,start,end,lo,hi);
+  if(minute&&previousClose>0){lo=std::min(lo,previousClose);hi=std::max(hi,previousClose);}
+  double pad=std::max({(hi-lo)*.10,std::abs(hi)*.003,1e-6});return {lo-pad,hi+pad};
+}
+QPointF Chart::extensionPoint(int index,double price) const {
+  if(bars.empty())return {};
+  int end=std::clamp(endIndex,1,int(bars.size())),start=std::max(0,end-visibleCount);
+  const auto range=priceBounds(start,end);auto r=priceRect();
+  return {barX(index),r.bottom()-(price-range.first)/(range.second-range.first)*r.height()};
+}
+chartExtension::Hit Chart::extensionItemAt(QPointF point) const {
+  if(bars.empty()||minute)return {};
+  int end=std::clamp(endIndex,1,int(bars.size())),start=std::max(0,end-visibleCount);
+  const auto range=priceBounds(start,end);if(!std::isfinite(range.first))return {};
+  auto r=priceRect();
+  return chartExtension::hitTest(point,r,extensionLayers,start,end,[&](int i){return barX(i);},
+    [&](double price){return r.bottom()-(price-range.first)/(range.second-range.first)*r.height();});
+}
 void Chart::wheelEvent(QWheelEvent *e) {
   if (bars.empty()) return;
   if (minute) {
@@ -720,9 +733,11 @@ void Chart::mousePressEvent(QMouseEvent *e) {
   press = e->pos();
   startEnd = endIndex;
   dragging = true;
+  extensionDragged = false;
   selectAt(e->position().x());
 }
 void Chart::mouseMoveEvent(QMouseEvent *e) {
+  if(dragging&&(e->position()-QPointF(press)).manhattanLength()>4)extensionDragged=true;
   if (dragging && minute) {
     selectAt(e->position().x());
     return;
@@ -736,7 +751,11 @@ void Chart::mouseMoveEvent(QMouseEvent *e) {
     update();
   }
 }
-void Chart::mouseReleaseEvent(QMouseEvent *) { dragging = false; lastInspectX = NAN; }
+void Chart::mouseReleaseEvent(QMouseEvent *e) {
+  bool clicked=dragging&&!extensionDragged&&e->button()==Qt::LeftButton&&(e->position()-QPointF(press)).manhattanLength()<=4;
+  dragging=false;lastInspectX=NAN;
+  if(clicked){auto hit=extensionItemAt(e->position());emit extensionItemSelected(hit.owner,hit.id);}
+}
 void Chart::keyPressEvent(QKeyEvent *e) {
   if (e->key() == Qt::Key_Home)
     latest();
