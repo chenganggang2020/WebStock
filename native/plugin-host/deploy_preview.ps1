@@ -15,7 +15,8 @@ param(
     [string]$IntradayCsv,
     [string]$FactorCsv,
     [string]$ObservationExamples,
-    [string]$CostCsv
+    [string]$CostCsv,
+    [string]$LimitExamples
 )
 $ErrorActionPreference = 'Stop'
 if (Test-Path -LiteralPath $Destination) { throw 'Destination exists; use a new preview directory.' }
@@ -46,6 +47,11 @@ if ($PortfolioCsv) { Copy-Item -LiteralPath $PortfolioCsv -Destination (Join-Pat
 if ($IntradayCsv) { Copy-Item -LiteralPath $IntradayCsv -Destination (Join-Path $taskRelease 'synthetic-intraday-sessions.csv') }
 if ($FactorCsv) { Copy-Item -LiteralPath $FactorCsv -Destination (Join-Path $taskRelease 'synthetic-factor-panel.csv') }
 if ($CostCsv) { Copy-Item -LiteralPath $CostCsv -Destination (Join-Path $taskRelease 'synthetic-cost-model.csv') }
+if ($LimitExamples) {
+    $taskLimits = Join-Path $taskRelease 'synthetic-limit-tests'
+    New-Item -ItemType Directory -Path $taskLimits | Out-Null
+    Get-ChildItem -LiteralPath $LimitExamples -Filter '*.csv' -File | ForEach-Object { Copy-Item -LiteralPath $_.FullName -Destination $taskLimits }
+}
 if ($ObservationExamples) {
     $taskObservations = Join-Path $taskRelease 'synthetic-observation-tests'
     New-Item -ItemType Directory -Path $taskObservations | Out-Null
@@ -80,6 +86,7 @@ Technical Ratings v3条件插件可选historical-fixture.csv；它使用明确�
 外部研究数据插件选择synthetic-observation-tests内对应功能文件；均为合成数据，演示发布/修订/撤回，非供应商公式复现。
 收缩与确认形态插件可选择historical-fixture.csv；候选只在拐点确认时出现，含每段比例与规则审计，见PATTERN_RESEARCH.txt。
 筹码成本假设模型选择synthetic-cost-model.csv，含合成自由流通股和重置数据；可查看历史摘要与末端成本直方图，非真实股东账本。
+历史涨跌停/封板插件选择synthetic-limit-tests内同名功能文件；日线统计与完整事件状态分开，输入含合成历史限制价，见LIMIT_RESEARCH.txt。
 
 本预览使用本目录内独立data，不修改原安装版的账户与数据库。
 移动整个目录后，需要把stock-data-root.json的directory更新到移动后的data绝对路径。
@@ -108,6 +115,7 @@ Copy-Item -LiteralPath (Join-Path $taskRepo 'quant\plugins\TECHNICAL_RATINGS.txt
 Copy-Item -LiteralPath (Join-Path $taskRepo 'quant\plugins\OBSERVATION_INPUT.txt') -Destination $taskRelease
 Copy-Item -LiteralPath (Join-Path $taskRepo 'quant\plugins\PATTERN_RESEARCH.txt') -Destination $taskRelease
 Copy-Item -LiteralPath (Join-Path $taskRepo 'quant\plugins\COST_DISTRIBUTION.txt') -Destination $taskRelease
+Copy-Item -LiteralPath (Join-Path $taskRepo 'quant\plugins\LIMIT_RESEARCH.txt') -Destination $taskRelease
 Copy-Item -LiteralPath (Join-Path $taskRepo 'quant\plugins\MPL-2.0.txt') -Destination $taskRelease
 $taskSetup = Join-Path $taskRelease 'runtime-setup'
 New-Item -ItemType Directory -Path $taskSetup | Out-Null

@@ -319,7 +319,7 @@
     "nativeWindow": "passed, quotes/classic and legacy focus redirect, real installed TA-Lib workflow",
     "visualReview": "Native overall technical-rating curve, 15/11 component tabs and numerical table; actual quotes/classic/focus run and frozen history reopening"
   },
-  "latestPackageVersion": "0.23.0",
+  "latestPackageVersion": "0.24.0",
   "additionalEvidence": [
     "native-acceptance-0.8.1.json",
     "native-akshare-0.7.0.json",
@@ -504,5 +504,25 @@
       "skipped": 0
     },
     "input": "320 synthetic sessions; raw prices, share volume, declared free float and resets; not real market data"
+  },
+  "nativeLimitAcceptance": "native-limits-0.24.0.json",
+  "nativeLimitWindows": {
+    "limit-breadth": {
+      "passed": 3,
+      "failed": 0,
+      "skipped": 0,
+      "testedPackageVersion": "0.24.0"
+    },
+    "limit-sequence": {
+      "passed": 3,
+      "failed": 0,
+      "skipped": 0,
+      "testedPackageVersion": "0.24.0"
+    }
+  },
+  "limitTests": {
+    "pythonPassed": 9,
+    "pythonFailed": 0,
+    "inputs": "120 synthetic daily member rows and 120 synthetic displayed-book observations; not real historical rules or market data"
   }
 }

@@ -22,7 +22,7 @@ def save_package(output, manifest, sources):
     # immutable package independent of Git core.autocrlf on the build machine.
     content = {name: (HERE/source).read_text(encoding="utf-8").replace('\r\n','\n').replace('\r','\n').encode('utf-8') for name, source in sources.items()}
     manifest.update(schema="webstock.plugin.manifest.v1", protocolVersion=1,
-                    entrypoint="worker.py", runtime="python", version="0.23.0",
+                    entrypoint="worker.py", runtime="python", version="0.24.0",
                     files={name: hashlib.sha256(raw).hexdigest() for name,raw in content.items()})
     package = {"schema": "webstock.plugin.package.v1", "manifest": manifest,
                "files": {name: base64.b64encode(raw).decode("ascii") for name,raw in content.items()}}
@@ -406,6 +406,14 @@ def main():
              'description':'需原始价格、以股为单位的成交量、当时自由流通股、连续会话及制度段。初始分布和日内成交分配是模型假设。见COST_DISTRIBUTION.txt。'}]},
         {'worker.py':'worker.py','cost_distribution.py':'cost_distribution.py','panel_contract.py':'panel_contract.py',
          'COST_DISTRIBUTION.txt':'COST_DISTRIBUTION.txt','THIRD_PARTY_NOTICES.txt':'THIRD_PARTY_NOTICES.txt'}))
+    records.append(save_package(args.output,{'id':'org.webstock.limit-research','name':'WebStock 历史涨跌停与封板研究','license':'Project source terms',
+        'source':'https://github.com/chenganggang2020/WebStock','distributions':['numpy','pandas'],'operations':[
+            {'id':'limit-breadth','title':'历史涨跌停家数 / 观察连板','formulaVersion':'webstock-limit-breadth-v1','parameters':[],
+             'inputKind':'market-panel-csv','outputKind':'indicator','description':'需每个历史会话实际限制价格、最小价位、已知规则与成分；日线不推断封板次数。见LIMIT_RESEARCH.txt。'},
+            {'id':'limit-sequence','title':'连续竞价封板状态 / 已观察转变','formulaVersion':'webstock-limit-sequence-v1','parameters':[],
+             'inputKind':'market-events-csv','outputKind':'indicator','description':'需带空侧盘口、当日最近成交、历史限制价与顺序的快照。采样数据不输出事件次数。见LIMIT_RESEARCH.txt。'}]},
+        {'worker.py':'worker.py','limit_research.py':'limit_research.py','panel_contract.py':'panel_contract.py',
+         'LIMIT_RESEARCH.txt':'LIMIT_RESEARCH.txt','PANEL_INPUT.txt':'PANEL_INPUT.txt','THIRD_PARTY_NOTICES.txt':'THIRD_PARTY_NOTICES.txt'}))
     (args.output/"index.json").write_text(json.dumps(records,ensure_ascii=False,indent=2),encoding="utf-8")
     print(json.dumps(records,ensure_ascii=False))
 

@@ -1,0 +1,55 @@
+{
+  "schema": "webstock.plugin.native-acceptance.v1",
+  "runs": [
+    {
+      "pluginId": "org.webstock.limit-research",
+      "operationId": "limit-breadth",
+      "version": "0.24.0",
+      "status": "verified",
+      "runId": "plugin-91c344ff-f1fe-4192-8dd2-7a18e94fbe89",
+      "resultSha256": "715531ab33304cb0c3d42d572938c609bec983fb330f79f0ff042ac3a0794dee",
+      "bars": 120,
+      "inputSha256": "369854be08bd56cd9951d6a9b625550e40c08ff5069ac66857e73c2b05052232",
+      "inputName": "limit-breadth.csv",
+      "tables": [
+        {
+          "id": "indicators",
+          "rows": 40
+        },
+        {
+          "id": "security-limit-audit",
+          "rows": 120
+        }
+      ],
+      "inputSemantics": {
+        "bounds": "externally supplied historical raw-price limits; known by session start",
+        "universe": "declared historical members",
+        "streak": "consecutive declared sessions with trades closing at upper bound; left-censored flag retained",
+        "providerCertified": false
+      }
+    },
+    {
+      "pluginId": "org.webstock.limit-research",
+      "operationId": "limit-sequence",
+      "version": "0.24.0",
+      "status": "verified",
+      "runId": "plugin-7e4c4e40-de79-45e4-84c2-2d23189ff688",
+      "resultSha256": "c6fa66dcd7a099d7d718ace6396a4054d91bef9ea56242b974f83cfb52dcbd67",
+      "bars": 120,
+      "inputSha256": "f71c50bd429fcd9143625e31b25d7f3abe5c574e259e1833ab64436358ad514d",
+      "inputName": "limit-sequence.csv",
+      "tables": [
+        {
+          "id": "indicators",
+          "rows": 120
+        }
+      ],
+      "inputSemantics": {
+        "symbol": "A",
+        "coverage": "events-complete",
+        "providerCertified": false,
+        "counts": "only observed adjacent continuous-phase transitions; no inference before first snapshot or across phase boundary"
+      }
+    }
+  ]
+}

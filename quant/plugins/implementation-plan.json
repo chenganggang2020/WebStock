@@ -9,11 +9,11 @@
     "indicatorFamilies": 110,
     "source": "indicator-scope.json",
     "indicatorReadiness": {
-      "formula_implemented_and_tested": 101,
+      "formula_implemented_and_tested": 102,
       "source_interface_implemented_and_tested": 7,
-      "pending": 2
+      "pending": 1
     },
-    "installedPackages": 31
+    "installedPackages": 32
   },
   "completionDefinition": [
     "All 19 projects have runnable installed adapters with declared capabilities, inputs, versions and actual results.",
@@ -299,7 +299,7 @@
     },
     {
       "id": "indicator-coverage",
-      "status": "201_talib_49_core_20_panel_5_event_6_learning_9_statistical_3_deep_3_portfolio_risk_operations_verified__3_factor_model_operations_verified__1_public_v3_rating_conditions_operation_verified__7_external_source_interfaces_verified__3_explicit_pattern_operations_verified__1_declared_cost_distribution_operation_verified",
+      "status": "201_talib_49_core_20_panel_5_event_6_learning_9_statistical_3_deep_3_portfolio_risk_operations_verified__3_factor_model_operations_verified__1_public_v3_rating_conditions_operation_verified__7_external_source_interfaces_verified__3_explicit_pattern_operations_verified__1_declared_cost_distribution_operation_verified__2_historical_limit_operations_verified",
       "note": "Function counts differ from family counts; source interfaces are tracked separately from reproduced formulas."
     },
     {
@@ -460,7 +460,22 @@
         "separately labelled native cost-weight histogram"
       ],
       "limits": "Assumed initial cost and uniform daily price allocation; not an observed shareholder ledger, vendor replication or PIT data certification."
+    },
+    {
+      "id": "historical-price-limits-and-book-states",
+      "status": "two_operations_verified_in_cpp_host_and_full_windows",
+      "checks": [
+        "historical supplied bounds and tick alignment",
+        "point-in-time historical membership",
+        "traded versus suspended/unbounded observations",
+        "left-censored observed closing streaks",
+        "one-sided displayed books and last-trade timing",
+        "phase/session boundaries",
+        "sampled streams never manufacture event counts",
+        "same-time sequence prefixes and future perturbation"
+      ],
+      "limits": "Externally declared rules/completeness; displayed-book state only, no full trading/execution engine or inferred hidden liquidity."
     }
   ],
-  "latestPackageVersion": "0.23.0"
+  "latestPackageVersion": "0.24.0"
 }

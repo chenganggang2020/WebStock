@@ -143,6 +143,9 @@ def validate_parameters(operation, supplied):
 
 
 def compute(manifest, operation, frame, parameters):
+    if manifest["id"] == "org.webstock.limit-research":
+        from limit_research import calculate
+        return calculate(operation['id'],frame,parameters)
     if manifest["id"] == "org.webstock.cost-distribution":
         from cost_distribution import calculate
         return calculate(frame,parameters)
@@ -296,8 +299,12 @@ def main():
         from portfolio_contract import load_portfolio
         frame=load_portfolio(source)
     elif operation["inputKind"]=="market-events-csv":
-        from event_contract import load_events
-        frame=load_events(source)
+        if manifest['id']=='org.webstock.limit-research':
+            from limit_research import load_limit_events
+            frame=load_limit_events(source)
+        else:
+            from event_contract import load_events
+            frame=load_events(source)
     else:
         frame=load_bars(source)
     computed = compute(manifest, operation, frame, parameters)

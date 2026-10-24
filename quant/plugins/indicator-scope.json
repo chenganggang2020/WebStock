@@ -1306,9 +1306,12 @@
       "overlap": "与涨跌广度相关；不能用固定百分比套全市场。",
       "evidence": "候选研究；规则与数据需另核",
       "refs": "https://quant.10jqka.com.cn/view/dataplatform",
-      "status": "pending",
-      "implementations": [],
-      "implementationNote": "未完成；不以目录条目或近似名称充当实现。"
+      "status": "formula_implemented_and_tested",
+      "implementations": [
+        "limit-research:limit-breadth",
+        "limit-research:limit-sequence"
+      ],
+      "implementationNote": "根据历史已知上下限/最小价位统计历史成分的触及/收盘涨跌停及有左侧不完整标记的观察连板；另用含空侧盘口、当日最近成交、交易阶段与完整序号的快照计算已观察封板进出。采样不输出事件次数，日线不推断真实炸板次数。"
     },
     {
       "id": 72,
